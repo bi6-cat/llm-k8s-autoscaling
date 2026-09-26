@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="578" viewBox="0 0 1240 578" role="img" aria-label="Hai tầng môi trường: laptop RTX 4060 để phát triển, VM GPU thuê theo giờ để thí nghiệm chính; cả hai triển khai từ cùng một Git repository" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+<title>Hai tầng môi trường: laptop RTX 4060 để phát triển, VM GPU thuê theo giờ để thí nghiệm chính; cả hai triển khai từ cùng một Git repository</title>
+<defs><marker id="a2a78d6" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path d="M0,1 L10,5 L0,9 z" fill="#2a78d6"/></marker><marker id="a52514e" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path d="M0,1 L10,5 L0,9 z" fill="#52514e"/></marker></defs>
+<rect x="0.5" y="0.5" width="1239" height="577" rx="14" fill="#fcfcfb" stroke="#e4e3de"/>
+<text x="32" y="38" font-size="19" font-weight="700" fill="#0b0b0b" text-anchor="start">Hai tầng môi trường: phát triển trên laptop, thí nghiệm trên GPU thuê</text>
+<text x="32" y="61" font-size="13" font-weight="400" fill="#52514e" text-anchor="start">Cùng một bộ manifest trong Git; mỗi môi trường chỉ khác overlay (model, số replica, tài nguyên)</text>
+<rect x="400" y="86" width="440" height="142" rx="12" fill="#ffffff" stroke="#52514e" stroke-width="1.4"/>
+<text x="416" y="112" font-size="13.5" text-anchor="start"><tspan font-weight="650" fill="#0b0b0b">Git repository</tspan><tspan font-weight="400" fill="#52514e">  nguồn sự thật duy nhất</tspan></text>
+<text x="416" y="136" font-size="11.5" font-weight="400" fill="#0b0b0b" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">serving/base/</text>
+<text x="606" y="136" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">Deployment vLLM, Service, probes</text>
+<text x="416" y="154.5" font-size="11.5" font-weight="400" fill="#0b0b0b" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">serving/overlays/laptop/</text>
+<text x="606" y="154.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">model 1,5B–3B</text>
+<text x="416" y="173" font-size="11.5" font-weight="400" fill="#0b0b0b" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">serving/overlays/cloud/</text>
+<text x="606" y="173" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">model 7–8B</text>
+<text x="416" y="191.5" font-size="11.5" font-weight="400" fill="#0b0b0b" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">autoscaling/</text>
+<text x="606" y="191.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">static, A1, A2, A3</text>
+<text x="416" y="210" font-size="11.5" font-weight="400" fill="#0b0b0b" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">infra/</text>
+<text x="606" y="210" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">Terraform + Ansible</text>
+<rect x="32" y="290" width="580" height="262" rx="14" fill="#f4f3ef" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="50" y="318" font-size="14.5" font-weight="700" fill="#0b0b0b" text-anchor="start">Tầng 1 · Phát triển &amp; thử nghiệm sơ bộ</text>
+<text x="50" y="338" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Laptop RTX 4060 (8 GB VRAM) · chi phí ≈ 0</text>
+<rect x="52" y="354" width="168" height="112" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="66" y="378" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">Laptop 1</text>
+<text x="66" y="396" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">k3s server + agent</text>
+<line x1="94" y1="414" x2="94" y2="418" stroke="#008300" stroke-width="1.5"/>
+<line x1="94" y1="450" x2="94" y2="454" stroke="#008300" stroke-width="1.5"/>
+<line x1="122" y1="414" x2="122" y2="418" stroke="#008300" stroke-width="1.5"/>
+<line x1="122" y1="450" x2="122" y2="454" stroke="#008300" stroke-width="1.5"/>
+<line x1="150" y1="414" x2="150" y2="418" stroke="#008300" stroke-width="1.5"/>
+<line x1="150" y1="450" x2="150" y2="454" stroke="#008300" stroke-width="1.5"/>
+<line x1="178" y1="414" x2="178" y2="418" stroke="#008300" stroke-width="1.5"/>
+<line x1="178" y1="450" x2="178" y2="454" stroke="#008300" stroke-width="1.5"/>
+<rect x="66" y="418" width="140" height="32" rx="5" fill="#edf6ed" stroke="#008300" stroke-width="1.4"/>
+<text x="136" y="438.5" font-size="11.5" font-weight="650" fill="#0b0b0b" text-anchor="middle">RTX 4060 · 8 GB</text>
+<rect x="240" y="354" width="168" height="112" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="254" y="378" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">Laptop 2</text>
+<text x="254" y="396" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">k3s agent</text>
+<line x1="282" y1="414" x2="282" y2="418" stroke="#008300" stroke-width="1.5"/>
+<line x1="282" y1="450" x2="282" y2="454" stroke="#008300" stroke-width="1.5"/>
+<line x1="310" y1="414" x2="310" y2="418" stroke="#008300" stroke-width="1.5"/>
+<line x1="310" y1="450" x2="310" y2="454" stroke="#008300" stroke-width="1.5"/>
+<line x1="338" y1="414" x2="338" y2="418" stroke="#008300" stroke-width="1.5"/>
+<line x1="338" y1="450" x2="338" y2="454" stroke="#008300" stroke-width="1.5"/>
+<line x1="366" y1="414" x2="366" y2="418" stroke="#008300" stroke-width="1.5"/>
+<line x1="366" y1="450" x2="366" y2="454" stroke="#008300" stroke-width="1.5"/>
+<rect x="254" y="418" width="140" height="32" rx="5" fill="#edf6ed" stroke="#008300" stroke-width="1.4"/>
+<text x="324" y="438.5" font-size="11.5" font-weight="650" fill="#0b0b0b" text-anchor="middle">RTX 4060 · 8 GB</text>
+<rect x="428" y="354" width="168" height="112" rx="10" fill="#ffffff" stroke="#52514e" stroke-width="1.2" stroke-dasharray="5 4"/>
+<text x="442" y="378" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">Laptop 3</text>
+<text x="442" y="396" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">tuỳ chọn</text>
+<line x1="470" y1="414" x2="470" y2="418" stroke="#008300" stroke-width="1.5"/>
+<line x1="470" y1="450" x2="470" y2="454" stroke="#008300" stroke-width="1.5"/>
+<line x1="498" y1="414" x2="498" y2="418" stroke="#008300" stroke-width="1.5"/>
+<line x1="498" y1="450" x2="498" y2="454" stroke="#008300" stroke-width="1.5"/>
+<line x1="526" y1="414" x2="526" y2="418" stroke="#008300" stroke-width="1.5"/>
+<line x1="526" y1="450" x2="526" y2="454" stroke="#008300" stroke-width="1.5"/>
+<line x1="554" y1="414" x2="554" y2="418" stroke="#008300" stroke-width="1.5"/>
+<line x1="554" y1="450" x2="554" y2="454" stroke="#008300" stroke-width="1.5"/>
+<rect x="442" y="418" width="140" height="32" rx="5" fill="#edf6ed" stroke="#008300" stroke-width="1.4"/>
+<text x="512" y="438.5" font-size="11.5" font-weight="650" fill="#0b0b0b" text-anchor="middle">RTX 4060 · 8 GB</text>
+<text x="52" y="496" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Ubuntu 22.04/24.04 · k3s · GPU Operator · vLLM + Qwen2.5-1.5B (hoặc 3B AWQ)</text>
+<text x="52" y="518" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Dùng cho: viết manifest, dashboard, máy tạo tải, pilot, demo khi bảo vệ</text>
+<text x="52" y="540" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Tuỳ chọn: llm-d-inference-sim (giả lập vLLM) để thử autoscaling không cần GPU</text>
+<rect x="628" y="290" width="580" height="262" rx="14" fill="#f4f3ef" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="646" y="318" font-size="14.5" font-weight="700" fill="#0b0b0b" text-anchor="start">Tầng 2 · Thí nghiệm chính</text>
+<text x="646" y="338" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">VM GPU thuê theo giờ · dựng bằng IaC, huỷ ngay khi chạy xong</text>
+<rect x="648" y="354" width="348" height="112" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="662" y="378" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">VM GPU · k3s single-node</text>
+<text x="662" y="396" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">4× GPU 24 GB (L4 / A10 / RTX 4090 …)</text>
+<line x1="676.4" y1="414" x2="676.4" y2="418" stroke="#008300" stroke-width="1.5"/>
+<line x1="676.4" y1="450" x2="676.4" y2="454" stroke="#008300" stroke-width="1.5"/>
+<line x1="690.8" y1="414" x2="690.8" y2="418" stroke="#008300" stroke-width="1.5"/>
+<line x1="690.8" y1="450" x2="690.8" y2="454" stroke="#008300" stroke-width="1.5"/>
+<line x1="705.2" y1="414" x2="705.2" y2="418" stroke="#008300" stroke-width="1.5"/>
+<line x1="705.2" y1="450" x2="705.2" y2="454" stroke="#008300" stroke-width="1.5"/>
+<line x1="719.6" y1="414" x2="719.6" y2="418" stroke="#008300" stroke-width="1.5"/>
+<line x1="719.6" y1="450" x2="719.6" y2="454" stroke="#008300" stroke-width="1.5"/>
+<rect x="662" y="418" width="72" height="32" rx="5" fill="#edf6ed" stroke="#008300" stroke-width="1.4"/>
+<text x="698" y="438.5" font-size="11.5" font-weight="650" fill="#0b0b0b" text-anchor="middle">GPU 0</text>
+<line x1="757.4" y1="414" x2="757.4" y2="418" stroke="#008300" stroke-width="1.5"/>
+<line x1="757.4" y1="450" x2="757.4" y2="454" stroke="#008300" stroke-width="1.5"/>
+<line x1="771.8" y1="414" x2="771.8" y2="418" stroke="#008300" stroke-width="1.5"/>
+<line x1="771.8" y1="450" x2="771.8" y2="454" stroke="#008300" stroke-width="1.5"/>
+<line x1="786.2" y1="414" x2="786.2" y2="418" stroke="#008300" stroke-width="1.5"/>
+<line x1="786.2" y1="450" x2="786.2" y2="454" stroke="#008300" stroke-width="1.5"/>
+<line x1="800.6" y1="414" x2="800.6" y2="418" stroke="#008300" stroke-width="1.5"/>
+<line x1="800.6" y1="450" x2="800.6" y2="454" stroke="#008300" stroke-width="1.5"/>
+<rect x="743" y="418" width="72" height="32" rx="5" fill="#edf6ed" stroke="#008300" stroke-width="1.4"/>
+<text x="779" y="438.5" font-size="11.5" font-weight="650" fill="#0b0b0b" text-anchor="middle">GPU 1</text>
+<line x1="838.4" y1="414" x2="838.4" y2="418" stroke="#008300" stroke-width="1.5"/>
+<line x1="838.4" y1="450" x2="838.4" y2="454" stroke="#008300" stroke-width="1.5"/>
+<line x1="852.8" y1="414" x2="852.8" y2="418" stroke="#008300" stroke-width="1.5"/>
+<line x1="852.8" y1="450" x2="852.8" y2="454" stroke="#008300" stroke-width="1.5"/>
+<line x1="867.2" y1="414" x2="867.2" y2="418" stroke="#008300" stroke-width="1.5"/>
+<line x1="867.2" y1="450" x2="867.2" y2="454" stroke="#008300" stroke-width="1.5"/>
+<line x1="881.6" y1="414" x2="881.6" y2="418" stroke="#008300" stroke-width="1.5"/>
+<line x1="881.6" y1="450" x2="881.6" y2="454" stroke="#008300" stroke-width="1.5"/>
+<rect x="824" y="418" width="72" height="32" rx="5" fill="#edf6ed" stroke="#008300" stroke-width="1.4"/>
+<text x="860" y="438.5" font-size="11.5" font-weight="650" fill="#0b0b0b" text-anchor="middle">GPU 2</text>
+<line x1="919.4" y1="414" x2="919.4" y2="418" stroke="#008300" stroke-width="1.5"/>
+<line x1="919.4" y1="450" x2="919.4" y2="454" stroke="#008300" stroke-width="1.5"/>
+<line x1="933.8" y1="414" x2="933.8" y2="418" stroke="#008300" stroke-width="1.5"/>
+<line x1="933.8" y1="450" x2="933.8" y2="454" stroke="#008300" stroke-width="1.5"/>
+<line x1="948.2" y1="414" x2="948.2" y2="418" stroke="#008300" stroke-width="1.5"/>
+<line x1="948.2" y1="450" x2="948.2" y2="454" stroke="#008300" stroke-width="1.5"/>
+<line x1="962.6" y1="414" x2="962.6" y2="418" stroke="#008300" stroke-width="1.5"/>
+<line x1="962.6" y1="450" x2="962.6" y2="454" stroke="#008300" stroke-width="1.5"/>
+<rect x="905" y="418" width="72" height="32" rx="5" fill="#edf6ed" stroke="#008300" stroke-width="1.4"/>
+<text x="941" y="438.5" font-size="11.5" font-weight="650" fill="#0b0b0b" text-anchor="middle">GPU 3</text>
+<rect x="1012" y="354" width="176" height="112" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="1026" y="390.4" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">VM CPU nhỏ</text>
+<text x="1026" y="408.1" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">máy tạo tải</text>
+<text x="1026" y="424.7" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">experiment runner</text>
+<text x="1026" y="441.4" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">cùng region / DC</text>
+<path d="M1012,440 L996,440" fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a2a78d6)"/>
+<text x="648" y="496" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Model 7–8B (vd Qwen2.5-7B-Instruct) · ghim phiên bản vLLM và image</text>
+<text x="648" y="518" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Dùng cho: hiệu chỉnh C, ma trận thí nghiệm, đo cold start</text>
+<text x="648" y="540" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Dữ liệu (CSV/Parquet + snapshot Prometheus) được lưu trước khi huỷ VM</text>
+<path d="M520,228 L520,250 Q520,258 512,258 L330,258 Q322,258 322,266 L322,290" fill="none" stroke="#52514e" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
+<rect x="338.1" y="240" width="165.8" height="18" rx="4" fill="#fcfcfb"/>
+<text x="421" y="252" font-size="11" font-weight="400" fill="#0b0b0b" text-anchor="middle">Argo CD sync · overlays/laptop</text>
+<path d="M720,228 L720,250 Q720,258 728,258 L910,258 Q918,258 918,266 L918,290" fill="none" stroke="#52514e" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
+<rect x="747.2" y="240" width="241.7" height="18" rx="4" fill="#fcfcfb"/>
+<text x="868" y="252" font-size="11" font-weight="400" fill="#0b0b0b" text-anchor="middle">IaC dựng VM → Argo CD sync · overlays/cloud</text>
+</svg>

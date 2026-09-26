@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="730" viewBox="0 0 1280 730" role="img" aria-label="Kiến trúc tổng thể: máy tạo tải gửi request qua Ingress và Service tới các pod vLLM (mỗi pod 1 GPU); Prometheus thu metric; KEDA và HPA điều chỉnh số replica" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+<title>Kiến trúc tổng thể: máy tạo tải gửi request qua Ingress và Service tới các pod vLLM (mỗi pod 1 GPU); Prometheus thu metric; KEDA và HPA điều chỉnh số replica</title>
+<defs><marker id="a2a78d6" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path d="M0,1 L10,5 L0,9 z" fill="#2a78d6"/></marker><marker id="a52514e" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path d="M0,1 L10,5 L0,9 z" fill="#52514e"/></marker><marker id="a4a3aa7" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path d="M0,1 L10,5 L0,9 z" fill="#4a3aa7"/></marker><marker id="aeb6834" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path d="M0,1 L10,5 L0,9 z" fill="#eb6834"/></marker></defs>
+<rect x="0.5" y="0.5" width="1279" height="729" rx="14" fill="#fcfcfb" stroke="#e4e3de"/>
+<text x="32" y="38" font-size="19" font-weight="700" fill="#0b0b0b" text-anchor="start">Kiến trúc tổng thể nền tảng LLM Serving có Autoscaling</text>
+<text x="32" y="61" font-size="13" font-weight="400" fill="#52514e" text-anchor="start">Một Deployment vLLM, mỗi pod dùng 1 GPU; KEDA + HPA điều chỉnh số replica theo metric của chính vLLM</text>
+<line x1="32" y1="86" x2="58" y2="86" stroke="#2a78d6" stroke-width="2.2" stroke-linecap="round"/>
+<text x="65" y="90" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Luồng request / token</text>
+<line x1="211.2" y1="86" x2="237.2" y2="86" stroke="#4a3aa7" stroke-width="2" stroke-dasharray="5 4" stroke-linecap="round"/>
+<text x="244.2" y="90" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Thu thập metric</text>
+<line x1="358.3" y1="86" x2="384.3" y2="86" stroke="#eb6834" stroke-width="2.2" stroke-linecap="round"/>
+<text x="391.3" y="90" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Điều khiển scale</text>
+<line x1="508" y1="86" x2="534" y2="86" stroke="#52514e" stroke-width="1.5" stroke-dasharray="3 4" stroke-linecap="round"/>
+<text x="541" y="90" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Nạp image / model</text>
+<rect x="232" y="104" width="820" height="596" rx="16" fill="#fbfbfa" stroke="#52514e" stroke-width="1.4"/>
+<text x="250" y="126" font-size="13.5" text-anchor="start"><tspan font-weight="700" fill="#0b0b0b">Kubernetes cluster</tspan><tspan font-weight="400" fill="#52514e">  k3s / RKE2</tspan></text>
+<rect x="252" y="138" width="780" height="318" rx="12" fill="#eef4fc" stroke="#c9dcf3" stroke-width="1.2"/>
+<text x="266" y="159" font-size="12.5" text-anchor="start"><tspan font-weight="650" fill="#0b0b0b">namespace: llm-serving</tspan></text>
+<rect x="272" y="269" width="140" height="64" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="342" y="298.1" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="middle">Ingress</text>
+<text x="342" y="315.7" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="middle">NGINX / Envoy</text>
+<rect x="440" y="269" width="140" height="64" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="510" y="298.1" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="middle">Service vllm</text>
+<text x="510" y="315.7" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="middle">ClusterIP · chia tải</text>
+<rect x="440" y="172" width="140" height="56" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="510" y="196.7" font-size="12.5" font-weight="650" fill="#0b0b0b" text-anchor="middle">PVC model-cache</text>
+<text x="510" y="214.3" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="middle">weights · mount RO</text>
+<rect x="612" y="168" width="400" height="252" rx="12" fill="#fdf3ee" stroke="#eb6834" stroke-width="1.4" stroke-dasharray="6 4"/>
+<text x="628" y="190" font-size="12.5" text-anchor="start"><tspan font-weight="650" fill="#0b0b0b">Deployment vllm</tspan><tspan font-weight="400" fill="#52514e">  replicas 1…N (N = 4)</tspan></text>
+<rect x="628" y="204" width="262" height="58" rx="9" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="642" y="228" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">vLLM pod 1</text>
+<rect x="730.8" y="214" width="53.4" height="18" rx="9" fill="#edf6ed" stroke="#0ca30c" stroke-width="1"/>
+<circle cx="739.8" cy="223" r="3.5" fill="#0ca30c"/>
+<text x="746.8" y="227" font-size="10.5" font-weight="600" fill="#0b0b0b" text-anchor="start">Ready</text>
+<text x="642" y="249" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">API :8000 · /metrics</text>
+<line x1="890" y1="233" x2="906" y2="233" stroke="#008300" stroke-width="1.5"/>
+<line x1="924" y1="210" x2="924" y2="214" stroke="#008300" stroke-width="1.5"/>
+<line x1="924" y1="252" x2="924" y2="256" stroke="#008300" stroke-width="1.5"/>
+<line x1="942" y1="210" x2="942" y2="214" stroke="#008300" stroke-width="1.5"/>
+<line x1="942" y1="252" x2="942" y2="256" stroke="#008300" stroke-width="1.5"/>
+<line x1="960" y1="210" x2="960" y2="214" stroke="#008300" stroke-width="1.5"/>
+<line x1="960" y1="252" x2="960" y2="256" stroke="#008300" stroke-width="1.5"/>
+<line x1="978" y1="210" x2="978" y2="214" stroke="#008300" stroke-width="1.5"/>
+<line x1="978" y1="252" x2="978" y2="256" stroke="#008300" stroke-width="1.5"/>
+<rect x="906" y="214" width="90" height="38" rx="5" fill="#edf6ed" stroke="#008300" stroke-width="1.4"/>
+<text x="951" y="237.5" font-size="11.5" font-weight="650" fill="#0b0b0b" text-anchor="middle">GPU 0</text>
+<rect x="628" y="274" width="262" height="58" rx="9" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="642" y="298" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">vLLM pod 2</text>
+<rect x="730.8" y="284" width="53.4" height="18" rx="9" fill="#edf6ed" stroke="#0ca30c" stroke-width="1"/>
+<circle cx="739.8" cy="293" r="3.5" fill="#0ca30c"/>
+<text x="746.8" y="297" font-size="10.5" font-weight="600" fill="#0b0b0b" text-anchor="start">Ready</text>
+<text x="642" y="319" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">API :8000 · /metrics</text>
+<line x1="890" y1="303" x2="906" y2="303" stroke="#008300" stroke-width="1.5"/>
+<line x1="924" y1="280" x2="924" y2="284" stroke="#008300" stroke-width="1.5"/>
+<line x1="924" y1="322" x2="924" y2="326" stroke="#008300" stroke-width="1.5"/>
+<line x1="942" y1="280" x2="942" y2="284" stroke="#008300" stroke-width="1.5"/>
+<line x1="942" y1="322" x2="942" y2="326" stroke="#008300" stroke-width="1.5"/>
+<line x1="960" y1="280" x2="960" y2="284" stroke="#008300" stroke-width="1.5"/>
+<line x1="960" y1="322" x2="960" y2="326" stroke="#008300" stroke-width="1.5"/>
+<line x1="978" y1="280" x2="978" y2="284" stroke="#008300" stroke-width="1.5"/>
+<line x1="978" y1="322" x2="978" y2="326" stroke="#008300" stroke-width="1.5"/>
+<rect x="906" y="284" width="90" height="38" rx="5" fill="#edf6ed" stroke="#008300" stroke-width="1.4"/>
+<text x="951" y="307.5" font-size="11.5" font-weight="650" fill="#0b0b0b" text-anchor="middle">GPU 1</text>
+<rect x="628" y="344" width="262" height="58" rx="9" fill="#ffffff" stroke="#52514e" stroke-width="1.2" stroke-dasharray="5 4"/>
+<text x="642" y="368" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">vLLM pod N</text>
+<rect x="732.1" y="354" width="99.5" height="18" rx="9" fill="#fdf3dc" stroke="#fab219" stroke-width="1"/>
+<circle cx="741.1" cy="363" r="3.5" fill="#fab219"/>
+<text x="748.1" y="367" font-size="10.5" font-weight="600" fill="#0b0b0b" text-anchor="start">Đang khởi động</text>
+<text x="642" y="389" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">chưa nhận traffic tới khi Ready</text>
+<line x1="890" y1="373" x2="906" y2="373" stroke="#008300" stroke-width="1.5"/>
+<line x1="924" y1="350" x2="924" y2="354" stroke="#008300" stroke-width="1.5"/>
+<line x1="924" y1="392" x2="924" y2="396" stroke="#008300" stroke-width="1.5"/>
+<line x1="942" y1="350" x2="942" y2="354" stroke="#008300" stroke-width="1.5"/>
+<line x1="942" y1="392" x2="942" y2="396" stroke="#008300" stroke-width="1.5"/>
+<line x1="960" y1="350" x2="960" y2="354" stroke="#008300" stroke-width="1.5"/>
+<line x1="960" y1="392" x2="960" y2="396" stroke="#008300" stroke-width="1.5"/>
+<line x1="978" y1="350" x2="978" y2="354" stroke="#008300" stroke-width="1.5"/>
+<line x1="978" y1="392" x2="978" y2="396" stroke="#008300" stroke-width="1.5"/>
+<rect x="906" y="354" width="90" height="38" rx="5" fill="#edf6ed" stroke="#008300" stroke-width="1.4"/>
+<text x="951" y="377.5" font-size="11.5" font-weight="650" fill="#0b0b0b" text-anchor="middle">GPU N</text>
+<rect x="252" y="496" width="250" height="176" rx="12" fill="#fdf3ee" stroke="#f3cdb9" stroke-width="1.2"/>
+<text x="266" y="517" font-size="12.5" text-anchor="start"><tspan font-weight="650" fill="#0b0b0b">namespace: keda</tspan></text>
+<rect x="266" y="532" width="222" height="50" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="377" y="553.9" font-size="13" font-weight="650" fill="#0b0b0b" text-anchor="middle">KEDA metrics server</text>
+<text x="377" y="571.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="middle">chạy PromQL, trả external metric</text>
+<rect x="266" y="606" width="222" height="50" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="377" y="627.9" font-size="13" font-weight="650" fill="#0b0b0b" text-anchor="middle">HPA controller</text>
+<text x="377" y="645.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="middle">replicas = ceil(Σ metric ÷ target)</text>
+<rect x="522" y="496" width="250" height="176" rx="12" fill="#f2f0fa" stroke="#d6d1ef" stroke-width="1.2"/>
+<text x="536" y="517" font-size="12.5" text-anchor="start"><tspan font-weight="650" fill="#0b0b0b">namespace: monitoring</tspan></text>
+<rect x="536" y="532" width="222" height="50" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="647" y="553.9" font-size="13" font-weight="650" fill="#0b0b0b" text-anchor="middle">Prometheus</text>
+<text x="647" y="571.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="middle">TSDB · scrape mỗi 5 s</text>
+<rect x="536" y="606" width="222" height="50" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="647" y="627.9" font-size="13" font-weight="650" fill="#0b0b0b" text-anchor="middle">Grafana</text>
+<text x="647" y="645.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="middle">dashboard · phân tích</text>
+<rect x="792" y="496" width="240" height="176" rx="12" fill="#edf6ed" stroke="#c4dfc4" stroke-width="1.2"/>
+<text x="806" y="517" font-size="12.5" text-anchor="start"><tspan font-weight="650" fill="#0b0b0b">NVIDIA GPU Operator</tspan></text>
+<rect x="806" y="532" width="212" height="50" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="912" y="553.9" font-size="13" font-weight="650" fill="#0b0b0b" text-anchor="middle">Device plugin</text>
+<text x="912" y="571.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="middle">cấp phát nvidia.com/gpu</text>
+<rect x="806" y="606" width="212" height="50" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="912" y="627.9" font-size="13" font-weight="650" fill="#0b0b0b" text-anchor="middle">DCGM exporter</text>
+<text x="912" y="645.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="middle">GPU util · VRAM · SM active</text>
+<rect x="32" y="262" width="176" height="78" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="120" y="289.7" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="middle">Máy tạo tải</text>
+<text x="120" y="307.4" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="middle">open-loop · streaming</text>
+<text x="120" y="324.1" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="middle">VM cùng region</text>
+<rect x="1084" y="120" width="168" height="60" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="1168" y="146.9" font-size="13" font-weight="650" fill="#0b0b0b" text-anchor="middle">Hugging Face Hub</text>
+<text x="1168" y="164.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="middle">tải weights lần đầu</text>
+<rect x="1084" y="341" width="168" height="60" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="1168" y="367.9" font-size="13" font-weight="650" fill="#0b0b0b" text-anchor="middle">Container registry</text>
+<text x="1168" y="385.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="middle">image vllm-openai</text>
+<path d="M208,301 L272,301" fill="none" stroke="#2a78d6" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a2a78d6)"/>
+<path d="M412,301 L440,301" fill="none" stroke="#2a78d6" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a2a78d6)"/>
+<path d="M580,301 L590,301 Q598,301 598,293 L598,241 Q598,233 606,233 L628,233" fill="none" stroke="#2a78d6" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a2a78d6)"/>
+<path d="M580,301 L628,301" fill="none" stroke="#2a78d6" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a2a78d6)"/>
+<path d="M580,301 L590,301 Q598,301 598,309 L598,365 Q598,373 606,373 L628,373" fill="none" stroke="#2a78d6" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="6 5" marker-end="url(#a2a78d6)"/>
+<path d="M1084,150 L518,150 Q510,150 510,158 L510,172" fill="none" stroke="#52514e" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="3 4" marker-end="url(#a52514e)"/>
+<path d="M580,200 L612,200" fill="none" stroke="#52514e" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="3 4" marker-end="url(#a52514e)"/>
+<path d="M1084,371 L1012,371" fill="none" stroke="#52514e" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="3 4" marker-end="url(#a52514e)"/>
+<path d="M700,420 L700,532" fill="none" stroke="#4a3aa7" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="5 4" marker-end="url(#a4a3aa7)"/>
+<rect x="703" y="474" width="130.2" height="18" rx="4" fill="#fbfbfa"/>
+<text x="708" y="486" font-size="11" font-weight="400" fill="#52514e" text-anchor="start">scrape /metrics mỗi 5 s</text>
+<path d="M806,631 L790,631 Q782,631 782,623 L782,565 Q782,557 774,557 L758,557" fill="none" stroke="#4a3aa7" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="5 4" marker-end="url(#a4a3aa7)"/>
+<path d="M647,582 L647,606" fill="none" stroke="#52514e" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
+<path d="M488,557 L536,557" fill="none" stroke="#eb6834" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#aeb6834)"/>
+<path d="M377,582 L377,606" fill="none" stroke="#eb6834" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#aeb6834)"/>
+<path d="M266,631 L250,631 Q242,631 242,623 L242,484 Q242,476 250,476 L642,476 Q650,476 650,468 L650,420" fill="none" stroke="#eb6834" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#aeb6834)"/>
+<text x="446" y="470" font-size="11" font-weight="400" fill="#52514e" text-anchor="middle">cập nhật spec.replicas</text>
+</svg>

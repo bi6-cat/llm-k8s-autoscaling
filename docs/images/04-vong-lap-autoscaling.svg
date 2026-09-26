@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="540" viewBox="0 0 1240 540" role="img" aria-label="Vòng lặp autoscaling gồm pha phát hiện (metric, Prometheus, KEDA, HPA) và pha thực thi (Deployment, Scheduler, Kubelet, Readiness); cold start chiếm phần lớn độ trễ" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+<title>Vòng lặp autoscaling gồm pha phát hiện (metric, Prometheus, KEDA, HPA) và pha thực thi (Deployment, Scheduler, Kubelet, Readiness); cold start chiếm phần lớn độ trễ</title>
+<defs><marker id="a4a3aa7" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path d="M0,1 L10,5 L0,9 z" fill="#4a3aa7"/></marker><marker id="aeb6834" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path d="M0,1 L10,5 L0,9 z" fill="#eb6834"/></marker><marker id="a2a78d6" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path d="M0,1 L10,5 L0,9 z" fill="#2a78d6"/></marker></defs>
+<rect x="0.5" y="0.5" width="1239" height="539" rx="14" fill="#fcfcfb" stroke="#e4e3de"/>
+<text x="32" y="38" font-size="19" font-weight="700" fill="#0b0b0b" text-anchor="start">Vòng lặp autoscaling và nơi phát sinh độ trễ</text>
+<text x="32" y="61" font-size="13" font-weight="400" fill="#52514e" text-anchor="start">Thời gian phản ứng = độ trễ phát hiện + độ trễ khởi động pod (cold start)</text>
+<rect x="32" y="86" width="1176" height="176" rx="12" fill="#f2f0fa" stroke="#d6d1ef" stroke-width="1.2"/>
+<text x="76" y="107" font-size="12.5" text-anchor="start"><tspan font-weight="650" fill="#0b0b0b">PHA PHÁT HIỆN</tspan><tspan font-weight="400" fill="#52514e">  tổng ~10–30 s (ước lượng)</tspan></text>
+<rect x="32" y="318" width="1176" height="190" rx="12" fill="#fdf3ee" stroke="#f3cdb9" stroke-width="1.2"/>
+<text x="76" y="339" font-size="12.5" text-anchor="start"><tspan font-weight="650" fill="#0b0b0b">PHA THỰC THI · cold start</tspan><tspan font-weight="400" fill="#52514e">  ~1–5 phút nếu chưa tối ưu (ước lượng)</tspan></text>
+<rect x="76" y="128" width="250" height="112" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<circle cx="100" cy="153" r="12" fill="#4a3aa7"/>
+<text x="100" y="157.5" font-size="12.5" font-weight="700" fill="#ffffff" text-anchor="middle">1</text>
+<text x="120" y="158" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">vLLM xuất metric</text>
+<text x="92" y="184" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">/metrics trên mỗi pod:</text>
+<text x="92" y="201.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">num_requests_running/waiting</text>
+<text x="92" y="219" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">kv_cache_usage_perc</text>
+<rect x="360" y="128" width="250" height="112" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<circle cx="384" cy="153" r="12" fill="#4a3aa7"/>
+<text x="384" y="157.5" font-size="12.5" font-weight="700" fill="#ffffff" text-anchor="middle">2</text>
+<text x="404" y="158" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">Prometheus scrape</text>
+<text x="376" y="184" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">chu kỳ scrape 5 s</text>
+<text x="376" y="201.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">(mặc định 30 s là quá chậm)</text>
+<text x="376" y="219" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">lưu chuỗi thời gian</text>
+<rect x="644" y="128" width="250" height="112" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<circle cx="668" cy="153" r="12" fill="#4a3aa7"/>
+<text x="668" y="157.5" font-size="12.5" font-weight="700" fill="#ffffff" text-anchor="middle">3</text>
+<text x="688" y="158" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">KEDA truy vấn</text>
+<text x="660" y="184" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">pollingInterval 5 s</text>
+<text x="660" y="201.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">PromQL: sum(metric) mọi pod</text>
+<text x="660" y="219" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">→ external metrics API</text>
+<rect x="928" y="128" width="250" height="112" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<circle cx="952" cy="153" r="12" fill="#4a3aa7"/>
+<text x="952" y="157.5" font-size="12.5" font-weight="700" fill="#ffffff" text-anchor="middle">4</text>
+<text x="972" y="158" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">HPA tính replicas</text>
+<text x="944" y="184" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">đồng bộ mỗi 15 s</text>
+<text x="944" y="201.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">ceil(Σ metric ÷ target)</text>
+<text x="944" y="219" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">stabilization · rate limit</text>
+<rect x="928" y="356" width="250" height="128" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<circle cx="952" cy="381" r="12" fill="#eb6834"/>
+<text x="952" y="385.5" font-size="12.5" font-weight="700" fill="#ffffff" text-anchor="middle">5</text>
+<text x="972" y="386" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">Deployment cập nhật</text>
+<text x="944" y="412" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">spec.replicas tăng</text>
+<text x="944" y="429.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">ReplicaSet tạo pod mới</text>
+<text x="944" y="447" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">pod ở trạng thái Pending</text>
+<rect x="644" y="356" width="250" height="128" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<circle cx="668" cy="381" r="12" fill="#eb6834"/>
+<text x="668" y="385.5" font-size="12.5" font-weight="700" fill="#ffffff" text-anchor="middle">6</text>
+<text x="688" y="386" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">Scheduler gán node</text>
+<text x="660" y="412" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">tìm node còn GPU trống</text>
+<text x="660" y="429.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">hết GPU → Pending mãi</text>
+<text x="660" y="447" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">(thêm node: ngoài phạm vi)</text>
+<rect x="360" y="356" width="250" height="128" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<circle cx="384" cy="381" r="12" fill="#eb6834"/>
+<text x="384" y="385.5" font-size="12.5" font-weight="700" fill="#ffffff" text-anchor="middle">7</text>
+<text x="404" y="386" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">Kubelet khởi động</text>
+<text x="376" y="412" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">pull image vLLM (~10 GB)</text>
+<text x="376" y="429.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">nạp model 7–8B (~15 GB)</text>
+<text x="376" y="447" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">torch.compile · CUDA graph</text>
+<rect x="76" y="356" width="250" height="128" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<circle cx="100" cy="381" r="12" fill="#eb6834"/>
+<text x="100" y="385.5" font-size="12.5" font-weight="700" fill="#ffffff" text-anchor="middle">8</text>
+<text x="120" y="386" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">Readiness probe OK</text>
+<text x="92" y="412" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">/health trả về 200</text>
+<text x="92" y="429.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">pod được thêm vào</text>
+<text x="92" y="447" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">Endpoints của Service</text>
+<path d="M326,184 L360,184" fill="none" stroke="#4a3aa7" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a4a3aa7)"/>
+<path d="M928,420 L894,420" fill="none" stroke="#eb6834" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#aeb6834)"/>
+<path d="M610,184 L644,184" fill="none" stroke="#4a3aa7" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a4a3aa7)"/>
+<path d="M644,420 L610,420" fill="none" stroke="#eb6834" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#aeb6834)"/>
+<path d="M894,184 L928,184" fill="none" stroke="#4a3aa7" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a4a3aa7)"/>
+<path d="M360,420 L326,420" fill="none" stroke="#eb6834" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#aeb6834)"/>
+<path d="M1053,240 L1053,356" fill="none" stroke="#eb6834" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#aeb6834)"/>
+<rect x="1058" y="290" width="97.6" height="18" rx="4" fill="#fcfcfb"/>
+<text x="1063" y="302" font-size="11" font-weight="400" fill="#0b0b0b" text-anchor="start">desired &gt; hiện tại</text>
+<path d="M76,430 L62,430 Q54,430 54,422 L54,192 Q54,184 62,184 L76,184" fill="none" stroke="#2a78d6" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a2a78d6)"/>
+<rect x="65" y="282" width="112.1" height="18" rx="4" fill="#fcfcfb"/>
+<text x="70" y="294" font-size="11" font-weight="400" fill="#0b0b0b" text-anchor="start">pod mới nhận traffic</text>
+<rect x="65" y="300" width="127.3" height="18" rx="4" fill="#fcfcfb"/>
+<text x="70" y="312" font-size="11" font-weight="400" fill="#0b0b0b" text-anchor="start">→ tải trên mỗi pod giảm</text>
+</svg>

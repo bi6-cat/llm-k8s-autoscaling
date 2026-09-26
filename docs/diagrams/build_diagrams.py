@@ -1,0 +1,820 @@
+#!/usr/bin/env python3
+"""Sinh toàn bộ sơ đồ SVG cho tài liệu mô tả đồ án (chỉ dùng thư viện chuẩn).
+
+Chạy:   python3 docs/diagrams/build_diagrams.py
+Kết quả: docs/images/*.svg  (xuất PNG: docs/diagrams/export_png.sh)
+"""
+import math
+import os
+from html import escape
+
+OUT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "images"))
+
+FONT = "system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+MONO = "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+
+# Bảng màu tham chiếu (categorical đã kiểm định CVD) + mực chữ + nền
+SURFACE, CARD_BORDER = "#fcfcfb", "#e4e3de"
+INK, INK2, MUTED = "#0b0b0b", "#52514e", "#898781"
+GRID, AXIS = "#e1e0d9", "#c3c2b7"
+BLUE, ORANGE, AQUA, YELLOW = "#2a78d6", "#eb6834", "#1baf7a", "#eda100"
+MAGENTA, GREEN, VIOLET = "#e87ba4", "#008300", "#4a3aa7"
+GOOD, WARN, CRIT = "#0ca30c", "#fab219", "#d03b3b"
+BLUE_T, ORANGE_T, VIOLET_T = "#eef4fc", "#fdf3ee", "#f2f0fa"
+GREEN_T, GRAY_T, YELLOW_T = "#edf6ed", "#f4f3ef", "#fdf3dc"
+WHITE = "#ffffff"
+
+OWNER = {"Trình": BLUE, "Quang": ORANGE, "Cả nhóm": AQUA}
+
+
+def f(v):
+    return f"{round(v, 1):g}"
+
+
+def text_width(s, size, weight=400):
+    w = 0.0
+    for ch in s:
+        if ch in "il.,:;'|!()[]{}·•/ ":
+            w += 0.30
+        elif ch in "fjrt-":
+            w += 0.38
+        elif ch in "mwMW%@":
+            w += 0.86
+        elif ch.isupper():
+            w += 0.66
+        elif ch.isdigit():
+            w += 0.57
+        else:
+            w += 0.54
+    return w * size * (1.06 if weight >= 600 else 1.0)
+
+
+def rounded_path(pts, r=8):
+    d = f"M{f(pts[0][0])},{f(pts[0][1])}"
+    for i in range(1, len(pts) - 1):
+        (x0, y0), (x1, y1), (x2, y2) = pts[i - 1], pts[i], pts[i + 1]
+        l1, l2 = math.hypot(x1 - x0, y1 - y0), math.hypot(x2 - x1, y2 - y1)
+        rr = min(r, l1 / 2, l2 / 2)
+        ax, ay = x1 - (x1 - x0) / l1 * rr, y1 - (y1 - y0) / l1 * rr
+        bx, by = x1 + (x2 - x1) / l2 * rr, y1 + (y2 - y1) / l2 * rr
+        d += f" L{f(ax)},{f(ay)} Q{f(x1)},{f(y1)} {f(bx)},{f(by)}"
+    d += f" L{f(pts[-1][0])},{f(pts[-1][1])}"
+    return d
+
+
+class Svg:
+    def __init__(self, w, h, label):
+        self.w, self.h, self.aria = w, h, label
+        self.defs, self.body, self._ids = [], [], set()
+
+    # ---------- nguyên tố cơ bản ----------
+    def add(self, s):
+        self.body.append(s)
+
+    def marker(self, color):
+        mid = "a" + color.strip("#")
+        if mid not in self._ids:
+            self._ids.add(mid)
+            self.defs.append(
+                f'<marker id="{mid}" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" '
+                f'markerWidth="10" markerHeight="10" orient="auto-start-reverse">'
+                f'<path d="M0,1 L10,5 L0,9 z" fill="{color}"/></marker>')
+        return mid
+
+    def hatch(self, color=MUTED):
+        pid = "h" + color.strip("#")
+        if pid not in self._ids:
+            self._ids.add(pid)
+            self.defs.append(
+                f'<pattern id="{pid}" width="6" height="6" patternUnits="userSpaceOnUse" '
+                f'patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" '
+                f'stroke="{color}" stroke-width="1.3"/></pattern>')
+        return f"url(#{pid})"
+
+    def rect(self, x, y, w, h, fill=WHITE, stroke=AXIS, sw=1.2, rx=10, dash=None, opacity=None):
+        a = f' stroke-dasharray="{dash}"' if dash else ""
+        o = f' fill-opacity="{opacity}"' if opacity is not None else ""
+        st = f' stroke="{stroke}" stroke-width="{sw}"' if stroke else ""
+        self.add(f'<rect x="{f(x)}" y="{f(y)}" width="{f(w)}" height="{f(h)}" rx="{rx}" fill="{fill}"{o}{st}{a}/>')
+
+    def line(self, x1, y1, x2, y2, stroke=GRID, sw=1, dash=None):
+        a = f' stroke-dasharray="{dash}"' if dash else ""
+        self.add(f'<line x1="{f(x1)}" y1="{f(y1)}" x2="{f(x2)}" y2="{f(y2)}" stroke="{stroke}" stroke-width="{sw}"{a}/>')
+
+    def text(self, x, y, s, size=13, weight=400, fill=INK, anchor="start", family=None):
+        fam = f' font-family="{family}"' if family else ""
+        self.add(f'<text x="{f(x)}" y="{f(y)}" font-size="{size}" font-weight="{weight}" fill="{fill}" '
+                 f'text-anchor="{anchor}"{fam}>{escape(s)}</text>')
+
+    def rich(self, x, y, parts, size=13, anchor="start"):
+        """parts: [(chuỗi, weight, màu)] nối liền trên một dòng."""
+        spans = "".join(f'<tspan font-weight="{w}" fill="{c}">{escape(t)}</tspan>' for t, w, c in parts)
+        self.add(f'<text x="{f(x)}" y="{f(y)}" font-size="{size}" text-anchor="{anchor}">{spans}</text>')
+
+    def path(self, d, stroke=INK2, sw=1.6, fill="none", dash=None, head=True, opacity=None):
+        a = f' stroke-dasharray="{dash}"' if dash else ""
+        m = f' marker-end="url(#{self.marker(stroke)})"' if head else ""
+        o = f' fill-opacity="{opacity}"' if opacity is not None else ""
+        self.add(f'<path d="{d}" fill="{fill}"{o} stroke="{stroke}" stroke-width="{sw}" '
+                 f'stroke-linejoin="round" stroke-linecap="round"{a}{m}/>')
+
+    def arrow(self, pts, color=INK2, sw=1.6, dash=None, head=True, r=8):
+        self.path(rounded_path(pts, r), stroke=color, sw=sw, dash=dash, head=head)
+
+    def polygon(self, pts, fill, opacity=None, stroke=None, sw=1):
+        o = f' fill-opacity="{opacity}"' if opacity is not None else ""
+        st = f' stroke="{stroke}" stroke-width="{sw}"' if stroke else ""
+        p = " ".join(f"{f(x)},{f(y)}" for x, y in pts)
+        self.add(f'<polygon points="{p}" fill="{fill}"{o}{st}/>')
+
+    def polyline(self, pts, stroke, sw=2, dash=None):
+        a = f' stroke-dasharray="{dash}"' if dash else ""
+        p = " ".join(f"{f(x)},{f(y)}" for x, y in pts)
+        self.add(f'<polyline points="{p}" fill="none" stroke="{stroke}" stroke-width="{sw}" '
+                 f'stroke-linejoin="round" stroke-linecap="round"{a}/>')
+
+    # ---------- thành phần ghép ----------
+    def label(self, x, y, s, size=11, fill=INK2, anchor="middle", bg=SURFACE, weight=400):
+        w = text_width(s, size, weight) + 10
+        x0 = x - w / 2 if anchor == "middle" else (x - 5 if anchor == "start" else x - w + 5)
+        self.rect(x0, y - size - 1, w, size + 7, fill=bg, stroke=None, rx=4)
+        self.text(x, y, s, size=size, fill=fill, anchor=anchor, weight=weight)
+
+    def header(self, title, subtitle=None):
+        self.text(32, 38, title, size=19, weight=700)
+        if subtitle:
+            self.text(32, 61, subtitle, size=13, fill=INK2)
+
+    def box(self, x, y, w, h, title, lines=(), fill=WHITE, stroke=AXIS, dash=None, sw=1.2,
+            tsize=13.5, lsize=11.5, rx=10, align="middle"):
+        self.rect(x, y, w, h, fill=fill, stroke=stroke, sw=sw, dash=dash, rx=rx)
+        block = tsize * 1.1 + len(lines) * lsize * 1.45
+        ty = y + (h - block) / 2 + tsize * 0.95
+        tx = x + w / 2 if align == "middle" else x + 14
+        self.text(tx, ty, title, size=tsize, weight=650, anchor=align if align == "middle" else "start")
+        for i, ln in enumerate(lines):
+            self.text(tx, ty + (i + 1) * lsize * 1.45 + 1, ln, size=lsize, fill=INK2,
+                      anchor=align if align == "middle" else "start")
+
+    def group(self, x, y, w, h, title, sub=None, fill=GRAY_T, stroke=AXIS, dash=None, tsize=12.5, tx=14):
+        self.rect(x, y, w, h, fill=fill, stroke=stroke, dash=dash, rx=12)
+        parts = [(title, 650, INK)]
+        if sub:
+            parts.append(("  " + sub, 400, INK2))
+        self.rich(x + tx, y + 21, parts, size=tsize)
+
+    def step_box(self, x, y, w, h, num, title, lines, accent, owner=None, fill=WHITE, dash=None):
+        self.rect(x, y, w, h, fill=fill, stroke=AXIS, dash=dash, rx=10)
+        self.add(f'<circle cx="{f(x + 24)}" cy="{f(y + 25)}" r="12" fill="{accent}"/>')
+        self.text(x + 24, y + 29.5, str(num), size=12.5, weight=700, fill=WHITE, anchor="middle")
+        self.text(x + 44, y + 30, title, size=13.5, weight=650)
+        for i, ln in enumerate(lines):
+            self.text(x + 16, y + 56 + i * 17.5, ln, size=11.5, fill=INK2)
+        if owner:
+            self.owner_pill(x + w - 12, y + 16, owner)
+
+    def owner_pill(self, x_right, y, owner):
+        w = text_width(owner, 11, 600) + 26
+        self.rect(x_right - w, y, w, 19, fill=WHITE, stroke=AXIS, sw=1, rx=9.5)
+        self.add(f'<circle cx="{f(x_right - w + 10)}" cy="{f(y + 9.5)}" r="4" fill="{OWNER[owner]}"/>')
+        self.text(x_right - w + 18, y + 13.5, owner, size=11, weight=600, fill=INK2)
+
+    def status_pill(self, x, y, s, color, tint):
+        w = text_width(s, 10.5, 600) + 22
+        self.rect(x, y, w, 18, fill=tint, stroke=color, sw=1, rx=9)
+        self.add(f'<circle cx="{f(x + 9)}" cy="{f(y + 9)}" r="3.5" fill="{color}"/>')
+        self.text(x + 16, y + 13, s, size=10.5, weight=600, fill=INK)
+        return w
+
+    def gpu_chip(self, x, y, w, h, s):
+        for i in range(4):
+            px = x + (i + 1) * w / 5
+            self.line(px, y - 4, px, y, stroke=GREEN, sw=1.5)
+            self.line(px, y + h, px, y + h + 4, stroke=GREEN, sw=1.5)
+        self.rect(x, y, w, h, fill=GREEN_T, stroke=GREEN, sw=1.4, rx=5)
+        self.text(x + w / 2, y + h / 2 + 4.5, s, size=11.5, weight=650, fill=INK, anchor="middle")
+
+    def legend_line(self, x, y, s, color, dash=None, sw=2):
+        a = f' stroke-dasharray="{dash}"' if dash else ""
+        self.add(f'<line x1="{f(x)}" y1="{f(y)}" x2="{f(x + 26)}" y2="{f(y)}" stroke="{color}" '
+                 f'stroke-width="{sw}"{a} stroke-linecap="round"/>')
+        self.text(x + 33, y + 4, s, size=12, fill=INK2)
+        return x + 33 + text_width(s, 12) + 26
+
+    def legend_swatch(self, x, y, s, fill, stroke=None, opacity=None):
+        self.rect(x, y - 6, 14, 12, fill=fill, stroke=stroke, sw=1, rx=3, opacity=opacity)
+        self.text(x + 20, y + 4, s, size=12, fill=INK2)
+        return x + 20 + text_width(s, 12) + 24
+
+    def save(self, name):
+        os.makedirs(OUT, exist_ok=True)
+        svg = (
+            f'<svg xmlns="http://www.w3.org/2000/svg" width="{self.w}" height="{self.h}" '
+            f'viewBox="0 0 {self.w} {self.h}" role="img" aria-label="{escape(self.aria)}" '
+            f'font-family="{FONT}">\n<title>{escape(self.aria)}</title>\n'
+            f'<defs>{"".join(self.defs)}</defs>\n'
+            f'<rect x="0.5" y="0.5" width="{self.w - 1}" height="{self.h - 1}" rx="14" '
+            f'fill="{SURFACE}" stroke="{CARD_BORDER}"/>\n' + "\n".join(self.body) + "\n</svg>\n")
+        with open(os.path.join(OUT, name), "w", encoding="utf-8") as fh:
+            fh.write(svg)
+        print("wrote", name)
+
+
+# ======================================================================
+# Hình 1 — Bài toán trade-off
+# ======================================================================
+def smooth(x):
+    x = max(0.0, min(1.0, x))
+    return x * x * (3 - 2 * x)
+
+
+def demo_load(t):
+    return 0.6 + 2.6 * smooth((t - 14) / 3) - 1.8 * smooth((t - 38) / 5)
+
+
+def demo_auto_cap(t):
+    steps = [(0, 1), (18.5, 2), (19.5, 3), (20.5, 4), (48, 3), (49.5, 2)]
+    r = 1
+    for t0, n in steps:
+        if t >= t0:
+            r = n
+    return r
+
+
+def fig_tradeoff():
+    W, H = 1200, 420
+    s = Svg(W, H, "Ba cách cấp phát GPU cho cùng một tải thay đổi: Static-min quá tải, "
+                  "Static-max lãng phí, Autoscaling bám theo tải nhưng có độ trễ scale-up")
+    s.header("Bài toán: hiệu năng phục vụ ↔ hiệu quả sử dụng GPU",
+             "Cùng một tải thay đổi theo thời gian — ba cách cấp phát cho ba kết quả khác nhau")
+    x = 32
+    x = s.legend_swatch(x, 94, "Tải (nhu cầu)", "#dcdbd5", stroke=INK2)
+    x = s.legend_line(x, 94, "Năng lực phục vụ (số replica × C)", BLUE, sw=2.4)
+    x = s.legend_swatch(x, 94, "Thiếu năng lực → vi phạm SLO", CRIT, opacity=0.35)
+    s.legend_swatch(x, 94, "Dư năng lực → lãng phí GPU", s.hatch(), stroke=MUTED)
+
+    panels = [
+        ("Static-min · cố định 1 replica", lambda t: 1.0,
+         [("SLO:", "vi phạm nặng khi tải cao"), ("GPU-giờ:", "thấp nhất")]),
+        ("Static-max · cố định 4 replica", lambda t: 4.0,
+         [("SLO:", "đạt trong mọi pha"), ("GPU-giờ:", "cao nhất (cấp theo đỉnh)")]),
+        ("Autoscaling · 1–4 replica", demo_auto_cap,
+         [("SLO:", "vi phạm ngắn trong lúc scale-up"), ("GPU-giờ:", "bám theo tải")]),
+    ]
+    pw, ph, top = 318, 196, 140
+    ymax = 4.5
+    ts = [i * 0.05 for i in range(0, 1201)]
+    for i, (title, cap, verdict) in enumerate(panels):
+        x0 = 78 + i * 382
+        y1 = top + ph
+        X = lambda t: x0 + t / 60 * pw
+        Y = lambda v: y1 - v / ymax * ph
+        s.text(x0, top - 12, title, size=13.5, weight=650)
+        for v in range(1, 5):
+            s.line(x0, Y(v), x0 + pw, Y(v), stroke=GRID)
+        for v in range(0, 5):
+            s.text(x0 - 8, Y(v) + 4, "0" if v == 0 else f"{v}C", size=11, fill=MUTED, anchor="end")
+        for t in (0, 15, 30, 45, 60):
+            s.text(X(t), y1 + 17, f"{t}", size=11, fill=MUTED, anchor="middle")
+        s.text(x0 + pw, y1 + 33, "phút", size=11, fill=MUTED, anchor="end")
+        load = [(X(t), Y(demo_load(t))) for t in ts]
+        s.polygon([(X(0), y1)] + load + [(X(60), y1)], fill="#dcdbd5", opacity=0.75)
+        s.polyline(load, INK2, sw=1.5)
+        upper_short = [(X(t), Y(max(demo_load(t), cap(t)))) for t in ts]
+        lower_cap = [(X(t), Y(cap(t))) for t in reversed(ts)]
+        s.polygon(upper_short + lower_cap, fill=CRIT, opacity=0.35)
+        upper_cap = [(X(t), Y(cap(t))) for t in ts]
+        lower_waste = [(X(t), Y(min(demo_load(t), cap(t)))) for t in reversed(ts)]
+        s.polygon(upper_cap + lower_waste, fill=s.hatch())
+        s.polyline([(X(t), Y(cap(t))) for t in ts], BLUE, sw=2.4)
+        s.line(x0, y1, x0 + pw, y1, stroke=AXIS, sw=1)
+        if i == 0:
+            s.label(X(27), Y(2.2), "quá tải", size=11.5, fill=INK, bg="#f4c9c4")
+        elif i == 1:
+            s.label(X(8), Y(2.6), "lãng phí", size=11.5, fill=INK)
+        else:
+            s.arrow([(X(8.5), Y(2.9)), (X(15.2), Y(2.2))], color=INK2, sw=1.2, r=0)
+            s.text(X(8.2), Y(2.9) - 5, "trễ scale-up", size=11.5, fill=INK, anchor="middle")
+            s.arrow([(X(51), Y(2.75)), (X(48.4), Y(3.4))], color=INK2, sw=1.2, r=0)
+            s.label(X(60), Y(2.45), "chờ ổn định rồi giảm", size=11.5, fill=INK, anchor="end")
+        for j, (k, v) in enumerate(verdict):
+            s.rich(x0, y1 + 56 + j * 18, [(k + " ", 650, INK), (v, 400, INK2)], size=12)
+    s.save("01-bai-toan-trade-off.svg")
+
+
+# ======================================================================
+# Hình 2 — Kiến trúc tổng thể
+# ======================================================================
+def fig_architecture():
+    W, H = 1280, 730
+    s = Svg(W, H, "Kiến trúc tổng thể: máy tạo tải gửi request qua Ingress và Service tới các pod vLLM "
+                  "(mỗi pod 1 GPU); Prometheus thu metric; KEDA và HPA điều chỉnh số replica")
+    s.header("Kiến trúc tổng thể nền tảng LLM Serving có Autoscaling",
+             "Một Deployment vLLM, mỗi pod dùng 1 GPU; KEDA + HPA điều chỉnh số replica theo metric của chính vLLM")
+    x = 32
+    x = s.legend_line(x, 86, "Luồng request / token", BLUE, sw=2.2)
+    x = s.legend_line(x, 86, "Thu thập metric", VIOLET, dash="5 4")
+    x = s.legend_line(x, 86, "Điều khiển scale", ORANGE, sw=2.2)
+    s.legend_line(x, 86, "Nạp image / model", INK2, dash="3 4", sw=1.5)
+
+    # cụm Kubernetes
+    s.rect(232, 104, 820, 596, fill="#fbfbfa", stroke=INK2, sw=1.4, rx=16)
+    s.rich(250, 126, [("Kubernetes cluster", 700, INK), ("  k3s / RKE2", 400, INK2)], size=13.5)
+
+    # namespace llm-serving
+    s.group(252, 138, 780, 318, "namespace: llm-serving", fill=BLUE_T, stroke="#c9dcf3")
+    s.box(272, 269, 140, 64, "Ingress", ["NGINX / Envoy"])
+    s.box(440, 269, 140, 64, "Service vllm", ["ClusterIP · chia tải"])
+    s.box(440, 172, 140, 56, "PVC model-cache", ["weights · mount RO"], tsize=12.5)
+
+    s.rect(612, 168, 400, 252, fill=ORANGE_T, stroke=ORANGE, sw=1.4, dash="6 4", rx=12)
+    s.rich(628, 190, [("Deployment vllm", 650, INK), ("  replicas 1…N (N = 4)", 400, INK2)], size=12.5)
+    pods = [("vLLM pod 1", "Ready", "API :8000 · /metrics"),
+            ("vLLM pod 2", "Ready", "API :8000 · /metrics"),
+            ("vLLM pod N", "Đang khởi động", "chưa nhận traffic tới khi Ready")]
+    for k, (name, st, sub) in enumerate(pods):
+        py = 204 + k * 70
+        s.rect(628, py, 262, 58, fill=WHITE, stroke=AXIS if k < 2 else INK2, dash=None if k < 2 else "5 4", rx=9)
+        s.text(642, py + 24, name, size=13.5, weight=650)
+        if k < 2:
+            s.status_pill(642 + text_width(name, 13.5, 650) + 10, py + 10, st, GOOD, GREEN_T)
+        else:
+            s.status_pill(642 + text_width(name, 13.5, 650) + 10, py + 10, st, WARN, YELLOW_T)
+        s.text(642, py + 45, sub, size=11.5, fill=INK2)
+        s.line(890, py + 29, 906, py + 29, stroke=GREEN, sw=1.5)
+        s.gpu_chip(906, py + 10, 90, 38, f"GPU {k if k < 2 else 'N'}")
+
+    # dải dưới: keda / monitoring / gpu-operator
+    s.group(252, 496, 250, 176, "namespace: keda", fill=ORANGE_T, stroke="#f3cdb9")
+    s.box(266, 532, 222, 50, "KEDA metrics server", ["chạy PromQL, trả external metric"], tsize=13)
+    s.box(266, 606, 222, 50, "HPA controller", ["replicas = ceil(Σ metric ÷ target)"], tsize=13)
+    s.group(522, 496, 250, 176, "namespace: monitoring", fill=VIOLET_T, stroke="#d6d1ef")
+    s.box(536, 532, 222, 50, "Prometheus", ["TSDB · scrape mỗi 5 s"], tsize=13)
+    s.box(536, 606, 222, 50, "Grafana", ["dashboard · phân tích"], tsize=13)
+    s.group(792, 496, 240, 176, "NVIDIA GPU Operator", fill=GREEN_T, stroke="#c4dfc4")
+    s.box(806, 532, 212, 50, "Device plugin", ["cấp phát nvidia.com/gpu"], tsize=13)
+    s.box(806, 606, 212, 50, "DCGM exporter", ["GPU util · VRAM · SM active"], tsize=13)
+
+    # ngoài cụm
+    s.box(32, 262, 176, 78, "Máy tạo tải", ["open-loop · streaming", "VM cùng region"])
+    s.box(1084, 120, 168, 60, "Hugging Face Hub", ["tải weights lần đầu"], tsize=13)
+    s.box(1084, 341, 168, 60, "Container registry", ["image vllm-openai"], tsize=13)
+
+    # luồng request
+    s.arrow([(208, 301), (272, 301)], BLUE, sw=2.2)
+    s.arrow([(412, 301), (440, 301)], BLUE, sw=2.2)
+    s.arrow([(580, 301), (598, 301), (598, 233), (628, 233)], BLUE, sw=2.2)
+    s.arrow([(580, 301), (628, 301)], BLUE, sw=2.2)
+    s.arrow([(580, 301), (598, 301), (598, 373), (628, 373)], BLUE, sw=2.2, dash="6 5")
+    # nạp image / model
+    s.arrow([(1084, 150), (510, 150), (510, 172)], INK2, sw=1.5, dash="3 4")
+    s.arrow([(580, 200), (612, 200)], INK2, sw=1.5, dash="3 4")
+    s.arrow([(1084, 371), (1012, 371)], INK2, sw=1.5, dash="3 4")
+    # metric
+    s.arrow([(700, 420), (700, 532)], VIOLET, sw=1.6, dash="5 4")
+    s.label(708, 486, "scrape /metrics mỗi 5 s", anchor="start", bg="#fbfbfa")
+    s.arrow([(806, 631), (782, 631), (782, 557), (758, 557)], VIOLET, sw=1.6, dash="5 4")
+    s.arrow([(647, 582), (647, 606)], INK2, sw=1.3)
+    # điều khiển scale
+    s.arrow([(488, 557), (536, 557)], ORANGE, sw=2)
+    s.arrow([(377, 582), (377, 606)], ORANGE, sw=2)
+    s.arrow([(266, 631), (242, 631), (242, 476), (650, 476), (650, 420)], ORANGE, sw=2.2)
+    s.text(446, 470, "cập nhật spec.replicas", size=11, fill=INK2, anchor="middle")
+    s.save("02-kien-truc-tong-the.svg")
+
+
+# ======================================================================
+# Hình 3 — Vòng đời request & metric độ trễ
+# ======================================================================
+def fig_request():
+    W, H = 1200, 470
+    s = Svg(W, H, "Vòng đời một request LLM: chờ trong hàng đợi, prefill, rồi decode từng token; "
+                  "TTFT tính đến token đầu, E2E tính đến token cuối")
+    s.header("Vòng đời một request LLM và các metric độ trễ",
+             "vLLM xử lý 2 pha: prefill (đọc prompt) rồi decode (sinh từng token); nhiều request được gộp chung batch")
+    lanes = [("Máy tạo tải", "đo phía client", 100), ("vLLM scheduler", "hàng đợi · waiting", 170),
+             ("vLLM engine · GPU", "đang chạy · running", 240)]
+    for name, sub, y in lanes:
+        s.rect(210, y, 960, 50, fill=GRAY_T, stroke=None, rx=8)
+        s.text(32, y + 22, name, size=13.5, weight=650)
+        s.text(32, y + 40, sub, size=11.5, fill=INK2)
+    t0 = 240
+    s.arrow([(t0, 138), (258, 182)], INK2, sw=1.4, r=0)
+    s.rect(262, 181, 158, 28, fill=YELLOW_T, stroke="#c98500", sw=1.2, rx=5)
+    s.text(341, 199.5, "chờ trong hàng đợi", size=11.5, fill=INK, anchor="middle")
+    s.arrow([(420, 209), (430, 250)], INK2, sw=1.4, r=0)
+    s.rect(432, 251, 108, 28, fill=BLUE_T, stroke=BLUE, sw=1.2, rx=5)
+    s.text(486, 269.5, "prefill", size=11.5, weight=600, fill=INK, anchor="middle")
+    ticks = [552]
+    for k in range(11):
+        bx = 546 + k * 44
+        s.rect(bx, 251, 36, 28, fill=VIOLET_T, stroke=VIOLET, sw=1.2, rx=5)
+        ticks.append(bx + 36 + 12)
+    s.text(784, 309, "decode — mỗi bước sinh 1 token, chạy chung batch với request khác (continuous batching)",
+           size=11.5, fill=INK2, anchor="middle")
+    for k, tx in enumerate(ticks):
+        s.rect(tx - 4, 116, 8, 18, fill=BLUE if k == 0 else VIOLET, stroke=None, rx=3)
+    s.arrow([(540, 251), (551, 138)], BLUE, sw=1.4, r=0)
+    s.arrow([(ticks[-1] - 12, 251), (ticks[-1] - 1, 138)], VIOLET, sw=1.4, r=0)
+    s.text(ticks[-1] + 10, 129, "token cuối", size=11, fill=INK2)
+    s.text(544, 129, "token đầu", size=11, fill=INK2, anchor="end")
+
+    def bracket(xa, xb, y, text_):
+        s.line(xa, y, xb, y, stroke=INK, sw=1.3)
+        s.line(xa, y - 6, xa, y + 6, stroke=INK, sw=1.3)
+        s.line(xb, y - 6, xb, y + 6, stroke=INK, sw=1.3)
+        s.text((xa + xb) / 2, y - 7, text_, size=12, weight=600, anchor="middle")
+
+    bracket(t0, 420, 350, "Queue time · chờ lập lịch")
+    bracket(t0, 552, 390, "TTFT · đến token đầu tiên")
+    bracket(t0, ticks[-1], 430, "E2E latency · toàn bộ phản hồi")
+    s.line(ticks[3], 94, ticks[4], 94, stroke=INK, sw=1.2)
+    s.line(ticks[3], 89, ticks[3], 99, stroke=INK, sw=1.2)
+    s.line(ticks[4], 89, ticks[4], 99, stroke=INK, sw=1.2)
+    s.text((ticks[3] + ticks[4]) / 2, 86, "ITL", size=12, weight=600, anchor="middle")
+    s.line(t0, 96, t0, 440, stroke=AXIS, sw=1, dash="3 3")
+    s.text(t0, 458, "gửi request", size=11, fill=INK2, anchor="middle")
+    s.text(1170, 458, "TPOT ≈ (E2E − TTFT) ÷ (số token − 1)", size=12, fill=INK2, anchor="end")
+    s.save("03-vong-doi-request.svg")
+
+
+# ======================================================================
+# Hình 4 — Vòng lặp autoscaling
+# ======================================================================
+def fig_loop():
+    W, H = 1240, 540
+    s = Svg(W, H, "Vòng lặp autoscaling gồm pha phát hiện (metric, Prometheus, KEDA, HPA) và pha thực thi "
+                  "(Deployment, Scheduler, Kubelet, Readiness); cold start chiếm phần lớn độ trễ")
+    s.header("Vòng lặp autoscaling và nơi phát sinh độ trễ",
+             "Thời gian phản ứng = độ trễ phát hiện + độ trễ khởi động pod (cold start)")
+    s.group(32, 86, 1176, 176, "PHA PHÁT HIỆN", "tổng ~10–30 s (ước lượng)", fill=VIOLET_T, stroke="#d6d1ef",
+            tx=44)
+    s.group(32, 318, 1176, 190, "PHA THỰC THI · cold start", "~1–5 phút nếu chưa tối ưu (ước lượng)",
+            fill=ORANGE_T, stroke="#f3cdb9", tx=44)
+    xs = [76, 360, 644, 928]
+    bw = 250
+    top = [
+        ("vLLM xuất metric", ["/metrics trên mỗi pod:", "num_requests_running/waiting", "kv_cache_usage_perc"]),
+        ("Prometheus scrape", ["chu kỳ scrape 5 s", "(mặc định 30 s là quá chậm)", "lưu chuỗi thời gian"]),
+        ("KEDA truy vấn", ["pollingInterval 5 s", "PromQL: sum(metric) mọi pod", "→ external metrics API"]),
+        ("HPA tính replicas", ["đồng bộ mỗi 15 s", "ceil(Σ metric ÷ target)", "stabilization · rate limit"]),
+    ]
+    bottom = [
+        ("Deployment cập nhật", ["spec.replicas tăng", "ReplicaSet tạo pod mới", "pod ở trạng thái Pending"]),
+        ("Scheduler gán node", ["tìm node còn GPU trống", "hết GPU → Pending mãi", "(thêm node: ngoài phạm vi)"]),
+        ("Kubelet khởi động", ["pull image vLLM (~10 GB)", "nạp model 7–8B (~15 GB)", "torch.compile · CUDA graph"]),
+        ("Readiness probe OK", ["/health trả về 200", "pod được thêm vào", "Endpoints của Service"]),
+    ]
+    for i, (t, ls) in enumerate(top):
+        s.step_box(xs[i], 128, bw, 112, i + 1, t, ls, VIOLET)
+    for i, (t, ls) in enumerate(bottom):
+        s.step_box(xs[3 - i], 356, bw, 128, i + 5, t, ls, ORANGE)
+    for i in range(3):
+        s.arrow([(xs[i] + bw, 184), (xs[i + 1], 184)], VIOLET, sw=1.8)
+        s.arrow([(xs[3 - i], 420), (xs[2 - i] + bw, 420)], ORANGE, sw=1.8)
+    s.arrow([(xs[3] + bw / 2, 240), (xs[3] + bw / 2, 356)], ORANGE, sw=1.8)
+    s.label(xs[3] + bw / 2 + 10, 302, "desired > hiện tại", anchor="start", bg=SURFACE, fill=INK)
+    s.arrow([(76, 430), (54, 430), (54, 184), (76, 184)], BLUE, sw=1.8)
+    s.label(70, 294, "pod mới nhận traffic", anchor="start", bg=SURFACE, fill=INK)
+    s.label(70, 312, "→ tải trên mỗi pod giảm", anchor="start", bg=SURFACE, fill=INK)
+    s.save("04-vong-lap-autoscaling.svg")
+
+
+# ======================================================================
+# Hình 5 — Phân rã cold start (minh hoạ)
+# ======================================================================
+def fig_coldstart():
+    W, H = 1120, 352
+    s = Svg(W, H, "Phân rã cold start minh hoạ: pull image và tải model chiếm phần lớn; "
+                  "cache model, pre-pull image và compile cache rút từ khoảng 5 phút xuống dưới 1 phút")
+    s.header("Phân rã thời gian cold start của một pod vLLM",
+             "Số liệu MINH HOẠ (model 7–8B, image ~10 GB) — sẽ được thay bằng kết quả đo thực tế trong đồ án")
+    phases = [("Scheduling", BLUE), ("Pull image", ORANGE), ("Tải model", AQUA),
+              ("Nạp weight → GPU", YELLOW), ("Compile · CUDA graph", MAGENTA), ("Probe → Ready", GREEN)]
+    x = 32
+    for name, c in phases:
+        x = s.legend_swatch(x, 96, name, c)
+    bars = [
+        ("Không tối ưu", "image + model tải từ Internet", [2, 90, 150, 25, 45, 10]),
+        ("Cache model trên PVC", "image vẫn phải pull", [2, 90, 0, 60, 45, 10]),
+        ("Tối ưu đầy đủ", "pre-pull · NVMe cục bộ · compile cache", [2, 0, 0, 20, 15, 6]),
+    ]
+    x0, scale, top = 320, 2.0, 138
+    for v in range(0, 351, 50):
+        gx = x0 + v * scale
+        s.line(gx, top - 12, gx, top + 3 * 64 - 20, stroke=GRID)
+        s.text(gx, top + 3 * 64 - 2, f"{v} s", size=11, fill=MUTED, anchor="middle")
+    for i, (name, sub, vals) in enumerate(bars):
+        y = top + i * 64
+        s.text(x0 - 16, y + 12, name, size=13, weight=650, anchor="end")
+        s.text(x0 - 16, y + 29, sub, size=11, fill=INK2, anchor="end")
+        cx = x0
+        nz = [k for k, v in enumerate(vals) if v > 0]
+        for k, v in enumerate(vals):
+            if v == 0:
+                continue
+            w = v * scale
+            color = phases[k][1]
+            dw = max(w - 2, 1.5)
+            if k == nz[-1]:
+                r = 4
+                s.add(f'<path d="M{f(cx)},{f(y)} h{f(dw - r)} q{r},0 {r},{r} v{f(28 - 2 * r)} '
+                      f'q0,{r} -{r},{r} h-{f(dw - r)} z" fill="{color}"/>')
+            else:
+                s.rect(cx, y, dw, 28, fill=color, stroke=None, rx=0)
+            if w >= 34:
+                s.text(cx + dw / 2, y + 43, f"{v} s", size=10.5, fill=INK2, anchor="middle")
+            cx += w
+        total = sum(vals)
+        s.rich(cx + 10, y + 19, [(f"{total} s", 700, INK), (f"  ≈ {total / 60:.1f} phút".replace(".", ","), 400, INK2)],
+               size=12.5)
+    s.save("05-cold-start.svg")
+
+
+# ======================================================================
+# Hình 7 — Kịch bản tải
+# ======================================================================
+def scenario(k, t):
+    if k == 1:
+        return 0.5 if t <= 20 else None
+    if k == 2:
+        return (0.5 + 2.5 * smooth((t - 5) / 0.5)) if t <= 20 else None
+    if k == 3:
+        return 0.5 + 3.0 * smooth(t / 5)
+    if k == 4:
+        return (3.0 - 2.5 * smooth((t - 10) / 0.5)) if t <= 25 else None
+    return 2.0 + 1.5 * math.sin(2 * math.pi * t / 15 - math.pi / 2)
+
+
+def fig_scenarios():
+    W, H = 1200, 634
+    s = Svg(W, H, "Năm kịch bản tải: thấp ổn định, tăng đột ngột, cao kéo dài, giảm đột ngột, dao động chu kỳ; "
+                  "trục tung tính theo C là năng lực 1 replica")
+    s.header("Năm kịch bản tải dùng trong thí nghiệm",
+             "Tốc độ gửi request λ(t), đơn vị C = năng lực tối đa của 1 replica mà vẫn đạt SLO (đo ở bước hiệu chỉnh)")
+    meta = [
+        (1, "KB1 · Thấp, ổn định", "20 phút", (10, 1.7, "baseline hiệu năng")),
+        (2, "KB2 · Tăng đột ngột", "20 phút", (12.5, 3.0, "0,5C → 3C trong 30 s")),
+        (3, "KB3 · Cao, kéo dài", "30 phút", (17.5, 3.5, "tải bền vững gần 4C")),
+        (4, "KB4 · Giảm đột ngột", "25 phút", (17.5, 0.5, "kiểm tra scale-down")),
+        (5, "KB5 · Dao động chu kỳ", "30 phút", (15, 3.2, "chu kỳ 15 phút")),
+    ]
+    pw, ph = 300, 168
+    ymax = 4.6
+    s.add(f'<line x1="32" y1="90" x2="58" y2="90" stroke="{MUTED}" stroke-width="1.1" stroke-dasharray="4 4"/>')
+    s.text(66, 94, "đường tham chiếu: 1C = năng lực 1 replica · 4C = năng lực tối đa (N = 4 replica)",
+           size=12, fill=INK2)
+    for idx, (k, title, dur, (at, av, note)) in enumerate(meta):
+        col, row = idx % 3, idx // 3
+        x0 = 76 + col * 384
+        top = 138 + row * 262
+        y1 = top + ph
+        X = lambda t: x0 + t / 30 * pw
+        Y = lambda v: y1 - v / ymax * ph
+        s.text(x0 - 40, top - 14, title, size=13.5, weight=650)
+        s.text(x0 + pw, top - 14, dur, size=11.5, fill=INK2, anchor="end")
+        for v in range(1, 5):
+            s.line(x0, Y(v), x0 + pw, Y(v), stroke=GRID)
+        for v in range(0, 5):
+            s.text(x0 - 8, Y(v) + 4, "0" if v == 0 else f"{v}C", size=11, fill=MUTED, anchor="end")
+        for t in (0, 10, 20, 30):
+            s.text(X(t), y1 + 17, str(t), size=11, fill=MUTED, anchor="middle")
+        s.text(x0 + pw, y1 + 33, "phút", size=11, fill=MUTED, anchor="end")
+        s.line(x0, Y(1), x0 + pw, Y(1), stroke=MUTED, sw=1.1, dash="4 4")
+        s.line(x0, Y(4), x0 + pw, Y(4), stroke=MUTED, sw=1.1, dash="4 4")
+        pts = []
+        for i in range(0, 301):
+            t = i * 0.1
+            v = scenario(k, t)
+            if v is None:
+                break
+            pts.append((X(t), Y(v)))
+        s.polygon([(pts[0][0], y1)] + pts + [(pts[-1][0], y1)], fill="#cde2fb", opacity=0.55)
+        s.polyline(pts, BLUE, sw=2.2)
+        s.line(x0, y1, x0 + pw, y1, stroke=AXIS)
+        lab_y = Y(av) - 10 if av < 3.4 else Y(av) + 18
+        s.label(X(at), lab_y, note, size=11, fill=INK)
+    # ô ghi chú
+    nx, ny = 32 + 2 * 384 + 4, 138 + 262 - 30
+    s.rect(nx, ny, 380, 228, fill=WHITE, stroke=AXIS, rx=10)
+    s.text(nx + 16, ny + 28, "Cách sinh tải", size=13.5, weight=650)
+    notes = [
+        "• Open-loop: request đến theo quá trình Poisson",
+        "  với tốc độ λ(t); không chờ request trước xong.",
+        "• Độ dài prompt/output lấy mẫu với seed cố định,",
+        "  mọi cấu hình nhận đúng cùng một chuỗi request.",
+        "• KB4 bắt đầu ở 3C để hệ thống đã scale lên,",
+        "  sau đó đo hành vi scale-down.",
+        "• KB5 có thể thay bằng trace thật đã nén thời",
+        "  gian (Azure LLM Inference Trace, BurstGPT).",
+    ]
+    for i, ln in enumerate(notes):
+        s.text(nx + 16, ny + 54 + i * 20, ln, size=12, fill=INK2)
+    s.save("07-kich-ban-tai.svg")
+
+
+# ======================================================================
+# Hình 6 — Hai tầng môi trường
+# ======================================================================
+def fig_envs():
+    W, H = 1240, 578
+    s = Svg(W, H, "Hai tầng môi trường: laptop RTX 4060 để phát triển, VM GPU thuê theo giờ để thí nghiệm chính; "
+                  "cả hai triển khai từ cùng một Git repository")
+    s.header("Hai tầng môi trường: phát triển trên laptop, thí nghiệm trên GPU thuê",
+             "Cùng một bộ manifest trong Git; mỗi môi trường chỉ khác overlay (model, số replica, tài nguyên)")
+    gx, gy, gw, gh = 400, 86, 440, 142
+    s.rect(gx, gy, gw, gh, fill=WHITE, stroke=INK2, sw=1.4, rx=12)
+    s.rich(gx + 16, gy + 26, [("Git repository", 650, INK), ("  nguồn sự thật duy nhất", 400, INK2)], size=13.5)
+    rows = [("serving/base/", "Deployment vLLM, Service, probes"),
+            ("serving/overlays/laptop/", "model 1,5B–3B"),
+            ("serving/overlays/cloud/", "model 7–8B"),
+            ("autoscaling/", "static, A1, A2, A3"),
+            ("infra/", "Terraform + Ansible")]
+    for i, (p, d) in enumerate(rows):
+        y = gy + 50 + i * 18.5
+        s.text(gx + 16, y, p, size=11.5, fill=INK, family=MONO)
+        s.text(gx + 206, y, d, size=11.5, fill=INK2)
+
+    # tầng 1
+    s.rect(32, 290, 580, 262, fill=GRAY_T, stroke=AXIS, rx=14)
+    s.text(50, 318, "Tầng 1 · Phát triển & thử nghiệm sơ bộ", size=14.5, weight=700)
+    s.text(50, 338, "Laptop RTX 4060 (8 GB VRAM) · chi phí ≈ 0", size=12, fill=INK2)
+    lap = [("Laptop 1", "k3s server + agent", None), ("Laptop 2", "k3s agent", None),
+           ("Laptop 3", "tuỳ chọn", "5 4")]
+    for i, (n, sub, dash) in enumerate(lap):
+        bx = 52 + i * 188
+        s.rect(bx, 354, 168, 112, fill=WHITE, stroke=AXIS if not dash else INK2, dash=dash, rx=10)
+        s.text(bx + 14, 378, n, size=13.5, weight=650)
+        s.text(bx + 14, 396, sub, size=11.5, fill=INK2)
+        s.gpu_chip(bx + 14, 418, 140, 32, "RTX 4060 · 8 GB")
+    for i, ln in enumerate(["Ubuntu 22.04/24.04 · k3s · GPU Operator · vLLM + Qwen2.5-1.5B (hoặc 3B AWQ)",
+                            "Dùng cho: viết manifest, dashboard, máy tạo tải, pilot, demo khi bảo vệ",
+                            "Tuỳ chọn: llm-d-inference-sim (giả lập vLLM) để thử autoscaling không cần GPU"]):
+        s.text(52, 496 + i * 22, ln, size=12, fill=INK2)
+
+    # tầng 2
+    s.rect(628, 290, 580, 262, fill=GRAY_T, stroke=AXIS, rx=14)
+    s.text(646, 318, "Tầng 2 · Thí nghiệm chính", size=14.5, weight=700)
+    s.text(646, 338, "VM GPU thuê theo giờ · dựng bằng IaC, huỷ ngay khi chạy xong", size=12, fill=INK2)
+    s.rect(648, 354, 348, 112, fill=WHITE, stroke=AXIS, rx=10)
+    s.text(662, 378, "VM GPU · k3s single-node", size=13.5, weight=650)
+    s.text(662, 396, "4× GPU 24 GB (L4 / A10 / RTX 4090 …)", size=11.5, fill=INK2)
+    for i in range(4):
+        s.gpu_chip(662 + i * 81, 418, 72, 32, f"GPU {i}")
+    s.box(1012, 354, 176, 112, "VM CPU nhỏ", ["máy tạo tải", "experiment runner", "cùng region / DC"],
+          align="start")
+    s.arrow([(1012, 440), (996, 440)], BLUE, sw=2, r=0)
+    for i, ln in enumerate(["Model 7–8B (vd Qwen2.5-7B-Instruct) · ghim phiên bản vLLM và image",
+                            "Dùng cho: hiệu chỉnh C, ma trận thí nghiệm, đo cold start",
+                            "Dữ liệu (CSV/Parquet + snapshot Prometheus) được lưu trước khi huỷ VM"]):
+        s.text(648, 496 + i * 22, ln, size=12, fill=INK2)
+
+    s.arrow([(520, 228), (520, 258), (322, 258), (322, 290)], INK2, sw=1.6)
+    s.label(421, 252, "Argo CD sync · overlays/laptop", fill=INK)
+    s.arrow([(720, 228), (720, 258), (918, 258), (918, 290)], INK2, sw=1.6)
+    s.label(868, 252, "IaC dựng VM → Argo CD sync · overlays/cloud", fill=INK)
+    s.save("06-moi-truong-trien-khai.svg")
+
+
+# ======================================================================
+# Hình 8 — Pipeline thí nghiệm
+# ======================================================================
+def fig_pipeline():
+    W, H = 1240, 620
+    s = Svg(W, H, "Pipeline thí nghiệm: dựng hạ tầng, triển khai nền tảng, hiệu chỉnh, vòng lặp 75 lượt chạy, "
+                  "sao lưu và huỷ hạ tầng, phân tích")
+    s.header("Pipeline tự động hoá một đợt thí nghiệm",
+             "Mọi bước chạy bằng script để dựng lại được và rút ngắn thời gian thuê GPU; nhãn màu = người phụ trách")
+    x = 760
+    for o in ("Trình", "Quang", "Cả nhóm"):
+        s.add(f'<circle cx="{x}" cy="57" r="5" fill="{OWNER[o]}"/>')
+        s.text(x + 10, 61, o, size=12, fill=INK2)
+        x += text_width(o, 12) + 34
+    xs = [32, 448, 864]
+    row1 = [(1, "Dựng hạ tầng", ["Terraform tạo VM GPU + VM CPU", "Ansible: driver, k3s, GPU Operator"], "Quang"),
+            (2, "Triển khai nền tảng", ["Argo CD sync: Prometheus, Grafana,", "KEDA, vLLM, dashboard"], "Cả nhóm"),
+            (3, "Hiệu chỉnh năng lực", ["sweep tốc độ → tìm C của 1 replica", "chốt SLO và target cho A1–A3"], "Trình")]
+    for i, (n, t, ls, o) in enumerate(row1):
+        s.step_box(xs[i], 86, 344, 100, n, t, ls, INK2, owner=o)
+    s.arrow([(376, 136), (448, 136)], INK2, sw=1.8)
+    s.arrow([(792, 136), (864, 136)], INK2, sw=1.8)
+    s.arrow([(1036, 186), (1036, 234)], INK2, sw=1.8)
+
+    s.rect(32, 234, 1176, 216, fill=GRAY_T, stroke=AXIS, rx=14)
+    s.add(f'<circle cx="56" cy="259" r="12" fill="{INK2}"/>')
+    s.text(56, 263.5, "4", size=12.5, weight=700, fill=WHITE, anchor="middle")
+    s.rich(76, 264, [("Vòng lặp ma trận thí nghiệm", 650, INK),
+                     ("  5 cấu hình × 5 kịch bản × 3 lần = 75 lượt · experiment runner (Python)", 400, INK2)],
+           size=13.5)
+    s.owner_pill(1194, 248, "Quang")
+    steps = [("a", "Áp cấu hình", ["Static hoặc", "ScaledObject A1–A3"]),
+             ("b", "Reset", ["về 1 replica,", "chờ hệ thống ổn định"]),
+             ("c", "Warm-up", ["2 phút tải nhẹ", "(không tính kết quả)"]),
+             ("d", "Chạy kịch bản", ["λ(t) theo KB1–KB5,", "log từng request"]),
+             ("e", "Thu thập", ["CSV phía client,", "Prometheus, sự kiện pod"]),
+             ("f", "Cooldown", ["chờ scale-down,", "kiểm tra dữ liệu"])]
+    for i, (k, t, ls) in enumerate(steps):
+        bx = 52 + i * 194
+        s.rect(bx, 286, 172, 96, fill=WHITE, stroke=AXIS, rx=10)
+        s.text(bx + 14, 310, f"{k}. {t}", size=13.5, weight=650)
+        for j, ln in enumerate(ls):
+            s.text(bx + 14, 334 + j * 18, ln, size=11.5, fill=INK2)
+        if i < 5:
+            s.arrow([(bx + 172, 334), (bx + 194, 334)], INK2, sw=1.6)
+    s.arrow([(1108, 382), (1108, 424), (138, 424), (138, 382)], INK2, sw=1.6, dash="5 4")
+    s.label(623, 428, "lượt tiếp theo", bg=GRAY_T, fill=INK)
+    s.arrow([(1036, 450), (1036, 494)], INK2, sw=1.8)
+
+    row3 = [(864, 5, "Sao lưu & huỷ hạ tầng", ["đẩy dữ liệu về object storage", "terraform destroy (ngừng tính tiền)"],
+             "Quang"),
+            (448, 6, "Phân tích & báo cáo", ["Jupyter + pandas: bảng, CDF,", "time series, kiểm định thống kê"],
+             "Cả nhóm")]
+    for bx, n, t, ls, o in row3:
+        s.step_box(bx, 494, 344, 100, n, t, ls, INK2, owner=o)
+    s.arrow([(864, 544), (792, 544)], INK2, sw=1.8)
+    s.rect(32, 494, 344, 100, fill=SURFACE, stroke=INK2, dash="5 4", rx=10)
+    s.text(48, 524, "Kết quả", size=13.5, weight=650)
+    s.text(48, 550, "trả lời RQ1–RQ3,", size=11.5, fill=INK2)
+    s.text(48, 567.5, "khuyến nghị cấu hình autoscaling", size=11.5, fill=INK2)
+    s.arrow([(448, 544), (376, 544)], INK2, sw=1.8)
+    s.save("08-pipeline-thi-nghiem.svg")
+
+
+# ======================================================================
+# Hình 9 — Kế hoạch 16 tuần
+# ======================================================================
+def fig_gantt():
+    phases = [
+        ("Giai đoạn 1 · Chuẩn bị", [
+            ("Nghiên cứu tài liệu, chốt thiết kế & RQ", "Cả nhóm", 1, 2),
+            ("Chọn model, nhà cung cấp GPU, dự toán chi phí", "Cả nhóm", 1, 2)]),
+        ("Giai đoạn 2 · Xây dựng nền tảng (laptop)", [
+            ("k3s + GPU Operator + vLLM trên laptop", "Trình", 2, 4),
+            ("Repo GitOps, Argo CD, khung IaC", "Quang", 2, 4),
+            ("Prometheus, Grafana, DCGM, dashboard", "Quang", 3, 5),
+            ("Máy tạo tải + profile KB1–KB5", "Quang", 4, 6),
+            ("Chiến lược autoscaling A1–A3 (KEDA)", "Trình", 5, 7),
+            ("Experiment runner tự động", "Quang", 6, 7),
+            ("Pilot trên laptop, sửa pipeline", "Cả nhóm", 7, 8)]),
+        ("Giai đoạn 3 · Thí nghiệm trên GPU thuê", [
+            ("Dựng cụm cloud bằng IaC, hiệu chỉnh C & SLO", "Cả nhóm", 8, 9),
+            ("Đo & tối ưu cold start", "Trình", 9, 11),
+            ("Chạy ma trận thí nghiệm chính (75 lượt)", "Cả nhóm", 9, 12),
+            ("Phân tích dữ liệu, vẽ biểu đồ", "Quang", 11, 13)]),
+        ("Giai đoạn 4 · Hoàn thiện", [
+            ("Viết luận văn", "Cả nhóm", 11, 15),
+            ("Slide, demo, tuần dự phòng", "Cả nhóm", 15, 16)]),
+    ]
+    rows = sum(1 + len(t) for _, t in phases)
+    rh, top = 27, 134
+    H = top + rows * rh + 92
+    W = 1240
+    s = Svg(W, H, "Kế hoạch 16 tuần chia 4 giai đoạn với 5 mốc: nền tảng trên laptop (T4), pipeline và pilot (T8), "
+                  "xong thí nghiệm (T12), bản thảo (T14), bảo vệ (T16)")
+    s.header("Kế hoạch thực hiện 16 tuần", "Màu thanh = người phụ trách chính; ◆ = mốc kiểm tra với giảng viên hướng dẫn")
+    x = 32
+    for o, desc in (("Trình", "Trình · Platform"), ("Quang", "Quang · DevOps/SRE"), ("Cả nhóm", "Cả nhóm")):
+        x = s.legend_swatch(x, 92, desc, OWNER[o])
+    gx0, ww = 392, 50
+    gy1 = top + rows * rh
+    for wk in range(16):
+        cx = gx0 + wk * ww
+        if wk % 2 == 0:
+            s.rect(cx, top - 4, ww, rows * rh + 8, fill="#f6f5f2", stroke=None, rx=0)
+        s.text(cx + ww / 2, top - 12, f"T{wk + 1}", size=11.5, fill=INK2, anchor="middle", weight=600)
+    y = top
+    for pname, tasks in phases:
+        s.text(32, y + 18, pname, size=12.5, weight=700)
+        y += rh
+        for name, owner, a, b in tasks:
+            s.text(48, y + 18, name, size=12, fill=INK)
+            bx = gx0 + (a - 1) * ww + 3
+            bw = (b - a + 1) * ww - 6
+            s.rect(bx, y + 7, bw, 14, fill=OWNER[owner], stroke=None, rx=4)
+            if b == 16:
+                s.text(bx - 6, y + 18, owner, size=10.5, fill=INK2, anchor="end")
+            else:
+                s.text(bx + bw + 6, y + 18, owner, size=10.5, fill=INK2)
+            y += rh
+    miles = [(4, "M1 · Nền tảng chạy trên laptop", 0), (8, "M2 · Pipeline + pilot", 0),
+             (12, "M3 · Xong thí nghiệm", 0), (14, "M4 · Bản thảo", 1), (16, "M5 · Bảo vệ", 0)]
+    for wk, lab, lvl in miles:
+        mx = gx0 + wk * ww
+        s.line(mx, top - 4, mx, gy1 + 14, stroke=INK2, sw=1, dash="3 3")
+        my = gy1 + 20
+        s.polygon([(mx, my - 7), (mx + 7, my), (mx, my + 7), (mx - 7, my)], fill=INK)
+        anchor = "end" if wk == 16 else "middle"
+        s.text(mx + (4 if wk == 16 else 0), my + 26 + lvl * 20, lab, size=11.5, weight=600, anchor=anchor)
+    s.save("09-ke-hoach-16-tuan.svg")
+
+
+if __name__ == "__main__":
+    fig_tradeoff()
+    fig_architecture()
+    fig_request()
+    fig_loop()
+    fig_coldstart()
+    fig_scenarios()
+    fig_envs()
+    fig_pipeline()
+    fig_gantt()
