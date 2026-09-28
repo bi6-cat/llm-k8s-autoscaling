@@ -44,9 +44,13 @@ Từ các kết quả này, nhóm đưa ra khuyến nghị cấu hình để áp
 16. [Tài liệu tham khảo](#16-tài-liệu-tham-khảo)
 - [Phụ lục A. Đối chiếu với đề cương đã nộp](#phụ-lục-a-đối-chiếu-với-đề-cương-đã-nộp)
 
+Mỗi mục 1–15 có một **tài liệu chuyên sâu** riêng; xem danh mục tại [docs/chi-tiet/](chi-tiet/README.md).
+
 ---
 
 ## 1. Đặt vấn đề
+
+> **Chi tiết:** [docs/chi-tiet/01-dat-van-de.md](chi-tiet/01-dat-van-de.md)
 
 ### 1.1. Bối cảnh
 
@@ -85,6 +89,8 @@ Vì vậy không thể áp nguyên công thức quen thuộc "HPA theo CPU 70%" 
 
 ## 2. Mục tiêu và câu hỏi nghiên cứu
 
+> **Chi tiết:** [docs/chi-tiet/02-muc-tieu-cau-hoi-nghien-cuu.md](chi-tiet/02-muc-tieu-cau-hoi-nghien-cuu.md)
+
 ### 2.1. Mục tiêu tổng quát
 
 Xây dựng một nền tảng LLM serving trên Kubernetes có autoscaling, triển khai lại được hoàn toàn bằng code. Sau đó đánh giá bằng thực nghiệm có kiểm soát xem autoscaling ảnh hưởng thế nào tới hiệu năng phục vụ và hiệu quả sử dụng GPU.
@@ -113,6 +119,8 @@ Xây dựng một nền tảng LLM serving trên Kubernetes có autoscaling, tri
 
 ## 3. Phạm vi và giả định
 
+> **Chi tiết:** [docs/chi-tiet/03-pham-vi-gia-dinh.md](chi-tiet/03-pham-vi-gia-dinh.md)
+
 ### 3.1. Trong phạm vi
 
 - Phục vụ inference cho **một model** trên Kubernetes bằng vLLM, chạy trên GPU.
@@ -139,6 +147,8 @@ Xây dựng một nền tảng LLM serving trên Kubernetes có autoscaling, tri
 ---
 
 ## 4. Kiến thức nền và các giải pháp liên quan
+
+> **Chi tiết:** [docs/chi-tiet/04-kien-thuc-nen.md](chi-tiet/04-kien-thuc-nen.md)
 
 ### 4.1. vLLM
 
@@ -173,7 +183,7 @@ HPA bỏ qua các dao động nhỏ hơn 10% (*tolerance*). Tham số `behavior`
 - Scale-down mặc định có cửa sổ ổn định (*stabilization window*) 300 s.
 - Scale-up mặc định cho phép tăng tới 100% số pod, hoặc thêm 4 pod, mỗi 15 s.
 
-**KEDA.** KEDA gồm hai phần: *operator*, đọc `ScaledObject` và tạo HPA tương ứng; và *metrics API server*, chạy truy vấn tới nguồn metric (ở đây là PromQL tới Prometheus) rồi trả kết quả cho HPA dưới dạng external metric. KEDA còn hỗ trợ scale về 0. Đồ án **không dùng** tính năng này vì cold start dài không phù hợp với dịch vụ tương tác; nó được đưa vào hướng mở rộng.
+**KEDA.** KEDA gồm hai phần: *operator*, đọc `ScaledObject` và tạo HPA tương ứng; và *metrics API server*, chạy truy vấn tới nguồn metric (ở đây là PromQL tới Prometheus) rồi trả kết quả cho HPA dưới dạng external metric. Lưu ý: `pollingInterval` của KEDA chủ yếu dùng cho việc kích hoạt 0 ↔ 1. Khi scale từ 1 lên N, chính **HPA** hỏi metric theo chu kỳ sync của nó (mặc định 15 s; trên k3s chỉnh được xuống 5 s), nên đây mới là tham số quyết định tốc độ phát hiện. KEDA còn hỗ trợ scale về 0. Đồ án **không dùng** tính năng này vì cold start dài không phù hợp với dịch vụ tương tác; nó được đưa vào hướng mở rộng.
 
 **Knative KPA / KServe serverless.** Đây là cơ chế scale theo số request đồng thời, có chế độ "panic" khi tải tăng đột ngột. Đồ án dùng nó làm đối chiếu về mặt lý thuyết, còn so sánh thực nghiệm để ở hướng mở rộng.
 
@@ -202,6 +212,8 @@ HPA bỏ qua các dao động nhỏ hơn 10% (*tolerance*). Tham số `behavior`
 
 ## 5. Kiến trúc hệ thống
 
+> **Chi tiết:** [docs/chi-tiet/05-kien-truc-he-thong.md](chi-tiet/05-kien-truc-he-thong.md)
+
 ### 5.1. Tổng quan
 
 ![Hình 2 – Kiến trúc tổng thể](images/02-kien-truc-tong-the.svg)
@@ -216,8 +228,8 @@ HPA bỏ qua các dao động nhỏ hơn 10% (*tolerance*). Tham số `behavior`
 | NVIDIA GPU Operator | Driver, device plugin, DCGM exporter | Trên laptop dùng `driver.enabled=false` (driver cài sẵn) | Trình |
 | vLLM (Deployment) | Phục vụ model qua API OpenAI | 1 GPU/pod; tham số cố định; có probe và `preStop` | Trình |
 | PVC `model-cache` | Lưu weights để không phải tải lại | Đọc-ghi dùng chung (NFS) hoặc NVMe cục bộ | Trình |
-| Ingress / Service | Điểm vào, chia tải cho các pod | Round-robin mặc định (được ghi nhận là hạn chế) | Trình |
-| KEDA | Chuyển metric Prometheus thành external metric, tạo HPA | `pollingInterval: 5`; A1–A3 | Trình |
+| Ingress / Service | Điểm vào, chia tải cho các pod | Traefik (có sẵn trong k3s) hoặc Envoy Gateway; không dùng ingress-nginx (đã ngừng bảo trì từ 3/2026); round-robin (được ghi nhận là hạn chế) | Trình |
+| KEDA | Chuyển metric Prometheus thành external metric, tạo HPA | A1–A3; chu kỳ sync HPA 5 s (tham số của k3s) | Trình |
 | Prometheus (kube-prometheus-stack) | Thu và lưu metric | `ServiceMonitor`/`PodMonitor` với scrape mỗi 5 s cho vLLM và DCGM | Quang |
 | Grafana | Dashboard, đánh dấu (annotation) từng pha thí nghiệm | 4 dashboard (mục 5.6) | Quang |
 | kube-state-metrics | Trạng thái Deployment, HPA, pod | Mặc định | Quang |
@@ -246,7 +258,7 @@ HPA bỏ qua các dao động nhỏ hơn 10% (*tolerance*). Tham số `behavior`
 Thời gian phản ứng của autoscaling được tách thành các thành phần:
 
 $$
-T_{\text{phản ứng}} = \underbrace{T_{\text{scrape}} + T_{\text{polling}} + T_{\text{HPA}}}_{\text{phát hiện: } \sim 10\text{–}30\,s} + \underbrace{T_{\text{schedule}} + T_{\text{pull}} + T_{\text{load}} + T_{\text{compile}} + T_{\text{ready}}}_{\text{cold start: } \sim 1\text{–}5\text{ phút}}
+T_{\text{phản ứng}} = \underbrace{T_{\text{scrape}} + T_{\text{HPA sync}} + T_{\text{PromQL}}}_{\text{phát hiện: } \sim 10\text{–}30\,s} + \underbrace{T_{\text{schedule}} + T_{\text{pull}} + T_{\text{load}} + T_{\text{compile}} + T_{\text{ready}}}_{\text{cold start: } \sim 1\text{–}5\text{ phút}}
 $$
 
 **Ví dụ tính số replica.** Chiến lược A2 đặt target 24 request đồng thời cho mỗi replica. Hiện có 1 replica, tổng `running + waiting` là 70. HPA tính ra $\lceil 70/24 \rceil = 3$ replica. Hai pod mới được tạo, và chỉ nhận traffic sau khi cold start xong.
@@ -340,6 +352,8 @@ spec:
 
 ## 6. Môi trường triển khai và dự toán chi phí
 
+> **Chi tiết:** [docs/chi-tiet/06-moi-truong-chi-phi.md](chi-tiet/06-moi-truong-chi-phi.md)
+
 ### 6.1. Chiến lược hai tầng
 
 ![Hình 6 – Hai tầng môi trường](images/06-moi-truong-trien-khai.svg)
@@ -400,6 +414,8 @@ Với đơn giá tham khảo khoảng 0,4–0,9 USD/GPU-giờ cho GPU 24 GB, t�
 
 ## 7. Thiết kế các chiến lược autoscaling
 
+> **Chi tiết:** [docs/chi-tiet/07-chien-luoc-autoscaling.md](chi-tiet/07-chien-luoc-autoscaling.md)
+
 ### 7.1. Các cấu hình được so sánh
 
 | Mã | Tên | Cơ chế | Metric (PromQL) | Target mỗi replica | Vai trò |
@@ -412,7 +428,7 @@ Với đơn giá tham khảo khoảng 0,4–0,9 USD/GPU-giờ cho GPU 24 GB, t�
 
 ¹ Tên label của pod/namespace trong metric DCGM phụ thuộc cấu hình scrape (có thể là `exported_namespace`); cần kiểm tra lại khi triển khai.
 
-**Nguyên tắc kiểm soát biến.** Mọi cấu hình autoscaling dùng chung `minReplicaCount: 1`, `maxReplicaCount: 4` (bằng Static-4), `pollingInterval: 5` và cùng tham số `behavior`. **Biến độc lập duy nhất là metric.**
+**Nguyên tắc kiểm soát biến.** Mọi cấu hình autoscaling dùng chung `minReplicaCount: 1`, `maxReplicaCount: 4` (bằng Static-4), cùng chu kỳ scrape và sync HPA (5 s), và cùng tham số `behavior`. **Biến độc lập duy nhất là metric.**
 
 ### 7.2. Vì sao không scale chỉ theo hàng đợi
 
@@ -438,7 +454,7 @@ spec:
     name: vllm
   minReplicaCount: 1
   maxReplicaCount: 4
-  pollingInterval: 5
+  pollingInterval: 5                  # chủ yếu cho kích hoạt 0↔1; tốc độ 1↔N do chu kỳ sync của HPA
   advanced:
     horizontalPodAutoscalerConfig:
       behavior:
@@ -470,6 +486,8 @@ Khi scale-down, pod bị xoá có thể đang xử lý request. Nhóm xử lý n
 ---
 
 ## 8. Thiết kế thí nghiệm
+
+> **Chi tiết:** [docs/chi-tiet/08-thiet-ke-thi-nghiem.md](chi-tiet/08-thiet-ke-thi-nghiem.md)
 
 ### 8.1. Bước hiệu chỉnh năng lực (calibration)
 
@@ -550,6 +568,8 @@ Chi tiết các bước trong một lượt:
 
 ## 9. Chỉ số đánh giá và cách đo
 
+> **Chi tiết:** [docs/chi-tiet/09-chi-so-danh-gia.md](chi-tiet/09-chi-so-danh-gia.md)
+
 | Nhóm | Chỉ số | Định nghĩa | Nguồn |
 |---|---|---|---|
 | Hiệu năng | **TTFT** p50/p95/p99 | $t_{\text{first}} - t_{\text{send}}$ | Log client (chính), đối chiếu histogram vLLM |
@@ -588,6 +608,8 @@ sum_over_time(kube_deployment_status_replicas{deployment="vllm"}[1h:15s]) * 15 /
 
 ## 10. Phân tích và trình bày kết quả
 
+> **Chi tiết:** [docs/chi-tiet/10-phan-tich-ket-qua.md](chi-tiet/10-phan-tich-ket-qua.md)
+
 Các biểu đồ dự kiến đưa vào luận văn:
 
 1. **Chuỗi thời gian căn theo nhau** cho mỗi kịch bản và cấu hình: λ(t), số replica(t), TTFT p95 (cửa sổ trượt), độ dài hàng đợi. Đây là biểu đồ trung tâm, cho thấy trực tiếp độ trễ scale-up.
@@ -605,6 +627,8 @@ Các biểu đồ dự kiến đưa vào luận văn:
 ---
 
 ## 11. Phân công công việc
+
+> **Chi tiết:** [docs/chi-tiet/11-phan-cong.md](chi-tiet/11-phan-cong.md)
 
 | Gói công việc | Nội dung | Trình | Quang |
 |---|---|---|---|
@@ -634,6 +658,8 @@ Các biểu đồ dự kiến đưa vào luận văn:
 
 ## 12. Kế hoạch thực hiện
 
+> **Chi tiết:** [docs/chi-tiet/12-ke-hoach.md](chi-tiet/12-ke-hoach.md)
+
 ![Hình 9 – Kế hoạch 16 tuần](images/09-ke-hoach-16-tuan.svg)
 
 *Hình 9. Kế hoạch 16 tuần. Màu thanh cho biết người phụ trách chính.*
@@ -652,6 +678,8 @@ Các biểu đồ dự kiến đưa vào luận văn:
 
 ## 13. Rủi ro và phương án giảm thiểu
 
+> **Chi tiết:** [docs/chi-tiet/13-rui-ro.md](chi-tiet/13-rui-ro.md)
+
 | Rủi ro | Khả năng | Ảnh hưởng | Phương án giảm thiểu |
 |---|---|---|---|
 | Chi phí thuê GPU vượt dự toán | Trung bình | Cao | Phát triển trên laptop; IaC dựng/huỷ nhanh; runner chạy không cần người trực; đặt cảnh báo ngân sách; dùng ma trận rút gọn |
@@ -667,6 +695,8 @@ Các biểu đồ dự kiến đưa vào luận văn:
 ---
 
 ## 14. Sản phẩm bàn giao
+
+> **Chi tiết:** [docs/chi-tiet/14-san-pham-ban-giao.md](chi-tiet/14-san-pham-ban-giao.md)
 
 1. **Git repository** chứa: IaC, manifest, Helm values, ScaledObject, máy tạo tải, experiment runner, dashboard (JSON), notebook phân tích.
 2. **Bộ dữ liệu thí nghiệm** (dạng thô và đã xử lý, CSV/Parquet) kèm metadata về phiên bản và cấu hình.
@@ -693,6 +723,8 @@ llm-k8s-autoscaling/
 ---
 
 ## 15. Hướng mở rộng
+
+> **Chi tiết:** [docs/chi-tiet/15-huong-mo-rong.md](chi-tiet/15-huong-mo-rong.md)
 
 - **Scale-to-zero** với KEDA hoặc Knative, kết hợp giảm cold start để phục vụ các model ít được dùng.
 - **Autoscaling ở mức node** (Cluster Autoscaler hoặc Karpenter trên GKE/EKS): đo thêm thời gian khởi tạo node GPU.

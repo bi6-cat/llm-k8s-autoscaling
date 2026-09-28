@@ -26,14 +26,14 @@
 <circle cx="668" cy="153" r="12" fill="#4a3aa7"/>
 <text x="668" y="157.5" font-size="12.5" font-weight="700" fill="#ffffff" text-anchor="middle">3</text>
 <text x="688" y="158" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">KEDA truy vấn</text>
-<text x="660" y="184" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">pollingInterval 5 s</text>
+<text x="660" y="184" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">chạy khi HPA hỏi metric</text>
 <text x="660" y="201.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">PromQL: sum(metric) mọi pod</text>
 <text x="660" y="219" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">→ external metrics API</text>
 <rect x="928" y="128" width="250" height="112" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
 <circle cx="952" cy="153" r="12" fill="#4a3aa7"/>
 <text x="952" y="157.5" font-size="12.5" font-weight="700" fill="#ffffff" text-anchor="middle">4</text>
 <text x="972" y="158" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">HPA tính replicas</text>
-<text x="944" y="184" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">đồng bộ mỗi 15 s</text>
+<text x="944" y="184" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">sync 15 s (k3s chỉnh được 5 s)</text>
 <text x="944" y="201.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">ceil(Σ metric ÷ target)</text>
 <text x="944" y="219" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">stabilization · rate limit</text>
 <rect x="928" y="356" width="250" height="128" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
@@ -71,11 +71,11 @@
 <path d="M894,184 L928,184" fill="none" stroke="#4a3aa7" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a4a3aa7)"/>
 <path d="M360,420 L326,420" fill="none" stroke="#eb6834" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#aeb6834)"/>
 <path d="M1053,240 L1053,356" fill="none" stroke="#eb6834" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#aeb6834)"/>
-<rect x="1058" y="290" width="97.6" height="18" rx="4" fill="#fcfcfb"/>
+<rect x="1058" y="290" width="104.8" height="18" rx="4" fill="#fcfcfb"/>
 <text x="1063" y="302" font-size="11" font-weight="400" fill="#0b0b0b" text-anchor="start">desired &gt; hiện tại</text>
 <path d="M76,430 L62,430 Q54,430 54,422 L54,192 Q54,184 62,184 L76,184" fill="none" stroke="#2a78d6" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a2a78d6)"/>
-<rect x="65" y="282" width="112.1" height="18" rx="4" fill="#fcfcfb"/>
+<rect x="65" y="282" width="120.2" height="18" rx="4" fill="#fcfcfb"/>
 <text x="70" y="294" font-size="11" font-weight="400" fill="#0b0b0b" text-anchor="start">pod mới nhận traffic</text>
-<rect x="65" y="300" width="127.3" height="18" rx="4" fill="#fcfcfb"/>
+<rect x="65" y="300" width="136.3" height="18" rx="4" fill="#fcfcfb"/>
 <text x="70" y="312" font-size="11" font-weight="400" fill="#0b0b0b" text-anchor="start">→ tải trên mỗi pod giảm</text>
 </svg>

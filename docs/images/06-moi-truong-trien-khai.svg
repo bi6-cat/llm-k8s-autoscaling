@@ -117,9 +117,9 @@
 <text x="648" y="518" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Dùng cho: hiệu chỉnh C, ma trận thí nghiệm, đo cold start</text>
 <text x="648" y="540" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Dữ liệu (CSV/Parquet + snapshot Prometheus) được lưu trước khi huỷ VM</text>
 <path d="M520,228 L520,250 Q520,258 512,258 L330,258 Q322,258 322,266 L322,290" fill="none" stroke="#52514e" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
-<rect x="338.1" y="240" width="165.8" height="18" rx="4" fill="#fcfcfb"/>
+<rect x="332.4" y="240" width="177.1" height="18" rx="4" fill="#fcfcfb"/>
 <text x="421" y="252" font-size="11" font-weight="400" fill="#0b0b0b" text-anchor="middle">Argo CD sync · overlays/laptop</text>
 <path d="M720,228 L720,250 Q720,258 728,258 L910,258 Q918,258 918,266 L918,290" fill="none" stroke="#52514e" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
-<rect x="747.2" y="240" width="241.7" height="18" rx="4" fill="#fcfcfb"/>
+<rect x="739.2" y="240" width="257.6" height="18" rx="4" fill="#fcfcfb"/>
 <text x="868" y="252" font-size="11" font-weight="400" fill="#0b0b0b" text-anchor="middle">IaC dựng VM → Argo CD sync · overlays/cloud</text>
 </svg>

@@ -135,7 +135,7 @@ class Svg:
 
     # ---------- thành phần ghép ----------
     def label(self, x, y, s, size=11, fill=INK2, anchor="middle", bg=SURFACE, weight=400):
-        w = text_width(s, size, weight) + 10
+        w = text_width(s, size, weight) * 1.06 + 12
         x0 = x - w / 2 if anchor == "middle" else (x - 5 if anchor == "start" else x - w + 5)
         self.rect(x0, y - size - 1, w, size + 7, fill=bg, stroke=None, rx=4)
         self.text(x, y, s, size=size, fill=fill, anchor=anchor, weight=weight)
@@ -180,7 +180,7 @@ class Svg:
         self.text(x_right - w + 18, y + 13.5, owner, size=11, weight=600, fill=INK2)
 
     def status_pill(self, x, y, s, color, tint):
-        w = text_width(s, 10.5, 600) + 22
+        w = text_width(s, 10.5, 600) * 1.1 + 24
         self.rect(x, y, w, 18, fill=tint, stroke=color, sw=1, rx=9)
         self.add(f'<circle cx="{f(x + 9)}" cy="{f(y + 9)}" r="3.5" fill="{color}"/>')
         self.text(x + 16, y + 13, s, size=10.5, weight=600, fill=INK)
@@ -323,7 +323,7 @@ def fig_architecture():
 
     # namespace llm-serving
     s.group(252, 138, 780, 318, "namespace: llm-serving", fill=BLUE_T, stroke="#c9dcf3")
-    s.box(272, 269, 140, 64, "Ingress", ["NGINX / Envoy"])
+    s.box(272, 269, 140, 64, "Ingress", ["Traefik / Envoy"])
     s.box(440, 269, 140, 64, "Service vllm", ["ClusterIP · chia tải"])
     s.box(440, 172, 140, 56, "PVC model-cache", ["weights · mount RO"], tsize=12.5)
 
@@ -456,8 +456,8 @@ def fig_loop():
     top = [
         ("vLLM xuất metric", ["/metrics trên mỗi pod:", "num_requests_running/waiting", "kv_cache_usage_perc"]),
         ("Prometheus scrape", ["chu kỳ scrape 5 s", "(mặc định 30 s là quá chậm)", "lưu chuỗi thời gian"]),
-        ("KEDA truy vấn", ["pollingInterval 5 s", "PromQL: sum(metric) mọi pod", "→ external metrics API"]),
-        ("HPA tính replicas", ["đồng bộ mỗi 15 s", "ceil(Σ metric ÷ target)", "stabilization · rate limit"]),
+        ("KEDA truy vấn", ["chạy khi HPA hỏi metric", "PromQL: sum(metric) mọi pod", "→ external metrics API"]),
+        ("HPA tính replicas", ["sync 15 s (k3s chỉnh được 5 s)", "ceil(Σ metric ÷ target)", "stabilization · rate limit"]),
     ]
     bottom = [
         ("Deployment cập nhật", ["spec.replicas tăng", "ReplicaSet tạo pod mới", "pod ở trạng thái Pending"]),
@@ -809,6 +809,8 @@ def fig_gantt():
 
 
 if __name__ == "__main__":
+    import chuyen_sau
+    chuyen_sau.build_all()
     fig_tradeoff()
     fig_architecture()
     fig_request()

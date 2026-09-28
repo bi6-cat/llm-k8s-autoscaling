@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="424" viewBox="0 0 1240 424" role="img" aria-label="So sánh static batching và continuous batching: static để slot trống chờ request dài nhất, continuous chèn request mới ngay khi có slot trống" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+<title>So sánh static batching và continuous batching: static để slot trống chờ request dài nhất, continuous chèn request mới ngay khi có slot trống</title>
+<defs><pattern id="h898781" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="#898781" stroke-width="1.3"/></pattern></defs>
+<rect x="0.5" y="0.5" width="1239" height="423" rx="14" fill="#fcfcfb" stroke="#e4e3de"/>
+<text x="32" y="38" font-size="19" font-weight="700" fill="#0b0b0b" text-anchor="start">Static batching và continuous batching</text>
+<text x="32" y="61" font-size="13" font-weight="400" fill="#52514e" text-anchor="start">Mỗi hàng là một slot trong batch, mỗi cột là một bước decode (sinh 1 token cho mọi request đang chạy) — đơn giản hoá, bỏ qua prefill</text>
+<rect x="32" y="86" width="14" height="12" rx="3" fill="#eef4fc" stroke="#2a78d6" stroke-width="1"/>
+<text x="52" y="96" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">request đang sinh token</text>
+<rect x="207.8" y="86" width="14" height="12" rx="3" fill="url(#h898781)" stroke="#898781" stroke-width="1"/>
+<text x="227.8" y="96" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">slot trống (GPU làm ít việc hơn khả năng)</text>
+<text x="100" y="124" font-size="14" font-weight="700" fill="#0b0b0b" text-anchor="start">Static batching</text>
+<line x1="100" y1="136" x2="100" y2="312" stroke="#e1e0d9" stroke-width="1"/>
+<line x1="138" y1="136" x2="138" y2="312" stroke="#e1e0d9" stroke-width="1"/>
+<line x1="176" y1="136" x2="176" y2="312" stroke="#e1e0d9" stroke-width="1"/>
+<line x1="214" y1="136" x2="214" y2="312" stroke="#e1e0d9" stroke-width="1"/>
+<line x1="252" y1="136" x2="252" y2="312" stroke="#e1e0d9" stroke-width="1"/>
+<line x1="290" y1="136" x2="290" y2="312" stroke="#e1e0d9" stroke-width="1"/>
+<line x1="328" y1="136" x2="328" y2="312" stroke="#e1e0d9" stroke-width="1"/>
+<line x1="366" y1="136" x2="366" y2="312" stroke="#e1e0d9" stroke-width="1"/>
+<line x1="404" y1="136" x2="404" y2="312" stroke="#e1e0d9" stroke-width="1"/>
+<line x1="442" y1="136" x2="442" y2="312" stroke="#e1e0d9" stroke-width="1"/>
+<line x1="480" y1="136" x2="480" y2="312" stroke="#e1e0d9" stroke-width="1"/>
+<line x1="518" y1="136" x2="518" y2="312" stroke="#e1e0d9" stroke-width="1"/>
+<line x1="556" y1="136" x2="556" y2="312" stroke="#e1e0d9" stroke-width="1"/>
+<text x="90" y="162" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="end">slot 1</text>
+<rect x="101.5" y="140" width="377" height="34" rx="5" fill="#eef4fc" stroke="#2a78d6" stroke-width="1.2"/>
+<text x="290" y="161.5" font-size="12" font-weight="650" fill="#0b0b0b" text-anchor="middle">R1</text>
+<rect x="481.5" y="140" width="73" height="34" rx="5" fill="#eef4fc" stroke="#2a78d6" stroke-width="1.2"/>
+<text x="518" y="161.5" font-size="12" font-weight="650" fill="#0b0b0b" text-anchor="middle">R5 …</text>
+<text x="90" y="206" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="end">slot 2</text>
+<rect x="101.5" y="184" width="111" height="34" rx="5" fill="#eef4fc" stroke="#2a78d6" stroke-width="1.2"/>
+<text x="157" y="205.5" font-size="12" font-weight="650" fill="#0b0b0b" text-anchor="middle">R2</text>
+<rect x="215.5" y="184" width="263" height="34" rx="5" fill="url(#h898781)" stroke="#898781" stroke-width="1" stroke-dasharray="3 3"/>
+<rect x="481.5" y="184" width="73" height="34" rx="5" fill="#eef4fc" stroke="#2a78d6" stroke-width="1.2"/>
+<text x="518" y="205.5" font-size="12" font-weight="650" fill="#0b0b0b" text-anchor="middle">R6 …</text>
+<text x="90" y="250" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="end">slot 3</text>
+<rect x="101.5" y="228" width="225" height="34" rx="5" fill="#eef4fc" stroke="#2a78d6" stroke-width="1.2"/>
+<text x="214" y="249.5" font-size="12" font-weight="650" fill="#0b0b0b" text-anchor="middle">R3</text>
+<rect x="329.5" y="228" width="149" height="34" rx="5" fill="url(#h898781)" stroke="#898781" stroke-width="1" stroke-dasharray="3 3"/>
+<rect x="481.5" y="228" width="73" height="34" rx="5" fill="#eef4fc" stroke="#2a78d6" stroke-width="1.2"/>
+<text x="518" y="249.5" font-size="12" font-weight="650" fill="#0b0b0b" text-anchor="middle">R7 …</text>
+<text x="90" y="294" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="end">slot 4</text>
+<rect x="101.5" y="272" width="301" height="34" rx="5" fill="#eef4fc" stroke="#2a78d6" stroke-width="1.2"/>
+<text x="252" y="293.5" font-size="12" font-weight="650" fill="#0b0b0b" text-anchor="middle">R4</text>
+<rect x="405.5" y="272" width="73" height="34" rx="5" fill="url(#h898781)" stroke="#898781" stroke-width="1" stroke-dasharray="3 3"/>
+<rect x="481.5" y="272" width="73" height="34" rx="5" fill="#eef4fc" stroke="#2a78d6" stroke-width="1.2"/>
+<text x="518" y="293.5" font-size="12" font-weight="650" fill="#0b0b0b" text-anchor="middle">R8 …</text>
+<text x="100" y="332" font-size="11" font-weight="400" fill="#898781" text-anchor="middle">0</text>
+<text x="214" y="332" font-size="11" font-weight="400" fill="#898781" text-anchor="middle">3</text>
+<text x="328" y="332" font-size="11" font-weight="400" fill="#898781" text-anchor="middle">6</text>
+<text x="442" y="332" font-size="11" font-weight="400" fill="#898781" text-anchor="middle">9</text>
+<text x="556" y="332" font-size="11" font-weight="400" fill="#898781" text-anchor="middle">12</text>
+<text x="556" y="348" font-size="11" font-weight="400" fill="#898781" text-anchor="end">bước decode</text>
+<text x="100" y="372" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">• Batch chỉ kết thúc khi request dài nhất (R1) xong</text>
+<text x="100" y="392" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">• R5–R8 phải chờ tới bước 10 mới được chạy</text>
+<text x="100" y="412" font-size="12.5" font-weight="700" fill="#0b0b0b" text-anchor="start">Hoàn thành trong 12 bước: 4 request</text>
+<text x="700" y="124" font-size="14" font-weight="700" fill="#0b0b0b" text-anchor="start">Continuous batching (cách vLLM làm)</text>
+<line x1="700" y1="136" x2="700" y2="312" stroke="#e1e0d9" stroke-width="1"/>
+<line x1="738" y1="136" x2="738" y2="312" stroke="#e1e0d9" stroke-width="1"/>
+<line x1="776" y1="136" x2="776" y2="312" stroke="#e1e0d9" stroke-width="1"/>
+<line x1="814" y1="136" x2="814" y2="312" stroke="#e1e0d9" stroke-width="1"/>
+<line x1="852" y1="136" x2="852" y2="312" stroke="#e1e0d9" stroke-width="1"/>
+<line x1="890" y1="136" x2="890" y2="312" stroke="#e1e0d9" stroke-width="1"/>
+<line x1="928" y1="136" x2="928" y2="312" stroke="#e1e0d9" stroke-width="1"/>
+<line x1="966" y1="136" x2="966" y2="312" stroke="#e1e0d9" stroke-width="1"/>
+<line x1="1004" y1="136" x2="1004" y2="312" stroke="#e1e0d9" stroke-width="1"/>
+<line x1="1042" y1="136" x2="1042" y2="312" stroke="#e1e0d9" stroke-width="1"/>
+<line x1="1080" y1="136" x2="1080" y2="312" stroke="#e1e0d9" stroke-width="1"/>
+<line x1="1118" y1="136" x2="1118" y2="312" stroke="#e1e0d9" stroke-width="1"/>
+<line x1="1156" y1="136" x2="1156" y2="312" stroke="#e1e0d9" stroke-width="1"/>
+<text x="690" y="162" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="end">slot 1</text>
+<rect x="701.5" y="140" width="377" height="34" rx="5" fill="#eef4fc" stroke="#2a78d6" stroke-width="1.2"/>
+<text x="890" y="161.5" font-size="12" font-weight="650" fill="#0b0b0b" text-anchor="middle">R1</text>
+<rect x="1081.5" y="140" width="73" height="34" rx="5" fill="#eef4fc" stroke="#2a78d6" stroke-width="1.2"/>
+<text x="1118" y="161.5" font-size="12" font-weight="650" fill="#0b0b0b" text-anchor="middle">R9 …</text>
+<text x="690" y="206" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="end">slot 2</text>
+<rect x="701.5" y="184" width="111" height="34" rx="5" fill="#eef4fc" stroke="#2a78d6" stroke-width="1.2"/>
+<text x="757" y="205.5" font-size="12" font-weight="650" fill="#0b0b0b" text-anchor="middle">R2</text>
+<rect x="815.5" y="184" width="187" height="34" rx="5" fill="#eef4fc" stroke="#2a78d6" stroke-width="1.2"/>
+<text x="909" y="205.5" font-size="12" font-weight="650" fill="#0b0b0b" text-anchor="middle">R5</text>
+<rect x="1005.5" y="184" width="149" height="34" rx="5" fill="#eef4fc" stroke="#2a78d6" stroke-width="1.2"/>
+<text x="1080" y="205.5" font-size="12" font-weight="650" fill="#0b0b0b" text-anchor="middle">R7</text>
+<text x="690" y="250" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="end">slot 3</text>
+<rect x="701.5" y="228" width="225" height="34" rx="5" fill="#eef4fc" stroke="#2a78d6" stroke-width="1.2"/>
+<text x="814" y="249.5" font-size="12" font-weight="650" fill="#0b0b0b" text-anchor="middle">R3</text>
+<rect x="929.5" y="228" width="149" height="34" rx="5" fill="#eef4fc" stroke="#2a78d6" stroke-width="1.2"/>
+<text x="1004" y="249.5" font-size="12" font-weight="650" fill="#0b0b0b" text-anchor="middle">R6</text>
+<rect x="1081.5" y="228" width="73" height="34" rx="5" fill="#eef4fc" stroke="#2a78d6" stroke-width="1.2"/>
+<text x="1118" y="249.5" font-size="12" font-weight="650" fill="#0b0b0b" text-anchor="middle">R10 …</text>
+<text x="690" y="294" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="end">slot 4</text>
+<rect x="701.5" y="272" width="301" height="34" rx="5" fill="#eef4fc" stroke="#2a78d6" stroke-width="1.2"/>
+<text x="852" y="293.5" font-size="12" font-weight="650" fill="#0b0b0b" text-anchor="middle">R4</text>
+<rect x="1005.5" y="272" width="149" height="34" rx="5" fill="#eef4fc" stroke="#2a78d6" stroke-width="1.2"/>
+<text x="1080" y="293.5" font-size="12" font-weight="650" fill="#0b0b0b" text-anchor="middle">R8 …</text>
+<text x="700" y="332" font-size="11" font-weight="400" fill="#898781" text-anchor="middle">0</text>
+<text x="814" y="332" font-size="11" font-weight="400" fill="#898781" text-anchor="middle">3</text>
+<text x="928" y="332" font-size="11" font-weight="400" fill="#898781" text-anchor="middle">6</text>
+<text x="1042" y="332" font-size="11" font-weight="400" fill="#898781" text-anchor="middle">9</text>
+<text x="1156" y="332" font-size="11" font-weight="400" fill="#898781" text-anchor="middle">12</text>
+<text x="1156" y="348" font-size="11" font-weight="400" fill="#898781" text-anchor="end">bước decode</text>
+<text x="700" y="372" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">• Request mới được chèn vào ngay khi một slot trống</text>
+<text x="700" y="392" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">• Slot luôn có việc → thông lượng cao hơn</text>
+<text x="700" y="412" font-size="12.5" font-weight="700" fill="#0b0b0b" text-anchor="start">Hoàn thành trong 12 bước: 7 request</text>
+</svg>

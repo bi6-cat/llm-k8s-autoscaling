@@ -18,7 +18,7 @@
 <text x="266" y="159" font-size="12.5" text-anchor="start"><tspan font-weight="650" fill="#0b0b0b">namespace: llm-serving</tspan></text>
 <rect x="272" y="269" width="140" height="64" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
 <text x="342" y="298.1" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="middle">Ingress</text>
-<text x="342" y="315.7" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="middle">NGINX / Envoy</text>
+<text x="342" y="315.7" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="middle">Traefik / Envoy</text>
 <rect x="440" y="269" width="140" height="64" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
 <text x="510" y="298.1" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="middle">Service vllm</text>
 <text x="510" y="315.7" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="middle">ClusterIP · chia tải</text>
@@ -29,7 +29,7 @@
 <text x="628" y="190" font-size="12.5" text-anchor="start"><tspan font-weight="650" fill="#0b0b0b">Deployment vllm</tspan><tspan font-weight="400" fill="#52514e">  replicas 1…N (N = 4)</tspan></text>
 <rect x="628" y="204" width="262" height="58" rx="9" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
 <text x="642" y="228" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">vLLM pod 1</text>
-<rect x="730.8" y="214" width="53.4" height="18" rx="9" fill="#edf6ed" stroke="#0ca30c" stroke-width="1"/>
+<rect x="730.8" y="214" width="58.5" height="18" rx="9" fill="#edf6ed" stroke="#0ca30c" stroke-width="1"/>
 <circle cx="739.8" cy="223" r="3.5" fill="#0ca30c"/>
 <text x="746.8" y="227" font-size="10.5" font-weight="600" fill="#0b0b0b" text-anchor="start">Ready</text>
 <text x="642" y="249" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">API :8000 · /metrics</text>
@@ -46,7 +46,7 @@
 <text x="951" y="237.5" font-size="11.5" font-weight="650" fill="#0b0b0b" text-anchor="middle">GPU 0</text>
 <rect x="628" y="274" width="262" height="58" rx="9" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
 <text x="642" y="298" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">vLLM pod 2</text>
-<rect x="730.8" y="284" width="53.4" height="18" rx="9" fill="#edf6ed" stroke="#0ca30c" stroke-width="1"/>
+<rect x="730.8" y="284" width="58.5" height="18" rx="9" fill="#edf6ed" stroke="#0ca30c" stroke-width="1"/>
 <circle cx="739.8" cy="293" r="3.5" fill="#0ca30c"/>
 <text x="746.8" y="297" font-size="10.5" font-weight="600" fill="#0b0b0b" text-anchor="start">Ready</text>
 <text x="642" y="319" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">API :8000 · /metrics</text>
@@ -63,7 +63,7 @@
 <text x="951" y="307.5" font-size="11.5" font-weight="650" fill="#0b0b0b" text-anchor="middle">GPU 1</text>
 <rect x="628" y="344" width="262" height="58" rx="9" fill="#ffffff" stroke="#52514e" stroke-width="1.2" stroke-dasharray="5 4"/>
 <text x="642" y="368" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">vLLM pod N</text>
-<rect x="732.1" y="354" width="99.5" height="18" rx="9" fill="#fdf3dc" stroke="#fab219" stroke-width="1"/>
+<rect x="732.1" y="354" width="109.2" height="18" rx="9" fill="#fdf3dc" stroke="#fab219" stroke-width="1"/>
 <circle cx="741.1" cy="363" r="3.5" fill="#fab219"/>
 <text x="748.1" y="367" font-size="10.5" font-weight="600" fill="#0b0b0b" text-anchor="start">Đang khởi động</text>
 <text x="642" y="389" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">chưa nhận traffic tới khi Ready</text>
@@ -121,7 +121,7 @@
 <path d="M580,200 L612,200" fill="none" stroke="#52514e" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="3 4" marker-end="url(#a52514e)"/>
 <path d="M1084,371 L1012,371" fill="none" stroke="#52514e" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="3 4" marker-end="url(#a52514e)"/>
 <path d="M700,420 L700,532" fill="none" stroke="#4a3aa7" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="5 4" marker-end="url(#a4a3aa7)"/>
-<rect x="703" y="474" width="130.2" height="18" rx="4" fill="#fbfbfa"/>
+<rect x="703" y="474" width="139.4" height="18" rx="4" fill="#fbfbfa"/>
 <text x="708" y="486" font-size="11" font-weight="400" fill="#52514e" text-anchor="start">scrape /metrics mỗi 5 s</text>
 <path d="M806,631 L790,631 Q782,631 782,623 L782,565 Q782,557 774,557 L758,557" fill="none" stroke="#4a3aa7" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="5 4" marker-end="url(#a4a3aa7)"/>
 <path d="M647,582 L647,606" fill="none" stroke="#52514e" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>

@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="548" viewBox="0 0 1240 548" role="img" aria-label="Dữ liệu một lượt chạy: sáu nguồn, thu thập qua ghi trực tiếp, Prometheus và runner, lưu thành một thư mục cho mỗi lượt, rồi căn thời gian và tổng hợp" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+<title>Dữ liệu một lượt chạy: sáu nguồn, thu thập qua ghi trực tiếp, Prometheus và runner, lưu thành một thư mục cho mỗi lượt, rồi căn thời gian và tổng hợp</title>
+<defs><marker id="a52514e" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path d="M0,1 L10,5 L0,9 z" fill="#52514e"/></marker><marker id="a4a3aa7" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path d="M0,1 L10,5 L0,9 z" fill="#4a3aa7"/></marker></defs>
+<rect x="0.5" y="0.5" width="1239" height="547" rx="14" fill="#fcfcfb" stroke="#e4e3de"/>
+<text x="32" y="38" font-size="19" font-weight="700" fill="#0b0b0b" text-anchor="start">Dữ liệu của một lượt chạy: thu thập → lưu trữ → tổng hợp</text>
+<text x="32" y="61" font-size="13" font-weight="400" fill="#52514e" text-anchor="start">Mọi nguồn đều mang timestamp (các máy đồng bộ giờ bằng NTP); runner gom về một thư mục cho mỗi lượt</text>
+<text x="32" y="100" font-size="12" font-weight="700" fill="#52514e" text-anchor="start">NGUỒN</text>
+<text x="330" y="100" font-size="12" font-weight="700" fill="#52514e" text-anchor="start">THU THẬP</text>
+<text x="628" y="100" font-size="12" font-weight="700" fill="#52514e" text-anchor="start">LƯU TRỮ (mỗi lượt)</text>
+<text x="956" y="100" font-size="12" font-weight="700" fill="#52514e" text-anchor="start">XỬ LÝ</text>
+<rect x="32" y="112" width="250" height="52" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="46" y="134.9" font-size="13" font-weight="650" fill="#0b0b0b" text-anchor="start">Máy tạo tải</text>
+<text x="46" y="152.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">1 dòng / request: TTFT, E2E…</text>
+<path d="M282,138 L330,138" fill="none" stroke="#52514e" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
+<rect x="32" y="176" width="250" height="52" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="46" y="198.9" font-size="13" font-weight="650" fill="#0b0b0b" text-anchor="start">vLLM /metrics</text>
+<text x="46" y="216.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">hàng đợi, running, KV-cache</text>
+<path d="M282,202 L330,202" fill="none" stroke="#4a3aa7" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="5 4" marker-end="url(#a4a3aa7)"/>
+<rect x="32" y="240" width="250" height="52" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="46" y="262.9" font-size="13" font-weight="650" fill="#0b0b0b" text-anchor="start">DCGM exporter</text>
+<text x="46" y="280.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">GPU util, SM active, VRAM</text>
+<path d="M282,266 L330,266" fill="none" stroke="#4a3aa7" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="5 4" marker-end="url(#a4a3aa7)"/>
+<rect x="32" y="304" width="250" height="52" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="46" y="326.9" font-size="13" font-weight="650" fill="#0b0b0b" text-anchor="start">kube-state-metrics</text>
+<text x="46" y="344.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">replicas, trạng thái pod, HPA</text>
+<path d="M282,330 L330,330" fill="none" stroke="#4a3aa7" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="5 4" marker-end="url(#a4a3aa7)"/>
+<rect x="32" y="368" width="250" height="52" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="46" y="390.9" font-size="13" font-weight="650" fill="#0b0b0b" text-anchor="start">Kubernetes API</text>
+<text x="46" y="408.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">pod conditions, events</text>
+<path d="M282,394 L330,394" fill="none" stroke="#52514e" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
+<rect x="32" y="432" width="250" height="52" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="46" y="454.9" font-size="13" font-weight="650" fill="#0b0b0b" text-anchor="start">Log vLLM</text>
+<text x="46" y="472.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">thời gian nạp model, compile</text>
+<path d="M282,458 L330,458" fill="none" stroke="#52514e" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
+<rect x="330" y="112" width="250" height="52" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="344" y="134.9" font-size="13" font-weight="650" fill="#0b0b0b" text-anchor="start">Ghi trực tiếp</text>
+<text x="344" y="152.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">CSV append theo request</text>
+<rect x="330" y="176" width="250" height="180" rx="10" fill="#f2f0fa" stroke="#d6d1ef" stroke-width="1.2"/>
+<text x="344" y="237.8" font-size="13" font-weight="650" fill="#0b0b0b" text-anchor="start">Prometheus</text>
+<text x="344" y="255.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">scrape mỗi 5 s</text>
+<text x="344" y="272.2" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">runner gọi query_range</text>
+<text x="344" y="288.9" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">theo cửa sổ lượt chạy</text>
+<text x="344" y="305.6" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">→ xuất Parquet</text>
+<rect x="330" y="368" width="250" height="116" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="344" y="414.5" font-size="13" font-weight="650" fill="#0b0b0b" text-anchor="start">Runner theo dõi</text>
+<text x="344" y="432.2" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">watch pod conditions</text>
+<text x="344" y="448.9" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">và events; lấy log vLLM</text>
+<path d="M580,138 L628,138" fill="none" stroke="#52514e" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
+<path d="M580,266 L628,266" fill="none" stroke="#52514e" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
+<path d="M580,426 L628,426" fill="none" stroke="#52514e" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
+<rect x="628" y="112" width="280" height="372" rx="10" fill="#ffffff" stroke="#52514e" stroke-width="1.3"/>
+<text x="644" y="138" font-size="12.5" font-weight="700" fill="#0b0b0b" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">runs/&lt;run-id&gt;/</text>
+<text x="652" y="170" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">metadata.json</text>
+<text x="652" y="187" font-size="11" font-weight="400" fill="#52514e" text-anchor="start">cấu hình, phiên bản, seed</text>
+<text x="652" y="214" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">phases.json</text>
+<text x="652" y="231" font-size="11" font-weight="400" fill="#52514e" text-anchor="start">mốc bắt đầu/kết thúc pha</text>
+<text x="652" y="258" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">requests.csv</text>
+<text x="652" y="275" font-size="11" font-weight="400" fill="#52514e" text-anchor="start">log từng request</text>
+<text x="652" y="302" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">metrics.parquet</text>
+<text x="652" y="319" font-size="11" font-weight="400" fill="#52514e" text-anchor="start">chuỗi Prometheus</text>
+<text x="652" y="346" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">events.jsonl</text>
+<text x="652" y="363" font-size="11" font-weight="400" fill="#52514e" text-anchor="start">sự kiện pod, HPA</text>
+<text x="652" y="390" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">vllm-logs/</text>
+<text x="652" y="407" font-size="11" font-weight="400" fill="#52514e" text-anchor="start">log từng pod</text>
+<text x="652" y="434" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">checks.json</text>
+<text x="652" y="451" font-size="11" font-weight="400" fill="#52514e" text-anchor="start">kết quả kiểm tra hợp lệ</text>
+<rect x="956" y="112" width="252" height="76" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="970" y="146.9" font-size="13" font-weight="650" fill="#0b0b0b" text-anchor="start">Căn thời gian, cắt pha</text>
+<text x="970" y="164.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">bỏ warm-up; gắn nhãn pha KB</text>
+<path d="M1082,188 L1082,208" fill="none" stroke="#52514e" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
+<rect x="956" y="208" width="252" height="76" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="970" y="242.9" font-size="13" font-weight="650" fill="#0b0b0b" text-anchor="start">Bảng theo request</text>
+<text x="970" y="260.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">TTFT, TPOT, E2E, đạt SLO?</text>
+<path d="M1082,284 L1082,304" fill="none" stroke="#52514e" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
+<rect x="956" y="304" width="252" height="76" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="970" y="338.9" font-size="13" font-weight="650" fill="#0b0b0b" text-anchor="start">Bảng theo pha / lượt</text>
+<text x="970" y="356.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">p95, SLO attainment, GPU-giờ</text>
+<path d="M1082,380 L1082,400" fill="none" stroke="#52514e" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
+<rect x="956" y="400" width="252" height="76" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="970" y="434.9" font-size="13" font-weight="650" fill="#0b0b0b" text-anchor="start">Bảng theo ô ma trận</text>
+<text x="970" y="452.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">trung bình ± CI qua 3 lượt</text>
+<path d="M908,150 L956,150" fill="none" stroke="#52514e" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
+<text x="956" y="512" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">→ biểu đồ, kiểm định, bảng trong luận văn</text>
+</svg>
