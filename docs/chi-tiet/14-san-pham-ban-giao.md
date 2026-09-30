@@ -28,11 +28,11 @@
 ```text
 llm-k8s-autoscaling/
 ├── README.md                      # giới thiệu, sơ đồ, quick start, liên kết tài liệu
-├── Makefile                       # up, bootstrap, prefetch, calibrate, run, backup, down, analysis
+├── Makefile                       # find, rent, burnin, bootstrap, prefetch, calibrate, run, backup, release, analysis
 ├── infra/
-│   ├── terraform/                 # module theo nhà cung cấp: vm-gpu, vm-cpu, network
+│   ├── provision/                 # script thuê/burn-in/huỷ VM (CLI vastai; dự phòng TensorDock API)
 │   └── ansible/
-│       ├── inventory/             # sinh từ output của Terraform
+│       ├── inventory/             # sinh từ thông tin instance vừa thuê
 │       └── roles/                 # common, chrony, nvidia, k3s-server, k3s-agent, nvme, argocd-bootstrap
 ├── platform/                      # values Helm theo môi trường
 │   ├── gpu-operator/values-{laptop,cloud}.yaml
@@ -78,7 +78,7 @@ llm-k8s-autoscaling/
 | Lệnh | Việc làm |
 |---|---|
 | `make laptop-up` | Cài k3s và các thành phần trên laptop (Ansible, inventory local) |
-| `make up` / `make down` | Terraform tạo / huỷ VM (`down` từ chối chạy nếu chưa backup xong) |
+| `make find` / `make rent` / `make burnin` / `make release` | Tìm máy theo tiêu chí, thuê, burn-in, huỷ (`release` từ chối chạy nếu chưa backup xong) |
 | `make bootstrap` | Ansible cấu hình máy, cài Argo CD, áp root-app |
 | `make prefetch` | Tải model về NVMe, pre-pull image |
 | `make calibrate` | Chạy hiệu chỉnh, sinh `calibration.json` |
@@ -110,7 +110,7 @@ llm-k8s-autoscaling/
 dataset/
 ├── README.md             # mô tả, lược đồ, cách trích dẫn, giấy phép
 ├── calibration/          # các lượt quét λ
-├── coldstart/            # 5 lần × L0/L1/L2
+├── coldstart/            # 5 lần × L0/L2
 ├── matrix/
 │   └── runs/<run-id>/    # metadata.json, phases.json, requests.csv, metrics.parquet, events.jsonl, vllm-logs/, checks.json
 ├── derived/              # req.parquet, phase_metrics.parquet, run_metrics.parquet, cell_summary.parquet, coldstart.parquet
@@ -126,9 +126,9 @@ dataset/
 
 ## 4. Hướng dẫn tái lập (dàn ý README)
 
-1. **Yêu cầu:** phần cứng (laptop NVIDIA, hoặc tài khoản cloud GPU), công cụ (terraform, ansible, kubectl, helm, python, uv).
+1. **Yêu cầu:** phần cứng (laptop NVIDIA, hoặc tài khoản cloud GPU), công cụ (vastai CLI, ansible, kubectl, helm, python, uv).
 2. **Chạy nhanh trên laptop:** `make laptop-up`, rồi `make run MATRIX=experiments/matrix-mini.yaml`, rồi `make analysis`.
-3. **Chạy đầy đủ trên cloud:** cấu hình `.env` (thông tin nhà cung cấp), rồi lần lượt `make up bootstrap prefetch calibrate`, sau đó `make run` cho 3 khối, `make backup`, `make down`.
+3. **Chạy đầy đủ trên máy thuê:** cấu hình `.env` (API key Vast.ai, R2), rồi lần lượt `make find rent burnin bootstrap prefetch calibrate`, sau đó `make run` cho 3 khối, `make backup`, `make release`.
 4. **Chỉ tái tạo hình và bảng từ dữ liệu đã công bố:** tải `dataset/`, rồi `make analysis DATA=dataset/`.
 5. **Phiên bản đã dùng:** bảng phiên bản kèm digest.
 6. **Các lỗi thường gặp:** Argo CD và `replicas`, label `release` của PodMonitor, `/dev/shm`, label DCGM.

@@ -20,7 +20,7 @@ data/derived/*.parquet
    │  01_build_tables.py    req, phase_metrics, run_metrics, cell_summary, coldstart
    ▼
    ├─ 02_calibration.ipynb  đường cong TTFT/ITL/B theo λ → C, B*, Hình 15 (thật)
-   ├─ 03_coldstart.ipynb    8 pha × L0/L1/L2 → C6
+   ├─ 03_coldstart.ipynb    8 pha × L0/L2 → C6
    ├─ 04_matrix.ipynb       RQ1, RQ3 → C1–C5, C7, C8, bảng tổng hợp
    └─ 05_figures.py         xuất mọi hình cho luận văn (SVG/PNG) với cùng một style
 ```
@@ -114,7 +114,7 @@ Mỗi RQ chỉ có một số ít so sánh chính, đã đăng ký trước. Cá
 | **C3** | SLO attainment theo cấu hình × kịch bản | RQ1, RQ3 | Cột nhóm kèm khoảng tin cậy và chấm các lượt riêng lẻ |
 | **C4** | GPU-giờ (% so với S4) theo cấu hình × kịch bản | RQ3 | Như C3 |
 | **C5** | **Trade-off**: trục hoành GPU-giờ (% S4), trục tung SLO attainment; mỗi cấu hình một điểm, mỗi kịch bản một ô | RQ3 | Điểm kèm thanh sai số 2 chiều; góc trên bên trái là "tốt" |
-| **C6** | Phân rã cold start đo thật ở L0/L1/L2 | RQ2 | Cột ngang chồng theo 8 pha (như Hình 5 và 12) kèm khoảng tin cậy của tổng |
+| **C6** | Phân rã cold start đo thật ở L0 và L2 | RQ2 | Cột ngang chồng theo 8 pha (như Hình 5 và 12) kèm khoảng tin cậy của tổng |
 | **C7** | Phân rã thời gian phản ứng ở KB2: phát hiện và cung cấp, theo A1/A2/A3 | RQ1, RQ2 | Cột chồng 2 phần |
 | **C8** | Bảng nhiệt tổng hợp: SLO attainment theo cấu hình × kịch bản | Tổng quan | Thang màu một sắc độ; ghi số trong từng ô |
 

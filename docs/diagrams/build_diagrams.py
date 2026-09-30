@@ -356,7 +356,7 @@ def fig_architecture():
     s.box(806, 606, 212, 50, "DCGM exporter", ["GPU util · VRAM · SM active"], tsize=13)
 
     # ngoài cụm
-    s.box(32, 262, 176, 78, "Máy tạo tải", ["open-loop · streaming", "VM cùng region"])
+    s.box(32, 262, 176, 78, "Máy tạo tải", ["open-loop · streaming", "pod có lõi CPU riêng"])
     s.box(1084, 120, 168, 60, "Hugging Face Hub", ["tải weights lần đầu"], tsize=13)
     s.box(1084, 341, 168, 60, "Container registry", ["image vllm-openai"], tsize=13)
 
@@ -629,7 +629,7 @@ def fig_envs():
             ("serving/overlays/laptop/", "model 1,5B–3B"),
             ("serving/overlays/cloud/", "model 7–8B"),
             ("autoscaling/", "static, A1, A2, A3"),
-            ("infra/", "Terraform + Ansible")]
+            ("infra/", "script thuê VM + Ansible")]
     for i, (p, d) in enumerate(rows):
         y = gy + 50 + i * 18.5
         s.text(gx + 16, y, p, size=11.5, fill=INK, family=MONO)
@@ -655,24 +655,24 @@ def fig_envs():
     # tầng 2
     s.rect(628, 290, 580, 262, fill=GRAY_T, stroke=AXIS, rx=14)
     s.text(646, 318, "Tầng 2 · Thí nghiệm chính", size=14.5, weight=700)
-    s.text(646, 338, "VM GPU thuê theo giờ · dựng bằng IaC, huỷ ngay khi chạy xong", size=12, fill=INK2)
-    s.rect(648, 354, 348, 112, fill=WHITE, stroke=AXIS, rx=10)
-    s.text(662, 378, "VM GPU · k3s single-node", size=13.5, weight=650)
-    s.text(662, 396, "4× GPU 24 GB (L4 / A10 / RTX 4090 …)", size=11.5, fill=INK2)
+    s.text(646, 338, "Vast.ai chế độ VM · thuê trọn máy · một đợt liên tục ~72 giờ", size=12, fill=INK2)
+    s.rect(648, 354, 540, 112, fill=WHITE, stroke=AXIS, rx=10)
+    s.text(662, 378, "VM 4 GPU · k3s single-node", size=13.5, weight=650)
+    s.text(662, 396, "4× RTX 4090 24 GB · CPU manager static", size=11.5, fill=INK2)
     for i in range(4):
         s.gpu_chip(662 + i * 81, 418, 72, 32, f"GPU {i}")
-    s.box(1012, 354, 176, 112, "VM CPU nhỏ", ["máy tạo tải", "experiment runner", "cùng region / DC"],
-          align="start")
-    s.arrow([(1012, 440), (996, 440)], BLUE, sw=2, r=0)
-    for i, ln in enumerate(["Model 7–8B (vd Qwen2.5-7B-Instruct) · ghim phiên bản vLLM và image",
-                            "Dùng cho: hiệu chỉnh C, ma trận thí nghiệm, đo cold start",
-                            "Dữ liệu (CSV/Parquet + snapshot Prometheus) được lưu trước khi huỷ VM"]):
+    s.box(1000, 368, 176, 86, "Máy tạo tải + runner", ["lõi CPU riêng", "không qua mạng ngoài"],
+          align="start", tsize=12.5, fill=BLUE_T, stroke="#c9dcf3")
+    s.arrow([(1000, 434), (984, 434)], BLUE, sw=2, r=0)
+    for i, ln in enumerate(["Qwen2.5-7B-Instruct · ghim digest của vLLM và image",
+                            "Dùng cho: burn-in, hiệu chỉnh C, cold start, 3 khối ma trận",
+                            "Dữ liệu đẩy lên R2 sau mỗi lượt; huỷ instance ngay khi xong"]):
         s.text(648, 496 + i * 22, ln, size=12, fill=INK2)
 
     s.arrow([(520, 228), (520, 258), (322, 258), (322, 290)], INK2, sw=1.6)
     s.label(421, 252, "Argo CD sync · overlays/laptop", fill=INK)
     s.arrow([(720, 228), (720, 258), (918, 258), (918, 290)], INK2, sw=1.6)
-    s.label(868, 252, "IaC dựng VM → Argo CD sync · overlays/cloud", fill=INK)
+    s.label(868, 252, "thuê VM (vastai) → Ansible → Argo CD · overlays/cloud", fill=INK)
     s.save("06-moi-truong-trien-khai.svg")
 
 
@@ -691,7 +691,7 @@ def fig_pipeline():
         s.text(x + 10, 61, o, size=12, fill=INK2)
         x += text_width(o, 12) + 34
     xs = [32, 448, 864]
-    row1 = [(1, "Dựng hạ tầng", ["Terraform tạo VM GPU + VM CPU", "Ansible: driver, k3s, GPU Operator"], "Quang"),
+    row1 = [(1, "Thuê máy & dựng", ["vastai: thuê VM 4 GPU, burn-in", "Ansible: driver, k3s, GPU, Argo CD"], "Quang"),
             (2, "Triển khai nền tảng", ["Argo CD sync: Prometheus, Grafana,", "KEDA, vLLM, dashboard"], "Cả nhóm"),
             (3, "Hiệu chỉnh năng lực", ["sweep tốc độ → tìm C của 1 replica", "chốt SLO và target cho A1–A3"], "Trình")]
     for i, (n, t, ls, o) in enumerate(row1):
@@ -704,7 +704,7 @@ def fig_pipeline():
     s.add(f'<circle cx="56" cy="259" r="12" fill="{INK2}"/>')
     s.text(56, 263.5, "4", size=12.5, weight=700, fill=WHITE, anchor="middle")
     s.rich(76, 264, [("Vòng lặp ma trận thí nghiệm", 650, INK),
-                     ("  5 cấu hình × 5 kịch bản × 3 lần = 75 lượt · experiment runner (Python)", 400, INK2)],
+                     ("  25 ô × 3 khối = 75 lượt (+3 lượt A4 × KB3) · experiment runner (Python)", 400, INK2)],
            size=13.5)
     s.owner_pill(1194, 248, "Quang")
     steps = [("a", "Áp cấu hình", ["Static hoặc", "ScaledObject A1–A3"]),
@@ -725,7 +725,7 @@ def fig_pipeline():
     s.label(623, 428, "lượt tiếp theo", bg=GRAY_T, fill=INK)
     s.arrow([(1036, 450), (1036, 494)], INK2, sw=1.8)
 
-    row3 = [(864, 5, "Sao lưu & huỷ hạ tầng", ["đẩy dữ liệu về object storage", "terraform destroy (ngừng tính tiền)"],
+    row3 = [(864, 5, "Sao lưu & huỷ máy", ["đẩy dữ liệu lên R2 sau mỗi lượt", "huỷ instance (ngừng tính tiền)"],
              "Quang"),
             (448, 6, "Phân tích & báo cáo", ["Jupyter + pandas: bảng, CDF,", "time series, kiểm định thống kê"],
              "Cả nhóm")]
@@ -757,10 +757,11 @@ def fig_gantt():
             ("Experiment runner tự động", "Quang", 6, 7),
             ("Pilot trên laptop, sửa pipeline", "Cả nhóm", 7, 8)]),
         ("Giai đoạn 3 · Thí nghiệm trên GPU thuê", [
-            ("Dựng cụm cloud bằng IaC, hiệu chỉnh C & SLO", "Cả nhóm", 8, 9),
-            ("Đo & tối ưu cold start", "Trình", 9, 11),
-            ("Chạy ma trận thí nghiệm chính (75 lượt)", "Cả nhóm", 9, 12),
-            ("Phân tích dữ liệu, vẽ biểu đồ", "Quang", 11, 13)]),
+            ("Chạy thử VM 1 GPU, script thuê/burn-in", "Cả nhóm", 8, 8),
+            ("Đợt thuê chính ~72 giờ (hiệu chỉnh → 3 khối)", "Cả nhóm", 9, 9),
+            ("Đợt dự phòng (nếu cần)", "Cả nhóm", 11, 11),
+            ("Phân tích cold start (RQ2)", "Trình", 10, 12),
+            ("Phân tích ma trận, thống kê, biểu đồ", "Quang", 10, 13)]),
         ("Giai đoạn 4 · Hoàn thiện", [
             ("Viết luận văn", "Cả nhóm", 11, 15),
             ("Slide, demo, tuần dự phòng", "Cả nhóm", 15, 16)]),

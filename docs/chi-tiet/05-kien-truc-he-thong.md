@@ -59,6 +59,7 @@
 | `replicas` | **Bỏ trống trong manifest** | Để HPA quản lý; nếu đặt thì Argo CD sẽ "sửa lại" (xem §10.3) |
 | `resources.limits.nvidia.com/gpu` | 1 | Mỗi replica dùng 1 GPU |
 | `resources.requests.cpu` | 4–6 | API server cần CPU để tokenize và stream (xem [04 §3.6](04-kien-thuc-nen.md#36-kiến-trúc-tiến-trình-của-vllm-v1)) |
+| QoS **Guaranteed** (requests = limits, CPU nguyên) | cpu 6, memory 24Gi | Với kubelet `cpu-manager-policy=static`, pod nhận **lõi CPU riêng**, không tranh với máy tạo tải chạy cùng VM ([06 §3.5](06-moi-truong-chi-phi.md#35-cấu-hình-k3s-và-phân-bổ-cpu-trên-vm-thuê)) |
 | `resources.requests/limits.memory` | 24–32 Gi | Nạp weights qua RAM; nếu giới hạn quá thấp sẽ bị OOM lúc khởi động |
 | `/dev/shm` | `emptyDir: {medium: Memory}` 8 Gi | PyTorch và NCCL dùng shared memory; mặc định chỉ có 64 MiB |
 | `startupProbe` | `/health`, chu kỳ 5 s, tối đa 120 lần thử | Cho phép cold start tới 10 phút mà không bị kill |
@@ -80,7 +81,7 @@
 | Đóng model vào image | Image chứa luôn weights | Một artifact duy nhất | Image khoảng 25 GB, pull rất lâu | Không khuyến nghị |
 | Stream từ object storage | `--load-format runai_streamer` | Không cần ổ cục bộ | Phụ thuộc băng thông object storage | Hướng mở rộng |
 
-**Khuyến nghị:** dùng L1 để khởi đầu (đơn giản). Dùng L2 cho thí nghiệm chính: một Job `model-prefetch` tải model về `/mnt/nvme/models`, rồi Deployment mount `hostPath` ở chế độ chỉ đọc. Trên cấu hình một node (phương án A), hostPath là đủ.
+**Khuyến nghị:** trên laptop, dùng PVC cho đơn giản. Trên máy thuê (một node), dùng L2: một Job `model-prefetch` tải model về `/mnt/nvme/models`, rồi Deployment mount `hostPath` ở chế độ chỉ đọc. Đồ án chỉ đo L0 và L2 (ADR-001), vì trên một máy thuê không có ổ mạng tương đương để đo L1 một cách thực tế.
 
 ### 3.3. Service và cân bằng tải
 
@@ -161,7 +162,7 @@ spec:
 
 | Bước | Diễn ra ở đâu | Thời gian | Có trong TTFT phía client? |
 |---|---|---|---|
-| Gửi HTTP, TCP/TLS | Máy tạo tải → Gateway | < 5 ms (cùng region, dùng keep-alive) | Có |
+| Gửi HTTP, TCP | Pod máy tạo tải → Traefik | < 1 ms (cùng VM, dùng keep-alive) | Có |
 | Chuyển tiếp qua Gateway, kube-proxy | Traefik → Service → pod | < 1 ms | Có |
 | Parse JSON, tokenize | API server (CPU) | 1–10 ms tuỳ độ dài prompt | Có |
 | **Chờ trong hàng đợi** | Scheduler | 0 → **vài giây** khi quá tải | Có (**thành phần biến động mạnh nhất**) |
@@ -322,6 +323,7 @@ spec:
 Với DCGM exporter, trong values của GPU Operator:
 - Bật `serviceMonitor` (interval 5 s).
 - Đặt chu kỳ thu metric về 5000 ms.
+- RTX 4090 là GPU GeForce: DCGM có thể không hỗ trợ đầy đủ, và **không có** metric profiling (`DCGM_FI_PROF_*`). Nếu `dcgm-exporter` không chạy, dùng `nvidia_gpu_exporter` (đọc qua `nvidia-smi`, metric kiểu `nvidia_smi_utilization_gpu_ratio`) và đổi truy vấn của A1 theo.
 
 ### 9.2. Recording rule (tính sẵn cho dashboard và autoscaling)
 
@@ -407,4 +409,4 @@ KServe thêm nhiều tầng (Knative, activator, CRD riêng). Các tầng này l
 Khi pod rất tải, `/health` có thể trả chậm. Liveness quá gắt sẽ **kill một pod đang làm việc** ngay lúc cần nó nhất, gây thêm một lần cold start.
 
 **Sao không cho mọi pod đọc chung model qua NFS cho gọn?**
-Hoàn toàn được (mức L1). Nhưng nạp 15 GB qua mạng chậm hơn NVMe nhiều. Thí nghiệm cold start sẽ lượng hoá chính xác mức chênh này.
+Hoàn toàn được (mức L1), và đây là cách phổ biến trong cluster nhiều node. Nhưng nạp 15 GB qua mạng chậm hơn NVMe nhiều. Trên một máy thuê, nhóm không có ổ mạng tương đương để đo L1, nên chỉ so L0 với L2.

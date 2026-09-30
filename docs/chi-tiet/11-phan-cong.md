@@ -29,7 +29,7 @@ R = làm chính · A = chịu trách nhiệm cuối (duyệt) · C = được h�
 | | Driver, container toolkit, device plugin / GPU Operator | R/A | I |
 | | Chỉnh chu kỳ sync HPA; nhãn node, `nodeSelector` | R/A | C |
 | | Ansible hoá các bước trên | C | R/A |
-| **WP2 IaC và GitOps** | Terraform tạo VM GPU và CPU | C | R/A |
+| **WP2 IaC và GitOps** | Script thuê, burn-in, huỷ VM (CLI `vastai`) | C | R/A |
 | | Cấu trúc repo, Kustomize base/overlay | C | R/A |
 | | Argo CD App-of-Apps; `ignoreDifferences` | C | R/A |
 | | Makefile (`up/bootstrap/run/backup/down`) | I | R/A |
@@ -49,7 +49,7 @@ R = làm chính · A = chịu trách nhiệm cuối (duyệt) · C = được h�
 | | Thu events và pod conditions; phân tích log vLLM | R (phần phân tích log vLLM) | A |
 | | Bộ kiểm tra hợp lệ `checks.json` | C | R/A |
 | **WP8 Hiệu chỉnh và cold start** | Quy trình hiệu chỉnh, chốt C/B\*/SLO | R/A | R (chạy tải) |
-| | Thí nghiệm cold start L0/L1/L2 | R/A | C |
+| | Thí nghiệm cold start L0/L2 | R/A | C |
 | **WP9 Phân tích** | Bảng dẫn xuất, unit test | C | R/A |
 | | Notebook hiệu chỉnh và cold start | R/A | C |
 | | Notebook ma trận, biểu đồ C1–C8, thống kê | C | R/A |

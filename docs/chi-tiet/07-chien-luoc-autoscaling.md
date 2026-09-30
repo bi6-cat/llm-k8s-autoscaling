@@ -52,7 +52,7 @@ Trong đó B\* và KV\* là giá trị đo được tại C (xem §4).
 - Ngược lại, khi tải rất thấp (KB1, 0,5C, có những khoảng không có request), `GPU_UTIL` dao động theo từng đợt request, nên có thể scale lên rồi xuống thất thường.
 - Kết luận dự kiến: A1 **gần như Static-4 cộng thêm độ trễ cold start**, tức là không tiết kiệm GPU-giờ. Tệ hơn, nó có thể dao động khi tải thấp.
 
-**Biến thể nên cân nhắc (A1′, tuỳ chọn):** dùng `DCGM_FI_PROF_SM_ACTIVE` hoặc `DCGM_FI_PROF_DRAM_ACTIVE`, phản ánh mức làm việc thật tốt hơn. Nếu các metric này có trên GPU thuê, A1′ là đối chứng thú vị: *metric phần cứng "tốt" so với metric ứng dụng*.
+**Biến thể A1′ (không khả thi trên RTX 4090, ADR-001):** dùng `DCGM_FI_PROF_SM_ACTIVE` hoặc `DCGM_FI_PROF_DRAM_ACTIVE`, phản ánh mức làm việc thật tốt hơn. Nếu các metric này có trên GPU thuê, A1′ là đối chứng thú vị: *metric phần cứng "tốt" so với metric ứng dụng*.
 
 **Công bằng:** chu kỳ thu metric DCGM phải là 5 s, giống vLLM (xem [05 §6](05-kien-truc-he-thong.md#6-vòng-lặp-autoscaling-và-mô-hình-thời-gian)).
 
@@ -192,7 +192,8 @@ spec:
 ### 6.3. A1, A3, A4 chỉ khác phần `triggers`
 
 ```yaml
-# A1: GPU utilization. Kiểm tra tên label pod/namespace trong metric DCGM của cluster mình
+# A1: GPU utilization. Kiểm tra tên label pod/namespace trong metric DCGM của cluster mình.
+# Nếu dùng nvidia_gpu_exporter thay DCGM: sum(nvidia_smi_utilization_gpu_ratio) * 100
 query: sum(DCGM_FI_DEV_GPU_UTIL{exported_namespace="llm-serving"}) or vector(0)
 threshold: "70"
 

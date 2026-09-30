@@ -15,7 +15,7 @@
 <text x="416" y="191.5" font-size="11.5" font-weight="400" fill="#0b0b0b" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">autoscaling/</text>
 <text x="606" y="191.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">static, A1, A2, A3</text>
 <text x="416" y="210" font-size="11.5" font-weight="400" fill="#0b0b0b" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">infra/</text>
-<text x="606" y="210" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">Terraform + Ansible</text>
+<text x="606" y="210" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">script thuê VM + Ansible</text>
 <rect x="32" y="290" width="580" height="262" rx="14" fill="#f4f3ef" stroke="#c3c2b7" stroke-width="1.2"/>
 <text x="50" y="318" font-size="14.5" font-weight="700" fill="#0b0b0b" text-anchor="start">Tầng 1 · Phát triển &amp; thử nghiệm sơ bộ</text>
 <text x="50" y="338" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Laptop RTX 4060 (8 GB VRAM) · chi phí ≈ 0</text>
@@ -63,10 +63,10 @@
 <text x="52" y="540" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Tuỳ chọn: llm-d-inference-sim (giả lập vLLM) để thử autoscaling không cần GPU</text>
 <rect x="628" y="290" width="580" height="262" rx="14" fill="#f4f3ef" stroke="#c3c2b7" stroke-width="1.2"/>
 <text x="646" y="318" font-size="14.5" font-weight="700" fill="#0b0b0b" text-anchor="start">Tầng 2 · Thí nghiệm chính</text>
-<text x="646" y="338" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">VM GPU thuê theo giờ · dựng bằng IaC, huỷ ngay khi chạy xong</text>
-<rect x="648" y="354" width="348" height="112" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
-<text x="662" y="378" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">VM GPU · k3s single-node</text>
-<text x="662" y="396" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">4× GPU 24 GB (L4 / A10 / RTX 4090 …)</text>
+<text x="646" y="338" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Vast.ai chế độ VM · thuê trọn máy · một đợt liên tục ~72 giờ</text>
+<rect x="648" y="354" width="540" height="112" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="662" y="378" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">VM 4 GPU · k3s single-node</text>
+<text x="662" y="396" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">4× RTX 4090 24 GB · CPU manager static</text>
 <line x1="676.4" y1="414" x2="676.4" y2="418" stroke="#008300" stroke-width="1.5"/>
 <line x1="676.4" y1="450" x2="676.4" y2="454" stroke="#008300" stroke-width="1.5"/>
 <line x1="690.8" y1="414" x2="690.8" y2="418" stroke="#008300" stroke-width="1.5"/>
@@ -107,19 +107,18 @@
 <line x1="962.6" y1="450" x2="962.6" y2="454" stroke="#008300" stroke-width="1.5"/>
 <rect x="905" y="418" width="72" height="32" rx="5" fill="#edf6ed" stroke="#008300" stroke-width="1.4"/>
 <text x="941" y="438.5" font-size="11.5" font-weight="650" fill="#0b0b0b" text-anchor="middle">GPU 3</text>
-<rect x="1012" y="354" width="176" height="112" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
-<text x="1026" y="390.4" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">VM CPU nhỏ</text>
-<text x="1026" y="408.1" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">máy tạo tải</text>
-<text x="1026" y="424.7" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">experiment runner</text>
-<text x="1026" y="441.4" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">cùng region / DC</text>
-<path d="M1012,440 L996,440" fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a2a78d6)"/>
-<text x="648" y="496" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Model 7–8B (vd Qwen2.5-7B-Instruct) · ghim phiên bản vLLM và image</text>
-<text x="648" y="518" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Dùng cho: hiệu chỉnh C, ma trận thí nghiệm, đo cold start</text>
-<text x="648" y="540" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Dữ liệu (CSV/Parquet + snapshot Prometheus) được lưu trước khi huỷ VM</text>
+<rect x="1000" y="368" width="176" height="86" rx="10" fill="#eef4fc" stroke="#c9dcf3" stroke-width="1.2"/>
+<text x="1014" y="399.3" font-size="12.5" font-weight="650" fill="#0b0b0b" text-anchor="start">Máy tạo tải + runner</text>
+<text x="1014" y="417" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">lõi CPU riêng</text>
+<text x="1014" y="433.7" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">không qua mạng ngoài</text>
+<path d="M1000,434 L984,434" fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a2a78d6)"/>
+<text x="648" y="496" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Qwen2.5-7B-Instruct · ghim digest của vLLM và image</text>
+<text x="648" y="518" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Dùng cho: burn-in, hiệu chỉnh C, cold start, 3 khối ma trận</text>
+<text x="648" y="540" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Dữ liệu đẩy lên R2 sau mỗi lượt; huỷ instance ngay khi xong</text>
 <path d="M520,228 L520,250 Q520,258 512,258 L330,258 Q322,258 322,266 L322,290" fill="none" stroke="#52514e" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
 <rect x="332.4" y="240" width="177.1" height="18" rx="4" fill="#fcfcfb"/>
 <text x="421" y="252" font-size="11" font-weight="400" fill="#0b0b0b" text-anchor="middle">Argo CD sync · overlays/laptop</text>
 <path d="M720,228 L720,250 Q720,258 728,258 L910,258 Q918,258 918,266 L918,290" fill="none" stroke="#52514e" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
-<rect x="739.2" y="240" width="257.6" height="18" rx="4" fill="#fcfcfb"/>
-<text x="868" y="252" font-size="11" font-weight="400" fill="#0b0b0b" text-anchor="middle">IaC dựng VM → Argo CD sync · overlays/cloud</text>
+<rect x="718.7" y="240" width="298.6" height="18" rx="4" fill="#fcfcfb"/>
+<text x="868" y="252" font-size="11" font-weight="400" fill="#0b0b0b" text-anchor="middle">thuê VM (vastai) → Ansible → Argo CD · overlays/cloud</text>
 </svg>

@@ -141,7 +141,7 @@ Xây dựng một nền tảng LLM serving trên Kubernetes có autoscaling, tri
 
 1. **Chi phí được đo bằng GPU-giờ cấp phát cho các pod vLLM.** Đại lượng này tương ứng với mô hình trả tiền theo mức dùng trên cloud, hoặc với lượng GPU được giải phóng cho workload khác trong cluster dùng chung. Lưu ý: trên một nhóm GPU cố định, việc scale-down **không tự động làm giảm tiền phải trả**. Luận văn sẽ ghi rõ giả định này.
 2. Model vừa với một GPU, nên không cần tensor parallelism.
-3. Máy tạo tải đặt **cùng region hoặc datacenter** với cluster. Nhờ đó độ trễ mạng (dưới 5 ms) không đáng kể so với TTFT.
+3. Máy tạo tải chạy **trên cùng VM** với cluster, dưới dạng pod có **lõi CPU riêng**. Nhờ đó không có độ trễ và dao động mạng giữa máy tạo tải và hệ thống được đo.
 4. Mọi phiên bản phần mềm (vLLM, KEDA, driver, model) được **ghim cố định** trong suốt đợt thí nghiệm.
 
 ---
@@ -234,8 +234,8 @@ HPA bỏ qua các dao động nhỏ hơn 10% (*tolerance*). Tham số `behavior`
 | Grafana | Dashboard, đánh dấu (annotation) từng pha thí nghiệm | 4 dashboard (mục 5.6) | Quang |
 | kube-state-metrics | Trạng thái Deployment, HPA, pod | Mặc định | Quang |
 | Argo CD | GitOps: đồng bộ cluster theo Git | Mỗi môi trường một overlay | Quang |
-| Terraform + Ansible | Tạo VM GPU, cài k3s và driver | Dựng hoặc huỷ trọn bộ trong dưới 30 phút | Quang |
-| Máy tạo tải + experiment runner | Sinh tải, điều phối các lượt chạy, thu dữ liệu | Python asyncio, chạy ngoài cluster | Quang |
+| Script thuê VM (CLI `vastai`) + Ansible | Thuê/huỷ VM GPU; cài k3s, driver, GPU | Dựng trọn bộ trong dưới 30 phút sau khi thuê | Quang |
+| Máy tạo tải + experiment runner | Sinh tải, điều phối các lượt chạy, thu dữ liệu | Python asyncio; máy tạo tải là pod có lõi CPU riêng trên cùng VM, runner chạy trên host | Quang |
 
 ### 5.3. Luồng xử lý một request
 
@@ -372,43 +372,38 @@ Nhóm hiện có **laptop RTX 4060 (8 GB VRAM)** và dự định **thuê GPU tr
 - **Tuỳ chọn:** `llm-d-inference-sim`, một chương trình giả lập API và metric của vLLM, chạy được trên máy không có GPU. Công cụ này tiện để thử logic autoscaling và dashboard.
 - **Hạn chế:** GPU laptop có thể bị giảm xung (*thermal throttling*) và VRAM nhỏ. Vì vậy **số liệu từ laptop không được dùng để rút ra kết luận**.
 
-### 6.3. Tầng 2: GPU thuê theo giờ
+### 6.3. Tầng 2: GPU thuê trên marketplace
 
-**Yêu cầu bắt buộc.** Phải thuê **VM đầy đủ** (có root, systemd, nạp được kernel module) để chạy k3s và GPU Operator, hoặc dùng dịch vụ **managed Kubernetes có GPU node pool**. Các nền tảng chỉ cho thuê *container* (kiểu RunPod Pods hay container instance trên Vast.ai) thường **không chạy được Kubernetes**. Chúng chỉ dùng được để thử vLLM đơn lẻ hoặc đo sơ bộ năng lực.
+Lựa chọn đã chốt nằm trong [ADR-001](adr/001-cac-lua-chon-ban-dau.md): thuê của bên thứ ba, ngân sách 100–200 USD.
 
-| Phương án | Cấu hình | Ưu điểm | Nhược điểm |
-|---|---|---|---|
-| **A (khuyến nghị)** | 1 VM với 4× GPU 24 GB, k3s single-node, cộng 1 VM CPU nhỏ | Đơn giản, rẻ, ít biến số | Không có mạng giữa các node; image chỉ cần pull một lần |
-| B | 2 VM × 2 GPU | Gần với thực tế nhiều node hơn (mỗi node pull image riêng) | Phức tạp hơn, cần mạng tốt giữa hai VM |
-| C (tiết kiệm) | 4× GPU 16 GB, model 3–4B | Rẻ hơn | Model nhỏ, kém đại diện |
+**Yêu cầu bắt buộc.** Máy phải là **VM đầy đủ** (có root, systemd) để chạy được k3s. **Vast.ai** có chế độ **VM (KVM)** hỗ trợ systemd và Kubernetes, lọc bằng `vms_enabled=true`. Chế độ container mặc định của Vast.ai (và RunPod Pods) thì **không** chạy được Kubernetes. TensorDock cho thuê VM KVM có root và GPU passthrough riêng.
 
-**Tiêu chí chọn nhà cung cấp:**
-- Cho thuê VM có GPU passthrough, và có loại VM 4 GPU.
-- Tính tiền theo giờ hoặc phút.
-- Có ổ NVMe cục bộ từ 200 GB trở lên.
-- Băng thông tải xuống tốt.
-- Có VM CPU cùng region.
-- Có API hoặc Terraform provider.
-- Nên ưu tiên GPU có **băng thông bộ nhớ cao** (A10, RTX 4090, L40S), vì pha decode bị giới hạn bởi băng thông. L4 rẻ nhưng chỉ khoảng 300 GB/s nên decode chậm.
+| Hạng mục | Lựa chọn |
+|---|---|
+| Nền tảng | **Chính: Vast.ai, chế độ VM**, vì marketplace lớn và công khai chỉ số từng máy. **Dự phòng: TensorDock** |
+| Cấu hình | **1 VM × 4 RTX 4090 24 GB, thuê trọn máy, on-demand** (dự phòng: 4 × RTX 3090 hoặc 4 × RTX A5000) |
+| Tiêu chí lọc | Máy datacenter, độ tin cậy ≥ 99%, ≥ 32 vCPU, RAM ≥ 128 GB, ổ ≥ 300 GB đọc ≥ 1 GB/s, PCIe Gen4, **≤ 0,50 USD/GPU-giờ** |
+| Burn-in (~1 giờ) | 4 GPU chênh nhau ≤ 5%, trôi ≤ 5% sau 30 phút, không bị throttle. Đạt thì chạy luôn đợt chính |
+| Máy tạo tải | Trên **cùng VM**: pod có lõi CPU riêng (`cpu-manager-policy=static`); các pod vLLM cũng có lõi riêng |
+| Cách thuê | **Một đợt liên tục ~72 giờ trên cùng một máy** (tuần T9), để toàn bộ dữ liệu chính đến từ cùng phần cứng |
 
-**Danh sách tham khảo** (cần kiểm tra giá và tình trạng còn máy tại thời điểm thuê):
-- Nhà cung cấp GPU cloud: Lambda, TensorDock, DataCrunch, Hyperstack, Vultr.
-- Hyperscaler: GCP (L4, GKE), AWS (g5/g6), Azure. Thường có credit cho sinh viên.
-- Trong nước: FPT Cloud / FPT AI Factory, Viettel Cloud. Nên hỏi về chương trình hỗ trợ nội bộ, vì hai thành viên đang làm tại FCI và VCS.
+**Hệ quả của GPU GeForce:** không có metric profiling DCGM, nên bỏ biến thể A1′. Nếu DCGM không chạy được thì dùng `nvidia_gpu_exporter`. Kết luận định lượng gắn với RTX 4090 và được ghi vào phần hạn chế. Chi tiết ở [06 §3](chi-tiet/06-moi-truong-chi-phi.md#3-tầng-2-gpu-thuê-trên-marketplace).
 
 ### 6.4. Dự toán chi phí
 
-| Hạng mục | Cách tính | Giờ chạy cluster |
+| Hạng mục | Giờ | GPU-giờ |
 |---|---|---|
-| Ma trận thí nghiệm chính | 75 lượt × (~25 phút chạy + ~10 phút reset/warm-up/cooldown) | ≈ 44 giờ |
-| Hiệu chỉnh, đo cold start, sửa lỗi trên cloud | Ước lượng | ≈ 20 giờ |
-| Dự phòng chạy lại (~30%) | | ≈ 20 giờ |
-| **Tổng** | | **≈ 84 giờ × 4 GPU ≈ 340 GPU-giờ** |
+| Chạy thử script trên VM 1 GPU (T8) | 4 | 4 |
+| Máy ứng viên trượt burn-in (tối đa 2) | 2 | 8 |
+| Đợt chính (T9): dựng, hiệu chỉnh, cold start, 3 khối ma trận (78 lượt), chạy lại | 70 | 280 |
+| **Cộng theo kế hoạch** | **76** | **≈ 292** |
+| Đợt dự phòng (T11, chỉ khi cần) | ≤ 12 | ≤ 48 |
 
-Với đơn giá tham khảo khoảng 0,4–0,9 USD/GPU-giờ cho GPU 24 GB, tổng chi phí vào khoảng **135–300 USD**, cộng thêm VM CPU và lưu trữ (không đáng kể). Có ba cách giảm chi phí:
-1. **Ma trận rút gọn:** Static-1 chỉ chạy KB1 và KB2 (ở các kịch bản khác nó chắc chắn vi phạm SLO); rút KB3 và KB5 xuống 20 phút. Tổng còn khoảng 55–60 lượt, tương đương ~35 giờ cluster.
-2. Runner **chạy tự động qua đêm**, không cần người trực. VM được **huỷ ngay** sau mỗi đợt.
-3. Tận dụng credit cho sinh viên hoặc chương trình hỗ trợ của doanh nghiệp.
+Với giá RTX 4090 khoảng 0,35–0,50 USD/GPU-giờ, chi phí theo kế hoạch vào khoảng **100–150 USD**. Kể cả đợt dự phòng và tiền ổ đĩa, tổng **không vượt 180 USD**, nằm trong ngân sách. Có bốn cách giữ chi phí:
+1. **Tín dụng trả trước là giới hạn cứng**: nạp 150 USD, dự phòng 50 USD. Runner báo động khi số dư dưới 30 USD, vì hết tiền có thể khiến instance bị xoá.
+2. Runner **chạy tự động suốt đợt** và gửi báo động qua webhook. Instance được **huỷ ngay** khi xong.
+3. Nếu tiền còn ít, dùng **ma trận rút gọn**: Static-1 chỉ chạy KB1 và KB2; KB3 và KB5 rút xuống 20 phút.
+4. RTX 3090 rẻ hơn khoảng một nửa. Nếu thuê 3090, còn đủ tiền chạy thêm lượt cho các ô trọng tâm.
 
 ---
 
@@ -432,7 +427,7 @@ Với đơn giá tham khảo khoảng 0,4–0,9 USD/GPU-giờ cho GPU 24 GB, t�
 
 ### 7.2. Vì sao không scale chỉ theo hàng đợi
 
-Nếu chỉ dùng `num_requests_waiting`, khi hàng đợi về 0 thì HPA tính ra 0 replica mong muốn và sẽ scale-down, dù các replica vẫn đang bận xử lý đầy batch. Kết quả là số replica dao động lên xuống liên tục (*flapping*). A2 cộng thêm `running` để tránh hiện tượng này. Đây là cách đo "tải đồng thời" tương tự Knative KPA. Có thể thêm biến thể A4 (chỉ hàng đợi) để **minh hoạ hiện tượng flapping** nếu còn thời gian.
+Nếu chỉ dùng `num_requests_waiting`, khi hàng đợi về 0 thì HPA tính ra 0 replica mong muốn và sẽ scale-down, dù các replica vẫn đang bận xử lý đầy batch. Kết quả là số replica dao động lên xuống liên tục (*flapping*). A2 cộng thêm `running` để tránh hiện tượng này. Đây là cách đo "tải đồng thời" tương tự Knative KPA. Biến thể A4 (chỉ hàng đợi) được chạy thêm ở KB3 (3 lượt) để **minh hoạ hiện tượng flapping** (ADR-001).
 
 ### 7.3. Cách chọn target
 
@@ -537,10 +532,10 @@ Một request được coi là **đạt SLO** khi TTFT ≤ 2 s, TPOT ≤ 100 ms 
 | A2 Concurrency | 3 | 3 | 3 | 3 | 3 |
 | A3 KV-cache | 3 | 3 | 3 | 3 | 3 |
 
-Tổng cộng **75 lượt** (có phương án rút gọn ở mục 6.4). **Thứ tự các lượt được xáo trộn ngẫu nhiên** để tránh sai lệch do thời điểm chạy, ví dụ hạ tầng cloud chạy chậm hơn vào một số giờ.
+Tổng cộng **75 lượt**, cộng 3 lượt A4 × KB3, là **78 lượt** (có phương án rút gọn ở mục 6.4). Ba khối nằm liền nhau trong một đợt thuê liên tục trên cùng một máy. **Thứ tự các lượt trong mỗi khối được xáo trộn ngẫu nhiên** để tránh sai lệch do thời điểm chạy.
 
 **Thí nghiệm cold start riêng (phục vụ RQ2):**
-- Với mỗi mức L0, L1, L2, đo phân rã các pha cold start **5 lần**.
+- Với mỗi mức L0 và L2, đo phân rã các pha cold start **5 lần**. Mức L1 không đo, vì trên một máy thuê không có ổ mạng tương đương (ADR-001).
 - Sau đó chạy lại **KB2 với A2** ở mức L0 và L2 để thấy cold start ảnh hưởng trực tiếp thế nào tới SLO.
 
 ### 8.6. Quy trình tự động của một lượt chạy
@@ -616,7 +611,7 @@ Các biểu đồ dự kiến đưa vào luận văn:
 2. **Đường CDF của TTFT** cho từng cấu hình trong mỗi kịch bản.
 3. **SLO attainment** và **GPU-giờ** của từng cấu hình. Hai đại lượng này được vẽ **thành hai biểu đồ riêng**, không gộp vào một biểu đồ hai trục.
 4. **Biểu đồ trade-off**: trục hoành là GPU-giờ, trục tung là SLO attainment; mỗi cấu hình là một điểm (trung bình ± khoảng tin cậy). Biểu đồ này trả lời trực tiếp RQ3.
-5. **Phân rã cold start thực tế** ở các mức L0, L1, L2 (dạng như Hình 5), trả lời RQ2.
+5. **Phân rã cold start thực tế** ở các mức L0 và L2 (dạng như Hình 5), trả lời RQ2.
 6. **Bảng tổng hợp** tất cả chỉ số theo từng cấu hình và kịch bản.
 
 **Phương pháp thống kê:**
@@ -633,7 +628,7 @@ Các biểu đồ dự kiến đưa vào luận văn:
 | Gói công việc | Nội dung | Trình | Quang |
 |---|---|---|---|
 | WP1 Hạ tầng GPU & Kubernetes | k3s/RKE2, GPU Operator, cấu hình node và GPU | **Chính** | Hỗ trợ (viết Ansible) |
-| WP2 IaC & GitOps | Terraform, Ansible, Argo CD, cấu trúc repo, overlay | Hỗ trợ | **Chính** |
+| WP2 IaC & GitOps | Script thuê VM (`vastai`), Ansible, Argo CD, cấu trúc repo, overlay | Hỗ trợ | **Chính** |
 | WP3 vLLM serving | Deployment, tham số, probe, graceful shutdown, model cache | **Chính** | Review |
 | WP4 Autoscaling | ScaledObject A1–A3, `behavior`, target từ hiệu chỉnh | **Chính** | Hỗ trợ (PromQL) |
 | WP5 Observability | Prometheus, DCGM, dashboard, xuất dữ liệu | Hỗ trợ | **Chính** |
@@ -682,14 +677,14 @@ Các biểu đồ dự kiến đưa vào luận văn:
 
 | Rủi ro | Khả năng | Ảnh hưởng | Phương án giảm thiểu |
 |---|---|---|---|
-| Chi phí thuê GPU vượt dự toán | Trung bình | Cao | Phát triển trên laptop; IaC dựng/huỷ nhanh; runner chạy không cần người trực; đặt cảnh báo ngân sách; dùng ma trận rút gọn |
-| Không thuê được VM 4 GPU hoặc hết máy | Trung bình | Cao | Chuyển sang phương án B (2 × 2 GPU) hoặc C (GPU 16 GB, model 3–4B); tham số hoá IaC để đổi nhà cung cấp dễ dàng |
-| Nền tảng thuê chỉ cho container, không chạy được Kubernetes | Cao nếu chọn sai | Trung bình | Kiểm tra điều kiện (VM, root, kernel module) và thuê thử 1 giờ trước khi chốt |
+| Chi phí thuê GPU vượt dự toán | Trung bình | Cao | Phát triển trên laptop; tín dụng trả trước làm giới hạn cứng; một đợt thuê liên tục tự động; báo động số dư; ma trận rút gọn |
+| Không tìm được máy 4 GPU chế độ VM đạt tiêu chí | Trung bình | Cao | Nới sang 4 × RTX 3090 hoặc A5000; chuyển sang TensorDock; chỉ phần thuê/huỷ phụ thuộc nhà cung cấp |
+| Máy marketplace kém ổn định (nhiễu, giảm xung, lỗi phần cứng) | Trung bình | Cao | Thuê trọn máy, máy datacenter, độ tin cậy ≥ 99%; burn-in trước khi chốt; toàn bộ dữ liệu chính từ cùng một máy; chạy lại trọn khối nếu hỏng |
 | Cold start quá dài, autoscaling không kịp phản ứng | Trung bình | Trung bình | Đây cũng là một kết quả nghiên cứu; tối ưu mức L2; thêm biến thể warm pool |
 | Tên hoặc ý nghĩa metric vLLM đổi theo phiên bản | Trung bình | Thấp | Ghim phiên bản image; kiểm tra `/metrics`; ghi vào phụ lục |
 | Kết quả nhiễu (máy dùng chung, giảm xung) | Trung bình | Trung bình | Chạy 3 lần, xáo trộn thứ tự, báo cáo khoảng tin cậy; không dùng số liệu laptop để kết luận |
 | Máy tạo tải thành nút thắt hoặc đo sai | Thấp | Cao | Dùng asyncio open-loop; theo dõi CPU máy tạo tải; đối chiếu với metric phía server |
-| Mất dữ liệu khi huỷ VM | Thấp | Cao | Runner đẩy dữ liệu ra ngoài sau mỗi lượt; có checklist trước khi chạy `terraform destroy` |
+| Mất dữ liệu khi huỷ VM | Thấp | Cao | Runner đẩy dữ liệu ra ngoài sau mỗi lượt; `make release` từ chối huỷ instance khi chưa sao lưu xong |
 | Chậm tiến độ do bận công việc ở công ty | Trung bình | Trung bình | Mốc kiểm tra 2 tuần/lần; tuần dự phòng T15–T16; tài liệu hoá để người kia tiếp quản được |
 
 ---
@@ -707,7 +702,7 @@ Cấu trúc repository dự kiến:
 
 ```text
 llm-k8s-autoscaling/
-├── infra/             # Terraform (VM GPU/CPU) + Ansible (driver, k3s, GPU Operator)
+├── infra/             # script thuê/huỷ VM (CLI vastai) + Ansible (driver, k3s, GPU)
 ├── platform/          # Helm values: gpu-operator, kube-prometheus-stack, keda, argocd
 ├── serving/
 │   ├── base/          # Deployment vLLM, Service, PVC, probes

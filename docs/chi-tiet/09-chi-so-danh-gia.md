@@ -220,7 +220,7 @@ Xem [08 §9](08-thiet-ke-thi-nghiem.md#9-quy-trình-một-lượt-chạy-máy-tr
 | `phase_metrics` | 1 pha của 1 lượt | n, p50/p95/p99 của TTFT/TPOT/E2E, SLO attainment, goodput, lỗi, GPU-giờ, token/GPU-giờ |
 | `run_metrics` | 1 lượt | Như trên cho cả lượt, cộng độ trễ phát hiện, thời gian phản ứng, hồi phục, số lần scale, flapping |
 | `cell_summary` | 1 ô (cấu hình × kịch bản) | Trung bình, độ lệch chuẩn và khoảng tin cậy qua các lượt |
-| `coldstart` | 1 lần đo cold start | Thời gian 8 pha, tổng, mức (L0/L1/L2) |
+| `coldstart` | 1 lần đo cold start | Thời gian 8 pha, tổng, mức (L0/L2) |
 
 ---
 

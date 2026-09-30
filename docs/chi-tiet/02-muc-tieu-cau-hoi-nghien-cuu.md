@@ -64,10 +64,10 @@ Ba câu hỏi đi theo đúng các "núm vặn" của bài toán: **tín hiệu 
 
 | Thành phần | Nội dung |
 |---|---|
-| Biến độc lập | Mức tối ưu cold start: L0 (không tối ưu), L1 (model trên PVC), L2 (pre-pull image, NVMe cục bộ, compile cache) |
+| Biến độc lập | Mức tối ưu cold start: L0 (không tối ưu) và L2 (pre-pull image, NVMe cục bộ, compile cache). L1 không đo (ADR-001) |
 | Biến phụ thuộc | Thời gian từng pha trong 8 pha (Hình 12), tổng cold start; SLO attainment và thời gian hồi phục ở KB2 |
 | Biến kiểm soát | Model, image, loại GPU, node; trạng thái cache hệ điều hành (được xoá hoặc ghi rõ) |
-| Thí nghiệm | (a) Đo cold start riêng: 5 lần mỗi mức. (b) KB2 với A2 ở mức L0 và L2, mỗi mức 3 lần |
+| Thí nghiệm | (a) Đo cold start riêng: 5 lần mỗi mức (L0, L2). (b) KB2 với A2 ở mức L0 và L2, mỗi mức 3 lần |
 | Giả thuyết H2 | Cold start chiếm phần lớn thời gian phản ứng. L2 giảm tổng cold start hơn 50% so với L0 và cải thiện SLO attainment ở KB2 |
 | Quy tắc kết luận | So sánh trung bình kèm khoảng tin cậy; báo cáo phần trăm thời gian phản ứng do cold start gây ra |
 
@@ -90,7 +90,7 @@ Ba câu hỏi đi theo đúng các "núm vặn" của bài toán: **tín hiệu 
 | RQ | Thí nghiệm | Chỉ số chính | Biểu đồ (xem [10](10-phan-tich-ket-qua.md#5-đặc-tả-các-biểu-đồ)) | Chương luận văn |
 |---|---|---|---|---|
 | RQ1 | Ma trận (A1–A3 × KB1–KB5) | SLO attainment, độ trễ phát hiện, thời gian hồi phục | C1 chuỗi thời gian, C3 SLO attainment, C7 phân rã thời gian phản ứng | 5.3 |
-| RQ2 | Đo cold start L0/L1/L2; KB2 × A2 ở L0 và L2 | Thời gian từng pha, tổng; SLO ở KB2 | C6 cold start, C1 (L0 so với L2) | 5.4 |
+| RQ2 | Đo cold start L0/L2; KB2 × A2 ở L0 và L2 | Thời gian từng pha, tổng; SLO ở KB2 | C6 cold start, C1 (L0 so với L2) | 5.4 |
 | RQ3 | Toàn bộ ma trận | GPU-giờ, SLO attainment, token/GPU-giờ | C4 GPU-giờ, C5 trade-off | 5.5 |
 | (nền) | Hiệu chỉnh | C, B\*, đường cong TTFT/ITL | Hình 15 | 5.2 |
 

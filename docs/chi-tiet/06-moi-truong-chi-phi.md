@@ -4,8 +4,8 @@
 
 **Tóm tắt nhanh**
 - **Tầng 1 (laptop RTX 4060):** hướng dẫn từng bước dựng k3s có GPU, gộp nhiều laptop thành một cluster, và những lưu ý riêng cho laptop.
-- **Tầng 2 (GPU thuê):** chọn loại GPU theo băng thông; checklist chọn nhà cung cấp; bài thử nghiệm 1 giờ trước khi chốt; cấu hình VM; tự động dựng và huỷ.
-- **Chi phí:** công thức, bảng dự toán theo 3 mức giá (khoảng 80–300 USD), các biện pháp kiểm soát chi phí, và lịch các phiên thuê GPU.
+- **Tầng 2 (GPU thuê):** thuê **Vast.ai chế độ VM, 4 × RTX 4090, thuê trọn máy** (dự phòng TensorDock); tiêu chí lọc máy; burn-in; phân bổ CPU riêng cho vLLM và máy tạo tải trên cùng VM; tự động thuê và huỷ.
+- **Chi phí:** dự toán khoảng **105–170 USD** (trong ngân sách 100–200 USD), tín dụng trả trước làm giới hạn cứng, và **một đợt thuê liên tục ~72 giờ trên cùng một máy** để số liệu ổn định.
 
 > Các lệnh dưới đây là **khung tham khảo**. Tên gói, cờ và đường dẫn có thể thay đổi theo phiên bản, nên luôn đối chiếu với tài liệu chính thức của k3s, NVIDIA và nhà cung cấp tại thời điểm cài đặt.
 
@@ -20,7 +20,7 @@
 | | Tầng 1: Laptop | Tầng 2: GPU thuê |
 |---|---|---|
 | Mục đích | Phát triển, pilot, demo khi bảo vệ | Hiệu chỉnh, ma trận thí nghiệm, đo cold start |
-| GPU | RTX 4060 Laptop 8 GB (mỗi máy 1 GPU) | 4 × GPU 24 GB |
+| GPU | RTX 4060 Laptop 8 GB (mỗi máy 1 GPU) | 4 × RTX 4090 24 GB (Vast.ai, chế độ VM) |
 | Model | Qwen2.5-1.5B-Instruct (hoặc 3B AWQ) | Qwen2.5-7B-Instruct |
 | Chi phí | ≈ 0 (tiền điện) | Theo giờ |
 | Số liệu dùng để kết luận? | **Không** (chỉ dùng để so xu hướng) | **Có** |
@@ -97,88 +97,125 @@ Overlay `laptop` gợi ý:
 
 ---
 
-## 3. Tầng 2: GPU thuê theo giờ
+## 3. Tầng 2: GPU thuê trên marketplace
+
+> Lựa chọn đã chốt: [ADR-001](../adr/001-cac-lua-chon-ban-dau.md). Thuê **Vast.ai ở chế độ VM**, **4 × RTX 4090, thuê trọn máy, on-demand**. Dự phòng là TensorDock. Ngân sách 100–200 USD.
 
 ### 3.1. Chọn loại GPU
 
 | GPU | VRAM | Băng thông | Decode tối đa với 7B BF16 | Nhận xét |
 |---|---|---|---|---|
-| L4 | 24 GB | ~300 GB/s | ~20 token/s | Rẻ, tiết kiệm điện, **decode chậm** |
-| A10 / A10G | 24 GB | ~600 GB/s | ~40 token/s | Cân bằng, phổ biến trên cloud |
-| RTX A5000 | 24 GB | ~768 GB/s | ~50 token/s | Hay có ở các nhà cung cấp GPU nhỏ |
-| RTX 4090 | 24 GB | ~1.008 GB/s | ~66 token/s | Nhanh, rẻ, nhưng hiếm ở dạng VM 4 GPU |
-| L40S | 48 GB | ~864 GB/s | ~57 token/s | Dư VRAM; đắt hơn |
-| A100 40/80 GB | 40/80 GB | 1,5–2 TB/s | 100+ token/s | Mạnh nhưng đắt; dư thừa cho 7B |
+| **RTX 4090** | 24 GB | ~1.008 GB/s | ~66 token/s | **Lựa chọn chính**: nhanh; khoảng 0,3–0,55 USD/GPU-giờ trên marketplace |
+| RTX 3090 | 24 GB | ~936 GB/s | ~61 token/s | Dự phòng rẻ hơn; Ampere, có BF16 |
+| RTX A5000 | 24 GB | ~768 GB/s | ~50 token/s | Dự phòng; card workstation, nhiệt độ và xung nhịp ổn định hơn |
+| A10 / L4 | 24 GB | 600 / 300 GB/s | ~40 / ~20 token/s | Chủ yếu có trên hyperscaler, giá vượt ngân sách |
+| A100 / H100 | 40–80 GB | 1,5–3,3 TB/s | 100+ token/s | Dư thừa cho 7B, đắt |
 
-**Khuyến nghị:** A10, RTX A5000 hoặc RTX 4090, **cả 4 GPU trong cùng một VM**. Tránh trộn nhiều loại GPU trong cùng một thí nghiệm.
+**Hệ quả của việc dùng GPU GeForce:**
+- Không có metric profiling của DCGM (`DCGM_FI_PROF_*`), nên bỏ A1′.
+- DCGM có thể không hỗ trợ đầy đủ. Nếu vậy, chuyển sang `nvidia_gpu_exporter` (đọc qua `nvidia-smi`).
+- Kết luận định lượng gắn với GPU consumer. Điều này được ghi vào phần hạn chế.
 
-### 3.2. Checklist chọn nhà cung cấp
+### 3.2. Chọn nền tảng
 
-**Bắt buộc**
-- [ ] Cho thuê **VM** có quyền root, systemd và nạp được kernel module (không phải chỉ container).
-- [ ] Có loại VM **4 GPU** (hoặc 2 × 2 GPU cùng mạng riêng).
-- [ ] Tính tiền theo giờ hoặc phút, **dừng và xoá được bất kỳ lúc nào**.
-- [ ] Có ổ **NVMe cục bộ** từ 300 GB trở lên.
-- [ ] Có VM CPU nhỏ **cùng region** để chạy máy tạo tải.
+| Nền tảng | Chạy được K8s? | Ưu | Nhược |
+|---|---|---|---|
+| **Vast.ai, chế độ VM** | **Có**: VM KVM, có systemd | Rẻ; nhiều máy; **hiển thị chỉ số từng máy** (độ tin cậy, tốc độ ổ, PCIe, mạng) để lọc | Ít máy hỗ trợ VM hơn máy container; khởi tạo chậm hơn; chỉ truy cập qua SSH |
+| Vast.ai, chế độ container (mặc định) | **Không**: không có systemd, không chạy container lồng được | Rẻ, nhiều máy | Chỉ dùng để thử vLLM đơn lẻ |
+| **TensorDock** | **Có**: VM KVM, root, GPU passthrough riêng | Máy chủ EPYC, NVMe; 1–8 GPU/VM; khoảng 0,37 USD/GPU-giờ | Máy 4 × 4090 thường khan hiếm; **hết tiền thì VM bị xoá** |
+| RunPod Pods | Không (container) | Dễ dùng | Không phù hợp |
+| Hyperscaler (AWS, GCP) | Có | Rất ổn định | 4 GPU cỡ 4–6 USD/giờ, vượt ngân sách; phải xin quota |
 
-**Nên có**
-- [ ] Có Terraform provider hoặc API/CLI để tự động hoá.
-- [ ] Image có sẵn driver NVIDIA.
-- [ ] Băng thông Internet tốt (tải image và model).
-- [ ] Không bị thu hồi máy giữa chừng (tránh loại spot/preemptible cho phiên chạy ma trận).
-- [ ] Có cảnh báo ngân sách.
+**Lý do chọn Vast.ai làm chính:** marketplace lớn nên dễ tìm được máy 4 GPU hỗ trợ VM, và **chỉ số công khai của từng máy** cho phép lọc máy ổn định trước khi thuê. TensorDock làm dự phòng.
 
-**Danh sách để khảo sát** (giá và tình trạng còn máy thay đổi liên tục, cần kiểm tra lại): Lambda, TensorDock, DataCrunch, Hyperstack, Vultr; GCP (L4/A100), AWS (g5/g6), Azure; trong nước: FPT Cloud / FPT AI Factory, Viettel Cloud.
+### 3.3. Tiêu chí lọc máy
 
-### 3.3. Bài thử nghiệm 1 giờ trước khi chốt
+Bảng đầy đủ nằm ở [ADR-001 §4.1](../adr/001-cac-lua-chon-ban-dau.md#41-tiêu-chí-lọc). Tóm tắt: `vms_enabled=true`; on-demand; **máy có đúng 4 GPU và thuê cả 4**; máy datacenter đã xác minh; độ tin cậy ≥ 99%; ≥ 32 vCPU (nên ≥ 48); RAM ≥ 128 GB; ổ ≥ 300 GB, đọc ≥ 1 GB/s; PCIe Gen4; mạng ≥ 500 Mbps; **≤ 0,50 USD/GPU-giờ**.
 
 ```bash
-# 1. Phần cứng
-nvidia-smi; nproc; free -g; lsblk; df -h
-# 2. Quyền và kernel module
-sudo whoami; lsmod | grep nvidia
-# 3. Container có dùng GPU không
-docker run --rm --gpus all nvidia/cuda:12.4.1-base-ubuntu22.04 nvidia-smi   # hoặc nerdctl/ctr
-# 4. Mạng: tốc độ tải (image, model)
-curl -o /dev/null -w "%{speed_download}\n" https://huggingface.co/…/model-00001-of-00004.safetensors
-# 5. Cài k3s, rồi chạy thử pod nvidia-smi (như §2.4)
-# 6. RTT từ VM CPU sang VM GPU
-ping -c 20 <ip-noi-bo-vm-gpu>
+pip install vastai && vastai set api-key <KEY>
+vastai search offers \
+  'num_gpus=4 gpu_name=RTX_4090 vms_enabled=true rentable=true reliability>0.99 cpu_ram>=128 disk_space>=300 inet_down>=500' \
+  -o 'dph'                     # kiểm tra tên trường bằng: vastai search offers --help
 ```
 
-Ghi kết quả vào `docs/nhat-ky/nha-cung-cap-<ten>.md` để so sánh các nhà cung cấp.
+**Vì sao thuê trọn máy:** không ai khác dùng chung CPU, RAM, PCIe hay ổ đĩa của máy. Đây là nguồn nhiễu lớn nhất trên marketplace.
 
-### 3.4. Cấu hình VM
+### 3.4. Burn-in trước khi chốt máy
 
-| Tài nguyên | VM GPU | VM CPU (máy tạo tải + runner) |
+Làm ngay sau khi thuê, mất khoảng 1 giờ. **Đạt thì giữ máy và chạy luôn đợt chính.**
+
+```bash
+nvidia-smi -q | grep -iE "product name|link|power limit|clocks|driver|cuda"   # ghi vào burnin.json
+fio --name=seqread --rw=read --bs=1M --size=8G --filename=/data/fio.tmp --direct=1   # yêu cầu ≥ 1 GB/s
+# Chạy vLLM bằng Docker trên từng GPU, mỗi GPU 5 phút ở cùng λ:
+for g in 0 1 2 3; do
+  docker run --rm --gpus "device=$g" … vllm/vllm-openai@sha256:… --model /models/Qwen2.5-7B-Instruct &
+  vllm bench serve … --request-rate 1.5 --num-prompts 450   # ghi TTFT p95, token/s
+done
+nvidia-smi -q -d PERFORMANCE,TEMPERATURE    # không có lý do throttle; nhiệt < 83 °C
+```
+
+| Kiểm tra | Ngưỡng đạt |
+|---|---|
+| Chênh lệch TTFT p95 và token/s giữa 4 GPU | ≤ 5% |
+| Trôi sau 30 phút (chạy lại GPU 0) | ≤ 5% |
+| Tốc độ đọc ổ | ≥ 1 GB/s |
+| Throttle / nhiệt độ | Không có / < 83 °C |
+| PCIe | Gen4 trở lên, đúng độ rộng khe cắm (thường x16) |
+
+**Không đạt** thì huỷ ngay (mất khoảng 1 giờ tiền thuê) và thử máy tiếp theo, tối đa 3 máy.
+
+### 3.5. Cấu hình k3s và phân bổ CPU trên VM thuê
+
+```bash
+curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=v1.xx.y+k3s1 sh -s - server \
+  --kube-controller-manager-arg=horizontal-pod-autoscaler-sync-period=5s \
+  --kubelet-arg=cpu-manager-policy=static \
+  --kubelet-arg=reserved-cpus=0-3 \
+  --write-kubeconfig-mode=644
+```
+
+Với `cpu-manager-policy=static`, pod có QoS **Guaranteed** (requests = limits, CPU là số nguyên) được cấp **lõi CPU riêng**, không bị pod khác chen vào. Ví dụ với máy 48 vCPU:
+
+| Nhóm | Lõi CPU | Ghi chú |
 |---|---|---|
-| vCPU | ≥ 32 (4 pod × 4–6 vCPU, cộng hệ thống và Prometheus) | 4–8 |
-| RAM | ≥ 128 GB (4 × 24 Gi request, cộng page cache cho weights) | 8–16 GB |
-| Ổ | NVMe ≥ 300 GB: image ~20 GB, model ~15 GB, compile cache, Prometheus ~20 GB, dữ liệu | 50 GB |
-| Mạng | Mạng riêng với VM CPU | Cùng region; RTT < 5 ms |
+| Hệ thống, k3s (`reserved-cpus`) | 0–3 | Không cấp riêng cho pod nào |
+| 4 pod vLLM | 4 × 6 lõi riêng | `requests = limits: cpu 6, memory 24Gi, nvidia.com/gpu 1` |
+| Pod máy tạo tải | 4 lõi riêng | `cpu 4, memory 4Gi` |
+| Các pod còn lại (Prometheus, Grafana, KEDA, Argo CD, Traefik) | Vùng CPU dùng chung | Không đòi lõi riêng |
 
-### 3.5. Tự động dựng và huỷ
+Nếu máy chỉ có 32 vCPU: dùng 5 lõi cho mỗi pod vLLM và 3 lõi cho máy tạo tải.
+
+### 3.6. Máy tạo tải chạy cùng VM
+
+- Trên marketplace khó thuê được một máy CPU riêng nằm cùng datacenter. Nhóm vì thế đặt máy tạo tải **trong chính cluster**, dưới dạng pod Guaranteed có lõi riêng, và gửi request qua Traefik. Độ trễ mạng gần như bằng 0 và không dao động.
+- **Kiểm chứng trong mỗi lượt:**
+  - CPU của pod máy tạo tải < 70%, và **không bị giới hạn CPU** (đọc `nr_throttled` trong `cpu.stat` của cgroup).
+  - Độ lệch lịch gửi p99 < 50 ms.
+- Experiment runner chạy trên host (ngoài cluster), dùng `kubectl` và API của Prometheus. Runner tốn rất ít CPU.
+
+### 3.7. Tự động hoá thuê và huỷ
 
 ```text
-make up         → Terraform: tạo VM GPU + VM CPU, mạng riêng, firewall
-make bootstrap  → Ansible: driver (nếu thiếu), toolkit, k3s, chrony, mount NVMe;
-                  cài Argo CD và áp root-app (overlay cloud)
-make prefetch   → Job tải model về NVMe, DaemonSet pre-pull image
-make calibrate  → runner chạy bước hiệu chỉnh
-make run MATRIX=experiments/matrix-session-1.yaml
-make backup     → rclone đẩy runs/ lên object storage, kiểm tra checksum
-make down       → terraform destroy (chỉ chạy sau khi backup báo OK)
+make find                → vastai search offers (tiêu chí §3.3), in ra 5 máy rẻ nhất
+make rent OFFER=<id>     → vastai create instance (template VM Ubuntu 22.04), chờ SSH, ghi instance id
+make burnin              → Ansible chạy các bước §3.4, xuất burnin.json; không đạt thì dừng
+make bootstrap           → Ansible: chrony, NVMe, k3s (tham số §3.5), GPU (device plugin/Operator), Argo CD, root-app
+make prefetch            → Job tải model, DaemonSet pre-pull image
+make calibrate           → hiệu chỉnh, sinh calibration.json
+make run MATRIX=…        → chạy các khối
+make backup              → rclone lên R2, kiểm tra checksum
+make release             → huỷ instance (từ chối chạy nếu backup chưa xong)
 ```
 
-- **Mục tiêu:** từ `make up` tới khi cluster sẵn sàng chạy thí nghiệm mất **dưới 30 phút**.
-- Nếu nhà cung cấp không có Terraform provider, thay bằng script gọi CLI/API của họ. Các bước Ansible trở đi giữ nguyên.
-- **Đồng bộ giờ:** cài chrony trên mọi máy, và kiểm tra độ lệch trước mỗi phiên (yêu cầu dưới 50 ms).
+- Chỉ phần `find/rent/release` phụ thuộc Vast.ai. Muốn chuyển sang TensorDock thì chỉ viết lại ba lệnh này bằng API của họ; toàn bộ Ansible trở đi giữ nguyên.
+- **Đồng bộ giờ:** tất cả chạy trên cùng một máy nên không lo lệch đồng hồ. Vẫn cài chrony để timestamp đúng giờ UTC.
 
-### 3.6. Sao lưu dữ liệu
+### 3.8. Sao lưu dữ liệu
 
-- Runner đẩy thư mục `runs/<run-id>/` lên object storage **ngay sau mỗi lượt**, bằng `rclone copy` kèm kiểm tra checksum.
-- Nếu không có object storage, dùng `rsync` về laptop qua SSH, hoặc lưu lên Google Drive qua rclone.
-- `make down` kiểm tra xem mọi lượt đã được sao lưu chưa; nếu chưa thì **từ chối huỷ VM**.
+- Runner đẩy `runs/<run-id>/` lên **Cloudflare R2** ngay sau mỗi lượt (`rclone copy` kèm checksum). Nếu không dùng R2 thì dùng Google Drive qua rclone.
+- `make release` kiểm tra xem mọi lượt đã được sao lưu chưa; nếu chưa thì **từ chối huỷ instance**.
 
 ---
 
@@ -187,64 +224,74 @@ make down       → terraform destroy (chỉ chạy sau khi backup báo OK)
 ### 4.1. Công thức
 
 $$
-\text{Chi phí} = \sum_{\text{phiên}} \Big( h \times (n_{\text{GPU}} \times p_{\text{GPU}} + p_{\text{VM CPU}}) \Big) + \text{lưu trữ} + \text{truyền dữ liệu ra ngoài}
+\text{Chi phí} = \sum_{\text{đợt}} h \times n_{\text{GPU}} \times p_{\text{GPU}} \;+\; \text{lưu trữ (GB × thời gian)} \;+\; \text{băng thông tải về}
 $$
 
-Trong đó h là số giờ bật máy của phiên, n_GPU là số GPU của VM, p_GPU là giá mỗi GPU-giờ, và p_VM CPU là giá mỗi giờ của VM CPU.
+Trên Vast.ai, giá hiển thị cho mỗi máy thường đã gồm CPU và RAM. **Ổ đĩa tính tiền riêng**, kể cả khi instance đang dừng. Một số máy tính thêm phí băng thông (với khoảng 50 GB image và model thì không đáng kể).
 
 ### 4.2. Dự toán
 
-| Hạng mục | Giờ bật cluster (đầy đủ) | Giờ bật cluster (rút gọn) |
-|---|---|---|
-| Thử nhà cung cấp | 2 | 2 |
-| Dựng và sửa cấu hình lần đầu | 6 | 6 |
-| Hiệu chỉnh và kiểm tra C | 6 | 6 |
-| Thí nghiệm cold start | 6 | 4 |
-| Ma trận chính | 44 (75 lượt) | 26 (khoảng 55 lượt) |
-| Chạy lại (~30% ma trận) | 13 | 8 |
-| Dự phòng sửa lỗi | 7 | 4 |
-| **Tổng** | **84 giờ → 336 GPU-giờ** | **56 giờ → 224 GPU-giờ** |
+| Hạng mục | Tuần | Số giờ | Số GPU | GPU-giờ |
+|---|---|---|---|---|
+| Chạy thử script trên VM 1 GPU giá rẻ | T8 | 4 | 1 | 4 |
+| Máy ứng viên trượt burn-in (tối đa 2) | T9 | 2 | 4 | 8 |
+| Đợt chính: burn-in, dựng, prefetch | T9 | 4 | 4 | 16 |
+| Hiệu chỉnh C, chốt SLO và threshold | T9 | 6 | 4 | 24 |
+| Cold start L0/L2 (5 lần mỗi mức) và KB2 × A2 ở L0/L2 | T9 | 6 | 4 | 24 |
+| 3 khối ma trận (78 lượt × ~35 phút) | T9 | 46 | 4 | 184 |
+| Chạy lại, độ nhạy chu kỳ sync HPA 15 s | T9 | 8 | 4 | 32 |
+| **Cộng (theo kế hoạch)** | | **76** | | **≈ 292** |
+| Đợt dự phòng: lượt bổ sung hoặc làm lại (chỉ khi cần) | T11 | ≤ 12 | 4 | ≤ 48 |
 
-| Mức giá (USD/GPU-giờ) | Bản đầy đủ | Bản rút gọn |
+| Giá RTX 4090 (USD/GPU-giờ) | Theo kế hoạch | Kể cả đợt dự phòng |
 |---|---|---|
-| 0,35 (rẻ, GPU consumer) | ~118 USD | ~78 USD |
-| 0,60 (trung bình) | ~202 USD | ~134 USD |
-| 0,90 (đắt) | ~302 USD | ~202 USD |
+| 0,35 | ~102 USD | ~119 USD |
+| 0,45 | ~131 USD | ~153 USD |
+| 0,50 (mức trần khi lọc máy) | ~146 USD | ~170 USD |
 
-Cộng thêm VM CPU (khoảng 0,05 USD/giờ × 84 giờ ≈ 4 USD) và lưu trữ (không đáng kể).
+Cộng thêm ổ đĩa và băng thông khoảng 5–10 USD, **tổng vẫn nằm trong 100–200 USD**. Nếu dùng RTX 3090 (thường rẻ hơn khoảng một nửa), chi phí chỉ còn khoảng 60–90 USD. Khi đó còn tiền chạy thêm 12 lượt cho các ô trọng tâm.
 
 ### 4.3. Kiểm soát chi phí
 
-1. **Không phát triển trên cloud.** Mọi thứ phải chạy ổn trên laptop trước (mốc M2).
-2. **Công tắc tự huỷ.** Mỗi phiên, VM tự tắt sau X giờ (`sudo shutdown -h +600`) phòng khi quên.
-3. **Cảnh báo ngân sách** ở mức 50%, 80% và 100% dự toán.
-4. **Chạy qua đêm không người trực.** Runner chạy trọn một khối, tự sao lưu, và gửi thông báo khi xong hoặc khi có lỗi.
-5. **Huỷ ngay sau mỗi phiên.** Nếu nhà cung cấp vẫn tính tiền ổ đĩa khi VM tắt, so sánh chi phí giữ ổ với chi phí tải lại model và image (khoảng 15 phút).
-6. **Tận dụng credit:** chương trình sinh viên của các cloud lớn, hoặc hỗ trợ nội bộ từ nơi làm việc.
+1. **Tín dụng trả trước là giới hạn cứng.** Nạp trước 150 USD, chỉ nạp thêm tối đa 50 USD khi thật cần.
+2. **Không để số dư về 0.** Khi hết tiền, instance có thể bị dừng hoặc **xoá** (TensorDock ghi rõ là xoá). Runner kiểm tra số dư mỗi giờ (`vastai show user`) và báo động khi còn dưới 30 USD.
+3. **Không phát triển trên máy thuê.** Mọi thứ phải chạy ổn trên laptop (mốc M2) và qua lần chạy thử 1 GPU.
+4. **Huỷ ngay khi xong đợt.** Không để instance ở trạng thái dừng lâu ngày, vì ổ đĩa vẫn tính tiền và khi bật lại chưa chắc GPU còn trống.
+5. **Báo động tự động:** runner gửi thông báo (webhook Telegram/Discord) khi xong mỗi khối, khi có lượt không hợp lệ, hoặc khi số dư thấp.
 
 ---
 
-## 5. Lịch các phiên thuê GPU
+## 5. Lịch sử dụng GPU thuê
 
-| Phiên | Tuần | Thời lượng | Nội dung | Điều kiện để bắt đầu |
+| Đợt | Tuần | Thời lượng | Nội dung | Điều kiện bắt đầu |
 |---|---|---|---|---|
-| S0 | T7–T8 | 2 giờ | Thử 1–2 nhà cung cấp | Checklist §3.2 |
-| S1 | T8 | 8 giờ | Dựng cluster bằng IaC, sửa lỗi, pilot 3 lượt | Mốc M2 đạt |
-| S2 | T9 | 10 giờ | Hiệu chỉnh C, đo cold start L0/L1/L2 | S1 ổn định |
-| S3 | T10 | ~15 giờ (qua đêm) | Khối 1 của ma trận (25 lượt) | C đã chốt |
-| S4 | T11 | ~15 giờ | Khối 2 + KB2 × A2 ở L0/L2 | – |
-| S5 | T11–T12 | ~15 giờ | Khối 3 | – |
-| S6 | T12 | ~10 giờ | Chạy lại lượt hỏng, thêm lần cho các ô trọng tâm | Kết quả kiểm tra hợp lệ |
+| Chạy thử | T8 | ~4 giờ, 1 GPU | Kiểm tra `make rent/bootstrap` trên VM của Vast.ai, GPU trong k3s, Argo CD, runner chạy 1 lượt | Pipeline laptop gần đạt M2 |
+| **Đợt chính** | T9 (ví dụ thứ Năm 03/12 đến Chủ nhật 06/12/2026) | ~72–76 giờ **liên tục, trên cùng một máy** | Burn-in → dựng → hiệu chỉnh → cold start → khối 1–3 → chạy lại → backup → huỷ | M2 đạt; `PLAN.md` đã commit; số dư ≥ 150 USD; webhook đã thử |
+| Dự phòng | T11 | ≤ 12 giờ | Lượt bổ sung, hoặc làm lại nếu đợt chính hỏng | Chỉ khi cần |
+
+Tiến trình trong đợt chính (tính theo giờ kể từ lúc thuê):
+
+```text
+0–1   burn-in (đạt → tiếp tục)            │ 16–31  khối 1 (25 ô + A4×KB3, thứ tự xáo trộn)
+1–4   bootstrap, prefetch                 │ 31–46  khối 2
+4–10  hiệu chỉnh → chốt C, SLO, threshold │ 46–61  khối 3
+      (cả nhóm online, ghi ADR-002)       │ 61–69  chạy lại lượt hỏng, độ nhạy HPA 15 s
+10–16 cold start L0/L2, KB2×A2 L0/L2      │ 69–72  backup, kiểm tra, huỷ instance
+```
+
+- **Mỗi khối** bắt đầu bằng bước kiểm tra nhanh C (tự động). Nếu lệch hơn 10%, runner tạm dừng và báo động.
+- **Chia ca theo dõi:** Trình và Quang thay phiên xem cảnh báo. Runner tự chạy; con người chỉ can thiệp khi có báo động.
+- Nếu một khối hỏng vì phần cứng, **chạy lại trọn khối** (không chạy lại lẻ từng ô), để đảm bảo thiết kế khối.
 
 ---
 
-## 6. Checklist mỗi phiên
+## 6. Checklist
 
-**Trước khi bật máy:** matrix file đã review; runner đã thử trên laptop; ngân sách còn đủ; mọi người biết lịch.
+**Trước khi thuê:** M2 đạt; đã chạy thử trên VM 1 GPU; `PLAN.md` và file ma trận đã review; số dư ≥ 150 USD; webhook báo động hoạt động; lịch trực đã thống nhất.
 
-**Sau khi dựng xong:** `nvidia-smi` thấy đủ 4 GPU; `kubectl get nodes` Ready; dashboard có dữ liệu; kiểm tra nhanh C (lệch dưới 10% so với lần hiệu chỉnh); chrony lệch dưới 50 ms; RTT dưới 5 ms.
+**Sau burn-in:** `burnin.json` đạt mọi ngưỡng; ghi mã máy, GPU, CPU, RAM, PCIe và driver vào `metadata.json`.
 
-**Trước khi huỷ:** mọi lượt đã sao lưu, checksum OK; đã xuất snapshot Prometheus nếu cần; đã ghi nhật ký phiên (giờ bắt đầu và kết thúc, sự cố, chi phí thực tế).
+**Trước khi huỷ:** mọi lượt đã sao lưu, checksum khớp; đã xuất snapshot Prometheus nếu cần; đã ghi nhật ký đợt (giờ bắt đầu và kết thúc, sự cố, chi phí thực tế).
 
 ---
 
@@ -253,8 +300,16 @@ Cộng thêm VM CPU (khoảng 0,05 USD/giờ × 84 giờ ≈ 4 USD) và lưu tr�
 **Sao không làm luôn trên laptop cho rẻ?**
 Laptop chỉ chạy được model khoảng 1,5B, GPU hay giảm xung vì nhiệt, và VRAM 8 GB không đại diện cho môi trường production. Laptop phù hợp để phát triển và demo; kết luận phải dựa trên GPU datacenter.
 
-**Kết quả trên VM thuê có ổn định không?**
-Có rủi ro (máy dùng chung). Nhóm giảm thiểu bằng cách kiểm tra nhanh C ở đầu mỗi phiên, so sánh cặp trong cùng phiên, và xáo trộn thứ tự lượt chạy (xem [08 §8](08-thiet-ke-thi-nghiem.md#8-ma-trận-thứ-tự-và-khối)).
+**Marketplace như Vast.ai có đủ tin cậy cho thí nghiệm không?**
+Có, với năm biện pháp:
+1. Chỉ thuê máy chế độ VM, datacenter, độ tin cậy ≥ 99%, và **thuê trọn máy** (không chia với ai).
+2. **Burn-in** trước khi chốt: 4 GPU chênh nhau ≤ 5%, trôi ≤ 5%.
+3. **Toàn bộ dữ liệu chính từ một đợt liên tục trên cùng một máy.**
+4. Máy tạo tải nằm cùng VM với lõi CPU riêng, nên không có nhiễu mạng.
+5. Thiết kế khối, xáo trộn thứ tự, và kiểm tra nhanh C ở đầu mỗi khối (xem [08 §8](08-thiet-ke-thi-nghiem.md#8-ma-trận-thứ-tự-và-khối)).
+
+**Vì sao dùng RTX 4090 mà không dùng GPU datacenter?**
+Vì ngân sách. RTX 4090 có 24 GB VRAM và băng thông khoảng 1 TB/s, đủ để phục vụ model 7B một cách thực tế. Các cơ chế đồ án nghiên cứu (metric bão hoà, cold start, trade-off) không phụ thuộc dòng GPU. Kết luận định lượng gắn với RTX 4090 được ghi vào phần hạn chế.
 
 **Hết ngân sách giữa chừng thì sao?**
 Có phương án rút gọn đã tính sẵn. Thứ tự ưu tiên cắt giảm theo Must/Should/Could ở [02 §7](02-muc-tieu-cau-hoi-nghien-cuu.md#7-mức-độ-thành-công).

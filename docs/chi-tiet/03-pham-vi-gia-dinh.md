@@ -34,9 +34,9 @@
 |---|---|---|---|---|
 | G1 | **Chi phí ≈ GPU-giờ cấp phát cho pod vLLM** | Trên cloud trả theo mức dùng (hoặc cluster dùng chung), GPU được giải phóng sẽ được dùng vào việc khác | Không kiểm chứng được bằng thí nghiệm; nêu rõ đây là quy ước | Trên một nhóm GPU cố định dành riêng, scale-down **không giảm tiền**. Khi đó kết luận chỉ còn nói về "GPU giải phóng được" |
 | G2 | Model vừa với 1 GPU, mỗi replica dùng 1 GPU | 7–8B ở BF16 cần khoảng 15 GB, GPU 24 GB | Log vLLM: KV-cache còn đủ cho `max-num-seqs` | Phải dùng lượng tử hoá hoặc model nhỏ hơn |
-| G3 | Độ trễ mạng từ máy tạo tải tới cluster không đáng kể | Hai máy cùng region hoặc datacenter | Đo RTT (`ping`, TTFT với prompt 1 token) và ghi vào `metadata.json`; yêu cầu dưới 5 ms | TTFT bị cộng thêm một hằng số; so sánh giữa các cấu hình vẫn công bằng nhưng số tuyệt đối lệch |
+| G3 | Máy tạo tải không gây nhiễu cho hệ thống được đo | Máy tạo tải chạy cùng VM nhưng trên **lõi CPU riêng** (CPU manager static, pod Guaranteed); không đi qua mạng ngoài | CPU và số lần bị giới hạn CPU (`nr_throttled`) của pod máy tạo tải; độ lệch lịch gửi p99 < 50 ms | Máy tạo tải tranh tài nguyên với vLLM, làm TTFT tăng giả tạo; phải tách lõi hoặc đổi sang máy riêng |
 | G4 | Phiên bản phần mềm cố định suốt đợt thí nghiệm | Ghim image digest và phiên bản Helm chart | `metadata.json` ghi digest; runner kiểm tra trước mỗi lượt | Kết quả giữa các phiên không so được với nhau |
-| G5 | Năng lực C ổn định trong suốt đợt thí nghiệm | Cùng loại VM, cùng cấu hình | **Kiểm tra nhanh C** ở đầu mỗi phiên cloud: 2 mức tải, 3 phút mỗi mức | Máy "yếu" hơn thì phải hiệu chỉnh lại; nếu lệch hơn 10% thì không gộp dữ liệu |
+| G5 | Năng lực C ổn định trong suốt đợt thí nghiệm | **Cùng một máy** trong cả đợt chính; máy đã qua burn-in | **Kiểm tra nhanh C** ở đầu mỗi khối: 2 mức tải, 3 phút mỗi mức | Máy "yếu" hơn thì phải hiệu chỉnh lại; nếu lệch hơn 10% thì không gộp dữ liệu |
 | G6 | Tải tổng hợp (Poisson, output cố định) đủ đại diện | Là chuẩn mực trong các benchmark serving; dễ kiểm soát | Chạy thêm KB5 bằng trace thật nếu còn thời gian | Hành vi với tải thật (burst lồng nhau, output dài ngắn khác nhau) có thể khác; ghi thành hạn chế |
 | G7 | Round-robin không làm lệch so sánh giữa các cấu hình | Mọi cấu hình cùng chịu một kiểu cân bằng tải | Theo dõi độ lệch `num_requests_running` giữa các pod | Có thể làm autoscaling trông kém hơn thực tế ở mức tải cao |
 | G8 | Một node với 4 GPU (phương án A) đủ đại diện | Autoscaling mức pod không phụ thuộc số node | Đo cold start ở chế độ "node lạnh" bằng cách xoá image và cache | Chưa đo được độ trễ mạng giữa các node; nếu có ngân sách thì chạy phương án B để đối chiếu |
@@ -45,7 +45,7 @@
 
 ## 3. Giới hạn (limitations) sẽ ghi trong luận văn
 
-1. **Chỉ một model, một loại GPU.** Kết luận định tính (metric nào tốt hơn, vì sao) có khả năng khái quát. Kết luận định lượng (bao nhiêu giây, bao nhiêu phần trăm) chỉ đúng cho cấu hình đã đo.
+1. **Chỉ một model, một loại GPU (RTX 4090, dòng consumer).** Kết luận định tính (metric nào tốt hơn, vì sao) có khả năng khái quát. Kết luận định lượng (bao nhiêu giây, bao nhiêu phần trăm) chỉ đúng cho cấu hình đã đo.
 2. **Tối đa 4 replica.** Chưa kiểm tra được hành vi ở quy mô hàng chục replica, nơi scheduling và cân bằng tải phức tạp hơn.
 3. **Tải tổng hợp** với độ dài output cố định. Tải thật đa dạng hơn.
 4. **Chỉ 3 lần chạy mỗi ô** trong ma trận (do ngân sách), nên khoảng tin cậy rộng. Nhóm bù bằng so sánh cặp và chạy thêm lần ở các ô trọng tâm.
@@ -72,7 +72,7 @@ Chỉ khi cả ba câu đều là "có, không, có" thì mới đưa vào. Nế
 
 | Mối đe doạ | Cơ chế gây sai | Biện pháp |
 |---|---|---|
-| Máy dùng chung với khách thuê khác (noisy neighbor) | Hiệu năng VM dao động theo giờ | So sánh cặp **trong cùng phiên** (mỗi phiên chứa đủ mọi cấu hình); xáo trộn thứ tự lượt chạy |
+| Máy marketplace không ổn định (chia máy với người khác, giảm xung vì nhiệt, 4 GPU không đồng đều) | Hiệu năng dao động theo giờ hoặc theo GPU | **Thuê trọn máy**; burn-in (4 GPU chênh ≤ 5%, trôi ≤ 5%); toàn bộ dữ liệu chính từ **cùng một máy**; so sánh cặp trong cùng khối; xáo trộn thứ tự; theo dõi nhiệt độ và xung nhịp |
 | Hiệu ứng thứ tự | Lượt trước để lại trạng thái (cache, hàng đợi, pod đang khởi động) | Quy trình reset: về 1 replica, hàng đợi trống, chờ thêm 60 s |
 | Page cache của hệ điều hành | Lần nạp model sau nhanh hơn vì weights đã nằm trong RAM | Ghi rõ trạng thái cache; với thí nghiệm cold start thì xoá cache (`drop_caches`) |
 | Máy tạo tải là nút thắt | Gửi chậm hơn lịch, làm tải thật thấp hơn tải danh nghĩa | Theo dõi độ lệch lịch và CPU của máy tạo tải; loại những lượt không đạt |

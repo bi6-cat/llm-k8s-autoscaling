@@ -27,7 +27,7 @@
 |---|---|---|
 | **Độc lập** | Cấu hình | S1, S4, A1, A2, A3 (A4 tuỳ chọn) |
 | | Kịch bản tải | KB1–KB5 |
-| | Mức cold start (chỉ cho RQ2) | L0, L1, L2 |
+| | Mức cold start (chỉ cho RQ2) | L0, L2 |
 | **Phụ thuộc** | Hiệu năng | TTFT, TPOT, E2E (p50/p95/p99), SLO attainment, goodput, lỗi |
 | | Tài nguyên | GPU-giờ, GPU utilization, token/GPU-giờ |
 | | Autoscaling | Độ trễ phát hiện, thời gian cung cấp, thời gian hồi phục, số lần scale |
@@ -55,7 +55,7 @@
 7. **Kiểm tra chéo bằng định luật Little:** B\* ≈ C × E2E trung bình. Nếu lệch hơn 15%, xem lại cách đo.
 8. Đối chiếu nhanh với `vllm bench serve` hoặc GuideLLM ở cùng λ, để chắc chắn máy tạo tải tự viết không sai lệch có hệ thống.
 
-**Kiểm tra lại C ở đầu mỗi phiên cloud:** chạy 2 mức (0,8C và 1,0C), 3 phút mỗi mức. Nếu TTFT p95 lệch hơn 10% so với lúc hiệu chỉnh, ghi vào nhật ký và cân nhắc hiệu chỉnh lại.
+**Kiểm tra lại C ở đầu mỗi khối** (runner tự làm): chạy 2 mức (0,8C và 1,0C), 3 phút mỗi mức. Nếu TTFT p95 lệch hơn 10% so với lúc hiệu chỉnh, ghi vào nhật ký và cân nhắc hiệu chỉnh lại.
 
 **Sản phẩm của bước này:** `calibration.json` = `{C, B_star, KV_star, UTIL_star, slo, curves}`. Runner đọc file này để tính λ(t) theo đơn vị C và threshold của A1–A3.
 
@@ -213,20 +213,20 @@ async def one_request(client, i, t_sched, prompt):
 ## 8. Ma trận, thứ tự và khối
 
 - **Ô ma trận:** 5 cấu hình × 5 kịch bản = 25 ô. Mỗi ô chạy 3 lần, tổng 75 lượt.
-- **Thiết kế khối ngẫu nhiên đầy đủ:** mỗi **phiên cloud là một khối**, chứa **đúng một lượt của cả 25 ô**. Trong khối, thứ tự được xáo trộn bằng một seed ghi lại. Ba phiên tạo ra ba lần lặp.
-  - Lợi ích: sai khác giữa các phiên (máy khác, giờ khác) ảnh hưởng đều lên mọi cấu hình. Khi so sánh A2 với A1, dùng **hiệu số trong cùng khối**, nhờ đó loại bỏ nhiễu do phiên.
-  - Thời lượng một khối: 25 × (khoảng 25 phút chạy + 10 phút phụ) ≈ 14,6 giờ, vừa một đêm.
+- **Thiết kế khối ngẫu nhiên đầy đủ:** mỗi **khối là một đoạn liên tiếp khoảng 15 giờ của đợt thuê chính**, chứa **đúng một lượt của cả 25 ô** (cộng A4 × KB3). Trong khối, thứ tự được xáo trộn bằng một seed ghi lại. Ba khối tạo ra ba lần lặp.
+  - Lợi ích: sai khác giữa các khối (giờ khác; hoặc máy khác, nếu phải chuyển máy giữa chừng) ảnh hưởng đều lên mọi cấu hình. Khi so sánh A2 với A1, dùng **hiệu số trong cùng khối**, nhờ đó loại bỏ nhiễu này.
+  - Thời lượng một khối: 26 × (khoảng 25 phút chạy + 10 phút phụ) ≈ 15 giờ. Ba khối nằm liền nhau trong đợt chính ([06 §5](06-moi-truong-chi-phi.md#5-lịch-sử-dụng-gpu-thuê)).
 - **Chạy bổ sung:** các ô KB2 và KB5 với A1–A3 được thêm 2 lượt (tổng 5) nếu ngân sách cho phép, vì đây là các ô trả lời RQ1.
-- **Thí nghiệm cold start** chạy ở phiên S2, tách khỏi các khối.
+- **Thí nghiệm cold start** chạy ở đầu đợt chính (sau hiệu chỉnh), trước các khối.
 
 Mẫu file ma trận:
 
 ```yaml
 # experiments/matrix-session-1.yaml
-session: S3
+campaign: main-1            # đợt thuê chính
 block: 1
 shuffle_seed: 20261201
-calibration: runs/calibration-S2/calibration.json
+calibration: runs/calibration-main-1/calibration.json
 configs: [S1, S4, A1, A2, A3]
 scenarios: [KB1, KB2, KB3, KB4, KB5]
 repeat_index: 1              # seed tải = hash(scenario, repeat_index)
@@ -271,19 +271,21 @@ cooldown: {until_replicas: 1, max_s: 600}
 | Đồng hồ các máy lệch nhau | < 50 ms |
 | Trạng thái đầu đúng (1 replica, hàng đợi trống) | Đúng |
 
-Lượt không đạt được đánh dấu `invalid` kèm lý do, và **chạy lại trong phiên S6**. Không xoá dữ liệu lượt hỏng; giữ lại để minh bạch.
+Lượt không đạt được đánh dấu `invalid` kèm lý do, và **chạy lại ở phần cuối đợt chính** (giờ 61–69), hoặc trong đợt dự phòng T11. Không xoá dữ liệu lượt hỏng; giữ lại để minh bạch.
 
 ---
 
 ## 11. Thí nghiệm cold start
 
-| Bước | L0 | L1 | L2 |
-|---|---|---|---|
-| Chuẩn bị node | `crictl rmi` image vLLM; xoá model và compile cache | `crictl rmi` image; model đã có trên PVC | Image đã pre-pull; model trên NVMe; compile cache đã được làm ấm |
-| Làm lạnh RAM | `sync; echo 3 > /proc/sys/vm/drop_caches` | như L0 | như L0 (đo "node lạnh"); tuỳ chọn đo thêm "node ấm" |
-| Kích hoạt | Scale từ 1 lên 2 replica (pod mới rơi vào GPU trống) | như L0 | như L0 |
-| Đo | Mốc thời gian của 8 pha: pod conditions, event pull, log vLLM | như L0 | như L0 |
-| Số lần | 5 | 5 | 5 |
+| Bước | L0 | L2 |
+|---|---|---|
+| Chuẩn bị node | `crictl rmi` image vLLM; xoá model và compile cache | Image đã pre-pull; model trên NVMe; compile cache đã được làm ấm |
+| Làm lạnh RAM | `sync; echo 3 > /proc/sys/vm/drop_caches` | như L0 (đo "node lạnh"); tuỳ chọn đo thêm "node ấm" |
+| Kích hoạt | Scale từ 1 lên 2 replica (pod mới rơi vào GPU trống) | như L0 |
+| Đo | Mốc thời gian của 8 pha: pod conditions, event pull, log vLLM | như L0 |
+| Số lần | 5 | 5 |
+
+Mức L1 (model trên PVC qua mạng) không đo, vì trên một máy thuê không có ổ mạng tương đương (ADR-001).
 
 Sau đó chạy **KB2 với A2** ở mức L0 và L2, mỗi mức 3 lần, để thấy cold start ảnh hưởng thế nào tới SLO trong tình huống thực tế.
 
@@ -300,13 +302,13 @@ Sau đó chạy **KB2 với A2** ở mức L0 và L2, mỗi mức 3 lần, để
 
 ## 13. Nhật ký thí nghiệm
 
-Mỗi phiên tạo file `docs/nhat-ky/phien-<Sx>.md`:
+Mỗi đợt thuê tạo file `docs/nhat-ky/dot-<ten>.md`, ghi theo từng khối:
 
 ```markdown
-# Phiên S3 — khối 1 — 2026-12-01
-- Nhà cung cấp / VM / GPU: …   · Giờ bật: 19:05 · Giờ tắt: 09:40 · Chi phí: …
+# Đợt chính main-1 — khối 1 — 2026-12-03
+- Máy (Vast.ai machine id) / GPU / CPU / RAM: …   · Giờ bắt đầu khối: 01:05 · Kết thúc: 16:20 · Số dư còn: …
 - Kiểm tra nhanh C: TTFT p95 @0,8C = … s (lúc hiệu chỉnh: … s) → OK
-- Sự cố: 02:14 lượt #17 (A3-KB5) invalid — scrape gap 22 s → chạy lại ở S6
+- Sự cố: 02:14 lượt #17 (A3-KB5) invalid — scrape gap 22 s → chạy lại ở cuối đợt
 - Quyết định: …
 ```
 

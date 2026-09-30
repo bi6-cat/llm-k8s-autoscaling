@@ -1,7 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="739" viewBox="0 0 1240 739" role="img" aria-label="Kế hoạch 16 tuần chia 4 giai đoạn với 5 mốc: nền tảng trên laptop (T4), pipeline và pilot (T8), xong thí nghiệm (T12), bản thảo (T14), bảo vệ (T16)" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="766" viewBox="0 0 1240 766" role="img" aria-label="Kế hoạch 16 tuần chia 4 giai đoạn với 5 mốc: nền tảng trên laptop (T4), pipeline và pilot (T8), xong thí nghiệm (T12), bản thảo (T14), bảo vệ (T16)" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
 <title>Kế hoạch 16 tuần chia 4 giai đoạn với 5 mốc: nền tảng trên laptop (T4), pipeline và pilot (T8), xong thí nghiệm (T12), bản thảo (T14), bảo vệ (T16)</title>
 <defs></defs>
-<rect x="0.5" y="0.5" width="1239" height="738" rx="14" fill="#fcfcfb" stroke="#e4e3de"/>
+<rect x="0.5" y="0.5" width="1239" height="765" rx="14" fill="#fcfcfb" stroke="#e4e3de"/>
 <text x="32" y="38" font-size="19" font-weight="700" fill="#0b0b0b" text-anchor="start">Kế hoạch thực hiện 16 tuần</text>
 <text x="32" y="61" font-size="13" font-weight="400" fill="#52514e" text-anchor="start">Màu thanh = người phụ trách chính; ◆ = mốc kiểm tra với giảng viên hướng dẫn</text>
 <rect x="32" y="86" width="14" height="12" rx="3" fill="#2a78d6"/>
@@ -10,28 +10,28 @@
 <text x="187.2" y="96" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Quang · DevOps/SRE</text>
 <rect x="325" y="86" width="14" height="12" rx="3" fill="#1baf7a"/>
 <text x="345" y="96" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Cả nhóm</text>
-<rect x="392" y="130" width="50" height="521" rx="0" fill="#f6f5f2"/>
+<rect x="392" y="130" width="50" height="548" rx="0" fill="#f6f5f2"/>
 <text x="417" y="122" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">T1</text>
 <text x="467" y="122" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">T2</text>
-<rect x="492" y="130" width="50" height="521" rx="0" fill="#f6f5f2"/>
+<rect x="492" y="130" width="50" height="548" rx="0" fill="#f6f5f2"/>
 <text x="517" y="122" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">T3</text>
 <text x="567" y="122" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">T4</text>
-<rect x="592" y="130" width="50" height="521" rx="0" fill="#f6f5f2"/>
+<rect x="592" y="130" width="50" height="548" rx="0" fill="#f6f5f2"/>
 <text x="617" y="122" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">T5</text>
 <text x="667" y="122" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">T6</text>
-<rect x="692" y="130" width="50" height="521" rx="0" fill="#f6f5f2"/>
+<rect x="692" y="130" width="50" height="548" rx="0" fill="#f6f5f2"/>
 <text x="717" y="122" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">T7</text>
 <text x="767" y="122" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">T8</text>
-<rect x="792" y="130" width="50" height="521" rx="0" fill="#f6f5f2"/>
+<rect x="792" y="130" width="50" height="548" rx="0" fill="#f6f5f2"/>
 <text x="817" y="122" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">T9</text>
 <text x="867" y="122" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">T10</text>
-<rect x="892" y="130" width="50" height="521" rx="0" fill="#f6f5f2"/>
+<rect x="892" y="130" width="50" height="548" rx="0" fill="#f6f5f2"/>
 <text x="917" y="122" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">T11</text>
 <text x="967" y="122" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">T12</text>
-<rect x="992" y="130" width="50" height="521" rx="0" fill="#f6f5f2"/>
+<rect x="992" y="130" width="50" height="548" rx="0" fill="#f6f5f2"/>
 <text x="1017" y="122" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">T13</text>
 <text x="1067" y="122" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">T14</text>
-<rect x="1092" y="130" width="50" height="521" rx="0" fill="#f6f5f2"/>
+<rect x="1092" y="130" width="50" height="548" rx="0" fill="#f6f5f2"/>
 <text x="1117" y="122" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">T15</text>
 <text x="1167" y="122" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">T16</text>
 <text x="32" y="152" font-size="12.5" font-weight="700" fill="#0b0b0b" text-anchor="start">Giai đoạn 1 · Chuẩn bị</text>
@@ -64,38 +64,41 @@
 <rect x="695" y="411" width="94" height="14" rx="4" fill="#1baf7a"/>
 <text x="795" y="422" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="start">Cả nhóm</text>
 <text x="32" y="449" font-size="12.5" font-weight="700" fill="#0b0b0b" text-anchor="start">Giai đoạn 3 · Thí nghiệm trên GPU thuê</text>
-<text x="48" y="476" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Dựng cụm cloud bằng IaC, hiệu chỉnh C &amp; SLO</text>
-<rect x="745" y="465" width="94" height="14" rx="4" fill="#1baf7a"/>
-<text x="845" y="476" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="start">Cả nhóm</text>
-<text x="48" y="503" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Đo &amp; tối ưu cold start</text>
-<rect x="795" y="492" width="144" height="14" rx="4" fill="#2a78d6"/>
-<text x="945" y="503" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="start">Trình</text>
-<text x="48" y="530" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Chạy ma trận thí nghiệm chính (75 lượt)</text>
-<rect x="795" y="519" width="194" height="14" rx="4" fill="#1baf7a"/>
-<text x="995" y="530" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="start">Cả nhóm</text>
-<text x="48" y="557" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Phân tích dữ liệu, vẽ biểu đồ</text>
-<rect x="895" y="546" width="144" height="14" rx="4" fill="#eb6834"/>
-<text x="1045" y="557" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="start">Quang</text>
-<text x="32" y="584" font-size="12.5" font-weight="700" fill="#0b0b0b" text-anchor="start">Giai đoạn 4 · Hoàn thiện</text>
-<text x="48" y="611" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Viết luận văn</text>
-<rect x="895" y="600" width="244" height="14" rx="4" fill="#1baf7a"/>
-<text x="1145" y="611" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="start">Cả nhóm</text>
-<text x="48" y="638" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Slide, demo, tuần dự phòng</text>
-<rect x="1095" y="627" width="94" height="14" rx="4" fill="#1baf7a"/>
-<text x="1089" y="638" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="end">Cả nhóm</text>
-<line x1="592" y1="130" x2="592" y2="661" stroke="#52514e" stroke-width="1" stroke-dasharray="3 3"/>
-<polygon points="592,660 599,667 592,674 585,667" fill="#0b0b0b"/>
-<text x="592" y="693" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="middle">M1 · Nền tảng chạy trên laptop</text>
-<line x1="792" y1="130" x2="792" y2="661" stroke="#52514e" stroke-width="1" stroke-dasharray="3 3"/>
-<polygon points="792,660 799,667 792,674 785,667" fill="#0b0b0b"/>
-<text x="792" y="693" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="middle">M2 · Pipeline + pilot</text>
-<line x1="992" y1="130" x2="992" y2="661" stroke="#52514e" stroke-width="1" stroke-dasharray="3 3"/>
-<polygon points="992,660 999,667 992,674 985,667" fill="#0b0b0b"/>
-<text x="992" y="693" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="middle">M3 · Xong thí nghiệm</text>
-<line x1="1092" y1="130" x2="1092" y2="661" stroke="#52514e" stroke-width="1" stroke-dasharray="3 3"/>
-<polygon points="1092,660 1099,667 1092,674 1085,667" fill="#0b0b0b"/>
-<text x="1092" y="713" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="middle">M4 · Bản thảo</text>
-<line x1="1192" y1="130" x2="1192" y2="661" stroke="#52514e" stroke-width="1" stroke-dasharray="3 3"/>
-<polygon points="1192,660 1199,667 1192,674 1185,667" fill="#0b0b0b"/>
-<text x="1196" y="693" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="end">M5 · Bảo vệ</text>
+<text x="48" y="476" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Chạy thử VM 1 GPU, script thuê/burn-in</text>
+<rect x="745" y="465" width="44" height="14" rx="4" fill="#1baf7a"/>
+<text x="795" y="476" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="start">Cả nhóm</text>
+<text x="48" y="503" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Đợt thuê chính ~72 giờ (hiệu chỉnh → 3 khối)</text>
+<rect x="795" y="492" width="44" height="14" rx="4" fill="#1baf7a"/>
+<text x="845" y="503" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="start">Cả nhóm</text>
+<text x="48" y="530" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Đợt dự phòng (nếu cần)</text>
+<rect x="895" y="519" width="44" height="14" rx="4" fill="#1baf7a"/>
+<text x="945" y="530" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="start">Cả nhóm</text>
+<text x="48" y="557" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Phân tích cold start (RQ2)</text>
+<rect x="845" y="546" width="144" height="14" rx="4" fill="#2a78d6"/>
+<text x="995" y="557" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="start">Trình</text>
+<text x="48" y="584" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Phân tích ma trận, thống kê, biểu đồ</text>
+<rect x="845" y="573" width="194" height="14" rx="4" fill="#eb6834"/>
+<text x="1045" y="584" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="start">Quang</text>
+<text x="32" y="611" font-size="12.5" font-weight="700" fill="#0b0b0b" text-anchor="start">Giai đoạn 4 · Hoàn thiện</text>
+<text x="48" y="638" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Viết luận văn</text>
+<rect x="895" y="627" width="244" height="14" rx="4" fill="#1baf7a"/>
+<text x="1145" y="638" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="start">Cả nhóm</text>
+<text x="48" y="665" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Slide, demo, tuần dự phòng</text>
+<rect x="1095" y="654" width="94" height="14" rx="4" fill="#1baf7a"/>
+<text x="1089" y="665" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="end">Cả nhóm</text>
+<line x1="592" y1="130" x2="592" y2="688" stroke="#52514e" stroke-width="1" stroke-dasharray="3 3"/>
+<polygon points="592,687 599,694 592,701 585,694" fill="#0b0b0b"/>
+<text x="592" y="720" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="middle">M1 · Nền tảng chạy trên laptop</text>
+<line x1="792" y1="130" x2="792" y2="688" stroke="#52514e" stroke-width="1" stroke-dasharray="3 3"/>
+<polygon points="792,687 799,694 792,701 785,694" fill="#0b0b0b"/>
+<text x="792" y="720" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="middle">M2 · Pipeline + pilot</text>
+<line x1="992" y1="130" x2="992" y2="688" stroke="#52514e" stroke-width="1" stroke-dasharray="3 3"/>
+<polygon points="992,687 999,694 992,701 985,694" fill="#0b0b0b"/>
+<text x="992" y="720" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="middle">M3 · Xong thí nghiệm</text>
+<line x1="1092" y1="130" x2="1092" y2="688" stroke="#52514e" stroke-width="1" stroke-dasharray="3 3"/>
+<polygon points="1092,687 1099,694 1092,701 1085,694" fill="#0b0b0b"/>
+<text x="1092" y="740" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="middle">M4 · Bản thảo</text>
+<line x1="1192" y1="130" x2="1192" y2="688" stroke="#52514e" stroke-width="1" stroke-dasharray="3 3"/>
+<polygon points="1192,687 1199,694 1192,701 1185,694" fill="#0b0b0b"/>
+<text x="1196" y="720" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="end">M5 · Bảo vệ</text>
 </svg>
