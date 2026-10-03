@@ -1,8 +1,9 @@
 # ADR-001: Các lựa chọn ban đầu của dự án
 
 - **Trạng thái:** Đã chấp nhận ngày 30/09/2026. Còn 3 điểm chờ xác nhận (xem §6).
+- **Thay thế một phần:** các mục D1, D11, D12, D15, D16, §3.2 và §5 được thay bằng [ADR-002](002-chuyen-trong-tam-sang-van-hanh.md) (04/10/2026), khi đồ án chuyển trọng tâm sang xây dựng và vận hành. Nội dung dưới đây giữ nguyên để lưu lịch sử.
 - **Người quyết định:** Nhóm. Ngân sách và nguồn GPU do nhóm chốt; các mục còn lại theo đề xuất trong phần thảo luận ngày 30/09/2026.
-- **Liên quan:** [Bản mô tả chính](../mo-ta-chi-tiet-do-an.md), [06 – Môi trường và chi phí](../chi-tiet/06-moi-truong-chi-phi.md), [12 – Kế hoạch](../chi-tiet/12-ke-hoach.md)
+- **Liên quan:** [Bản mô tả chính](../mo-ta-chi-tiet-do-an.md), [06 – Môi trường và chi phí](../chi-tiet/06-moi-truong-chi-phi.md), [11 – Kế hoạch](../chi-tiet/11-ke-hoach.md)
 
 ## 1. Bối cảnh
 
@@ -106,7 +107,7 @@ Máy **đạt** thì giữ và bắt đầu đợt chính ngay. **Không đạt*
 |---|---|---|
 | Số laptop RTX 4060 cài được Ubuntu | 2–3 | Nếu chỉ có 1: demo scale bằng simulator; phần còn lại không đổi |
 | Ngôn ngữ luận văn theo quy định trường | Tiếng Việt | Nếu phải viết tiếng Anh: sinh lại sơ đồ với nhãn tiếng Anh |
-| Ngày bắt đầu T1 và ngày bảo vệ | 05/10/2026 và cuối tháng 01/2027 | Quy đổi lại bảng lịch trong [12](../chi-tiet/12-ke-hoach.md) |
+| Ngày bắt đầu T1 và ngày bảo vệ | 05/10/2026 và cuối tháng 01/2027 | Quy đổi lại bảng lịch trong [11](../chi-tiet/11-ke-hoach.md) |
 
 ## 7. Nguồn tham khảo
 

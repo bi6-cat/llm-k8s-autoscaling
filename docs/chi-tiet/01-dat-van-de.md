@@ -5,8 +5,8 @@
 **Tóm tắt nhanh**
 - Chi phí chính của một dịch vụ LLM là **GPU**. Nhu cầu GPU phụ thuộc vào số request đang được xử lý cùng lúc, và con số này dao động mạnh theo thời gian.
 - Lý thuyết hàng đợi cho thấy độ trễ **tăng vọt khi tải tiến gần năng lực tối đa**. Vì vậy hệ thống luôn phải chừa dư năng lực, và nếu cấp phát tĩnh theo mức tải đỉnh thì sẽ lãng phí GPU phần lớn thời gian.
-- Autoscaling giải được bài toán lãng phí. Nhưng với LLM, autoscaling gặp ba trở ngại riêng: **cold start kéo dài hàng phút**, **metric quen thuộc (GPU utilization, VRAM) không phản ánh tải**, và **đơn vị tài nguyên rời rạc, đắt**.
-- Đồ án phát biểu bài toán dưới dạng: tối thiểu hoá GPU-giờ, với ràng buộc tỷ lệ request đạt SLO không thấp hơn một ngưỡng cho trước.
+- Autoscaling giải được bài toán lãng phí. Nhưng với LLM, autoscaling gặp ba trở ngại riêng: **cold start kéo dài hàng phút**, **metric quen thuộc (GPU utilization, VRAM) không phản ánh tải**, và **đơn vị tài nguyên rời rạc, đắt**. Các thao tác vận hành quen thuộc như scale-down hay rolling update cũng có cạm bẫy riêng với GPU.
+- Bài toán của đồ án là một **bài toán vận hành**: xây dựng một nền tảng để một doanh nghiệp tự host LLM, giữ được chất lượng phục vụ với số GPU ít nhất có thể, và vận hành được hằng ngày (cập nhật, xử lý sự cố, dựng lại).
 
 ---
 
@@ -57,7 +57,7 @@ Như vậy **gộp nhiều request vào cùng một batch** là cách duy nhất
 | **Request không đồng nhất** | Prompt dài từ vài chục đến hàng nghìn token; câu trả lời cũng vậy | Thời gian phục vụ mỗi request chênh nhau hàng chục lần; "số request/giây" không phản ánh đúng lượng việc |
 | **Phân phối đuôi dài** | Một ít request rất dài chiếm phần lớn tài nguyên | Độ trễ p99 nhạy cảm hơn nhiều so với trung bình |
 
-Các bộ trace công khai như BurstGPT [5] và Azure LLM Inference Trace [3], [18] cho thấy những đặc điểm trên có thật. Kịch bản KB5 có thể dùng một trong hai trace này, sau khi nén thời gian (xem [08 §6.4](08-thiet-ke-thi-nghiem.md#64-phát-lại-trace-thật-tuỳ-chọn)).
+Các bộ trace công khai như BurstGPT [5] và Azure LLM Inference Trace [3], [18] cho thấy những đặc điểm trên có thật. Ba kịch bản tải của đồ án (thấp ổn định, tăng đột ngột, cao kéo dài) tái hiện các pha chính của một ngày tải. Phát lại trace thật là hướng mở rộng ([14 – E13](14-huong-mo-rong.md#e13-đánh-giá-mở-rộng-trace-thật-nhiều-lượt-độ-nhạy-tham-số)).
 
 ---
 
@@ -65,7 +65,7 @@ Các bộ trace công khai như BurstGPT [5] và Azure LLM Inference Trace [3], 
 
 ![Hình 10 – Độ trễ theo mức tải](../images/10-do-tre-theo-muc-tai.svg)
 
-*Hình 10. Độ trễ theo tốc độ request trên một replica. Đồ thị được vẽ từ mô hình hàng đợi đơn giản để minh hoạ; đường cong thật sẽ được đo ở bước hiệu chỉnh (Hình 15).*
+*Hình 10. Độ trễ theo tốc độ request trên một replica. Đồ thị được vẽ từ mô hình hàng đợi đơn giản để minh hoạ; đường cong thật sẽ được đo ở bước đo năng lực (Hình 15).*
 
 Gọi μ là thông lượng tối đa của một replica (số request/giây nó xử lý được) và λ là tốc độ request đến. **Mức sử dụng** là ρ = λ/μ. Trong mô hình hàng đợi M/M/1 cổ điển, thời gian trung bình trong hệ thống là:
 
@@ -78,19 +78,24 @@ Công thức này nói lên ba điều:
 - Khi ρ tiến tới 1, độ trễ **tăng không giới hạn**. Chỉ cần tăng ρ từ 0,8 lên 0,9 là thời gian chờ đã tăng gấp đôi.
 - Khi λ > μ, hàng đợi **tăng mãi**. Hệ thống không bao giờ tự hồi phục được cho tới khi tải giảm.
 
-LLM serving phức tạp hơn M/M/1 ở hai điểm. Thứ nhất, thông lượng μ **tăng theo kích thước batch** cho tới khi KV-cache đầy. Thứ hai, thời gian phục vụ phụ thuộc độ dài request. Tuy vậy, hình dạng "đầu gối" của đường cong vẫn giữ nguyên, và dữ liệu hiệu chỉnh sẽ cho thấy điều đó.
+LLM serving phức tạp hơn M/M/1 ở hai điểm. Thứ nhất, thông lượng μ **tăng theo kích thước batch** cho tới khi KV-cache đầy. Thứ hai, thời gian phục vụ phụ thuộc độ dài request. Tuy vậy, hình dạng "đầu gối" của đường cong vẫn giữ nguyên, và dữ liệu đo năng lực sẽ cho thấy điều đó.
 
 **Hệ quả thực tế:** năng lực dùng được **C** (tốc độ lớn nhất còn đạt SLO) luôn nhỏ hơn μ. Hệ thống phải giữ ρ ở mức 0,7–0,85, tức là **luôn có dư năng lực**. Câu hỏi đặt ra là dư bao nhiêu và vào lúc nào, và autoscaling chính là cách điều chỉnh lượng dư này theo thời gian.
 
 ---
 
-## 4. Ba cách cấp phát: một ví dụ có số liệu
+## 4. Bối cảnh giả định và ba cách cấp phát
 
 ![Hình 1 – Bài toán trade-off](../images/01-bai-toan-trade-off.svg)
 
 *Hình 1 (tài liệu chính). Cùng một tải, ba cách cấp phát.*
 
-Giả sử một dịch vụ nội bộ có mỗi ngày **8 giờ cao điểm** với tải 3C và **16 giờ thấp điểm** với tải 0,5C. Target là 80% năng lực mỗi replica, tức mỗi replica gánh 0,8C:
+**Bối cảnh.** Một doanh nghiệp vài nghìn nhân viên muốn có trợ lý AI nội bộ: hỏi đáp tài liệu, soạn thảo, hỗ trợ viết code. Dữ liệu nội bộ **không được gửi ra API bên ngoài**, nên phải tự host một model mã nguồn mở trên GPU của mình hoặc GPU thuê. Đây là tình huống rất gần với nơi làm việc của hai thành viên (một công ty cloud và một công ty an ninh mạng). Đội platform nhận ba yêu cầu:
+- Người dùng không phải chờ lâu, kể cả lúc 9 giờ sáng khi mọi người cùng mở trợ lý.
+- Không trả tiền cho GPU chạy không vào ban đêm và cuối tuần.
+- Đội vận hành ít người, nên nền tảng phải tự xử lý phần lớn tình huống, và khi có sự cố thì phải biết ngay và có sẵn hướng dẫn xử lý.
+
+**Ví dụ có số liệu.** Giả sử dịch vụ có mỗi ngày **8 giờ cao điểm** với tải 3C và **16 giờ thấp điểm** với tải 0,5C. Target là 80% năng lực mỗi replica, tức mỗi replica gánh 0,8C:
 - Giờ cao điểm cần ⌈3 ÷ 0,8⌉ = 4 replica.
 - Giờ thấp điểm cần 1 replica.
 
@@ -100,7 +105,7 @@ Giả sử một dịch vụ nội bộ có mỗi ngày **8 giờ cao điểm** 
 | Static-max (4 replica) | 96 | ~2.016 USD | Đạt SLO |
 | Autoscaling lý tưởng | 8 × 4 + 16 × 1 = 48 | ~1.008 USD | Đạt SLO, trừ các **khoảng trễ khi scale-up** |
 
-Trên giấy, autoscaling tiết kiệm **50%** chi phí so với Static-max. Đồ án sẽ đo trên thực tế:
+Trên giấy, autoscaling tiết kiệm **50%** chi phí so với Static-max. Nhưng con số đó chỉ đạt được nếu nền tảng giải quyết được các khó khăn ở §5. Đồ án xây dựng nền tảng làm việc này, rồi đo trên thực tế:
 - Khoảng trễ scale-up dài bao nhiêu và gây vi phạm SLO đến mức nào.
 - Phần tiết kiệm thực tế còn lại bao nhiêu, sau khi trừ các yếu tố như pod đang khởi động vẫn giữ GPU và việc chờ ổn định trước khi scale-down.
 
@@ -123,58 +128,57 @@ Mỗi lần scale là thêm hoặc bớt **nguyên một GPU**. Khác với CPU 
 Một request có thể kéo dài hàng chục giây, và trạng thái của nó (KV-cache) nằm trên đúng GPU đang xử lý. Khi scale-down, không thể "chuyển" request sang pod khác. Pod phải được xử lý xong các request đang chạy (*drain*) trước khi bị xoá, và nếu làm sai thì request bị cắt ngang. → Xem [05 §8](05-kien-truc-he-thong.md#8-scale-down-và-graceful-shutdown).
 
 ### 5.5. Cân bằng tải không biết trạng thái của pod
-Service của Kubernetes chia request gần như ngẫu nhiên, không biết pod nào đang có hàng đợi dài. Hệ quả là có pod quá tải trong khi pod khác còn rảnh, nên năng lực thực tế thấp hơn tổng năng lực danh nghĩa. → Được đưa vào hướng mở rộng ở [15](15-huong-mo-rong.md#e1-định-tuyến-có-nhận-biết-llm).
+Service của Kubernetes chia request gần như ngẫu nhiên, không biết pod nào đang có hàng đợi dài. Hệ quả là có pod quá tải trong khi pod khác còn rảnh, nên năng lực thực tế thấp hơn tổng năng lực danh nghĩa. → Được đưa vào hướng mở rộng ở [14](14-huong-mo-rong.md#e1-định-tuyến-có-nhận-biết-llm).
+
+### 5.6. Thao tác vận hành quen thuộc không còn đúng
+Với web service, rolling update thường đặt `maxSurge: 1, maxUnavailable: 0`: tạo pod mới trước, rồi mới xoá pod cũ. Với GPU, khi mọi GPU đều đang có pod, pod mới **không có GPU để chạy** và nằm Pending, nên lần cập nhật bị kẹt. Tương tự, đặt trường `replicas` trong Git khiến Argo CD và HPA "giành nhau" số replica. → Xem [08 §5](08-van-hanh.md#5-cập-nhật-phiên-bản-khi-gpu-đã-dùng-hết) và [05 §10.3](05-kien-truc-he-thong.md#103-cạm-bẫy-argo-cd-và-hpa-tranh-nhau-replicas).
 
 ---
 
 ## 6. Phát biểu bài toán
 
-Gọi:
-- λ(t): tốc độ request đến.
-- N(t) ∈ {1, …, N_max}: số replica đang giữ GPU.
-- π: chính sách autoscaling. π quyết định số replica mong muốn N\*(t) dựa trên metric quan sát được m(t − δ), với δ là độ trễ phát hiện.
+**Bài toán.** Xây dựng và vận hành một nền tảng phục vụ LLM tự host trên Kubernetes, với một nhóm N GPU cố định (trong đồ án N = 4), sao cho:
 
-Replica mới chỉ bắt đầu phục vụ sau thời gian cold start D. Bài toán là:
+1. **Chất lượng phục vụ:** phần lớn request đạt SLO về độ trễ (TTFT, TPOT), kể cả khi tải thay đổi theo giờ hoặc tăng đột ngột.
+2. **Hiệu quả tài nguyên:** số GPU-giờ bị giữ chỉ ở mức cần thiết. Lúc tải thấp, GPU được giải phóng cho việc khác hoặc ngừng tính tiền.
+3. **Vận hành được hằng ngày:** cập nhật phiên bản và scale-down không làm rớt request. Có cảnh báo khi chất lượng giảm, và mỗi cảnh báo có hướng dẫn xử lý. Toàn bộ nền tảng dựng lại được từ Git.
 
-$$
-\min_{\pi} \;\; \text{GPU-giờ} = \int_0^T N(t)\,dt
-\qquad \text{với ràng buộc} \qquad
-\text{SLO attainment} \;\ge\; \alpha
-$$
+Ba yêu cầu này kéo nhau theo các hướng khác nhau. Chất lượng phục vụ muốn giữ nhiều GPU; hiệu quả muốn giữ ít. Muốn giữ ít GPU thì phải scale thường xuyên, mà mỗi lần scale lại là một thao tác có rủi ro (cold start, cắt request). Hình 1 minh hoạ sự đánh đổi này.
 
-trong đó SLO attainment là tỷ lệ request đạt SLO về TTFT và TPOT, và α là mức mong muốn, ví dụ 95%.
+**Cách đồ án giải bài toán:**
+- **Tín hiệu scale đúng:** dùng metric của chính vLLM (số request đang xử lý cộng đang chờ) thay vì GPU utilization (§5.2, [07](07-chien-luoc-autoscaling.md)).
+- **Rút ngắn cold start:** tải sẵn image, đặt model trên ổ NVMe cục bộ, giữ compile cache (§5.1, [05 §7](05-kien-truc-he-thong.md#7-cold-start-chi-tiết)).
+- **Thay đổi an toàn:** graceful shutdown cho request streaming; chiến lược rolling update phù hợp khi đã hết GPU trống (§5.4, §5.6).
+- **Quan sát và phản ứng:** SLO, cảnh báo theo tốc độ tiêu hao ngân sách lỗi, runbook cho từng cảnh báo ([08](08-van-hanh.md)).
+- **Tái lập:** IaC cho máy, GitOps cho mọi thứ chạy trên cluster.
 
-Đồ án **không đi tìm chính sách tối ưu** cho bài toán này. Thay vào đó, đồ án làm hai việc:
-1. So sánh ba lựa chọn tín hiệu m(t) (chiến lược A1–A3) khi dùng cùng một cơ chế π chuẩn là HPA/KEDA. Đây là RQ1.
-2. Đo và tìm cách giảm D (cold start). Đây là RQ2.
-
-Kết quả được đặt cạnh hai "đáp án biên" là Static-1 và Static-4, để định lượng trade-off (RQ3).
+Sau đó đồ án **đo** để nghiệm thu: so với hai cấu hình tĩnh Static-1 và Static-4, nền tảng giữ được bao nhiêu chất lượng và tiết kiệm được bao nhiêu GPU-giờ, phản ứng nhanh tới đâu, và các thao tác vận hành có an toàn không ([09](09-kiem-thu-danh-gia.md)). Các yêu cầu đo được nằm ở [02](02-muc-tieu-yeu-cau.md).
 
 ---
 
 ## 7. Ý nghĩa thực tiễn
 
-- Doanh nghiệp tự vận hành LLM (vì lý do dữ liệu, chi phí khi quy mô lớn, hoặc tuỳ biến) đều gặp đúng bài toán này. Nơi làm việc của hai thành viên cung cấp dịch vụ cloud và AI, nên kết quả đồ án có thể đem vào thực tế.
-- Đồ án chỉ dùng thành phần chuẩn (KEDA, HPA, Prometheus). Vì vậy khuyến nghị rút ra (nên scale theo metric nào, đặt target bao nhiêu, cold start tối ưu tới đâu) áp dụng được ngay cho các nền tảng dựa trên cùng cơ chế như KServe hay vLLM Production Stack.
+- Doanh nghiệp tự vận hành LLM (vì dữ liệu, vì chi phí khi quy mô lớn, hoặc vì cần tuỳ biến) đều gặp đúng bài toán này. Nơi làm việc của hai thành viên cung cấp dịch vụ cloud và AI, nên nền tảng và quy trình vận hành của đồ án có thể đem vào thực tế.
+- Đồ án chỉ dùng thành phần chuẩn (KEDA, HPA, Prometheus, Argo CD). Vì vậy cấu hình và runbook rút ra áp dụng được ngay cho các nền tảng dựa trên cùng cơ chế như KServe hay vLLM Production Stack.
 
 ---
 
 ## 8. Câu hỏi hội đồng có thể đặt ra
 
 **Sao không dùng API có sẵn (OpenAI, Gemini…) thay vì tự vận hành?**
-Có ba lý do khiến doanh nghiệp tự vận hành: dữ liệu nhạy cảm không được gửi ra ngoài, chi phí ở quy mô lớn, và nhu cầu tuỳ biến hoặc dùng model riêng. Hơn nữa, đề tài nghiên cứu **hạ tầng serving**, không phải bản thân model.
+Có ba lý do khiến doanh nghiệp tự vận hành: dữ liệu nhạy cảm không được gửi ra ngoài, chi phí ở quy mô lớn, và nhu cầu tuỳ biến hoặc dùng model riêng. Hơn nữa, đề tài là về **hạ tầng serving**, không phải bản thân model.
 
-**Kubernetes đã có sẵn HPA, vậy đóng góp của nhóm là gì?**
-HPA chỉ là cơ chế. Câu hỏi mở nằm ở chỗ **dùng tín hiệu gì** và **cold start ảnh hưởng thế nào** trong trường hợp đặc thù của LLM. Đồ án trả lời hai câu hỏi đó bằng thực nghiệm có kiểm soát, có số liệu và tái lập được.
+**Kubernetes đã có sẵn HPA, vậy nhóm làm thêm được gì?**
+HPA chỉ là cơ chế. Để autoscaling cho LLM chạy được trong thực tế, phải giải các vấn đề mà cấu hình mặc định không xử lý: chọn tín hiệu đúng, rút ngắn cold start, không cắt request khi scale-down, cập nhật khi hết GPU trống, cảnh báo khi chất lượng giảm. Đồ án giải từng vấn đề và đo để chứng minh.
 
 **Sao không scale-to-zero để tiết kiệm tối đa?**
 Với cold start 1–8 phút, request đầu tiên sau một khoảng nghỉ sẽ phải chờ vài phút. Điều này không chấp nhận được với dịch vụ tương tác. Scale-to-zero chỉ hợp lý khi cold start giảm được xuống vài giây, nên được đặt ở hướng mở rộng.
 
 **Sao không scale theo lịch cố định (scheduled scaling)?**
-Scale theo lịch hiệu quả khi tải lặp lại đều đặn, và có thể **kết hợp** với autoscaling (ví dụ KEDA cron scaler). Tuy nhiên nó không xử lý được các đợt tăng đột biến không báo trước (KB2). Đồ án chọn autoscaling phản ứng theo tải làm trọng tâm, còn autoscaling dự báo nằm ở hướng mở rộng.
+Scale theo lịch hiệu quả khi tải lặp lại đều đặn, và có thể **kết hợp** với autoscaling (ví dụ KEDA cron scaler). Tuy nhiên nó không xử lý được các đợt tăng đột biến không báo trước (KB2). Đồ án chọn autoscaling phản ứng theo tải làm trọng tâm; autoscaling dự báo nằm ở hướng mở rộng.
 
 ---
 
 ## Đọc thêm
-- [1] vLLM/PagedAttention; [3] Splitwise (Azure trace); [5] BurstGPT (danh mục đầy đủ ở [mục 16 của tài liệu chính](../mo-ta-chi-tiet-do-an.md#16-tài-liệu-tham-khảo)).
+- [1] vLLM/PagedAttention; [3] Splitwise (Azure trace); [5] BurstGPT (danh mục đầy đủ ở [mục 15 của tài liệu chính](../mo-ta-chi-tiet-do-an.md#15-tài-liệu-tham-khảo)).
 - M. Harchol-Balter, *Performance Modeling and Design of Computer Systems: Queueing Theory in Action*, Cambridge University Press, 2013, chương về M/M/1.

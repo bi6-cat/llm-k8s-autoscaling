@@ -3,10 +3,10 @@
 > Thuộc [Mục 5 của bản mô tả chính](../mo-ta-chi-tiet-do-an.md#5-kiến-trúc-hệ-thống) · [Danh mục tài liệu chuyên sâu](README.md)
 
 **Tóm tắt nhanh**
-- Năm nguyên tắc thiết kế: **đơn giản và minh bạch, tái lập được, đo được mọi thứ, kiểm soát biến, an toàn khi scale**.
+- Năm nguyên tắc thiết kế: **đơn giản và minh bạch, tái lập được, quan sát được, vận hành được, an toàn khi thay đổi**.
 - Chi tiết tầng serving: cấu hình Deployment vLLM, lưu trữ model, Service, Ingress (Traefik hoặc Envoy Gateway, **không dùng ingress-nginx vì đã ngừng bảo trì**).
 - Hai vòng đời quan trọng nhất của pod: **cold start 8 pha** (Hình 12) và **graceful shutdown** (Hình 13).
-- Kiến trúc giám sát (PodMonitor, chu kỳ scrape, recording rule) và GitOps, kèm hai cạm bẫy hay gặp: **Argo CD tranh quyền `replicas` với HPA**, và **ServiceMonitor không được Prometheus nhận** vì thiếu label.
+- Kiến trúc giám sát (PodMonitor, chu kỳ scrape, recording rule, năm dashboard) và GitOps, kèm hai cạm bẫy hay gặp: **Argo CD tranh quyền `replicas` với HPA**, và **ServiceMonitor không được Prometheus nhận** vì thiếu label.
 
 ---
 
@@ -15,10 +15,10 @@
 | Nguyên tắc | Cụ thể hoá |
 |---|---|
 | **Đơn giản, minh bạch** | Dùng Deployment và KEDA thay vì một framework serving nhiều tầng. Mọi quyết định scale đều truy được về một câu PromQL |
-| **Tái lập được** | Mọi thứ nằm trong Git: IaC dựng máy, Argo CD dựng nền tảng, runner chạy thí nghiệm. Không có bước làm tay |
-| **Đo được mọi thứ** | Mỗi pha của request, của cold start và của lần scale đều có timestamp |
-| **Kiểm soát biến** | Giữa các cấu hình chỉ khác **một** thứ (metric hoặc số replica); mọi tham số khác được ghim |
-| **An toàn khi scale** | Có probe đúng, có preStop, grace period đủ dài, và không để request bị cắt |
+| **Tái lập được** | Mọi thứ nằm trong Git: IaC dựng máy, Argo CD dựng nền tảng, runner chạy đánh giá. Không có bước làm tay; mọi phiên bản được ghim |
+| **Quan sát được** | Mỗi pha của request, của cold start và của lần scale đều có metric hoặc timestamp; mỗi tầng có dashboard |
+| **Vận hành được** | Mỗi tình huống bất thường có cảnh báo và runbook; mọi thay đổi đi qua PR và Argo CD ([08](08-van-hanh.md)) |
+| **An toàn khi thay đổi** | Có probe đúng, preStop, grace period đủ dài, chiến lược rolling update hợp với GPU; không để request bị cắt |
 
 ---
 
@@ -32,10 +32,10 @@
 |---|---|---|
 | `llm-serving` | Deployment `vllm`, Service, PVC `model-cache`, PodMonitor, ScaledObject | Workload chính |
 | `keda` | KEDA operator, metrics API server, admission webhook | Helm chart `kedacore/keda` |
-| `monitoring` | Prometheus Operator, Prometheus, Grafana, kube-state-metrics, node-exporter | Helm chart `kube-prometheus-stack` |
+| `monitoring` | Prometheus Operator, Prometheus, **Alertmanager**, Grafana, kube-state-metrics, node-exporter | Helm chart `kube-prometheus-stack` |
 | `gpu-operator` | Device plugin, GFD, DCGM exporter (và toolkit nếu cần) | Helm chart `nvidia/gpu-operator` |
 | `argocd` | Argo CD | Nền của GitOps |
-| `kube-system` | Traefik (có sẵn trong k3s), CoreDNS… | – |
+| `kube-system` | Traefik (có sẵn trong k3s), CoreDNS, Sealed Secrets controller | Traefik bật metrics để đo tỷ lệ lỗi |
 
 **Bảng phiên bản** (điền và ghim khi triển khai, rồi ghi vào `metadata.json`):
 
@@ -69,7 +69,8 @@
 | `terminationGracePeriodSeconds` | 180 | Lớn hơn preStop cộng request dài nhất |
 | `imagePullPolicy` | `IfNotPresent` | Để pre-pull có tác dụng |
 | env `HF_HOME`, `VLLM_CACHE_ROOT` | Trỏ vào volume | Giữ lại cache model và compile cache (mức L2) |
-| args | `--no-enable-prefix-caching` | Kiểm soát biến (xem [04 §3.4](04-kien-thuc-nen.md#34-prefix-caching)) |
+| `strategy` | `RollingUpdate`, `maxSurge: 0`, `maxUnavailable: 1` | Không bị kẹt khi mọi GPU đều đang có pod (xem [08 §5](08-van-hanh.md#5-cập-nhật-phiên-bản-khi-gpu-đã-dùng-hết)) |
+| args | `--no-enable-prefix-caching` khi đánh giá | Để số đo không phụ thuộc nội dung prompt; khi vận hành thật thì bật (xem [04 §3.4](04-kien-thuc-nen.md#34-prefix-caching)) |
 
 ### 3.2. Lưu trữ model: các phương án
 
@@ -88,20 +89,23 @@
 - Service kiểu `ClusterIP`. kube-proxy (chế độ iptables) chọn endpoint **gần như ngẫu nhiên, đều nhau**, không biết pod nào đang có hàng đợi dài.
 - Hệ quả: khi các request dài ngắn khác nhau, có lúc một pod bị dồn nhiều request dài trong khi pod khác rảnh. Năng lực thực tế vì thế thấp hơn N × C một chút.
 - Trong đồ án, round-robin được **giữ nguyên cho mọi cấu hình** để so sánh công bằng. Nhóm theo dõi độ lệch `num_requests_running` giữa các pod để lượng hoá hiện tượng này.
-- Có thể thay bằng Envoy Gateway với thuật toán `LEAST_REQUEST`, hoặc định tuyến nhận biết LLM. Đây là hướng mở rộng ([15 – E1](15-huong-mo-rong.md#e1-định-tuyến-có-nhận-biết-llm)).
+- Có thể thay bằng Envoy Gateway với thuật toán `LEAST_REQUEST`, hoặc định tuyến nhận biết LLM. Đây là hướng mở rộng ([14 – E1](14-huong-mo-rong.md#e1-định-tuyến-có-nhận-biết-llm)).
 
 ### 3.4. Ingress / Gateway
 
 - **ingress-nginx** đã được Kubernetes cho **ngừng bảo trì từ tháng 3/2026**, nên không nên dùng cho hệ thống mới.
 - **Traefik** có sẵn trong k3s và hỗ trợ SSE streaming tốt. Nhóm khuyến nghị Traefik cho đơn giản. Envoy Gateway (Gateway API) là lựa chọn thay thế nếu muốn dùng `LEAST_REQUEST`.
 - Với streaming dài, cần kiểm tra **timeout** của entrypoint và route để stream không bị cắt giữa chừng, và kiểm tra rằng proxy không gom (buffer) response lại.
-- **Trong thí nghiệm**, có thể cho máy tạo tải gọi thẳng Service qua NodePort để loại bỏ Ingress khỏi danh sách biến. Nếu làm vậy, phải ghi rõ trong phần phương pháp.
+- **Khi đánh giá**, máy tạo tải vẫn đi qua Traefik như người dùng thật, để số đo gồm cả xác thực và giới hạn tốc độ. Giới hạn tốc độ được nới rộng cho khoá API của máy tạo tải.
 
 ### 3.5. Bảo mật tối thiểu
 
-- Không mở API ra Internet; chỉ máy tạo tải (cùng mạng riêng) được gọi.
-- Có thể bật `--api-key` hoặc xác thực ở Gateway.
-- Tách namespace; NetworkPolicy cho `llm-serving` là tuỳ chọn.
+- Không mở API ra Internet; chỉ mạng nội bộ (và máy tạo tải) gọi được.
+- **API key** và **giới hạn tốc độ** theo từng khoá, đặt ở Traefik (middleware).
+- **NetworkPolicy**: pod vLLM chỉ nhận kết nối từ Traefik (cổng API) và Prometheus (cổng metric).
+- **Bí mật** (khoá API, token Hugging Face, webhook cảnh báo) nằm trong Git ở dạng mã hoá bằng Sealed Secrets.
+
+Chi tiết và checklist ở [08 §8](08-van-hanh.md#8-bảo-mật-tối-thiểu).
 
 ---
 
@@ -180,7 +184,7 @@ data: {"id":"…","choices":[],"usage":{"prompt_tokens":512,"completion_tokens":
 data: [DONE]
 ```
 
-Để nhận được phần `usage` ở cuối stream, request phải gửi kèm `"stream_options": {"include_usage": true}`. Một chunk có thể chứa nhiều token, nên phải lấy số token từ `usage` (xem [09 §3.2](09-chi-so-danh-gia.md#32-tpot-và-itl)).
+Để nhận được phần `usage` ở cuối stream, request phải gửi kèm `"stream_options": {"include_usage": true}`. Một chunk có thể chứa nhiều token, nên phải lấy số token từ `usage` (xem [09 §11](09-kiem-thu-danh-gia.md#11-chỉ-số-và-cách-tính)).
 
 ---
 
@@ -294,7 +298,7 @@ spec:
 
 - `preStop sleep` bằng 15–20 s: lớn hơn thời gian lan truyền thay đổi Endpoints.
 - `terminationGracePeriodSeconds` ≥ preStop + (thời gian chờ tối đa + thời gian sinh output dài nhất). Với output 256 token và TPOT 100 ms, riêng phần sinh đã là 26 s. Chọn 180 s để có biên an toàn.
-- **Cần kiểm chứng bằng thực nghiệm** (KB4): vLLM có thực sự chờ hết các stream đang mở trước khi thoát không, và số lỗi trong cửa sổ scale-down có bằng 0 không. Nếu có lỗi, đó là một phát hiện, và là cơ sở đề xuất giải pháp như tăng thời gian preStop hoặc chủ động gỡ pod khỏi Service trước.
+- **Cần kiểm chứng bằng đo đạc** (pha giảm tải của KB2 và kịch bản VH1): vLLM có thực sự chờ hết các stream đang mở trước khi thoát không, và số lỗi trong cửa sổ scale-down có bằng 0 không. Nếu có lỗi, nhóm sửa cấu hình (tăng preStop, chủ động gỡ pod khỏi Service trước) rồi đo lại, và ghi vào runbook.
 
 ---
 
@@ -346,7 +350,7 @@ spec:
           expr: sum(rate(vllm:generation_tokens_total{namespace="llm-serving"}[1m]))
 ```
 
-ScaledObject **nên dùng biểu thức gốc** thay vì recording rule. Recording rule được tính theo chu kỳ riêng, nên sẽ cộng thêm một khoảng trễ vào quá trình phát hiện.
+ScaledObject **nên dùng biểu thức gốc** thay vì recording rule. Recording rule được tính theo chu kỳ riêng, nên sẽ cộng thêm một khoảng trễ vào quá trình phát hiện. Các recording rule cho SLO và quy tắc cảnh báo nằm ở [08 §2–3](08-van-hanh.md#2-sli-và-slo).
 
 ### 9.3. Dashboard
 
@@ -355,11 +359,12 @@ ScaledObject **nên dùng biểu thức gốc** thay vì recording rule. Recordi
 | Serving | RPS; TTFT/ITL p50 và p95; running, waiting theo từng pod; KV-cache; token/s; preemption |
 | GPU | GPU_UTIL, SM_ACTIVE, DRAM_ACTIVE; VRAM; công suất; nhiệt độ và xung nhịp |
 | Autoscaling | desired so với current replicas; metric so với target (vẽ `threshold × replicas`); pod theo trạng thái (Pending, ContainerCreating, Running-not-ready, Ready) |
-| Thí nghiệm | Annotation các pha KB; λ(t) theo lịch so với thực tế; độ lệch lịch gửi của máy tạo tải; lỗi |
+| **SLO và chi phí** | SLI so với SLO; ngân sách lỗi còn lại; cảnh báo đang bật; GPU-giờ theo ngày; chi phí ước tính và chi phí trên 1 triệu token |
+| Đánh giá | Annotation các pha KB; λ(t) theo lịch so với thực tế; độ lệch lịch gửi của máy tạo tải; lỗi |
 
 ### 9.4. Lưu trữ
 
-- Retention khoảng 15 ngày; dữ liệu mỗi lượt chạy được runner xuất riêng (xem [09](09-chi-so-danh-gia.md#7-lược-đồ-dữ-liệu)).
+- Retention khoảng 15 ngày; dữ liệu mỗi lượt đánh giá được runner xuất riêng (xem [09 §10.2](09-kiem-thu-danh-gia.md#102-dữ-liệu-của-một-lượt)).
 - Lượng series ít (4 pod, vài chục metric), nên chỉ cần khoảng 10–20 GB ổ cho Prometheus.
 
 ---
@@ -378,9 +383,12 @@ argocd/
     └── serving.yaml         # Kustomize overlay laptop|cloud
 ```
 
-### 10.2. Autoscaling nằm ngoài Argo CD
+### 10.2. Cấu hình autoscaling: trong Git, tạm tách khi đánh giá
 
-Cấu hình autoscaling **thay đổi theo từng lượt chạy**, nên runner áp nó trực tiếp bằng `kubectl apply` từ thư mục `autoscaling/`. Argo CD **không quản lý** thư mục này. Nhờ vậy việc đổi cấu hình diễn ra ngay lập tức, không phải chờ Git sync.
+- **Khi vận hành:** cấu hình chính thức (A2) nằm trong Git, là một Application riêng `autoscaling` do Argo CD quản lý như mọi thứ khác.
+- **Khi đánh giá:** cấu hình phải đổi theo từng lượt (S1, S4, A1, A2). Runner **tắt auto-sync** của Application `autoscaling`, rồi áp từng cấu hình bằng `kubectl apply` từ thư mục `autoscaling/`. Hết đợt đánh giá thì bật lại auto-sync, và Argo CD đưa cluster về A2.
+
+Cách này giữ đúng nguyên tắc "Git là nguồn sự thật" trong vận hành, mà vẫn đổi được cấu hình ngay lập tức khi đánh giá.
 
 ### 10.3. Cạm bẫy: Argo CD và HPA tranh nhau `replicas`
 
@@ -403,7 +411,7 @@ spec:
 ## 11. Câu hỏi hội đồng có thể đặt ra
 
 **Vì sao không dùng KServe cho "chuẩn"?**
-KServe thêm nhiều tầng (Knative, activator, CRD riêng). Các tầng này làm khó kiểm soát biến và khó tách thời gian phản ứng thành từng thành phần. Deployment cộng KEDA là tối giản, và kết quả vẫn áp dụng được cho KServe ở chế độ raw deployment.
+KServe thêm nhiều tầng (Knative, activator, CRD riêng). Các tầng này là thêm thành phần phải vận hành, và làm khó tách thời gian phản ứng thành từng phần. Deployment cộng KEDA là tối giản, và cấu hình vẫn áp dụng được cho KServe ở chế độ raw deployment.
 
 **Vì sao liveness probe để rộng tay như vậy?**
 Khi pod rất tải, `/health` có thể trả chậm. Liveness quá gắt sẽ **kill một pod đang làm việc** ngay lúc cần nó nhất, gây thêm một lần cold start.

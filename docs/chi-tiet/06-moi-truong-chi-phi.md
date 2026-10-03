@@ -5,7 +5,8 @@
 **Tóm tắt nhanh**
 - **Tầng 1 (laptop RTX 4060):** hướng dẫn từng bước dựng k3s có GPU, gộp nhiều laptop thành một cluster, và những lưu ý riêng cho laptop.
 - **Tầng 2 (GPU thuê):** thuê **Vast.ai chế độ VM, 4 × RTX 4090, thuê trọn máy** (dự phòng TensorDock); tiêu chí lọc máy; burn-in; phân bổ CPU riêng cho vLLM và máy tạo tải trên cùng VM; tự động thuê và huỷ.
-- **Chi phí:** dự toán khoảng **105–170 USD** (trong ngân sách 100–200 USD), tín dụng trả trước làm giới hạn cứng, và **một đợt thuê liên tục ~72 giờ trên cùng một máy** để số liệu ổn định.
+- **Chi phí:** dự toán khoảng **60–105 USD** (trong ngân sách 100–200 USD), tín dụng trả trước làm giới hạn cứng, và **một đợt thuê liên tục khoảng 37 giờ trên cùng một máy** để số liệu ổn định.
+- Phần lớn công việc vận hành (cảnh báo, runbook, rolling update, drain node) được làm và kiểm thử trên **cluster laptop**, nên không tốn tiền thuê GPU.
 
 > Các lệnh dưới đây là **khung tham khảo**. Tên gói, cờ và đường dẫn có thể thay đổi theo phiên bản, nên luôn đối chiếu với tài liệu chính thức của k3s, NVIDIA và nhà cung cấp tại thời điểm cài đặt.
 
@@ -19,11 +20,11 @@
 
 | | Tầng 1: Laptop | Tầng 2: GPU thuê |
 |---|---|---|
-| Mục đích | Phát triển, pilot, demo khi bảo vệ | Hiệu chỉnh, ma trận thí nghiệm, đo cold start |
+| Mục đích | Phát triển; kiểm thử chức năng; kịch bản vận hành (drain node, rolling update, cảnh báo); demo khi bảo vệ | Đo năng lực, đánh giá autoscaling, cold start, kịch bản vận hành trên GPU thật |
 | GPU | RTX 4060 Laptop 8 GB (mỗi máy 1 GPU) | 4 × RTX 4090 24 GB (Vast.ai, chế độ VM) |
 | Model | Qwen2.5-1.5B-Instruct (hoặc 3B AWQ) | Qwen2.5-7B-Instruct |
 | Chi phí | ≈ 0 (tiền điện) | Theo giờ |
-| Số liệu dùng để kết luận? | **Không** (chỉ dùng để so xu hướng) | **Có** |
+| Số liệu dùng trong chương đánh giá? | Chỉ kết quả đạt/không đạt của kịch bản vận hành | **Có** |
 
 ---
 
@@ -91,8 +92,8 @@ Overlay `laptop` gợi ý:
 ### 2.6. Không có GPU vẫn phát triển được
 
 `llm-d-inference-sim` giả lập API và metric của vLLM, cho phép cấu hình TTFT và ITL giả. Công cụ này chạy được trên cluster `kind` hoặc k3s không có GPU. Dùng nó để:
-- Viết và kiểm thử ScaledObject A1–A3 (A1 cần GPU thật, hoặc giả lập metric DCGM).
-- Viết dashboard và bộ export dữ liệu của runner.
+- Viết và kiểm thử ScaledObject A1, A2 (A1 cần GPU thật, hoặc giả lập metric DCGM).
+- Viết dashboard, quy tắc cảnh báo và runner đánh giá.
 - Kiểm thử máy tạo tải ở tốc độ cao mà không tốn GPU.
 
 ---
@@ -193,7 +194,7 @@ Nếu máy chỉ có 32 vCPU: dùng 5 lõi cho mỗi pod vLLM và 3 lõi cho má
 - **Kiểm chứng trong mỗi lượt:**
   - CPU của pod máy tạo tải < 70%, và **không bị giới hạn CPU** (đọc `nr_throttled` trong `cpu.stat` của cgroup).
   - Độ lệch lịch gửi p99 < 50 ms.
-- Experiment runner chạy trên host (ngoài cluster), dùng `kubectl` và API của Prometheus. Runner tốn rất ít CPU.
+- Runner đánh giá chạy trên host (ngoài cluster), dùng `kubectl` và API của Prometheus. Runner tốn rất ít CPU.
 
 ### 3.7. Tự động hoá thuê và huỷ
 
@@ -202,9 +203,11 @@ make find                → vastai search offers (tiêu chí §3.3), in ra 5 m�
 make rent OFFER=<id>     → vastai create instance (template VM Ubuntu 22.04), chờ SSH, ghi instance id
 make burnin              → Ansible chạy các bước §3.4, xuất burnin.json; không đạt thì dừng
 make bootstrap           → Ansible: chrony, NVMe, k3s (tham số §3.5), GPU (device plugin/Operator), Argo CD, root-app
+                           (in ra thời gian từng bước; dùng cho kịch bản VH5)
 make prefetch            → Job tải model, DaemonSet pre-pull image
-make calibrate           → hiệu chỉnh, sinh calibration.json
-make run MATRIX=…        → chạy các khối
+make capacity            → đo năng lực một replica, sinh capacity.json
+make run MATRIX=…        → chạy ma trận đánh giá autoscaling
+make ops-tests           → chạy các kịch bản vận hành tự động hoá được (VH2–VH4, VH6)
 make backup              → rclone lên R2, kiểm tra checksum
 make release             → huỷ instance (từ chối chạy nếu backup chưa xong)
 ```
@@ -235,29 +238,30 @@ Trên Vast.ai, giá hiển thị cho mỗi máy thường đã gồm CPU và RAM
 |---|---|---|---|---|
 | Chạy thử script trên VM 1 GPU giá rẻ | T8 | 4 | 1 | 4 |
 | Máy ứng viên trượt burn-in (tối đa 2) | T9 | 2 | 4 | 8 |
-| Đợt chính: burn-in, dựng, prefetch | T9 | 4 | 4 | 16 |
-| Hiệu chỉnh C, chốt SLO và threshold | T9 | 6 | 4 | 24 |
-| Cold start L0/L2 (5 lần mỗi mức) và KB2 × A2 ở L0/L2 | T9 | 6 | 4 | 24 |
-| 3 khối ma trận (78 lượt × ~35 phút) | T9 | 46 | 4 | 184 |
-| Chạy lại, độ nhạy chu kỳ sync HPA 15 s | T9 | 8 | 4 | 32 |
-| **Cộng (theo kế hoạch)** | | **76** | | **≈ 292** |
-| Đợt dự phòng: lượt bổ sung hoặc làm lại (chỉ khi cần) | T11 | ≤ 12 | 4 | ≤ 48 |
+| Đợt chính: burn-in, dựng từ máy trắng (đo thời gian cho VH5), prefetch | T9 | 4 | 4 | 16 |
+| Đo năng lực, chốt SLO và threshold | T9 | 4 | 4 | 16 |
+| Cold start L0/L2 (3 lần mỗi mức) và KB2 × A2 ở L0 (2 lượt) | T9 | 3 | 4 | 12 |
+| Ma trận autoscaling (28 lượt × ~35 phút) | T9 | 17 | 4 | 68 |
+| Kịch bản vận hành trên GPU thật (rolling update, xoá pod, mất Prometheus, cảnh báo) | T9 | 4 | 4 | 16 |
+| Chạy lại lượt hỏng, sao lưu, huỷ máy | T9 | 5 | 4 | 20 |
+| **Cộng (theo kế hoạch)** | | **43** | | **≈ 160** |
+| Đợt dự phòng: lượt bổ sung hoặc làm lại (chỉ khi cần) | T11 | ≤ 8 | 4 | ≤ 32 |
 
 | Giá RTX 4090 (USD/GPU-giờ) | Theo kế hoạch | Kể cả đợt dự phòng |
 |---|---|---|
-| 0,35 | ~102 USD | ~119 USD |
-| 0,45 | ~131 USD | ~153 USD |
-| 0,50 (mức trần khi lọc máy) | ~146 USD | ~170 USD |
+| 0,35 | ~56 USD | ~67 USD |
+| 0,45 | ~72 USD | ~86 USD |
+| 0,50 (mức trần khi lọc máy) | ~80 USD | ~96 USD |
 
-Cộng thêm ổ đĩa và băng thông khoảng 5–10 USD, **tổng vẫn nằm trong 100–200 USD**. Nếu dùng RTX 3090 (thường rẻ hơn khoảng một nửa), chi phí chỉ còn khoảng 60–90 USD. Khi đó còn tiền chạy thêm 12 lượt cho các ô trọng tâm.
+Cộng thêm ổ đĩa và băng thông khoảng 5–10 USD, **tổng khoảng 60–105 USD**, chỉ bằng khoảng một nửa dự toán của bản mô tả 1.0 (105–170 USD). Phần tiết kiệm đến từ việc ma trận đánh giá nhỏ hơn (28 lượt thay vì 78) và các kịch bản vận hành chủ yếu chạy trên laptop. Nếu dùng RTX 3090 (thường rẻ hơn khoảng một nửa), chi phí chỉ còn khoảng 35–55 USD.
 
 ### 4.3. Kiểm soát chi phí
 
-1. **Tín dụng trả trước là giới hạn cứng.** Nạp trước 150 USD, chỉ nạp thêm tối đa 50 USD khi thật cần.
+1. **Tín dụng trả trước là giới hạn cứng.** Nạp trước 100 USD; chỉ nạp thêm khi thật cần, tổng không quá 150 USD.
 2. **Không để số dư về 0.** Khi hết tiền, instance có thể bị dừng hoặc **xoá** (TensorDock ghi rõ là xoá). Runner kiểm tra số dư mỗi giờ (`vastai show user`) và báo động khi còn dưới 30 USD.
 3. **Không phát triển trên máy thuê.** Mọi thứ phải chạy ổn trên laptop (mốc M2) và qua lần chạy thử 1 GPU.
 4. **Huỷ ngay khi xong đợt.** Không để instance ở trạng thái dừng lâu ngày, vì ổ đĩa vẫn tính tiền và khi bật lại chưa chắc GPU còn trống.
-5. **Báo động tự động:** runner gửi thông báo (webhook Telegram/Discord) khi xong mỗi khối, khi có lượt không hợp lệ, hoặc khi số dư thấp.
+5. **Báo động tự động:** runner gửi thông báo (webhook Telegram/Discord) khi xong mỗi nhóm lượt, khi có lượt không hợp lệ, hoặc khi số dư thấp.
 
 ---
 
@@ -265,29 +269,28 @@ Cộng thêm ổ đĩa và băng thông khoảng 5–10 USD, **tổng vẫn nằ
 
 | Đợt | Tuần | Thời lượng | Nội dung | Điều kiện bắt đầu |
 |---|---|---|---|---|
-| Chạy thử | T8 | ~4 giờ, 1 GPU | Kiểm tra `make rent/bootstrap` trên VM của Vast.ai, GPU trong k3s, Argo CD, runner chạy 1 lượt | Pipeline laptop gần đạt M2 |
-| **Đợt chính** | T9 (ví dụ thứ Năm 03/12 đến Chủ nhật 06/12/2026) | ~72–76 giờ **liên tục, trên cùng một máy** | Burn-in → dựng → hiệu chỉnh → cold start → khối 1–3 → chạy lại → backup → huỷ | M2 đạt; `PLAN.md` đã commit; số dư ≥ 150 USD; webhook đã thử |
-| Dự phòng | T11 | ≤ 12 giờ | Lượt bổ sung, hoặc làm lại nếu đợt chính hỏng | Chỉ khi cần |
+| Chạy thử | T8 | ~4 giờ, 1 GPU | Kiểm tra `make rent/bootstrap` trên VM của Vast.ai, GPU trong k3s, Argo CD, cảnh báo, runner chạy 1 lượt | Nền tảng trên laptop gần đạt M2 |
+| **Đợt chính** | T9 (ví dụ thứ Sáu 04/12 đến thứ Bảy 05/12/2026) | ~37 giờ **liên tục, trên cùng một máy** | Burn-in → dựng từ máy trắng → đo năng lực → cold start → ma trận → kịch bản vận hành → chạy lại → sao lưu → huỷ | M2 đạt; file ma trận đã review; số dư ≥ 100 USD; webhook đã thử |
+| Dự phòng | T11 | ≤ 8 giờ | Lượt bổ sung, hoặc làm lại nếu đợt chính hỏng | Chỉ khi cần |
 
 Tiến trình trong đợt chính (tính theo giờ kể từ lúc thuê):
 
 ```text
-0–1   burn-in (đạt → tiếp tục)            │ 16–31  khối 1 (25 ô + A4×KB3, thứ tự xáo trộn)
-1–4   bootstrap, prefetch                 │ 31–46  khối 2
-4–10  hiệu chỉnh → chốt C, SLO, threshold │ 46–61  khối 3
-      (cả nhóm online, ghi ADR-002)       │ 61–69  chạy lại lượt hỏng, độ nhạy HPA 15 s
-10–16 cold start L0/L2, KB2×A2 L0/L2      │ 69–72  backup, kiểm tra, huỷ instance
+0–1    burn-in (đạt → tiếp tục)                 │ 11–28  ma trận autoscaling: 28 lượt, thứ tự xáo trộn
+1–4    bootstrap từ máy trắng (đo VH5), prefetch │ 28–32  kịch bản vận hành: VH2 rolling update, VH3 xoá pod,
+4–8    đo năng lực → chốt C, SLO, threshold      │        VH4 mất Prometheus, VH6 kiểm tra cảnh báo
+       (cả nhóm online, ghi ADR-003)            │ 32–36  chạy lại lượt hỏng
+8–11   cold start L0/L2; KB2 × A2 ở L0           │ 36–37  sao lưu, kiểm tra, huỷ instance
 ```
 
-- **Mỗi khối** bắt đầu bằng bước kiểm tra nhanh C (tự động). Nếu lệch hơn 10%, runner tạm dừng và báo động.
-- **Chia ca theo dõi:** Trình và Quang thay phiên xem cảnh báo. Runner tự chạy; con người chỉ can thiệp khi có báo động.
-- Nếu một khối hỏng vì phần cứng, **chạy lại trọn khối** (không chạy lại lẻ từng ô), để đảm bảo thiết kế khối.
+- **Giữa đợt** (khoảng giờ 20), runner tự chạy lại một mức tải 3 phút để kiểm tra năng lực không bị trôi. Nếu lệch hơn 10%, runner tạm dừng và báo động.
+- **Chia ca theo dõi:** Trình và Quang thay phiên xem cảnh báo. Runner tự chạy; con người chỉ can thiệp khi có báo động. Đây cũng là dịp chạy thử chính quy trình trực và runbook của nền tảng.
 
 ---
 
 ## 6. Checklist
 
-**Trước khi thuê:** M2 đạt; đã chạy thử trên VM 1 GPU; `PLAN.md` và file ma trận đã review; số dư ≥ 150 USD; webhook báo động hoạt động; lịch trực đã thống nhất.
+**Trước khi thuê:** M2 đạt; đã chạy thử trên VM 1 GPU; file ma trận đánh giá đã review; số dư ≥ 100 USD; webhook báo động hoạt động; lịch trực đã thống nhất.
 
 **Sau burn-in:** `burnin.json` đạt mọi ngưỡng; ghi mã máy, GPU, CPU, RAM, PCIe và driver vào `metadata.json`.
 
@@ -298,18 +301,18 @@ Tiến trình trong đợt chính (tính theo giờ kể từ lúc thuê):
 ## 7. Câu hỏi hội đồng có thể đặt ra
 
 **Sao không làm luôn trên laptop cho rẻ?**
-Laptop chỉ chạy được model khoảng 1,5B, GPU hay giảm xung vì nhiệt, và VRAM 8 GB không đại diện cho môi trường production. Laptop phù hợp để phát triển và demo; kết luận phải dựa trên GPU datacenter.
+Laptop chỉ chạy được model khoảng 1,5B, GPU hay giảm xung vì nhiệt, và VRAM 8 GB không đại diện cho môi trường production. Laptop phù hợp để phát triển, kiểm thử các kịch bản vận hành và demo. Số liệu hiệu năng phải đo trên GPU 24 GB.
 
-**Marketplace như Vast.ai có đủ tin cậy cho thí nghiệm không?**
+**Marketplace như Vast.ai có đủ tin cậy cho việc đánh giá không?**
 Có, với năm biện pháp:
 1. Chỉ thuê máy chế độ VM, datacenter, độ tin cậy ≥ 99%, và **thuê trọn máy** (không chia với ai).
 2. **Burn-in** trước khi chốt: 4 GPU chênh nhau ≤ 5%, trôi ≤ 5%.
 3. **Toàn bộ dữ liệu chính từ một đợt liên tục trên cùng một máy.**
 4. Máy tạo tải nằm cùng VM với lõi CPU riêng, nên không có nhiễu mạng.
-5. Thiết kế khối, xáo trộn thứ tự, và kiểm tra nhanh C ở đầu mỗi khối (xem [08 §8](08-thiet-ke-thi-nghiem.md#8-ma-trận-thứ-tự-và-khối)).
+5. Xáo trộn thứ tự các lượt, và chạy lại nhanh một mức tải giữa đợt để chắc năng lực không bị trôi (xem [03 §5](03-pham-vi-gia-dinh.md#5-điều-kiện-để-so-sánh-công-bằng)).
 
 **Vì sao dùng RTX 4090 mà không dùng GPU datacenter?**
-Vì ngân sách. RTX 4090 có 24 GB VRAM và băng thông khoảng 1 TB/s, đủ để phục vụ model 7B một cách thực tế. Các cơ chế đồ án nghiên cứu (metric bão hoà, cold start, trade-off) không phụ thuộc dòng GPU. Kết luận định lượng gắn với RTX 4090 được ghi vào phần hạn chế.
+Vì ngân sách. RTX 4090 có 24 GB VRAM và băng thông khoảng 1 TB/s, đủ để phục vụ model 7B một cách thực tế. Các cơ chế mà đồ án xử lý (metric bão hoà, cold start, scale-down, cập nhật khi hết GPU) không phụ thuộc dòng GPU. Kết luận định lượng gắn với RTX 4090 được ghi vào phần hạn chế.
 
 **Hết ngân sách giữa chừng thì sao?**
-Có phương án rút gọn đã tính sẵn. Thứ tự ưu tiên cắt giảm theo Must/Should/Could ở [02 §7](02-muc-tieu-cau-hoi-nghien-cuu.md#7-mức-độ-thành-công).
+Dự toán mới chỉ dùng khoảng một nửa ngân sách, nên khả năng này thấp. Nếu vẫn xảy ra, cắt giảm theo thứ tự Must/Should/Could ở [02 §9](02-muc-tieu-yeu-cau.md#9-mức-độ-thành-công).

@@ -1,112 +1,100 @@
-# 3. Phạm vi, giả định và giới hạn: tài liệu chuyên sâu
+# 3. Phạm vi, giả định và hạn chế: tài liệu chuyên sâu
 
 > Thuộc [Mục 3 của bản mô tả chính](../mo-ta-chi-tiet-do-an.md#3-phạm-vi-và-giả-định) · [Danh mục tài liệu chuyên sâu](README.md)
 
 **Tóm tắt nhanh**
-- Mỗi hạng mục trong và ngoài phạm vi đều có **lý do**, kèm phân tích **ảnh hưởng tới kết luận**.
-- Có 8 giả định. Mỗi giả định đi kèm cách **kiểm chứng** và hệ quả **nếu nó sai**.
-- Mục **các mối đe doạ tính hợp lệ** chia theo bốn loại (nội tại, cấu trúc, ngoại suy, kết luận). Đây là phần hội đồng thường hỏi, và cũng là nền cho mục "Hạn chế" trong luận văn.
+- Mỗi hạng mục trong và ngoài phạm vi đều có **lý do**, kèm **ảnh hưởng tới kết quả**.
+- Có 7 giả định. Mỗi giả định đi kèm cách **kiểm tra** và hệ quả **nếu nó sai**.
+- Phần đánh giá chỉ cần một số **điều kiện so sánh công bằng** (cùng máy, cùng tải, cùng phiên bản, trạng thái đầu giống nhau). Đồ án không dựng một thiết kế thí nghiệm thống kê đầy đủ, nên các hạn chế được ghi rõ ở §3.
 
 ---
 
 ## 1. Ranh giới hệ thống
 
-| Hạng mục | Trong / Ngoài | Lý do | Ảnh hưởng tới kết luận |
+| Hạng mục | Trong / Ngoài | Lý do | Ảnh hưởng tới kết quả |
 |---|---|---|---|
 | Serving một model trên vLLM | **Trong** | Là trọng tâm của đề tài | – |
 | Autoscaling mức pod (1 replica = 1 GPU) | **Trong** | Cơ chế phổ biến nhất, chạy được trên cluster tự dựng | Kết luận áp dụng cho autoscaling mức pod |
-| Giám sát, sinh tải, thí nghiệm | **Trong** | Cần để đánh giá | – |
-| Đo và tối ưu cold start | **Trong** | Là nhân tố quyết định chất lượng autoscaling (RQ2) | – |
-| IaC và GitOps | **Trong** | Cần để tái lập và giảm chi phí thuê GPU | – |
+| Rút ngắn cold start | **Trong** | Quyết định tốc độ phản ứng của autoscaling | – |
+| IaC, GitOps, CI | **Trong** | Để dựng lại được và giảm chi phí thuê GPU | – |
+| Giám sát, SLO, cảnh báo, runbook | **Trong** | Là phần "vận hành" của nền tảng | – |
+| Cập nhật phiên bản, xử lý sự cố, dựng lại | **Trong** | Là phần "vận hành" của nền tảng | – |
+| Bảo mật tối thiểu (API key, giới hạn tốc độ, NetworkPolicy, bí mật) | **Trong**, ở mức tối thiểu | Không thể vận hành một API mà không có | Không đánh giá sâu về bảo mật |
+| Sinh tải và đánh giá | **Trong** | Để nghiệm thu yêu cầu | – |
 | Autoscaling mức node | Ngoài | Cần managed K8s có API cấp node GPU; thời gian cấp node thêm vài phút nữa | Thời gian phản ứng thực tế trên cloud công cộng có thể **dài hơn** con số đo được |
 | Tensor/pipeline parallelism | Ngoài | Model 7–8B vừa với 1 GPU | Không áp dụng trực tiếp cho model hơn 30B |
 | Tách prefill/decode | Ngoài | Kiến trúc khác hẳn, cần nhiều GPU và mạng nhanh | Hướng mở rộng |
 | MIG / time-slicing | Ngoài | Đề cương đã loại trừ multi-tenant | Không có đơn vị scale nhỏ hơn 1 GPU |
-| Định tuyến nhận biết LLM | Ngoài | Muốn giữ biến kiểm soát; mọi cấu hình đều dùng round-robin | Năng lực thực tế **có thể thấp hơn** so với khi dùng router thông minh, nhưng như nhau với mọi cấu hình |
+| Định tuyến nhận biết LLM | Ngoài | Giữ kiến trúc đơn giản; mọi cấu hình đều dùng round-robin | Năng lực thực tế **có thể thấp hơn** so với khi dùng router thông minh |
 | Nhiều model, LoRA | Ngoài | Làm phức tạp tải và trạng thái | Hướng mở rộng |
-| Bảo mật, đa người dùng | Ngoài (chỉ ở mức tối thiểu) | Không phải trọng tâm | – |
+| Log tập trung (Loki), tracing | Ngoài | Metric và cảnh báo đủ cho các kịch bản của đồ án | Chẩn đoán dựa vào `kubectl logs` |
+| Đa người dùng, phân quyền chi tiết, kiểm toán | Ngoài | Không phải trọng tâm | – |
 
 ---
 
 ## 2. Giả định
 
-| # | Giả định | Vì sao hợp lý | Cách kiểm chứng | Nếu sai thì sao |
+| # | Giả định | Vì sao hợp lý | Cách kiểm tra | Nếu sai thì sao |
 |---|---|---|---|---|
-| G1 | **Chi phí ≈ GPU-giờ cấp phát cho pod vLLM** | Trên cloud trả theo mức dùng (hoặc cluster dùng chung), GPU được giải phóng sẽ được dùng vào việc khác | Không kiểm chứng được bằng thí nghiệm; nêu rõ đây là quy ước | Trên một nhóm GPU cố định dành riêng, scale-down **không giảm tiền**. Khi đó kết luận chỉ còn nói về "GPU giải phóng được" |
+| G1 | **Chi phí ≈ GPU-giờ cấp phát cho pod vLLM** | Trên cloud trả theo mức dùng (hoặc cluster dùng chung), GPU được giải phóng sẽ được dùng vào việc khác | Không kiểm chứng được bằng thực nghiệm; nêu rõ đây là quy ước | Trên một nhóm GPU cố định dành riêng, scale-down **không giảm tiền**. Khi đó kết quả chỉ còn nói về "GPU giải phóng được" |
 | G2 | Model vừa với 1 GPU, mỗi replica dùng 1 GPU | 7–8B ở BF16 cần khoảng 15 GB, GPU 24 GB | Log vLLM: KV-cache còn đủ cho `max-num-seqs` | Phải dùng lượng tử hoá hoặc model nhỏ hơn |
-| G3 | Máy tạo tải không gây nhiễu cho hệ thống được đo | Máy tạo tải chạy cùng VM nhưng trên **lõi CPU riêng** (CPU manager static, pod Guaranteed); không đi qua mạng ngoài | CPU và số lần bị giới hạn CPU (`nr_throttled`) của pod máy tạo tải; độ lệch lịch gửi p99 < 50 ms | Máy tạo tải tranh tài nguyên với vLLM, làm TTFT tăng giả tạo; phải tách lõi hoặc đổi sang máy riêng |
-| G4 | Phiên bản phần mềm cố định suốt đợt thí nghiệm | Ghim image digest và phiên bản Helm chart | `metadata.json` ghi digest; runner kiểm tra trước mỗi lượt | Kết quả giữa các phiên không so được với nhau |
-| G5 | Năng lực C ổn định trong suốt đợt thí nghiệm | **Cùng một máy** trong cả đợt chính; máy đã qua burn-in | **Kiểm tra nhanh C** ở đầu mỗi khối: 2 mức tải, 3 phút mỗi mức | Máy "yếu" hơn thì phải hiệu chỉnh lại; nếu lệch hơn 10% thì không gộp dữ liệu |
-| G6 | Tải tổng hợp (Poisson, output cố định) đủ đại diện | Là chuẩn mực trong các benchmark serving; dễ kiểm soát | Chạy thêm KB5 bằng trace thật nếu còn thời gian | Hành vi với tải thật (burst lồng nhau, output dài ngắn khác nhau) có thể khác; ghi thành hạn chế |
-| G7 | Round-robin không làm lệch so sánh giữa các cấu hình | Mọi cấu hình cùng chịu một kiểu cân bằng tải | Theo dõi độ lệch `num_requests_running` giữa các pod | Có thể làm autoscaling trông kém hơn thực tế ở mức tải cao |
-| G8 | Một node với 4 GPU (phương án A) đủ đại diện | Autoscaling mức pod không phụ thuộc số node | Đo cold start ở chế độ "node lạnh" bằng cách xoá image và cache | Chưa đo được độ trễ mạng giữa các node; nếu có ngân sách thì chạy phương án B để đối chiếu |
+| G3 | Máy tạo tải không làm nhiễu hệ thống được đo | Chạy cùng VM nhưng trên **lõi CPU riêng** (CPU manager static); không đi qua mạng ngoài | CPU của pod máy tạo tải; độ lệch lịch gửi p99 < 50 ms | Phải tách lõi hoặc đổi sang máy riêng |
+| G4 | Phiên bản phần mềm cố định suốt đợt đánh giá | Ghim image digest và phiên bản Helm chart | `metadata.json` ghi digest | Kết quả giữa các lượt không so được với nhau |
+| G5 | Năng lực C ổn định trong suốt đợt đánh giá | **Cùng một máy** trong cả đợt; máy đã qua burn-in | Chạy lại nhanh một mức tải giữa đợt (3 phút) | Nếu lệch hơn 10% thì đo năng lực lại và ghi vào nhật ký |
+| G6 | Tải tổng hợp (Poisson, output cố định) đủ đại diện | Là cách làm chuẩn trong các benchmark serving; dễ kiểm soát | – | Tải thật đa dạng hơn; ghi thành hạn chế |
+| G7 | Một node có 4 GPU đủ đại diện cho cluster nhiều node | Autoscaling mức pod không phụ thuộc số node | Kịch bản drain node chạy trên cluster laptop nhiều node | Chưa đo được độ trễ mạng giữa các node trên GPU thật |
 
 ---
 
-## 3. Giới hạn (limitations) sẽ ghi trong luận văn
+## 3. Hạn chế sẽ ghi trong luận văn
 
-1. **Chỉ một model, một loại GPU (RTX 4090, dòng consumer).** Kết luận định tính (metric nào tốt hơn, vì sao) có khả năng khái quát. Kết luận định lượng (bao nhiêu giây, bao nhiêu phần trăm) chỉ đúng cho cấu hình đã đo.
+1. **Chỉ một model, một loại GPU (RTX 4090, dòng consumer).** Kết luận về cơ chế (metric nào phản ánh tải, vì sao cold start dài) có khả năng khái quát. Con số cụ thể (bao nhiêu giây, bao nhiêu phần trăm) chỉ đúng cho cấu hình đã đo.
 2. **Tối đa 4 replica.** Chưa kiểm tra được hành vi ở quy mô hàng chục replica, nơi scheduling và cân bằng tải phức tạp hơn.
-3. **Tải tổng hợp** với độ dài output cố định. Tải thật đa dạng hơn.
-4. **Chỉ 3 lần chạy mỗi ô** trong ma trận (do ngân sách), nên khoảng tin cậy rộng. Nhóm bù bằng so sánh cặp và chạy thêm lần ở các ô trọng tâm.
+3. **Tải tổng hợp** với độ dài output cố định, và chỉ ba kịch bản tải. Tải thật đa dạng hơn.
+4. **Mỗi cấu hình chỉ chạy 2–3 lượt.** Đủ để nghiệm thu và thấy các khác biệt lớn, không đủ để khẳng định các khác biệt nhỏ. Đồ án không tính khoảng tin cậy thống kê.
 5. **Không có autoscaling mức node.** Trên cloud công cộng, thời gian phản ứng thật cộng thêm thời gian cấp node GPU.
 6. **Cân bằng tải round-robin.**
+7. **Các kịch bản vận hành được dựng có chủ đích** (xoá pod, tắt Prometheus…). Chúng chưa bao quát mọi sự cố thật, ví dụ GPU hỏng dần hay mạng chập chờn.
 
 ---
 
 ## 4. Tiêu chí vào / ra phạm vi trong lúc làm
 
-Khi xuất hiện một ý tưởng mới giữa chừng (ví dụ "thêm thử KServe"), cả nhóm tự hỏi ba câu sau trước khi đưa vào phạm vi:
+Khi xuất hiện một ý tưởng mới giữa chừng (ví dụ "thêm thử KServe" hay "thêm Loki"), cả nhóm tự hỏi ba câu sau trước khi đưa vào phạm vi:
 
-1. Nó có giúp trả lời RQ1–RQ3 **trực tiếp** không?
-2. Nó có làm thay đổi **biến kiểm soát** của các thí nghiệm đã chạy không?
+1. Nó có giúp đáp ứng **một yêu cầu F hoặc N** ([02](02-muc-tieu-yeu-cau.md)) mà hiện chưa đáp ứng được không?
+2. Nó có làm thay đổi các cấu hình **đã đo** trong đợt đánh giá không?
 3. Nó có vừa với **thời gian và ngân sách** còn lại mà không đẩy mốc tiếp theo lùi lại không?
 
-Chỉ khi cả ba câu đều là "có, không, có" thì mới đưa vào. Nếu không, ghi vào [15 – Hướng mở rộng](15-huong-mo-rong.md).
+Chỉ khi cả ba câu đều là "có, không, có" thì mới đưa vào. Nếu không, ghi vào [14 – Hướng mở rộng](14-huong-mo-rong.md).
 
 ---
 
-## 5. Các mối đe doạ tính hợp lệ
+## 5. Điều kiện để so sánh công bằng
 
-### 5.1. Tính hợp lệ nội tại: kết quả có thật do metric/cấu hình gây ra không?
+Phần đánh giá so sánh các cấu hình với nhau, nên cần một số điều kiện tối thiểu. Đây là các biện pháp kỹ thuật đơn giản, không phải một thiết kế thí nghiệm thống kê.
 
-| Mối đe doạ | Cơ chế gây sai | Biện pháp |
+| Điều kiện | Vì sao cần | Cách làm |
 |---|---|---|
-| Máy marketplace không ổn định (chia máy với người khác, giảm xung vì nhiệt, 4 GPU không đồng đều) | Hiệu năng dao động theo giờ hoặc theo GPU | **Thuê trọn máy**; burn-in (4 GPU chênh ≤ 5%, trôi ≤ 5%); toàn bộ dữ liệu chính từ **cùng một máy**; so sánh cặp trong cùng khối; xáo trộn thứ tự; theo dõi nhiệt độ và xung nhịp |
-| Hiệu ứng thứ tự | Lượt trước để lại trạng thái (cache, hàng đợi, pod đang khởi động) | Quy trình reset: về 1 replica, hàng đợi trống, chờ thêm 60 s |
-| Page cache của hệ điều hành | Lần nạp model sau nhanh hơn vì weights đã nằm trong RAM | Ghi rõ trạng thái cache; với thí nghiệm cold start thì xoá cache (`drop_caches`) |
-| Máy tạo tải là nút thắt | Gửi chậm hơn lịch, làm tải thật thấp hơn tải danh nghĩa | Theo dõi độ lệch lịch và CPU của máy tạo tải; loại những lượt không đạt |
-| Đồng hồ các máy lệch nhau | Ghép dữ liệu client với server sai thời điểm | Đồng bộ bằng chrony; yêu cầu lệch dưới 50 ms |
-| Giảm xung vì nhiệt (laptop) | Hiệu năng tụt giữa chừng | Không dùng số liệu laptop để kết luận |
+| **Cùng máy** | Máy trên marketplace có thể khác nhau về hiệu năng | Toàn bộ đợt đánh giá chạy trên một máy, đã qua burn-in |
+| **Cùng tải** | Để khác biệt đến từ cấu hình chứ không phải từ tải | Lịch gửi request sinh từ seed cố định; mọi cấu hình nhận đúng cùng một chuỗi request |
+| **Cùng phiên bản và tham số** | Tham số vLLM đổi thì năng lực đổi | Ghim digest; chỉ đổi cấu hình autoscaling giữa các lượt |
+| **Trạng thái đầu giống nhau** | Lượt trước có thể để lại pod đang khởi động hoặc hàng đợi | Reset về 1 replica, hàng đợi trống, chờ thêm 60 s |
+| **Thứ tự xáo trộn** | Tránh việc một cấu hình luôn chạy vào giờ máy "mệt" | Xáo thứ tự các lượt bằng một seed ghi lại |
+| **Không dùng số liệu laptop để kết luận** | GPU laptop giảm xung vì nhiệt, VRAM nhỏ | Laptop chỉ dùng cho phát triển, kịch bản vận hành và demo |
+| **Page cache khi đo cold start** | Lần nạp model thứ hai đọc từ RAM nên nhanh bất thường | Xoá cache (`drop_caches`) trước mỗi lần đo |
 
-### 5.2. Tính hợp lệ cấu trúc: chỉ số có đo đúng điều cần đo không?
-
-| Mối đe doạ | Biện pháp |
-|---|---|
-| SLO attainment có thực sự phản ánh trải nghiệm người dùng? | Dùng hai tiêu chí TTFT và TPOT (phần người dùng cảm nhận được); báo cáo thêm phân phối đầy đủ (CDF) |
-| GPU-giờ có phải là chi phí? | Nêu rõ giả định G1; báo cáo thêm "số request đạt SLO trên mỗi GPU-giờ" |
-| TTFT phía client lẫn cả độ trễ mạng | Đo RTT; đối chiếu với histogram phía server |
-| ITL đo từ các "chunk" SSE (một chunk có thể chứa nhiều token) | Dùng TPOT tính theo số token trong `usage` làm chỉ số chính (xem [09](09-chi-so-danh-gia.md#32-tpot-và-itl)) |
-
-### 5.3. Tính hợp lệ ngoại suy: kết quả có khái quát được không?
-
-- Khác model hoặc GPU thì C và cold start đổi, nhưng **cơ chế** (GPU utilization bão hoà, định luật Little, phân rã cold start) vẫn đúng. Luận văn phải tách rõ **kết luận định tính** và **kết luận định lượng**.
-- Có thể kiểm tra sơ bộ tính khái quát bằng chính tầng laptop: model 1,5B trên RTX 4060. Nếu xu hướng giữa A1, A2, A3 giống nhau trên cả hai tầng, lập luận khái quát mạnh hơn. Chỉ so xu hướng, không so số tuyệt đối.
-
-### 5.4. Tính hợp lệ của kết luận thống kê
-
-- n = 3 cho khoảng tin cậy rộng, nên chỉ phát hiện được các khác biệt lớn. Nhóm sẽ báo cáo **độ lớn hiệu ứng kèm khoảng tin cậy**, không chỉ nói "có ý nghĩa / không có ý nghĩa".
-- Tránh kiểm định nhiều lần rồi chỉ chọn kết quả đẹp: các so sánh chính được **đăng ký trước** (xem [10 §3](10-phan-tich-ket-qua.md#3-kế-hoạch-phân-tích-đăng-ký-trước)).
+Lượt chạy nào vi phạm các điều kiện trên thì được đánh dấu không hợp lệ và chạy lại ([09 §13](09-kiem-thu-danh-gia.md#13-điều-kiện-hợp-lệ-của-một-lượt)).
 
 ---
 
 ## 6. Câu hỏi hội đồng có thể đặt ra
 
 **Chỉ 4 GPU có đủ để nói về autoscaling không?**
-Đủ để quan sát **cơ chế**: phát hiện tải, cold start, flapping, trade-off. Hạn chế về quy mô được ghi rõ. Các hiện tượng chính (metric bão hoà, cold start) không phụ thuộc số replica.
+Đủ để quan sát và xử lý các **cơ chế**: phát hiện tải, cold start, scale-down, cập nhật khi hết GPU. Hạn chế về quy mô được ghi rõ.
 
 **Nếu cluster là của riêng mình thì scale-down đâu có tiết kiệm được gì?**
-Đúng vậy, và đó là lý do có giả định G1. Trên cloud trả theo mức dùng, hoặc cluster dùng chung, GPU được giải phóng tương đương với tiền hoặc năng lực cho việc khác. Luận văn trình bày cả hai cách hiểu.
+Đúng vậy, và đó là lý do có giả định G1. Trên cloud trả theo mức dùng, hoặc cluster dùng chung cho nhiều đội, GPU được giải phóng tương đương với tiền hoặc năng lực cho việc khác. Luận văn trình bày cả hai cách hiểu.
 
-**Tải tổng hợp có quá đơn giản không?**
-Tải tổng hợp giúp **kiểm soát biến**, và đây là yêu cầu của một thí nghiệm so sánh. KB5 được thiết kế gần thực tế hơn và có thể thay bằng trace thật. Giới hạn này được thừa nhận ở mục 3.
+**Sao không làm thí nghiệm có khoảng tin cậy cho chặt chẽ?**
+Mục tiêu của phần đánh giá là **nghiệm thu yêu cầu**, và các khác biệt cần thấy đều lớn. Một thiết kế thống kê đầy đủ cần nhiều lượt chạy hơn nhiều lần, tức nhiều tiền thuê GPU hơn, mà không thay đổi kết luận vận hành. Nhóm báo cáo mọi lượt riêng lẻ để người đọc tự thấy độ dao động.

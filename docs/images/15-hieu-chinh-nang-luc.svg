@@ -1,8 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="452" viewBox="0 0 1240 452" role="img" aria-label="Hiệu chỉnh năng lực: quét tốc độ request trên một replica; TTFT chạm ngưỡng SLO trước ITL; C bằng 2,0 req/s, B* bằng 30 request đồng thời" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
-<title>Hiệu chỉnh năng lực: quét tốc độ request trên một replica; TTFT chạm ngưỡng SLO trước ITL; C bằng 2,0 req/s, B* bằng 30 request đồng thời</title>
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="452" viewBox="0 0 1240 452" role="img" aria-label="Đo năng lực: quét tốc độ request trên một replica; TTFT chạm ngưỡng SLO trước ITL; C bằng 2,0 req/s, B* bằng 30 request đồng thời" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+<title>Đo năng lực: quét tốc độ request trên một replica; TTFT chạm ngưỡng SLO trước ITL; C bằng 2,0 req/s, B* bằng 30 request đồng thời</title>
 <defs></defs>
 <rect x="0.5" y="0.5" width="1239" height="451" rx="14" fill="#fcfcfb" stroke="#e4e3de"/>
-<text x="32" y="38" font-size="19" font-weight="700" fill="#0b0b0b" text-anchor="start">Hiệu chỉnh năng lực một replica (calibration)</text>
+<text x="32" y="38" font-size="19" font-weight="700" fill="#0b0b0b" text-anchor="start">Đo năng lực một replica (capacity planning)</text>
 <text x="32" y="61" font-size="13" font-weight="400" fill="#52514e" text-anchor="start">Quét tốc độ λ trên 1 replica; C = λ lớn nhất mà mọi SLO còn đạt — số liệu minh hoạ</text>
 <circle cx="38" cy="92" r="5.5" fill="#2a78d6"/>
 <text x="50" y="96" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">đạt mọi SLO</text>

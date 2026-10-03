@@ -7,9 +7,10 @@
 - **vLLM**: dùng PagedAttention, continuous batching, chunked prefill và prefix caching. Kiến trúc V1 tách tiến trình API và tiến trình engine. Các tham số chính quyết định năng lực phục vụ.
 - **Autoscaling trên Kubernetes**: thuật toán HPA, `behavior`, cách KEDA gắn vào HPA (và điều hay bị hiểu nhầm về `pollingInterval`), Knative KPA.
 - **GPU trên Kubernetes**: device plugin, GPU Operator, và ý nghĩa thật của từng metric DCGM.
+- **Vận hành theo SLO và GitOps**: SLI, SLO, ngân sách lỗi, cảnh báo theo tốc độ tiêu hao (*burn rate*), mô hình GitOps của Argo CD, và cơ chế rolling update của Deployment.
 - Tổng quan các hệ thống liên quan, và vị trí của đồ án giữa chúng.
 
-Mục lục: [2. LLM inference](#2-llm-inference-cơ-bản) · [3. vLLM](#3-vllm) · [4. Autoscaling trên K8s](#4-autoscaling-trên-kubernetes) · [5. GPU trên K8s](#5-gpu-trên-kubernetes) · [6. Giải pháp liên quan](#6-các-giải-pháp-và-nghiên-cứu-liên-quan) · [7. Thuật ngữ](#7-bảng-thuật-ngữ)
+Mục lục: [2. LLM inference](#2-llm-inference-cơ-bản) · [3. vLLM](#3-vllm) · [4. Autoscaling trên K8s](#4-autoscaling-trên-kubernetes) · [5. GPU trên K8s](#5-gpu-trên-kubernetes) · [6. Vận hành theo SLO và GitOps](#6-vận-hành-theo-slo-và-gitops) · [7. Giải pháp liên quan](#7-các-giải-pháp-và-nghiên-cứu-liên-quan) · [8. Thuật ngữ](#8-bảng-thuật-ngữ)
 
 ---
 
@@ -103,8 +104,8 @@ Một prompt dài có thể chiếm GPU trong vài trăm mili-giây, làm mọi 
 
 Khi nhiều request có chung phần đầu (ví dụ cùng một system prompt), vLLM dùng lại các block KV-cache đã tính thay vì prefill lại. Trong V1, tính năng này **bật mặc định**.
 
-**Ảnh hưởng tới thí nghiệm:** nếu các prompt vô tình chung tiền tố, TTFT sẽ đẹp giả tạo. Có hai cách xử lý:
-1. **Tắt tính năng** bằng `--no-enable-prefix-caching`. Nhóm khuyến nghị cách này cho thí nghiệm chính.
+**Ảnh hưởng tới phép đo:** nếu các prompt vô tình chung tiền tố, TTFT sẽ đẹp giả tạo. Có hai cách xử lý:
+1. **Tắt tính năng** bằng `--no-enable-prefix-caching`. Nhóm làm cách này trong đợt đánh giá. Khi vận hành thật thì nên bật, vì các request thật thường chung system prompt.
 2. Sinh prompt ngẫu nhiên hoàn toàn và theo dõi tỷ lệ cache hit.
 
 ### 3.5. Preemption
@@ -127,7 +128,7 @@ Client ────────────────────────�
                                    • vòng lặp bước: schedule → forward → sample
 ```
 
-**Hệ quả thực tế:** API server chạy bằng CPU (tokenize, detokenize, JSON, SSE). Ở số request/giây cao, **CPU có thể trở thành nút thắt** trước cả GPU. Vì vậy cần cấp đủ CPU cho pod, khoảng 4–6 vCPU, và theo dõi CPU của pod trong quá trình hiệu chỉnh.
+**Hệ quả thực tế:** API server chạy bằng CPU (tokenize, detokenize, JSON, SSE). Ở số request/giây cao, **CPU có thể trở thành nút thắt** trước cả GPU. Vì vậy cần cấp đủ CPU cho pod, khoảng 4–6 vCPU, và theo dõi CPU của pod trong lúc đo năng lực.
 
 ### 3.7. Tham số quan trọng
 
@@ -137,8 +138,8 @@ Client ────────────────────────�
 | `--max-num-seqs` | Số request chạy song song tối đa | 64 | Giới hạn batch; vượt quá thì request phải chờ |
 | `--max-num-batched-tokens` | Ngân sách token mỗi bước (chunked prefill) | Để mặc định, ghi lại giá trị | Đánh đổi giữa TTFT và ITL |
 | `--gpu-memory-utilization` | Tỷ lệ VRAM vLLM được dùng | 0,90 | Quyết định dung lượng KV-cache |
-| `--enable-prefix-caching` / `--no-…` | Bật hoặc tắt prefix caching | **Tắt** khi làm thí nghiệm | Tránh TTFT đẹp giả tạo |
-| `--enforce-eager` | Tắt torch.compile và CUDA graph | Không dùng (trừ thí nghiệm cold start) | Khởi động nhanh hơn nhưng ITL tăng |
+| `--enable-prefix-caching` / `--no-…` | Bật hoặc tắt prefix caching | **Tắt** khi đánh giá, bật khi vận hành thật | Tránh TTFT đẹp giả tạo khi đo |
+| `--enforce-eager` | Tắt torch.compile và CUDA graph | Không dùng (trừ khi đo cold start) | Khởi động nhanh hơn nhưng ITL tăng |
 | `--dtype` | Kiểu số | `bfloat16` (hoặc `auto`) | – |
 | `--served-model-name` | Tên model trả về trong API | `qwen2.5-7b` | Máy tạo tải dùng tên này |
 | `--api-key` | Yêu cầu khoá khi gọi API | Tuỳ chọn | Bảo mật tối thiểu |
@@ -159,7 +160,7 @@ Mọi tham số (kể cả tham số để mặc định) phải được **ghi 
 | `generation_tokens_total` | counter | Tổng token đã sinh | Dùng `rate()` để ra token/s |
 | `num_preemptions_total` | counter | Số lần preempt | Tăng tức là KV-cache không đủ |
 
-Với histogram, `histogram_quantile` **nội suy trong từng bucket**, nên p95 tính từ Prometheus chỉ là gần đúng. Kết quả chính thức của đồ án lấy từ **log phía client** (xem [09 §4](09-chi-so-danh-gia.md#4-phân-vị-và-cỡ-mẫu)).
+Với histogram, `histogram_quantile` **nội suy trong từng bucket**, nên p95 tính từ Prometheus chỉ là gần đúng. Mức này đủ cho dashboard và cảnh báo ([08 §2](08-van-hanh.md#2-sli-và-slo)). Số liệu độ trễ trong chương đánh giá lấy từ **log phía client**, chính xác tới từng request ([09 §11](09-kiem-thu-danh-gia.md#11-chỉ-số-và-cách-tính)).
 
 ---
 
@@ -212,14 +213,14 @@ Các điểm quan trọng (theo tài liệu KEDA):
 - `cooldownPeriod` (mặc định 300 s) chỉ áp dụng khi scale **về 0**.
 - `fallback`: số replica dự phòng khi scaler lỗi liên tục, ví dụ khi Prometheus sập.
 - `activationThreshold`: ngưỡng để "thức dậy" từ 0 replica.
-- Annotation `autoscaling.keda.sh/paused-replicas: "N"` **tạm dừng** autoscaling và giữ nguyên N replica. Experiment runner dùng annotation này để reset giữa các lượt chạy.
+- Annotation `autoscaling.keda.sh/paused-replicas: "N"` **tạm dừng** autoscaling và giữ nguyên N replica. Runner đánh giá dùng annotation này để reset giữa các lượt chạy.
 
 ### 4.4. Knative KPA (dùng trong KServe serverless)
 
 - Scale theo **số request đồng thời** trên mỗi pod (target mềm, mặc định 100, thường chỉnh nhỏ hơn cho LLM).
 - Có hai cửa sổ: **stable** (mặc định 60 s) và **panic** (10% của stable, tức 6 s). Khi tải vượt 200% target, KPA vào chế độ panic và scale rất nhanh.
 - Hỗ trợ scale về 0 thông qua *activator*, thành phần giữ request lại trong lúc pod khởi động.
-- Về bản chất, KPA gần với chiến lược A2 (scale theo tải đồng thời). So sánh thực nghiệm với KPA là một hướng mở rộng ([15](15-huong-mo-rong.md#e4-so-sánh-với-kserve--knative-kpa)).
+- Về bản chất, KPA gần với chiến lược A2 (scale theo tải đồng thời). So sánh thực nghiệm với KPA là một hướng mở rộng ([14](14-huong-mo-rong.md#e4-so-sánh-với-kserve--knative-kpa)).
 
 ### 4.5. Những cơ chế khác không dùng
 
@@ -268,9 +269,55 @@ Với vLLM, chỉ cần có vài request là vòng lặp engine đã liên tục
 
 ---
 
-## 6. Các giải pháp và nghiên cứu liên quan
+## 6. Vận hành theo SLO và GitOps
 
-### 6.1. Nền tảng mã nguồn mở
+### 6.1. SLI, SLO và ngân sách lỗi
+
+Ba khái niệm này đến từ thực hành SRE [23]:
+- **SLI** (*Service Level Indicator*): một con số đo chất lượng dịch vụ từ góc nhìn người dùng, thường ở dạng tỷ lệ "sự kiện tốt / tổng sự kiện". Ví dụ: tỷ lệ request có TTFT ≤ 2 s.
+- **SLO** (*Service Level Objective*): mục tiêu cho SLI trong một khoảng thời gian. Ví dụ: 95% request có TTFT ≤ 2 s, tính trong 30 ngày.
+- **Ngân sách lỗi** (*error budget*): phần còn lại, 1 − SLO. Với SLO 95%, dịch vụ được phép có 5% request "xấu". Ngân sách lỗi giúp quyết định khi nào nên tạm dừng thay đổi để ổn định hệ thống, và khi nào được phép thử cái mới.
+
+Với LLM serving, SLI hợp lý là **TTFT** (người dùng chờ bao lâu mới thấy chữ đầu tiên), **TPOT** (chữ hiện ra có đủ nhanh không) và **tỷ lệ lỗi**. Cách chọn cụ thể nằm ở [08 §2](08-van-hanh.md#2-sli-và-slo).
+
+### 6.2. Cảnh báo theo tốc độ tiêu hao (burn rate)
+
+Cảnh báo kiểu "TTFT p95 > 2 s" có hai nhược điểm: dễ kêu vì một đợt nhiễu ngắn, và không cho biết vấn đề nghiêm trọng tới đâu. SRE Workbook [23] đề xuất cảnh báo theo **tốc độ tiêu hao ngân sách lỗi**:
+
+$$
+\text{burn rate} = \frac{\text{tỷ lệ request xấu trong cửa sổ}}{1 - \text{SLO}}
+$$
+
+Burn rate bằng 1 nghĩa là ngân sách vừa đủ dùng hết vào cuối kỳ. Burn rate bằng 10 nghĩa là ngân sách sẽ cạn sau một phần mười kỳ. Cảnh báo được đặt theo **hai cửa sổ** cùng lúc: một cửa sổ dài để chắc chắn vấn đề có thật, và một cửa sổ ngắn để cảnh báo tự tắt nhanh khi vấn đề đã hết. Hai mức thường dùng:
+- **page** (gọi người trực ngay): burn rate cao trên cửa sổ ngắn, ví dụ 1 giờ và 5 phút.
+- **ticket** (xử lý trong giờ làm việc): burn rate thấp hơn trên cửa sổ dài hơn.
+
+Trong đồ án, mỗi lượt đánh giá chỉ dài 20–25 phút, nên các cửa sổ được **rút ngắn** cho phù hợp ([08 §3.3](08-van-hanh.md#33-quy-tắc-mẫu)).
+
+### 6.3. GitOps và Argo CD
+
+**GitOps** nghĩa là trạng thái mong muốn của hệ thống được khai báo trong Git, và một bộ điều khiển trong cluster liên tục đưa trạng thái thật về đúng trạng thái đó. Argo CD làm việc này qua ba khái niệm:
+- **Application:** một thư mục trong Git (Helm, Kustomize hoặc YAML) ánh xạ vào một namespace.
+- **Sync:** áp các thay đổi từ Git vào cluster, tự động hoặc bấm tay.
+- **Self-heal:** nếu ai đó sửa trực tiếp trên cluster, Argo CD đưa về đúng như Git.
+
+Hệ quả cho vận hành: **mọi thay đổi đi qua PR** nên có review và có lịch sử; **rollback bằng `git revert`**. Hệ quả phụ: lệnh `kubectl rollout undo` hay `kubectl scale` sẽ bị Argo CD ghi đè, và trường `replicas` không được nằm trong Git khi đã có HPA ([05 §10.3](05-kien-truc-he-thong.md#103-cạm-bẫy-argo-cd-và-hpa-tranh-nhau-replicas)).
+
+### 6.4. Rolling update của Deployment
+
+Khi template của pod thay đổi (image, tham số), Deployment thay dần pod cũ bằng pod mới theo hai tham số:
+- **`maxSurge`**: được tạo thêm tối đa bao nhiêu pod **vượt** số replica mong muốn.
+- **`maxUnavailable`**: được phép thiếu tối đa bao nhiêu pod sẵn sàng so với số replica mong muốn.
+
+Mặc định cả hai là 25%. Nếu cập nhật không tiến triển trong `progressDeadlineSeconds` (mặc định 600 s), Deployment báo `ProgressDeadlineExceeded`. Deployment **không tự rollback**; pod mới bị kẹt vẫn nằm đó.
+
+Với web service, cấu hình phổ biến là `maxSurge: 1, maxUnavailable: 0`: luôn đủ năng lực trong lúc cập nhật. Với GPU, pod "vượt" cần thêm một GPU trống, và nếu không có thì cập nhật bị kẹt. Phân tích và cách xử lý nằm ở [08 §5](08-van-hanh.md#5-cập-nhật-phiên-bản-khi-gpu-đã-dùng-hết).
+
+---
+
+## 7. Các giải pháp và nghiên cứu liên quan
+
+### 7.1. Nền tảng mã nguồn mở
 
 | Hệ thống | Cách autoscaling | Điểm đáng học |
 |---|---|---|
@@ -281,9 +328,9 @@ Với vLLM, chỉ cần có vài request là vòng lặp engine đã liên tục
 | **NVIDIA Dynamo** | "Planner" scale theo SLO; serving phân tán | Tách prefill/decode quy mô lớn |
 | **Ray Serve (LLM)** | Scale theo số request đang xử lý mỗi replica (`target_ongoing_requests`) | Cùng ý tưởng với A2 |
 
-**Nhận xét:** các nền tảng trên hoặc dùng HPA/KEDA/KPA làm cơ chế nền, hoặc dùng **tải đồng thời hoặc hàng đợi** làm tín hiệu chính, trái hẳn với GPU utilization. Đồ án kiểm chứng xu hướng này bằng thực nghiệm có kiểm soát.
+**Nhận xét:** các nền tảng trên hoặc dùng HPA/KEDA/KPA làm cơ chế nền, hoặc dùng **tải đồng thời hoặc hàng đợi** làm tín hiệu chính, trái hẳn với GPU utilization. Đồ án áp dụng đúng xu hướng này, và đo để kiểm chứng trên hạ tầng của mình.
 
-### 6.2. Nghiên cứu học thuật
+### 7.2. Nghiên cứu học thuật
 
 | Công trình | Ý chính | Liên hệ |
 |---|---|---|
@@ -291,18 +338,18 @@ Với vLLM, chỉ cần có vài request là vòng lặp engine đã liên tục
 | vLLM (SOSP'23) [1] | PagedAttention | Engine được dùng |
 | Sarathi-Serve (OSDI'24) [21] | Chunked prefill, cân bằng TTFT và ITL | Hiểu hành vi của V1 |
 | DistServe (OSDI'24) [2] | Goodput theo SLO; tách prefill/decode | Định nghĩa goodput |
-| Splitwise (ISCA'24) [3] | Tách pha theo phần cứng; công bố trace Azure | Nguồn trace cho KB5 |
+| Splitwise (ISCA'24) [3] | Tách pha theo phần cứng; công bố trace Azure | Nguồn trace thật (hướng mở rộng E13) |
 | Llumnix (OSDI'24) [22] | Di chuyển request giữa các instance, lập lịch động | Hướng định tuyến và cân bằng |
-| ServerlessLLM (OSDI'24) [4] | Nạp checkpoint nhanh, lưu trữ nhiều tầng | Cơ sở lý thuyết cho RQ2 |
+| ServerlessLLM (OSDI'24) [4] | Nạp checkpoint nhanh, lưu trữ nhiều tầng | Cơ sở cho các kỹ thuật rút ngắn cold start |
 | BurstGPT [5] | Trace tải thật, đặc tính burst | Mô hình tải |
 
-### 6.3. Vị trí của đồ án
+### 7.3. Vị trí của đồ án
 
-Các công trình trên hoặc **xây hệ thống mới**, hoặc **tối ưu engine**. Khoảng trống mà đồ án lấp là **đánh giá thực nghiệm có kiểm soát, tái lập được** trên hạ tầng chuẩn mà doanh nghiệp đang dùng (Kubernetes, KEDA, HPA), để trả lời những câu hỏi rất thực tế: nên scale theo metric nào, cold start ảnh hưởng thế nào, và thực sự tiết kiệm được bao nhiêu.
+Các công trình trên hoặc **xây hệ thống mới**, hoặc **tối ưu engine**. Đồ án không cạnh tranh với chúng. Đồ án lắp ráp một nền tảng **từ các thành phần chuẩn** mà doanh nghiệp đang dùng (Kubernetes, KEDA, Prometheus, Argo CD), giải các vấn đề vận hành riêng của GPU và LLM, rồi **đo** để biết nền tảng đó đáp ứng được tới đâu. Kết quả là một bản thiết kế và bộ quy trình mà một đội platform nhỏ có thể làm theo.
 
 ---
 
-## 7. Bảng thuật ngữ
+## 8. Bảng thuật ngữ
 
 | Thuật ngữ | Giải thích ngắn |
 |---|---|
@@ -311,7 +358,13 @@ Các công trình trên hoặc **xây hệ thống mới**, hoặc **tối ưu e
 | KV-cache | Bộ nhớ lưu Key/Value của các token đã xử lý |
 | TTFT | Time To First Token: thời gian tới token đầu tiên |
 | ITL / TPOT | Inter-Token Latency / Time Per Output Token: độ trễ giữa các token |
+| SLI | Service Level Indicator: chỉ số đo chất lượng dịch vụ |
 | SLO | Service Level Objective: mục tiêu chất lượng dịch vụ |
+| Ngân sách lỗi (error budget) | 1 − SLO: phần request "xấu" được phép có |
+| Burn rate | Tốc độ tiêu hao ngân sách lỗi so với mức vừa đủ |
+| Runbook | Hướng dẫn xử lý cho một cảnh báo cụ thể |
+| GitOps | Khai báo trạng thái trong Git, bộ điều khiển đưa cluster về đúng trạng thái đó |
+| Rolling update | Thay dần pod cũ bằng pod mới khi cập nhật phiên bản |
 | SLO attainment | Tỷ lệ request đạt SLO |
 | Goodput | Thông lượng tính trên các request đạt SLO |
 | Replica | Một bản sao của pod vLLM (ở đây mỗi bản dùng 1 GPU) |
@@ -326,7 +379,7 @@ Các công trình trên hoặc **xây hệ thống mới**, hoặc **tối ưu e
 
 ---
 
-## 8. Câu hỏi hội đồng có thể đặt ra
+## 9. Câu hỏi hội đồng có thể đặt ra
 
 **Vì sao không dùng metric CPU/RAM như bình thường?**
 CPU của pod vLLM chủ yếu phục vụ API server (tokenize, SSE), còn RAM gần như cố định. Cả hai đều không phản ánh tải trên GPU (xem §3.6 và §5.4).
@@ -337,9 +390,10 @@ Có, nhưng ít. Decode bị giới hạn bởi băng thông, nên tăng batch c
 **Tại sao KEDA mà không phải prometheus-adapter?**
 Cả hai đều cấp external metric cho HPA. KEDA được chọn vì cấu hình khai báo gọn trong một `ScaledObject`, có sẵn các tính năng `fallback`, `paused-replicas`, kích hoạt từ 0, và phổ biến trong các giải pháp serving LLM.
 
+**Sao không cảnh báo thẳng khi TTFT p95 vượt 2 s?**
+Ngưỡng tĩnh trên một phân vị dễ báo giả khi có một đợt nhiễu ngắn, và không cho biết mức độ nghiêm trọng. Cảnh báo theo burn rate gắn trực tiếp với SLO, có hai mức (page, ticket), và tự tắt nhanh khi vấn đề đã qua (§6.2).
+
 ---
 
-## Tham khảo bổ sung (ngoài danh mục của tài liệu chính)
-- [20] G.-I. Yu et al., "Orca: A Distributed Serving System for Transformer-Based Generative Models," *OSDI*, 2022.
-- [21] A. Agrawal et al., "Taming Throughput-Latency Tradeoff in LLM Inference with Sarathi-Serve," *OSDI*, 2024.
-- [22] B. Sun et al., "Llumnix: Dynamic Scheduling for Large Language Model Serving," *OSDI*, 2024.
+## Tham khảo
+Các số trong ngoặc vuông, gồm cả các số từ [20] trở đi, là số thứ tự trong [danh mục tài liệu tham khảo của tài liệu chính](../mo-ta-chi-tiet-do-an.md#15-tài-liệu-tham-khảo).

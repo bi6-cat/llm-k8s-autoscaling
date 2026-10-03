@@ -1,12 +1,12 @@
-"""Sơ đồ bổ sung cho các tài liệu chuyên sâu trong docs/chi-tiet/ (Hình 10–16).
+"""Sơ đồ bổ sung cho các tài liệu chuyên sâu trong docs/chi-tiet/ (Hình 10–17).
 
 Được gọi từ build_diagrams.py; dùng chung lớp Svg và bảng màu.
 """
 import math
 
 from build_diagrams import (AQUA, AXIS, BLUE, BLUE_T, CRIT, GOOD, GRAY_T, GREEN_T, GRID, INK, INK2, MONO,
-                            MUTED, ORANGE, ORANGE_T, SURFACE, VIOLET, VIOLET_T, WARN, WHITE, YELLOW, YELLOW_T,
-                            Svg, f, smooth, text_width)
+                            MUTED, ORANGE, ORANGE_T, OWNER, SURFACE, VIOLET, VIOLET_T, WARN, WHITE, YELLOW,
+                            YELLOW_T, Svg, f, smooth, text_width)
 
 AQUA_T = "#e6f6f0"
 
@@ -317,13 +317,13 @@ def fig_flapping():
 
 
 # ======================================================================
-# Hình 15 — Hiệu chỉnh năng lực một replica
+# Hình 15 — Đo năng lực một replica
 # ======================================================================
 def fig_calibration():
     W, H = 1240, 452
-    s = Svg(W, H, "Hiệu chỉnh năng lực: quét tốc độ request trên một replica; TTFT chạm ngưỡng SLO trước ITL; "
+    s = Svg(W, H, "Đo năng lực: quét tốc độ request trên một replica; TTFT chạm ngưỡng SLO trước ITL; "
                   "C bằng 2,0 req/s, B* bằng 30 request đồng thời")
-    s.header("Hiệu chỉnh năng lực một replica (calibration)",
+    s.header("Đo năng lực một replica (capacity planning)",
              "Quét tốc độ λ trên 1 replica; C = λ lớn nhất mà mọi SLO còn đạt — số liệu minh hoạ")
     x = 32
     s.add(f'<circle cx="{x + 6}" cy="92" r="5.5" fill="{BLUE}"/>')
@@ -378,60 +378,143 @@ def fig_calibration():
 
 
 # ======================================================================
-# Hình 16 — Nguồn dữ liệu và luồng xử lý
+# Hình 16 — Rolling update khi không còn GPU trống
 # ======================================================================
-def fig_data():
-    W, H = 1240, 548
-    s = Svg(W, H, "Dữ liệu một lượt chạy: sáu nguồn, thu thập qua ghi trực tiếp, Prometheus và runner, lưu thành một "
-                  "thư mục cho mỗi lượt, rồi căn thời gian và tổng hợp")
-    s.header("Dữ liệu của một lượt chạy: thu thập → lưu trữ → tổng hợp",
-             "Mọi nguồn đều mang timestamp (các máy đồng bộ giờ bằng NTP); runner gom về một thư mục cho mỗi lượt")
-    for x, lab in ((32, "NGUỒN"), (330, "THU THẬP"), (628, "LƯU TRỮ (mỗi lượt)"), (956, "XỬ LÝ")):
-        s.text(x, 100, lab, size=12, weight=700, fill=INK2)
-    sources = [("Máy tạo tải", "1 dòng / request: TTFT, E2E…"),
-               ("vLLM /metrics", "hàng đợi, running, KV-cache"),
-               ("DCGM exporter", "GPU util, SM active, VRAM"),
-               ("kube-state-metrics", "replicas, trạng thái pod, HPA"),
-               ("Kubernetes API", "pod conditions, events"),
-               ("Log vLLM", "thời gian nạp model, compile")]
-    for i, (t, l) in enumerate(sources):
-        y = 112 + i * 64
-        s.box(32, y, 250, 52, t, [l], tsize=13, align="start")
-        tgt_y = y + 26
-        s.arrow([(282, tgt_y), (330, tgt_y)], INK2 if i in (0, 4, 5) else VIOLET, sw=1.5,
-                dash=None if i in (0, 4, 5) else "5 4")
-    s.box(330, 112, 250, 52, "Ghi trực tiếp", ["CSV append theo request"], tsize=13, align="start")
-    s.box(330, 176, 250, 180, "Prometheus", ["scrape mỗi 5 s", "runner gọi query_range", "theo cửa sổ lượt chạy",
-                                             "→ xuất Parquet"], tsize=13, align="start", fill=VIOLET_T, stroke="#d6d1ef")
-    s.box(330, 368, 250, 116, "Runner theo dõi", ["watch pod conditions", "và events; lấy log vLLM"], tsize=13,
-          align="start")
-    for y in (138, 266, 426):
-        s.arrow([(580, y), (628, y)], INK2, sw=1.6)
-    s.rect(628, 112, 280, 372, fill=WHITE, stroke=INK2, sw=1.3, rx=10)
-    s.text(644, 138, "runs/<run-id>/", size=12.5, weight=700, family=MONO)
-    files = [("metadata.json", "cấu hình, phiên bản, seed"),
-             ("phases.json", "mốc bắt đầu/kết thúc pha"),
-             ("requests.csv", "log từng request"),
-             ("metrics.parquet", "chuỗi Prometheus"),
-             ("events.jsonl", "sự kiện pod, HPA"),
-             ("vllm-logs/", "log từng pod"),
-             ("checks.json", "kết quả kiểm tra hợp lệ")]
-    for i, (fn, d) in enumerate(files):
-        y = 170 + i * 44
-        s.text(652, y, fn, size=12, fill=INK, family=MONO)
-        s.text(652, y + 17, d, size=11, fill=INK2)
-    steps = [("Căn thời gian, cắt pha", "bỏ warm-up; gắn nhãn pha KB"),
-             ("Bảng theo request", "TTFT, TPOT, E2E, đạt SLO?"),
-             ("Bảng theo pha / lượt", "p95, SLO attainment, GPU-giờ"),
-             ("Bảng theo ô ma trận", "trung bình ± CI qua 3 lượt")]
-    for i, (t, l) in enumerate(steps):
-        y = 112 + i * 96
-        s.box(956, y, 252, 76, t, [l], tsize=13, align="start")
-        if i < 3:
-            s.arrow([(1082, y + 76), (1082, y + 96)], INK2, sw=1.6)
-    s.arrow([(908, 150), (956, 150)], INK2, sw=1.6)
-    s.text(956, 512, "→ biểu đồ, kiểm định, bảng trong luận văn", size=12, fill=INK2)
-    s.save("16-nguon-du-lieu.svg")
+def fig_rolling_update():
+    W, H = 1240, 596
+    s = Svg(W, H, "Rolling update khi cả 4 GPU đều có pod: cấu hình maxSurge 1 maxUnavailable 0 bị kẹt vì pod mới "
+                  "không có GPU; cấu hình maxSurge 0 maxUnavailable 1 xoá pod cũ trước, năng lực còn 3/4 "
+                  "trong suốt lần cập nhật")
+    s.header("Cập nhật phiên bản khi mọi GPU đều đang có pod",
+             "4 GPU, HPA đang chạy 4 replica; so sánh hai cách đặt maxSurge / maxUnavailable — thời gian minh hoạ")
+    X = lambda t: 200 + t * 120
+    x = 32
+    x = s.legend_swatch(x, 92, "pod cũ (v1)", BLUE_T, stroke=BLUE)
+    x = s.legend_swatch(x, 92, "drain (preStop, làm nốt request)", ORANGE_T, stroke=ORANGE)
+    x = s.legend_swatch(x, 92, "cold start pod mới", YELLOW_T, stroke="#c98500")
+    x = s.legend_swatch(x, 92, "pod mới (v2) Ready", GREEN_T, stroke=GOOD)
+    s.legend_swatch(x, 92, "Pending: không còn GPU trống", s.hatch(CRIT), stroke=CRIT)
+
+    def seg(t0, t1, y, fill, stroke, label=None, h=20):
+        s.rect(X(t0), y, X(t1) - X(t0), h, fill=fill, stroke=stroke, sw=1, rx=4)
+        if label and X(t1) - X(t0) > text_width(label, 11) + 10:
+            s.text((X(t0) + X(t1)) / 2, y + 14, label, size=11, anchor="middle", fill=INK)
+
+    def grid(y0, y1):
+        for m in range(0, 9):
+            s.line(X(m), y0, X(m), y1, stroke=GRID)
+
+    # (a) kiểu web
+    s.rich(32, 130, [("(a) maxSurge: 1 · maxUnavailable: 0", 700, INK), ("  cấu hình quen thuộc của web", 400, INK2)],
+           size=13.5)
+    grid(140, 278)
+    for i in range(4):
+        y = 148 + i * 26
+        s.text(40, y + 15, f"GPU {i}", size=12, fill=INK2)
+        seg(0, 8, y, BLUE_T, BLUE, "v1 · vẫn phục vụ, không được xoá vì maxUnavailable = 0")
+    s.text(40, 252 + 15, "pod mới (v2)", size=12, fill=INK2)
+    seg(0.1, 8, 252, s.hatch(CRIT), CRIT)
+    s.label(X(4.05), 252 + 15, "Pending: Insufficient nvidia.com/gpu", size=11, fill=INK)
+    s.text(200, 300, "→ Kẹt cho tới khi tải giảm và HPA tự scale-down. Sau 600 s, Deployment báo "
+                     "ProgressDeadlineExceeded và cảnh báo LLMPodPending kêu.", size=12, fill=INK)
+
+    # (b) cho GPU
+    s.rich(32, 338, [("(b) maxSurge: 0 · maxUnavailable: 1", 700, INK), ("  đồ án chọn", 400, INK2)], size=13.5)
+    grid(348, 478)
+    starts, drain, cold = [0.25, 2.0, 3.75, 5.5], 0.5, 1.25
+    for i, st in enumerate(starts):
+        y = 352 + i * 26
+        s.text(40, y + 15, f"GPU {i}", size=12, fill=INK2)
+        seg(0, st, y, BLUE_T, BLUE, "v1")
+        seg(st, st + drain, y, ORANGE_T, ORANGE, "drain")
+        seg(st + drain, st + drain + cold, y, YELLOW_T, "#c98500", "cold start")
+        seg(st + drain + cold, 8, y, GREEN_T, GOOD, "v2 Ready")
+    end = starts[-1] + drain + cold
+    s.text(40, 456 + 15, "Năng lực", size=12, weight=650, fill=INK)
+    seg(0, starts[0], 456, GREEN_T, GOOD, "4/4")
+    seg(starts[0], end, 456, "#fbe9e8", CRIT, "3/4 trong suốt lần cập nhật (≈ 4 × (drain + cold start))")
+    seg(end, 8, 456, GREEN_T, GOOD, "4/4")
+
+    ya = 486
+    s.line(X(0), ya, X(8), ya, stroke=AXIS)
+    for m in range(0, 9):
+        s.line(X(m), ya, X(m), ya + 5, stroke=AXIS)
+        s.text(X(m), ya + 19, str(m), size=11, fill=MUTED, anchor="middle")
+    s.text(X(8) + 10, ya + 19, "phút", size=11, fill=MUTED)
+    for i, ln in enumerate([
+            "• (a) chỉ chạy được khi còn GPU trống: lúc tải thấp HPA chỉ chạy 1–2 replica nên không kẹt; lúc tải cao thì kẹt.",
+            "• (b) không bao giờ kẹt, đổi lại năng lực còn 3/4 trong lúc cập nhật; nên cập nhật lúc tải thấp "
+            "(sync window của Argo CD).",
+            "• (c) giữ một GPU trống (maxReplicaCount = 3) để dùng (a) mà không giảm năng lực; đổi lại mất 25% năng lực "
+            "tối đa."]):
+        s.text(32, 532 + i * 22, ln, size=12, fill=INK2)
+    s.save("16-rolling-update-gpu.svg")
+
+
+# ======================================================================
+# Hình 17 — Quy trình một đợt đánh giá trên GPU thuê
+# ======================================================================
+def fig_eval_pipeline():
+    W, H = 1240, 620
+    s = Svg(W, H, "Quy trình một đợt đánh giá: thuê và dựng từ máy trắng, triển khai, đo năng lực, vòng lặp 28 lượt, "
+                  "cold start và kịch bản vận hành, sao lưu, huỷ máy và phân tích")
+    s.header("Quy trình tự động của một đợt đánh giá trên GPU thuê",
+             "Mọi bước chạy bằng script để dựng lại được và rút ngắn thời gian thuê GPU; nhãn màu = người phụ trách")
+    x = 760
+    for o in ("Trình", "Quang", "Cả nhóm"):
+        s.add(f'<circle cx="{x}" cy="57" r="5" fill="{OWNER[o]}"/>')
+        s.text(x + 10, 61, o, size=12, fill=INK2)
+        x += text_width(o, 12) + 34
+    xs = [32, 448, 864]
+    row1 = [(1, "Thuê máy & dựng từ đầu", ["vastai: thuê VM 4 GPU, burn-in", "Ansible + Argo CD; đo thời gian (VH5)"],
+             "Quang"),
+            (2, "Triển khai nền tảng", ["Argo CD sync: giám sát, cảnh báo,", "KEDA, vLLM; tắt auto-sync autoscaling"],
+             "Cả nhóm"),
+            (3, "Đo năng lực", ["quét tốc độ → tìm C của 1 replica", "chốt SLO, target A1, A2 (ADR-003)"], "Trình")]
+    for i, (n, t, ls, o) in enumerate(row1):
+        s.step_box(xs[i], 86, 344, 100, n, t, ls, INK2, owner=o)
+    s.arrow([(376, 136), (448, 136)], INK2, sw=1.8)
+    s.arrow([(792, 136), (864, 136)], INK2, sw=1.8)
+    s.arrow([(1036, 186), (1036, 234)], INK2, sw=1.8)
+
+    s.rect(32, 234, 1176, 216, fill=GRAY_T, stroke=AXIS, rx=14)
+    s.add(f'<circle cx="56" cy="259" r="12" fill="{INK2}"/>')
+    s.text(56, 263.5, "4", size=12.5, weight=700, fill=WHITE, anchor="middle")
+    s.rich(76, 264, [("Vòng lặp đánh giá autoscaling", 650, INK),
+                     ("  4 cấu hình × 3 kịch bản, 2–3 lượt mỗi ô = 28 lượt · runner (Python)", 400, INK2)],
+           size=13.5)
+    s.owner_pill(1194, 248, "Quang")
+    steps = [("a", "Áp cấu hình", ["S1, S4 hoặc", "ScaledObject A1/A2"]),
+             ("b", "Reset", ["về 1 replica,", "chờ hệ thống ổn định"]),
+             ("c", "Warm-up", ["2 phút tải nhẹ", "(không tính kết quả)"]),
+             ("d", "Chạy kịch bản", ["λ(t) theo KB1–KB3,", "log từng request"]),
+             ("e", "Thu thập", ["CSV, Prometheus,", "sự kiện pod, cảnh báo"]),
+             ("f", "Cooldown", ["chờ scale-down,", "kiểm tra dữ liệu"])]
+    for i, (k, t, ls) in enumerate(steps):
+        bx = 52 + i * 194
+        s.rect(bx, 286, 172, 96, fill=WHITE, stroke=AXIS, rx=10)
+        s.text(bx + 14, 310, f"{k}. {t}", size=13.5, weight=650)
+        for j, ln in enumerate(ls):
+            s.text(bx + 14, 334 + j * 18, ln, size=11.5, fill=INK2)
+        if i < 5:
+            s.arrow([(bx + 172, 334), (bx + 194, 334)], INK2, sw=1.6)
+    s.arrow([(1108, 382), (1108, 424), (138, 424), (138, 382)], INK2, sw=1.6, dash="5 4")
+    s.label(623, 428, "lượt tiếp theo", bg=GRAY_T, fill=INK)
+    s.arrow([(1036, 450), (1036, 494)], INK2, sw=1.8)
+
+    row3 = [(864, 5, "Cold start & vận hành", ["L0/L2; rolling update, xoá pod,", "mất Prometheus, kiểm tra cảnh báo"],
+             "Cả nhóm"),
+            (448, 6, "Sao lưu, huỷ máy, phân tích", ["đẩy dữ liệu lên R2; huỷ instance;", "pandas: bảng và biểu đồ"],
+             "Quang")]
+    for bx, n, t, ls, o in row3:
+        s.step_box(bx, 494, 344, 100, n, t, ls, INK2, owner=o)
+    s.arrow([(864, 544), (792, 544)], INK2, sw=1.8)
+    s.rect(32, 494, 344, 100, fill=SURFACE, stroke=INK2, dash="5 4", rx=10)
+    s.text(48, 524, "Kết quả", size=13.5, weight=650)
+    s.text(48, 550, "bảng nghiệm thu N1–N8,", size=11.5, fill=INK2)
+    s.text(48, 567.5, "khuyến nghị cấu hình vận hành", size=11.5, fill=INK2)
+    s.arrow([(448, 544), (376, 544)], INK2, sw=1.8)
+    s.save("17-quy-trinh-danh-gia.svg")
 
 
 def build_all():
@@ -441,4 +524,5 @@ def build_all():
     fig_shutdown()
     fig_flapping()
     fig_calibration()
-    fig_data()
+    fig_rolling_update()
+    fig_eval_pipeline()

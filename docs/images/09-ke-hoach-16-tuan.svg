@@ -1,104 +1,110 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="766" viewBox="0 0 1240 766" role="img" aria-label="Kế hoạch 16 tuần chia 4 giai đoạn với 5 mốc: nền tảng trên laptop (T4), pipeline và pilot (T8), xong thí nghiệm (T12), bản thảo (T14), bảo vệ (T16)" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
-<title>Kế hoạch 16 tuần chia 4 giai đoạn với 5 mốc: nền tảng trên laptop (T4), pipeline và pilot (T8), xong thí nghiệm (T12), bản thảo (T14), bảo vệ (T16)</title>
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="820" viewBox="0 0 1240 820" role="img" aria-label="Kế hoạch 16 tuần chia 4 giai đoạn với 5 mốc: nền tảng trên laptop (T4), vận hành thử đạt (T8), xong đánh giá (T12), bản thảo (T14), bảo vệ (T16)" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+<title>Kế hoạch 16 tuần chia 4 giai đoạn với 5 mốc: nền tảng trên laptop (T4), vận hành thử đạt (T8), xong đánh giá (T12), bản thảo (T14), bảo vệ (T16)</title>
 <defs></defs>
-<rect x="0.5" y="0.5" width="1239" height="765" rx="14" fill="#fcfcfb" stroke="#e4e3de"/>
+<rect x="0.5" y="0.5" width="1239" height="819" rx="14" fill="#fcfcfb" stroke="#e4e3de"/>
 <text x="32" y="38" font-size="19" font-weight="700" fill="#0b0b0b" text-anchor="start">Kế hoạch thực hiện 16 tuần</text>
 <text x="32" y="61" font-size="13" font-weight="400" fill="#52514e" text-anchor="start">Màu thanh = người phụ trách chính; ◆ = mốc kiểm tra với giảng viên hướng dẫn</text>
 <rect x="32" y="86" width="14" height="12" rx="3" fill="#2a78d6"/>
 <text x="52" y="96" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Trình · Platform</text>
 <rect x="167.2" y="86" width="14" height="12" rx="3" fill="#eb6834"/>
-<text x="187.2" y="96" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Quang · DevOps/SRE</text>
-<rect x="325" y="86" width="14" height="12" rx="3" fill="#1baf7a"/>
-<text x="345" y="96" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Cả nhóm</text>
-<rect x="392" y="130" width="50" height="548" rx="0" fill="#f6f5f2"/>
+<text x="187.2" y="96" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Quang · DevOps/SRE/Cloud</text>
+<rect x="359.5" y="86" width="14" height="12" rx="3" fill="#1baf7a"/>
+<text x="379.5" y="96" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Cả nhóm</text>
+<rect x="392" y="130" width="50" height="602" rx="0" fill="#f6f5f2"/>
 <text x="417" y="122" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">T1</text>
 <text x="467" y="122" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">T2</text>
-<rect x="492" y="130" width="50" height="548" rx="0" fill="#f6f5f2"/>
+<rect x="492" y="130" width="50" height="602" rx="0" fill="#f6f5f2"/>
 <text x="517" y="122" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">T3</text>
 <text x="567" y="122" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">T4</text>
-<rect x="592" y="130" width="50" height="548" rx="0" fill="#f6f5f2"/>
+<rect x="592" y="130" width="50" height="602" rx="0" fill="#f6f5f2"/>
 <text x="617" y="122" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">T5</text>
 <text x="667" y="122" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">T6</text>
-<rect x="692" y="130" width="50" height="548" rx="0" fill="#f6f5f2"/>
+<rect x="692" y="130" width="50" height="602" rx="0" fill="#f6f5f2"/>
 <text x="717" y="122" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">T7</text>
 <text x="767" y="122" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">T8</text>
-<rect x="792" y="130" width="50" height="548" rx="0" fill="#f6f5f2"/>
+<rect x="792" y="130" width="50" height="602" rx="0" fill="#f6f5f2"/>
 <text x="817" y="122" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">T9</text>
 <text x="867" y="122" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">T10</text>
-<rect x="892" y="130" width="50" height="548" rx="0" fill="#f6f5f2"/>
+<rect x="892" y="130" width="50" height="602" rx="0" fill="#f6f5f2"/>
 <text x="917" y="122" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">T11</text>
 <text x="967" y="122" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">T12</text>
-<rect x="992" y="130" width="50" height="548" rx="0" fill="#f6f5f2"/>
+<rect x="992" y="130" width="50" height="602" rx="0" fill="#f6f5f2"/>
 <text x="1017" y="122" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">T13</text>
 <text x="1067" y="122" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">T14</text>
-<rect x="1092" y="130" width="50" height="548" rx="0" fill="#f6f5f2"/>
+<rect x="1092" y="130" width="50" height="602" rx="0" fill="#f6f5f2"/>
 <text x="1117" y="122" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">T15</text>
 <text x="1167" y="122" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">T16</text>
 <text x="32" y="152" font-size="12.5" font-weight="700" fill="#0b0b0b" text-anchor="start">Giai đoạn 1 · Chuẩn bị</text>
-<text x="48" y="179" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Nghiên cứu tài liệu, chốt thiết kế &amp; RQ</text>
+<text x="48" y="179" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Chốt thiết kế, yêu cầu F/N, phiên bản</text>
 <rect x="395" y="168" width="94" height="14" rx="4" fill="#1baf7a"/>
 <text x="495" y="179" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="start">Cả nhóm</text>
-<text x="48" y="206" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Chọn model, nhà cung cấp GPU, dự toán chi phí</text>
-<rect x="395" y="195" width="94" height="14" rx="4" fill="#1baf7a"/>
-<text x="495" y="206" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="start">Cả nhóm</text>
-<text x="32" y="233" font-size="12.5" font-weight="700" fill="#0b0b0b" text-anchor="start">Giai đoạn 2 · Xây dựng nền tảng (laptop)</text>
-<text x="48" y="260" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">k3s + GPU Operator + vLLM trên laptop</text>
+<text x="48" y="206" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Chọn nhà cung cấp GPU, dự toán chi phí</text>
+<rect x="395" y="195" width="94" height="14" rx="4" fill="#eb6834"/>
+<text x="495" y="206" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="start">Quang</text>
+<text x="32" y="233" font-size="12.5" font-weight="700" fill="#0b0b0b" text-anchor="start">Giai đoạn 2 · Xây dựng và vận hành thử (laptop)</text>
+<text x="48" y="260" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">GPU + vLLM trên laptop</text>
 <rect x="445" y="249" width="144" height="14" rx="4" fill="#2a78d6"/>
 <text x="595" y="260" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="start">Trình</text>
-<text x="48" y="287" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Repo GitOps, Argo CD, khung IaC</text>
+<text x="48" y="287" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Cluster k3s (Ansible), Argo CD, CI</text>
 <rect x="445" y="276" width="144" height="14" rx="4" fill="#eb6834"/>
 <text x="595" y="287" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="start">Quang</text>
-<text x="48" y="314" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Prometheus, Grafana, DCGM, dashboard</text>
+<text x="48" y="314" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Prometheus, Grafana, dashboard</text>
 <rect x="495" y="303" width="144" height="14" rx="4" fill="#eb6834"/>
 <text x="645" y="314" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="start">Quang</text>
-<text x="48" y="341" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Máy tạo tải + profile KB1–KB5</text>
-<rect x="545" y="330" width="144" height="14" rx="4" fill="#eb6834"/>
-<text x="695" y="341" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="start">Quang</text>
-<text x="48" y="368" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Chiến lược autoscaling A1–A3 (KEDA)</text>
-<rect x="595" y="357" width="144" height="14" rx="4" fill="#2a78d6"/>
-<text x="745" y="368" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="start">Trình</text>
-<text x="48" y="395" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Experiment runner tự động</text>
-<rect x="645" y="384" width="94" height="14" rx="4" fill="#eb6834"/>
-<text x="745" y="395" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="start">Quang</text>
-<text x="48" y="422" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Pilot trên laptop, sửa pipeline</text>
-<rect x="695" y="411" width="94" height="14" rx="4" fill="#1baf7a"/>
-<text x="795" y="422" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="start">Cả nhóm</text>
-<text x="32" y="449" font-size="12.5" font-weight="700" fill="#0b0b0b" text-anchor="start">Giai đoạn 3 · Thí nghiệm trên GPU thuê</text>
-<text x="48" y="476" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Chạy thử VM 1 GPU, script thuê/burn-in</text>
-<rect x="745" y="465" width="44" height="14" rx="4" fill="#1baf7a"/>
-<text x="795" y="476" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="start">Cả nhóm</text>
-<text x="48" y="503" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Đợt thuê chính ~72 giờ (hiệu chỉnh → 3 khối)</text>
-<rect x="795" y="492" width="44" height="14" rx="4" fill="#1baf7a"/>
-<text x="845" y="503" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="start">Cả nhóm</text>
-<text x="48" y="530" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Đợt dự phòng (nếu cần)</text>
-<rect x="895" y="519" width="44" height="14" rx="4" fill="#1baf7a"/>
-<text x="945" y="530" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="start">Cả nhóm</text>
-<text x="48" y="557" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Phân tích cold start (RQ2)</text>
-<rect x="845" y="546" width="144" height="14" rx="4" fill="#2a78d6"/>
-<text x="995" y="557" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="start">Trình</text>
-<text x="48" y="584" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Phân tích ma trận, thống kê, biểu đồ</text>
-<rect x="845" y="573" width="194" height="14" rx="4" fill="#eb6834"/>
-<text x="1045" y="584" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="start">Quang</text>
-<text x="32" y="611" font-size="12.5" font-weight="700" fill="#0b0b0b" text-anchor="start">Giai đoạn 4 · Hoàn thiện</text>
-<text x="48" y="638" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Viết luận văn</text>
-<rect x="895" y="627" width="244" height="14" rx="4" fill="#1baf7a"/>
-<text x="1145" y="638" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="start">Cả nhóm</text>
-<text x="48" y="665" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Slide, demo, tuần dự phòng</text>
-<rect x="1095" y="654" width="94" height="14" rx="4" fill="#1baf7a"/>
-<text x="1089" y="665" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="end">Cả nhóm</text>
-<line x1="592" y1="130" x2="592" y2="688" stroke="#52514e" stroke-width="1" stroke-dasharray="3 3"/>
-<polygon points="592,687 599,694 592,701 585,694" fill="#0b0b0b"/>
-<text x="592" y="720" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="middle">M1 · Nền tảng chạy trên laptop</text>
-<line x1="792" y1="130" x2="792" y2="688" stroke="#52514e" stroke-width="1" stroke-dasharray="3 3"/>
-<polygon points="792,687 799,694 792,701 785,694" fill="#0b0b0b"/>
-<text x="792" y="720" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="middle">M2 · Pipeline + pilot</text>
-<line x1="992" y1="130" x2="992" y2="688" stroke="#52514e" stroke-width="1" stroke-dasharray="3 3"/>
-<polygon points="992,687 999,694 992,701 985,694" fill="#0b0b0b"/>
-<text x="992" y="720" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="middle">M3 · Xong thí nghiệm</text>
-<line x1="1092" y1="130" x2="1092" y2="688" stroke="#52514e" stroke-width="1" stroke-dasharray="3 3"/>
-<polygon points="1092,687 1099,694 1092,701 1085,694" fill="#0b0b0b"/>
-<text x="1092" y="740" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="middle">M4 · Bản thảo</text>
-<line x1="1192" y1="130" x2="1192" y2="688" stroke="#52514e" stroke-width="1" stroke-dasharray="3 3"/>
-<polygon points="1192,687 1199,694 1192,701 1185,694" fill="#0b0b0b"/>
-<text x="1196" y="720" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="end">M5 · Bảo vệ</text>
+<text x="48" y="341" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Autoscaling A1, A2 (KEDA) + kiểm thử</text>
+<rect x="595" y="330" width="94" height="14" rx="4" fill="#2a78d6"/>
+<text x="695" y="341" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="start">Trình</text>
+<text x="48" y="368" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">SLO, cảnh báo, Alertmanager, runbook</text>
+<rect x="595" y="357" width="144" height="14" rx="4" fill="#eb6834"/>
+<text x="745" y="368" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="start">Quang</text>
+<text x="48" y="395" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Cold start: đo 8 pha, rút ngắn</text>
+<rect x="645" y="384" width="94" height="14" rx="4" fill="#2a78d6"/>
+<text x="745" y="395" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="start">Trình</text>
+<text x="48" y="422" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Máy tạo tải, runner đánh giá</text>
+<rect x="645" y="411" width="94" height="14" rx="4" fill="#eb6834"/>
+<text x="745" y="422" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="start">Quang</text>
+<text x="48" y="449" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Rolling update khi hết GPU; bảo mật tối thiểu</text>
+<rect x="695" y="438" width="94" height="14" rx="4" fill="#2a78d6"/>
+<text x="795" y="449" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="start">Trình</text>
+<text x="48" y="476" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Hạ tầng cloud: thuê VM, burn-in, dựng tự động</text>
+<rect x="695" y="465" width="94" height="14" rx="4" fill="#eb6834"/>
+<text x="795" y="476" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="start">Quang</text>
+<text x="48" y="503" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Kịch bản vận hành trên laptop; chạy thử 1 GPU</text>
+<rect x="695" y="492" width="94" height="14" rx="4" fill="#1baf7a"/>
+<text x="795" y="503" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="start">Cả nhóm</text>
+<text x="32" y="530" font-size="12.5" font-weight="700" fill="#0b0b0b" text-anchor="start">Giai đoạn 3 · Đánh giá trên GPU thuê</text>
+<text x="48" y="557" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Đợt thuê chính ~37 giờ liên tục</text>
+<rect x="795" y="546" width="44" height="14" rx="4" fill="#1baf7a"/>
+<text x="845" y="557" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="start">Cả nhóm</text>
+<text x="48" y="584" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Đợt dự phòng (nếu cần)</text>
+<rect x="895" y="573" width="44" height="14" rx="4" fill="#1baf7a"/>
+<text x="945" y="584" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="start">Cả nhóm</text>
+<text x="48" y="611" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Biểu đồ cold start, rolling update</text>
+<rect x="845" y="600" width="94" height="14" rx="4" fill="#2a78d6"/>
+<text x="945" y="611" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="start">Trình</text>
+<text x="48" y="638" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Xử lý số liệu, bảng nghiệm thu</text>
+<rect x="845" y="627" width="144" height="14" rx="4" fill="#eb6834"/>
+<text x="995" y="638" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="start">Quang</text>
+<text x="32" y="665" font-size="12.5" font-weight="700" fill="#0b0b0b" text-anchor="start">Giai đoạn 4 · Viết và hoàn thiện</text>
+<text x="48" y="692" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Viết luận văn</text>
+<rect x="845" y="681" width="294" height="14" rx="4" fill="#1baf7a"/>
+<text x="1145" y="692" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="start">Cả nhóm</text>
+<text x="48" y="719" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Slide, demo, tuần dự phòng</text>
+<rect x="1095" y="708" width="94" height="14" rx="4" fill="#1baf7a"/>
+<text x="1089" y="719" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="end">Cả nhóm</text>
+<line x1="592" y1="130" x2="592" y2="742" stroke="#52514e" stroke-width="1" stroke-dasharray="3 3"/>
+<polygon points="592,741 599,748 592,755 585,748" fill="#0b0b0b"/>
+<text x="592" y="774" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="middle">M1 · Nền tảng chạy trên laptop</text>
+<line x1="792" y1="130" x2="792" y2="742" stroke="#52514e" stroke-width="1" stroke-dasharray="3 3"/>
+<polygon points="792,741 799,748 792,755 785,748" fill="#0b0b0b"/>
+<text x="792" y="774" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="middle">M2 · Vận hành thử đạt</text>
+<line x1="992" y1="130" x2="992" y2="742" stroke="#52514e" stroke-width="1" stroke-dasharray="3 3"/>
+<polygon points="992,741 999,748 992,755 985,748" fill="#0b0b0b"/>
+<text x="992" y="774" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="middle">M3 · Xong đánh giá</text>
+<line x1="1092" y1="130" x2="1092" y2="742" stroke="#52514e" stroke-width="1" stroke-dasharray="3 3"/>
+<polygon points="1092,741 1099,748 1092,755 1085,748" fill="#0b0b0b"/>
+<text x="1092" y="794" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="middle">M4 · Bản thảo</text>
+<line x1="1192" y1="130" x2="1192" y2="742" stroke="#52514e" stroke-width="1" stroke-dasharray="3 3"/>
+<polygon points="1192,741 1199,748 1192,755 1185,748" fill="#0b0b0b"/>
+<text x="1196" y="774" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="end">M5 · Bảo vệ</text>
 </svg>
