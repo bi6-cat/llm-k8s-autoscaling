@@ -7,7 +7,7 @@
 <rect x="32" y="86" width="1176" height="176" rx="12" fill="#f2f0fa" stroke="#d6d1ef" stroke-width="1.2"/>
 <text x="76" y="107" font-size="12.5" text-anchor="start"><tspan font-weight="650" fill="#0b0b0b">PHA PHÁT HIỆN</tspan><tspan font-weight="400" fill="#52514e">  tổng ~10–30 s (ước lượng)</tspan></text>
 <rect x="32" y="318" width="1176" height="190" rx="12" fill="#fdf3ee" stroke="#f3cdb9" stroke-width="1.2"/>
-<text x="76" y="339" font-size="12.5" text-anchor="start"><tspan font-weight="650" fill="#0b0b0b">PHA THỰC THI · cold start</tspan><tspan font-weight="400" fill="#52514e">  ~1–5 phút nếu chưa tối ưu (ước lượng)</tspan></text>
+<text x="76" y="339" font-size="12.5" text-anchor="start"><tspan font-weight="650" fill="#0b0b0b">PHA THỰC THI · cold start</tspan><tspan font-weight="400" fill="#52514e">  ~1–8 phút nếu chưa tối ưu (ước lượng)</tspan></text>
 <rect x="76" y="128" width="250" height="112" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
 <circle cx="100" cy="153" r="12" fill="#4a3aa7"/>
 <text x="100" y="157.5" font-size="12.5" font-weight="700" fill="#ffffff" text-anchor="middle">1</text>

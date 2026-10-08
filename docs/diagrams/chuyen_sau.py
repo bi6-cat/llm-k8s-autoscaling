@@ -27,7 +27,7 @@ def fig_knee():
              "TTFT p95 theo tốc độ request trên 1 replica — mô hình hàng đợi minh hoạ: T ≈ T₀ + k·ρ/(1 − ρ), với ρ = λ/μ")
     x0, top, pw, ph = 96, 110, 900, 240
     y1 = top + ph
-    lmax, ymax, mu, C = 3.0, 8.0, 2.4, 1.99
+    lmax, ymax, mu, C = 3.0, 8.0, 2.4, 2.07
     X = lambda l: x0 + l / lmax * pw
     Y = lambda v: y1 - v / ymax * ph
     ttft = lambda l: 0.3 + 0.35 * (l / mu) / (1 - l / mu)
@@ -55,9 +55,9 @@ def fig_knee():
     s.arrow([pts[-1], (pts[-1][0] + 2, top + 2)], BLUE, sw=2.6, r=0)
     s.line(x0, y1, x0 + pw, y1, stroke=AXIS)
 
-    s.line(x0, Y(2), x0 + pw, Y(2), stroke=INK2, sw=1.3, dash="6 4")
-    s.label(x0 + 8, Y(2) - 6, "SLO: TTFT p95 ≤ 2 s", anchor="start", fill=INK)
-    for lv, lab in ((C, "C ≈ 2,0"), (mu, "μ = 2,4")):
+    s.line(x0, Y(2.5), x0 + pw, Y(2.5), stroke=INK2, sw=1.3, dash="6 4")
+    s.label(x0 + 8, Y(2.5) - 6, "SLO: TTFT p95 ≤ 2,5 s", anchor="start", fill=INK)
+    for lv, lab in ((C, "C ≈ 2,1"), (mu, "μ = 2,4")):
         s.line(X(lv), top, X(lv), y1, stroke=INK, sw=1.2, dash="3 3")
         s.text(X(lv), top - 12, lab, size=12, weight=650, anchor="middle")
     s.text(X(1.0), Y(7.1), "đạt SLO", size=12.5, weight=650, anchor="middle")
@@ -192,9 +192,10 @@ def fig_coldstart_detail():
 # Hình 13 — Graceful shutdown khi scale-down
 # ======================================================================
 def fig_shutdown():
-    W, H = 1240, 528
+    W, H = 1240, 550
     s = Svg(W, H, "Scale-down an toàn: khi không có preStop, request đến trong lúc Endpoints chưa cập nhật bị từ chối; "
-                  "có preStop sleep 20 giây thì request đó vẫn được phục vụ")
+                  "có preStop sleep 20 giây thì request đó vẫn được phục vụ; vLLM chỉ làm nốt request khi có "
+                  "--shutdown-timeout lớn hơn 0")
     s.header("Scale-down an toàn: vì sao cần preStop",
              "Khi pod bị xoá, việc gỡ pod khỏi Endpoints và việc gửi SIGTERM chạy song song — "
              "thiếu preStop, request đến muộn sẽ lỗi")
@@ -227,7 +228,7 @@ def fig_shutdown():
         bar(4, 50, le, 30, "đã gỡ khỏi Endpoints: không nhận request mới", GRAY_T, AXIS)
         t_term, t_exit = (20, 34) if prestop else (0, 22)
         bar(-10, t_term, lv, 30, "vẫn phục vụ (preStop đang sleep)" if prestop else "phục vụ", BLUE_T, "#c9dcf3")
-        bar(t_term, t_exit, lv, 30, "drain: làm nốt request đang chạy" if not prestop else "drain",
+        bar(t_term, t_exit, lv, 30, "drain (--shutdown-timeout): làm nốt request" if not prestop else "drain",
             ORANGE_T, ORANGE)
         tag(t_term, lv, "SIGTERM")
         exit_mark(t_exit, lv + 15)
@@ -248,8 +249,10 @@ def fig_shutdown():
         s.text(X(t), ya + 19, f"{t} s", size=11, fill=MUTED, anchor="middle")
     s.text(32, 482, "• preStop giữ tiến trình chạy đến khi kube-proxy và Ingress đều đã ngừng gửi request mới tới pod.",
            size=12, fill=INK2)
-    s.text(32, 504, "• terminationGracePeriodSeconds tính từ t = 0 (gồm cả preStop) phải lớn hơn preStop + request dài nhất; "
-                    "quá hạn → SIGKILL, request dở dang bị cắt.", size=12, fill=INK2)
+    s.text(32, 504, "• vLLM chỉ drain khi chạy với --shutdown-timeout > 0; mặc định 0 nghĩa là huỷ ngay mọi request "
+                    "đang chạy khi nhận SIGTERM.", size=12, fill=INK2)
+    s.text(32, 526, "• terminationGracePeriodSeconds tính từ t = 0 (gồm cả preStop) phải lớn hơn preStop + "
+                    "--shutdown-timeout; quá hạn → SIGKILL, request dở dang bị cắt.", size=12, fill=INK2)
     s.save("13-graceful-shutdown.svg")
 
 
@@ -335,13 +338,13 @@ def fig_calibration():
     s.legend_line(x, 92, "ngưỡng SLO · C · B*", INK2, dash="6 4", sw=1.3)
 
     lams = [0.5, 1.0, 1.5, 1.75, 2.0, 2.25, 2.5]
-    mu = 2.6
+    mu = 2.52
     ttft = [0.25 + 0.3 * (l / mu) / (1 - l / mu) for l in lams]
     itl = [30 + 45 * (l / mu) for l in lams]
     conc = [4.5, 9.5, 15.5, 19.5, 30, 44, 85]
-    ok = [t <= 2 and i <= 100 for t, i in zip(ttft, itl)]
+    ok = [t <= 2.5 and i <= 100 for t, i in zip(ttft, itl)]
     panels = [
-        ("TTFT p95 (s)", ttft, 8, [0, 2, 4, 6, 8], [(2, "SLO 2 s", -5)]),
+        ("TTFT p95 (s)", ttft, 8, [0, 2, 4, 6, 8], [(2.5, "SLO 2,5 s", -5)]),
         ("ITL p95 (ms)", itl, 120, [0, 30, 60, 90, 120], [(100, "SLO 100 ms", -5)]),
         ("Request đồng thời B (trung bình)", conc, 90, [0, 30, 60, 90], [(30, "B* = 30 (tại C)", -5),
                                                                           (24, "target A2 = 0,8·B* = 24", 16)]),
@@ -443,8 +446,8 @@ def fig_rolling_update():
     s.text(X(8) + 10, ya + 19, "phút", size=11, fill=MUTED)
     for i, ln in enumerate([
             "• (a) chỉ chạy được khi còn GPU trống: lúc tải thấp HPA chỉ chạy 1–2 replica nên không kẹt; lúc tải cao thì kẹt.",
-            "• (b) không bao giờ kẹt, đổi lại năng lực còn 3/4 trong lúc cập nhật; nên cập nhật lúc tải thấp "
-            "(sync window của Argo CD).",
+            "• (b) không bao giờ kẹt, đổi lại năng lực còn 3/4 trong lúc cập nhật; khi chỉ có 1 replica thì phải tạm "
+            "nâng minReplicaCount lên 2 trước, nếu không sẽ mất dịch vụ.",
             "• (c) giữ một GPU trống (maxReplicaCount = 3) để dùng (a) mà không giảm năng lực; đổi lại mất 25% năng lực "
             "tối đa."]):
         s.text(32, 532 + i * 22, ln, size=12, fill=INK2)
@@ -456,23 +459,16 @@ def fig_rolling_update():
 # ======================================================================
 def fig_eval_pipeline():
     W, H = 1240, 620
-    s = Svg(W, H, "Quy trình một đợt đánh giá: thuê và dựng từ máy trắng, triển khai, đo năng lực, vòng lặp 28 lượt, "
+    s = Svg(W, H, "Quy trình phiên đánh giá chính: thuê và dựng từ máy trắng, triển khai, đo năng lực, vòng lặp 17 lượt, "
                   "cold start và kịch bản vận hành, sao lưu, huỷ máy và phân tích")
-    s.header("Quy trình tự động của một đợt đánh giá trên GPU thuê",
-             "Mọi bước chạy bằng script để dựng lại được và rút ngắn thời gian thuê GPU; nhãn màu = người phụ trách")
-    x = 760
-    for o in ("Trình", "Quang", "Cả nhóm"):
-        s.add(f'<circle cx="{x}" cy="57" r="5" fill="{OWNER[o]}"/>')
-        s.text(x + 10, 61, o, size=12, fill=INK2)
-        x += text_width(o, 12) + 34
+    s.header("Quy trình tự động của phiên đánh giá chính trên GPU thuê",
+             "Một lần thuê liền ~20–22 giờ; mọi bước chạy bằng script để dựng lại được và rút ngắn thời gian thuê GPU")
     xs = [32, 448, 864]
-    row1 = [(1, "Thuê máy & dựng từ đầu", ["vastai: thuê VM 4 GPU, burn-in", "Ansible + Argo CD; đo thời gian (VH5)"],
-             "Quang"),
-            (2, "Triển khai nền tảng", ["Argo CD sync: giám sát, cảnh báo,", "KEDA, vLLM; tắt auto-sync autoscaling"],
-             "Cả nhóm"),
-            (3, "Đo năng lực", ["quét tốc độ → tìm C của 1 replica", "chốt SLO, target A1, A2 (ADR-003)"], "Trình")]
-    for i, (n, t, ls, o) in enumerate(row1):
-        s.step_box(xs[i], 86, 344, 100, n, t, ls, INK2, owner=o)
+    row1 = [(1, "Thuê máy & dựng từ đầu", ["vastai: thuê VM 4 GPU, burn-in rút gọn", "Ansible + Argo CD; đo thời gian (VH5)"]),
+            (2, "Triển khai nền tảng", ["Argo CD sync: giám sát, cảnh báo,", "KEDA, vLLM; tắt auto-sync autoscaling"]),
+            (3, "Đo năng lực", ["quét tốc độ → tìm C của 1 replica", "chốt SLO, target A1, A2 (ADR-003)"])]
+    for i, (n, t, ls) in enumerate(row1):
+        s.step_box(xs[i], 86, 344, 100, n, t, ls, INK2)
     s.arrow([(376, 136), (448, 136)], INK2, sw=1.8)
     s.arrow([(792, 136), (864, 136)], INK2, sw=1.8)
     s.arrow([(1036, 186), (1036, 234)], INK2, sw=1.8)
@@ -481,9 +477,8 @@ def fig_eval_pipeline():
     s.add(f'<circle cx="56" cy="259" r="12" fill="{INK2}"/>')
     s.text(56, 263.5, "4", size=12.5, weight=700, fill=WHITE, anchor="middle")
     s.rich(76, 264, [("Vòng lặp đánh giá autoscaling", 650, INK),
-                     ("  4 cấu hình × 3 kịch bản, 2–3 lượt mỗi ô = 28 lượt · runner (Python)", 400, INK2)],
+                     ("  4 cấu hình × 3 kịch bản, 1–3 lượt mỗi ô = 17 lượt · runner (Python), chạy qua đêm", 400, INK2)],
            size=13.5)
-    s.owner_pill(1194, 248, "Quang")
     steps = [("a", "Áp cấu hình", ["S1, S4 hoặc", "ScaledObject A1/A2"]),
              ("b", "Reset", ["về 1 replica,", "chờ hệ thống ổn định"]),
              ("c", "Warm-up", ["2 phút tải nhẹ", "(không tính kết quả)"]),
@@ -502,12 +497,10 @@ def fig_eval_pipeline():
     s.label(623, 428, "lượt tiếp theo", bg=GRAY_T, fill=INK)
     s.arrow([(1036, 450), (1036, 494)], INK2, sw=1.8)
 
-    row3 = [(864, 5, "Cold start & vận hành", ["L0/L2; rolling update, xoá pod,", "mất Prometheus, kiểm tra cảnh báo"],
-             "Cả nhóm"),
-            (448, 6, "Sao lưu, huỷ máy, phân tích", ["đẩy dữ liệu lên R2; huỷ instance;", "pandas: bảng và biểu đồ"],
-             "Quang")]
-    for bx, n, t, ls, o in row3:
-        s.step_box(bx, 494, 344, 100, n, t, ls, INK2, owner=o)
+    row3 = [(864, 5, "Cold start & vận hành", ["L0/L2; rolling update, xoá pod,", "chặn Prometheus, kiểm tra cảnh báo"]),
+            (448, 6, "Sao lưu, huỷ máy, phân tích", ["đẩy dữ liệu lên R2; huỷ instance;", "pandas: bảng và biểu đồ"])]
+    for bx, n, t, ls in row3:
+        s.step_box(bx, 494, 344, 100, n, t, ls, INK2)
     s.arrow([(864, 544), (792, 544)], INK2, sw=1.8)
     s.rect(32, 494, 344, 100, fill=SURFACE, stroke=INK2, dash="5 4", rx=10)
     s.text(48, 524, "Kết quả", size=13.5, weight=650)

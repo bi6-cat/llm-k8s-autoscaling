@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="751" viewBox="0 0 1240 751" role="img" aria-label="Kế hoạch 9 tuần đến hạn nộp khoảng 08/12/2026: xây dựng và vận hành thử ở nhà W1–W4, đánh giá trong một lần thuê liền ở W5, đóng băng dữ liệu 15/11, viết luận văn tới W9" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+<title>Kế hoạch 9 tuần đến hạn nộp khoảng 08/12/2026: xây dựng và vận hành thử ở nhà W1–W4, đánh giá trong một lần thuê liền ở W5, đóng băng dữ liệu 15/11, viết luận văn tới W9</title>
+<defs></defs>
+<rect x="0.5" y="0.5" width="1239" height="750" rx="14" fill="#fcfcfb" stroke="#e4e3de"/>
+<text x="32" y="38" font-size="19" font-weight="700" fill="#0b0b0b" text-anchor="start">Kế hoạch đến hạn nộp (9 tuần)</text>
+<text x="32" y="61" font-size="13" font-weight="400" fill="#52514e" text-anchor="start">Màu thanh = loại việc; dải tuần là thứ Hai đầu tuần; ◆ = mốc kiểm tra với giảng viên hướng dẫn</text>
+<rect x="32" y="86" width="14" height="12" rx="3" fill="#4a3aa7"/>
+<text x="52" y="96" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Chuẩn bị, quyết định</text>
+<rect x="193.6" y="86" width="14" height="12" rx="3" fill="#2a78d6"/>
+<text x="213.6" y="96" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Xây dựng, vận hành thử</text>
+<rect x="365.3" y="86" width="14" height="12" rx="3" fill="#eb6834"/>
+<text x="385.3" y="96" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Phiên thuê GPU</text>
+<rect x="495.2" y="86" width="14" height="12" rx="3" fill="#1baf7a"/>
+<text x="515.2" y="96" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Phân tích, viết</text>
+<rect x="432" y="142" width="80" height="521" rx="0" fill="#f6f5f2"/>
+<text x="472" y="120" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">W1</text>
+<text x="472" y="135" font-size="10.5" font-weight="400" fill="#898781" text-anchor="middle">08/10</text>
+<text x="552" y="120" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">W2</text>
+<text x="552" y="135" font-size="10.5" font-weight="400" fill="#898781" text-anchor="middle">12/10</text>
+<rect x="592" y="142" width="80" height="521" rx="0" fill="#f6f5f2"/>
+<text x="632" y="120" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">W3</text>
+<text x="632" y="135" font-size="10.5" font-weight="400" fill="#898781" text-anchor="middle">19/10</text>
+<text x="712" y="120" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">W4</text>
+<text x="712" y="135" font-size="10.5" font-weight="400" fill="#898781" text-anchor="middle">26/10</text>
+<rect x="752" y="142" width="80" height="521" rx="0" fill="#f6f5f2"/>
+<text x="792" y="120" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">W5</text>
+<text x="792" y="135" font-size="10.5" font-weight="400" fill="#898781" text-anchor="middle">02/11</text>
+<text x="872" y="120" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">W6</text>
+<text x="872" y="135" font-size="10.5" font-weight="400" fill="#898781" text-anchor="middle">09/11</text>
+<rect x="912" y="142" width="80" height="521" rx="0" fill="#f6f5f2"/>
+<text x="952" y="120" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">W7</text>
+<text x="952" y="135" font-size="10.5" font-weight="400" fill="#898781" text-anchor="middle">16/11</text>
+<text x="1032" y="120" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">W8</text>
+<text x="1032" y="135" font-size="10.5" font-weight="400" fill="#898781" text-anchor="middle">23/11</text>
+<rect x="1072" y="142" width="80" height="521" rx="0" fill="#f6f5f2"/>
+<text x="1112" y="120" font-size="11.5" font-weight="600" fill="#52514e" text-anchor="middle">W9</text>
+<text x="1112" y="135" font-size="10.5" font-weight="400" fill="#898781" text-anchor="middle">30/11</text>
+<text x="32" y="164" font-size="12.5" font-weight="700" fill="#0b0b0b" text-anchor="start">Chuẩn bị</text>
+<text x="48" y="191" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Gửi GVHD; thử vLLM trên 5060; simulator</text>
+<rect x="435" y="180" width="74" height="14" rx="4" fill="#4a3aa7"/>
+<text x="48" y="218" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Tìm offer Vast; chốt cloud (18/10)</text>
+<rect x="435" y="207" width="154" height="14" rx="4" fill="#4a3aa7"/>
+<text x="32" y="245" font-size="12.5" font-weight="700" fill="#0b0b0b" text-anchor="start">Xây dựng và vận hành thử (nhà + simulator)</text>
+<text x="48" y="272" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">k3s, Argo CD, giám sát, CI; ghim phiên bản</text>
+<rect x="515" y="261" width="74" height="14" rx="4" fill="#2a78d6"/>
+<text x="48" y="299" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Autoscaling A1, A2; graceful shutdown</text>
+<rect x="515" y="288" width="154" height="14" rx="4" fill="#2a78d6"/>
+<text x="48" y="326" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">SLO, 6 cảnh báo, 3 dashboard, máy tạo tải</text>
+<rect x="595" y="315" width="74" height="14" rx="4" fill="#2a78d6"/>
+<text x="48" y="353" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Rolling update, L2, runbook, runner</text>
+<rect x="675" y="342" width="74" height="14" rx="4" fill="#2a78d6"/>
+<text x="48" y="380" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">VH3, VH4 ở nhà; script VH5</text>
+<rect x="755" y="369" width="74" height="14" rx="4" fill="#2a78d6"/>
+<text x="32" y="407" font-size="12.5" font-weight="700" fill="#0b0b0b" text-anchor="start">Phiên thuê GPU (cuối tuần)</text>
+<text x="48" y="434" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">V0 smoke · 1 GPU</text>
+<rect x="515" y="423" width="74" height="14" rx="4" fill="#eb6834"/>
+<text x="48" y="461" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">V1 phát triển · 1 GPU</text>
+<rect x="675" y="450" width="74" height="14" rx="4" fill="#eb6834"/>
+<text x="48" y="488" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">V2 đánh giá chính · 4 GPU, ~20–22 giờ</text>
+<rect x="755" y="477" width="74" height="14" rx="4" fill="#eb6834"/>
+<text x="48" y="515" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">V3 dự phòng (chỉ khi cần)</text>
+<rect x="835" y="504" width="74" height="14" rx="4" fill="#eb6834"/>
+<text x="32" y="542" font-size="12.5" font-weight="700" fill="#0b0b0b" text-anchor="start">Phân tích và viết</text>
+<text x="48" y="569" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Viết chương 2–4</text>
+<rect x="755" y="558" width="234" height="14" rx="4" fill="#1baf7a"/>
+<text x="48" y="596" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Phân tích; chương 5; bảng nghiệm thu</text>
+<rect x="835" y="585" width="154" height="14" rx="4" fill="#1baf7a"/>
+<text x="48" y="623" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Chương 1, 6; rà bản thảo; slide</text>
+<rect x="995" y="612" width="74" height="14" rx="4" fill="#1baf7a"/>
+<text x="48" y="650" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Sửa theo GVHD; nộp</text>
+<rect x="1075" y="639" width="74" height="14" rx="4" fill="#1baf7a"/>
+<line x1="592" y1="142" x2="592" y2="673" stroke="#52514e" stroke-width="1" stroke-dasharray="3 3"/>
+<polygon points="592,672 599,679 592,686 585,679" fill="#0b0b0b"/>
+<text x="592" y="705" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="middle">M1 · 18/10</text>
+<line x1="752" y1="142" x2="752" y2="673" stroke="#52514e" stroke-width="1" stroke-dasharray="3 3"/>
+<polygon points="752,672 759,679 752,686 745,679" fill="#0b0b0b"/>
+<text x="752" y="705" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="middle">M2 · 01/11</text>
+<line x1="912" y1="142" x2="912" y2="673" stroke="#52514e" stroke-width="1" stroke-dasharray="3 3"/>
+<polygon points="912,672 919,679 912,686 905,679" fill="#0b0b0b"/>
+<text x="912" y="705" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="middle">M3 · đóng băng 15/11</text>
+<line x1="1072" y1="142" x2="1072" y2="673" stroke="#52514e" stroke-width="1" stroke-dasharray="3 3"/>
+<polygon points="1072,672 1079,679 1072,686 1065,679" fill="#0b0b0b"/>
+<text x="1072" y="725" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="middle">M4 · bản thảo 29/11</text>
+<line x1="1152" y1="142" x2="1152" y2="673" stroke="#52514e" stroke-width="1" stroke-dasharray="3 3"/>
+<polygon points="1152,672 1159,679 1152,686 1145,679" fill="#0b0b0b"/>
+<text x="1156" y="705" font-size="11.5" font-weight="600" fill="#0b0b0b" text-anchor="end">M5 · nộp 07–08/12</text>
+</svg>

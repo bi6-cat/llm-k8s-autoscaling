@@ -308,7 +308,8 @@ def fig_tradeoff():
 def fig_architecture():
     W, H = 1280, 730
     s = Svg(W, H, "Kiến trúc tổng thể: client gửi request qua Traefik và Service tới các pod vLLM "
-                  "(mỗi pod 1 GPU); Prometheus thu metric, Alertmanager gửi cảnh báo; KEDA và HPA điều chỉnh số replica")
+                  "(mỗi pod 1 GPU, kiểm API key); Prometheus thu metric, Alertmanager gửi cảnh báo; "
+                  "KEDA và HPA điều chỉnh số replica")
     s.header("Kiến trúc tổng thể nền tảng LLM Serving có Autoscaling",
              "Một Deployment vLLM, mỗi pod dùng 1 GPU; KEDA + HPA điều chỉnh số replica theo metric của chính vLLM")
     x = 32
@@ -323,14 +324,14 @@ def fig_architecture():
 
     # namespace llm-serving
     s.group(252, 138, 780, 318, "namespace: llm-serving", fill=BLUE_T, stroke="#c9dcf3")
-    s.box(272, 269, 140, 64, "Traefik", ["API key", "giới hạn tốc độ"])
+    s.box(272, 269, 140, 64, "Traefik", ["giới hạn tốc độ", "route riêng cho tải"])
     s.box(440, 269, 140, 64, "Service vllm", ["ClusterIP · chia tải"])
-    s.box(440, 172, 140, 56, "PVC model-cache", ["weights · mount RO"], tsize=12.5)
+    s.box(440, 172, 140, 56, "Lưu model", ["NVMe (cloud) · PVC (nhà)"], tsize=12.5, lsize=10.5)
 
     s.rect(612, 168, 400, 252, fill=ORANGE_T, stroke=ORANGE, sw=1.4, dash="6 4", rx=12)
     s.rich(628, 190, [("Deployment vllm", 650, INK), ("  replicas 1…N (N = 4)", 400, INK2)], size=12.5)
-    pods = [("vLLM pod 1", "Ready", "API :8000 · /metrics"),
-            ("vLLM pod 2", "Ready", "API :8000 · /metrics"),
+    pods = [("vLLM pod 1", "Ready", "API key · :8000 · /metrics"),
+            ("vLLM pod 2", "Ready", "API key · :8000 · /metrics"),
             ("vLLM pod N", "Đang khởi động", "chưa nhận traffic tới khi Ready")]
     for k, (name, st, sub) in enumerate(pods):
         py = 204 + k * 70
@@ -351,9 +352,9 @@ def fig_architecture():
     s.group(522, 496, 250, 176, "namespace: monitoring", fill=VIOLET_T, stroke="#d6d1ef")
     s.box(536, 532, 222, 50, "Prometheus", ["TSDB · scrape mỗi 5 s"], tsize=13)
     s.box(536, 606, 222, 50, "Grafana · Alertmanager", ["dashboard · cảnh báo → runbook"], tsize=13)
-    s.group(792, 496, 240, 176, "NVIDIA GPU Operator", fill=GREEN_T, stroke="#c4dfc4")
+    s.group(792, 496, 240, 176, "namespace: gpu", fill=GREEN_T, stroke="#c4dfc4")
     s.box(806, 532, 212, 50, "Device plugin", ["cấp phát nvidia.com/gpu"], tsize=13)
-    s.box(806, 606, 212, 50, "DCGM exporter", ["GPU util · VRAM · SM active"], tsize=13)
+    s.box(806, 606, 212, 50, "Exporter GPU", ["GPU util · VRAM · nhiệt độ"], tsize=13)
 
     # ngoài cụm
     s.box(32, 262, 176, 78, "Client", ["người dùng nội bộ (API)", "đánh giá: máy tạo tải"])
@@ -449,7 +450,7 @@ def fig_loop():
              "Thời gian phản ứng = độ trễ phát hiện + độ trễ khởi động pod (cold start)")
     s.group(32, 86, 1176, 176, "PHA PHÁT HIỆN", "tổng ~10–30 s (ước lượng)", fill=VIOLET_T, stroke="#d6d1ef",
             tx=44)
-    s.group(32, 318, 1176, 190, "PHA THỰC THI · cold start", "~1–5 phút nếu chưa tối ưu (ước lượng)",
+    s.group(32, 318, 1176, 190, "PHA THỰC THI · cold start", "~1–8 phút nếu chưa tối ưu (ước lượng)",
             fill=ORANGE_T, stroke="#f3cdb9", tx=44)
     xs = [76, 360, 644, 928]
     bw = 250
@@ -565,7 +566,7 @@ def fig_slo_alert():
     s.rect(608, 134, 250, 252, fill=ORANGE_T, stroke="#f3cdb9", rx=12)
     s.box(624, 150, 218, 92, "page", ["người dùng đang bị ảnh hưởng", "→ Telegram của người trực"], tsize=13,
           stroke=CRIT)
-    s.box(624, 278, 218, 92, "ticket", ["xử lý trong giờ làm việc", "→ kênh Discord"], tsize=13, stroke=WARN)
+    s.box(624, 278, 218, 92, "ticket", ["xử lý trong giờ làm việc", "→ Telegram, không nhắc lại"], tsize=13, stroke=WARN)
     s.text(733, 264, "gom nhóm · chặn trùng · silence", size=11, fill=INK2, anchor="middle")
     s.arrow([(544, 312), (584, 312), (584, 196), (624, 196)], ORANGE, sw=2)
     s.arrow([(544, 336), (624, 336)], ORANGE, sw=2)
@@ -603,7 +604,7 @@ def scenario(k, t):
         return 0.5 if t <= 20 else None
     if k == 2:
         return (0.5 + 2.5 * smooth((t - 5) / 0.5) - 2.5 * smooth((t - 15) / 0.5)) if t <= 25 else None
-    return (0.5 + 3.0 * smooth(t / 5)) if t <= 25 else None
+    return (0.5 + 2.5 * smooth(t / 5)) if t <= 25 else None
 
 
 def fig_scenarios():
@@ -616,7 +617,7 @@ def fig_scenarios():
         (1, "KB1 · Thấp, ổn định", "20 phút", [(10, 0.5, "như ban đêm: 1 replica là đủ")]),
         (2, "KB2 · Tăng đột ngột rồi giảm", "25 phút",
          [(10, 3.0, "0,5C → 3C trong 30 s"), (22.5, 0.5, "về 0,5C: scale-down")]),
-        (3, "KB3 · Cao, kéo dài", "25 phút", [(15, 3.5, "giữ 3,5C: gần năng lực tối đa")]),
+        (3, "KB3 · Cao, kéo dài", "25 phút", [(15, 3.0, "giữ 3C = 0,75 × N × C")]),
     ]
     pw, ph = 300, 168
     ymax = 4.6
@@ -674,18 +675,18 @@ def fig_scenarios():
 # ======================================================================
 def fig_envs():
     W, H = 1240, 578
-    s = Svg(W, H, "Hai tầng môi trường: laptop RTX 4060 để xây dựng và vận hành thử, VM GPU thuê theo giờ để đánh giá; "
-                  "cả hai triển khai từ cùng một Git repository")
-    s.header("Hai tầng môi trường: xây dựng và vận hành thử trên laptop, đánh giá trên GPU thuê",
+    s = Svg(W, H, "Hai tầng môi trường: máy nhà và simulator để xây dựng và vận hành thử, VM 4 GPU thuê theo giờ "
+                  "để đánh giá; cả hai triển khai từ cùng một Git repository")
+    s.header("Hai tầng môi trường: xây dựng và vận hành thử ở nhà, đánh giá trên GPU thuê",
              "Cùng một bộ manifest trong Git; mỗi môi trường chỉ khác overlay (model, số replica, tài nguyên)")
     gx, gy, gw, gh = 400, 86, 440, 142
     s.rect(gx, gy, gw, gh, fill=WHITE, stroke=INK2, sw=1.4, rx=12)
     s.rich(gx + 16, gy + 26, [("Git repository", 650, INK), ("  nguồn sự thật duy nhất", 400, INK2)], size=13.5)
     rows = [("serving/base/", "Deployment vLLM, Service, probes"),
-            ("serving/overlays/", "laptop (1,5B) · cloud (7B)"),
-            ("autoscaling/", "A2 chính thức; S1, S4, A1"),
+            ("serving/overlays/", "home (1,5B) · cloud (7B)"),
+            ("autoscaling/", "official: A2 · eval: S1, S4, A1"),
             ("observability/", "dashboard, cảnh báo, runbook"),
-            ("infra/", "script thuê VM + Ansible")]
+            ("infra/", "script vastai + Ansible")]
     for i, (p, d) in enumerate(rows):
         y = gy + 50 + i * 18.5
         s.text(gx + 16, y, p, size=11.5, fill=INK, family=MONO)
@@ -694,24 +695,29 @@ def fig_envs():
     # tầng 1
     s.rect(32, 290, 580, 262, fill=GRAY_T, stroke=AXIS, rx=14)
     s.text(50, 318, "Tầng 1 · Xây dựng & vận hành thử", size=14.5, weight=700)
-    s.text(50, 338, "Laptop RTX 4060 (8 GB VRAM) · chi phí ≈ 0", size=12, fill=INK2)
-    lap = [("Laptop 1", "k3s server + agent", None), ("Laptop 2", "k3s agent", None),
-           ("Laptop 3", "tuỳ chọn", "5 4")]
-    for i, (n, sub, dash) in enumerate(lap):
+    s.text(50, 338, "Máy nhà + simulator · chi phí ≈ 0 · không dùng số liệu hiệu năng", size=12, fill=INK2)
+    nodes = [("PC", "k3s server", "RTX 5060 · 8 GB", None), ("Laptop", "k3s agent (nếu có)", "RTX 4050 · 6 GB", "5 4"),
+             ("Máy không GPU", "kind + simulator", None, None)]
+    for i, (n, sub, chip, dash) in enumerate(nodes):
         bx = 52 + i * 188
         s.rect(bx, 354, 168, 112, fill=WHITE, stroke=AXIS if not dash else INK2, dash=dash, rx=10)
         s.text(bx + 14, 378, n, size=13.5, weight=650)
         s.text(bx + 14, 396, sub, size=11.5, fill=INK2)
-        s.gpu_chip(bx + 14, 418, 140, 32, "RTX 4060 · 8 GB")
-    for i, ln in enumerate(["Ubuntu 22.04/24.04 · k3s (Ansible) · GPU Operator · vLLM + Qwen2.5-1.5B",
-                            "Dùng cho: phát triển, kiểm thử, kịch bản vận hành (drain node, cảnh báo…)",
-                            "Demo khi bảo vệ; llm-d-inference-sim để thử khi không có GPU"]):
+        if chip:
+            s.gpu_chip(bx + 14, 418, 140, 32, chip)
+        else:
+            s.rect(bx + 14, 418, 140, 32, fill=BLUE_T, stroke="#c9dcf3", sw=1.2, rx=5)
+            s.text(bx + 84, 438.5, "llm-d-inference-sim", size=11, weight=600, fill=INK, anchor="middle")
+    for i, ln in enumerate(["Ubuntu server · k3s (Ansible) · device plugin · vLLM + Qwen2.5-1.5B",
+                            "Dùng cho: phát triển, kiểm thử chức năng, kịch bản vận hành",
+                            "Simulator: scale 1 → 3, A4, drain node; truy cập cluster nhà qua Tailscale"]):
         s.text(52, 496 + i * 22, ln, size=12, fill=INK2)
 
     # tầng 2
     s.rect(628, 290, 580, 262, fill=GRAY_T, stroke=AXIS, rx=14)
     s.text(646, 318, "Tầng 2 · Đánh giá trên GPU thật", size=14.5, weight=700)
-    s.text(646, 338, "Vast.ai chế độ VM · thuê trọn máy · một đợt liên tục ~37 giờ", size=12, fill=INK2)
+    s.text(646, 338, "Vast.ai chế độ VM · thuê trọn máy · một lần thuê liền cuối tuần (~20–22 giờ)",
+           size=12, fill=INK2)
     s.rect(648, 354, 540, 112, fill=WHITE, stroke=AXIS, rx=10)
     s.text(662, 378, "VM 4 GPU · k3s single-node", size=13.5, weight=650)
     s.text(662, 396, "4× RTX 4090 24 GB · CPU manager static", size=11.5, fill=INK2)
@@ -721,86 +727,86 @@ def fig_envs():
           align="start", tsize=12.5, fill=BLUE_T, stroke="#c9dcf3")
     s.arrow([(1000, 434), (984, 434)], BLUE, sw=2, r=0)
     for i, ln in enumerate(["Qwen2.5-7B-Instruct · ghim digest của vLLM và image",
-                            "Dùng cho: đo năng lực, ma trận 28 lượt, cold start, kịch bản vận hành",
+                            "Dùng cho: đo năng lực, ma trận 17 lượt, cold start, kịch bản vận hành",
                             "Dữ liệu đẩy lên R2 sau mỗi lượt; huỷ instance ngay khi xong"]):
         s.text(648, 496 + i * 22, ln, size=12, fill=INK2)
 
     s.arrow([(520, 228), (520, 258), (322, 258), (322, 290)], INK2, sw=1.6)
-    s.label(421, 252, "Argo CD sync · overlays/laptop", fill=INK)
+    s.label(421, 252, "Argo CD sync · overlays/home", fill=INK)
     s.arrow([(720, 228), (720, 258), (918, 258), (918, 290)], INK2, sw=1.6)
     s.label(868, 252, "thuê VM (vastai) → Ansible → Argo CD · overlays/cloud", fill=INK)
     s.save("06-moi-truong-trien-khai.svg")
 
 
 # ======================================================================
-# Hình 9 — Kế hoạch 16 tuần
+# Hình 9 — Kế hoạch đến hạn nộp
 # ======================================================================
+PLAN_COLORS = {"build": BLUE, "rent": ORANGE, "write": AQUA, "gate": VIOLET}
+
+
 def fig_gantt():
     phases = [
-        ("Giai đoạn 1 · Chuẩn bị", [
-            ("Chốt thiết kế, yêu cầu F/N, phiên bản", "Cả nhóm", 1, 2),
-            ("Chọn nhà cung cấp GPU, dự toán chi phí", "Quang", 1, 2)]),
-        ("Giai đoạn 2 · Xây dựng và vận hành thử (laptop)", [
-            ("GPU + vLLM trên laptop", "Trình", 2, 4),
-            ("Cluster k3s (Ansible), Argo CD, CI", "Quang", 2, 4),
-            ("Prometheus, Grafana, dashboard", "Quang", 3, 5),
-            ("Autoscaling A1, A2 (KEDA) + kiểm thử", "Trình", 5, 6),
-            ("SLO, cảnh báo, Alertmanager, runbook", "Quang", 5, 7),
-            ("Cold start: đo 8 pha, rút ngắn", "Trình", 6, 7),
-            ("Máy tạo tải, runner đánh giá", "Quang", 6, 7),
-            ("Rolling update khi hết GPU; bảo mật tối thiểu", "Trình", 7, 8),
-            ("Hạ tầng cloud: thuê VM, burn-in, dựng tự động", "Quang", 7, 8),
-            ("Kịch bản vận hành trên laptop; chạy thử 1 GPU", "Cả nhóm", 7, 8)]),
-        ("Giai đoạn 3 · Đánh giá trên GPU thuê", [
-            ("Đợt thuê chính ~37 giờ liên tục", "Cả nhóm", 9, 9),
-            ("Đợt dự phòng (nếu cần)", "Cả nhóm", 11, 11),
-            ("Biểu đồ cold start, rolling update", "Trình", 10, 11),
-            ("Xử lý số liệu, bảng nghiệm thu", "Quang", 10, 12)]),
-        ("Giai đoạn 4 · Viết và hoàn thiện", [
-            ("Viết luận văn", "Cả nhóm", 10, 15),
-            ("Slide, demo, tuần dự phòng", "Cả nhóm", 15, 16)]),
+        ("Chuẩn bị", [
+            ("Gửi GVHD; thử vLLM trên 5060; simulator", "gate", 1, 1),
+            ("Tìm offer Vast; chốt cloud (18/10)", "gate", 1, 2)]),
+        ("Xây dựng và vận hành thử (nhà + simulator)", [
+            ("k3s, Argo CD, giám sát, CI; ghim phiên bản", "build", 2, 2),
+            ("Autoscaling A1, A2; graceful shutdown", "build", 2, 3),
+            ("SLO, 6 cảnh báo, 3 dashboard, máy tạo tải", "build", 3, 3),
+            ("Rolling update, L2, runbook, runner", "build", 4, 4),
+            ("VH3, VH4 ở nhà; script VH5", "build", 5, 5)]),
+        ("Phiên thuê GPU (cuối tuần)", [
+            ("V0 smoke · 1 GPU", "rent", 2, 2),
+            ("V1 phát triển · 1 GPU", "rent", 4, 4),
+            ("V2 đánh giá chính · 4 GPU, ~20–22 giờ", "rent", 5, 5),
+            ("V3 dự phòng (chỉ khi cần)", "rent", 6, 6)]),
+        ("Phân tích và viết", [
+            ("Viết chương 2–4", "write", 5, 7),
+            ("Phân tích; chương 5; bảng nghiệm thu", "write", 6, 7),
+            ("Chương 1, 6; rà bản thảo; slide", "write", 8, 8),
+            ("Sửa theo GVHD; nộp", "write", 9, 9)]),
     ]
+    weeks = ["08/10", "12/10", "19/10", "26/10", "02/11", "09/11", "16/11", "23/11", "30/11"]
     rows = sum(1 + len(t) for _, t in phases)
-    rh, top = 27, 134
+    rh, top = 27, 146
     H = top + rows * rh + 92
     W = 1240
-    s = Svg(W, H, "Kế hoạch 16 tuần chia 4 giai đoạn với 5 mốc: nền tảng trên laptop (T4), vận hành thử đạt (T8), "
-                  "xong đánh giá (T12), bản thảo (T14), bảo vệ (T16)")
-    s.header("Kế hoạch thực hiện 16 tuần", "Màu thanh = người phụ trách chính; ◆ = mốc kiểm tra với giảng viên hướng dẫn")
+    s = Svg(W, H, "Kế hoạch 9 tuần đến hạn nộp khoảng 08/12/2026: xây dựng và vận hành thử ở nhà W1–W4, "
+                  "đánh giá trong một lần thuê liền ở W5, đóng băng dữ liệu 15/11, viết luận văn tới W9")
+    s.header("Kế hoạch đến hạn nộp (9 tuần)",
+             "Màu thanh = loại việc; dải tuần là thứ Hai đầu tuần; ◆ = mốc kiểm tra với giảng viên hướng dẫn")
     x = 32
-    for o, desc in (("Trình", "Trình · Platform"), ("Quang", "Quang · DevOps/SRE/Cloud"), ("Cả nhóm", "Cả nhóm")):
-        x = s.legend_swatch(x, 92, desc, OWNER[o])
-    gx0, ww = 392, 50
+    for k, desc in (("gate", "Chuẩn bị, quyết định"), ("build", "Xây dựng, vận hành thử"),
+                    ("rent", "Phiên thuê GPU"), ("write", "Phân tích, viết")):
+        x = s.legend_swatch(x, 92, desc, PLAN_COLORS[k])
+    gx0, ww = 432, 80
     gy1 = top + rows * rh
-    for wk in range(16):
+    for wk in range(9):
         cx = gx0 + wk * ww
         if wk % 2 == 0:
             s.rect(cx, top - 4, ww, rows * rh + 8, fill="#f6f5f2", stroke=None, rx=0)
-        s.text(cx + ww / 2, top - 12, f"T{wk + 1}", size=11.5, fill=INK2, anchor="middle", weight=600)
+        s.text(cx + ww / 2, top - 26, f"W{wk + 1}", size=11.5, fill=INK2, anchor="middle", weight=600)
+        s.text(cx + ww / 2, top - 11, weeks[wk], size=10.5, fill=MUTED, anchor="middle")
     y = top
     for pname, tasks in phases:
         s.text(32, y + 18, pname, size=12.5, weight=700)
         y += rh
-        for name, owner, a, b in tasks:
+        for name, kind, a, b in tasks:
             s.text(48, y + 18, name, size=12, fill=INK)
             bx = gx0 + (a - 1) * ww + 3
             bw = (b - a + 1) * ww - 6
-            s.rect(bx, y + 7, bw, 14, fill=OWNER[owner], stroke=None, rx=4)
-            if b == 16:
-                s.text(bx - 6, y + 18, owner, size=10.5, fill=INK2, anchor="end")
-            else:
-                s.text(bx + bw + 6, y + 18, owner, size=10.5, fill=INK2)
+            s.rect(bx, y + 7, bw, 14, fill=PLAN_COLORS[kind], stroke=None, rx=4)
             y += rh
-    miles = [(4, "M1 · Nền tảng chạy trên laptop", 0), (8, "M2 · Vận hành thử đạt", 0),
-             (12, "M3 · Xong đánh giá", 0), (14, "M4 · Bản thảo", 1), (16, "M5 · Bảo vệ", 0)]
+    miles = [(2, "M1 · 18/10", 0), (4, "M2 · 01/11", 0), (6, "M3 · đóng băng 15/11", 0),
+             (8, "M4 · bản thảo 29/11", 1), (9, "M5 · nộp 07–08/12", 0)]
     for wk, lab, lvl in miles:
         mx = gx0 + wk * ww
         s.line(mx, top - 4, mx, gy1 + 14, stroke=INK2, sw=1, dash="3 3")
         my = gy1 + 20
         s.polygon([(mx, my - 7), (mx + 7, my), (mx, my + 7), (mx - 7, my)], fill=INK)
-        anchor = "end" if wk == 16 else "middle"
-        s.text(mx + (4 if wk == 16 else 0), my + 26 + lvl * 20, lab, size=11.5, weight=600, anchor=anchor)
-    s.save("09-ke-hoach-16-tuan.svg")
+        anchor = "end" if wk == 9 else "middle"
+        s.text(mx + (4 if wk == 9 else 0), my + 26 + lvl * 20, lab, size=11.5, weight=600, anchor=anchor)
+    s.save("09-ke-hoach.svg")
 
 
 if __name__ == "__main__":
