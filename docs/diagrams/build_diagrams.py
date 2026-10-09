@@ -811,7 +811,9 @@ def fig_gantt():
 
 if __name__ == "__main__":
     import chuyen_sau
+    import huong_dan
     chuyen_sau.build_all()
+    huong_dan.build_all()
     fig_tradeoff()
     fig_architecture()
     fig_request()

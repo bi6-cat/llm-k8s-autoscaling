@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="640" viewBox="0 0 1240 640" role="img" aria-label="Trạng thái cuối W2: cluster nhà gồm PC (k3s server) và laptop (k3s agent, máy làm việc, cluster simulator); Argo CD kéo cấu hình từ GitHub; VM Vast cho phiên V0; Mac chỉ để xem giao diện" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+<title>Trạng thái cuối W2: cluster nhà gồm PC (k3s server) và laptop (k3s agent, máy làm việc, cluster simulator); Argo CD kéo cấu hình từ GitHub; VM Vast cho phiên V0; Mac chỉ để xem giao diện</title>
+<defs><marker id="a2a78d6" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path d="M0,1 L10,5 L0,9 z" fill="#2a78d6"/></marker><marker id="a52514e" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path d="M0,1 L10,5 L0,9 z" fill="#52514e"/></marker><marker id="aeb6834" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path d="M0,1 L10,5 L0,9 z" fill="#eb6834"/></marker><marker id="a898781" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path d="M0,1 L10,5 L0,9 z" fill="#898781"/></marker></defs>
+<rect x="0.5" y="0.5" width="1239" height="639" rx="14" fill="#fcfcfb" stroke="#e4e3de"/>
+<text x="32" y="38" font-size="19" font-weight="700" fill="#0b0b0b" text-anchor="start">W2 · Trạng thái hệ thống ở mốc M1 (18/10)</text>
+<text x="32" y="61" font-size="13" font-weight="400" fill="#52514e" text-anchor="start">Mọi lệnh gõ trên laptop Ubuntu; cluster nhà tự kéo cấu hình từ Git; VM thuê chỉ sống vài giờ</text>
+<rect x="420" y="84" width="400" height="100" rx="12" fill="#ffffff" stroke="#52514e" stroke-width="1.4"/>
+<text x="436" y="110" font-size="13.5" text-anchor="start"><tspan font-weight="650" fill="#0b0b0b">GitHub</tspan><tspan font-weight="400" fill="#52514e">  bi6-cat/llm-k8s-autoscaling · main</tspan></text>
+<text x="436" y="136" font-size="11.5" font-weight="400" fill="#0b0b0b" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">platform/  serving/  autoscaling/  infra/</text>
+<text x="436" y="158" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">CI: yamllint · kubeconform · ansible --syntax-check</text>
+<rect x="32" y="236" width="728" height="364" rx="12" fill="#f4f3ef" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="46" y="257" font-size="12.5" text-anchor="start"><tspan font-weight="650" fill="#0b0b0b">Cluster nhà</tspan><tspan font-weight="400" fill="#52514e">  k3s v1.36.5 · cùng LAN</tspan></text>
+<rect x="50" y="272" width="318" height="290" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="64" y="296" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">PC · k3s server</text>
+<text x="64" y="314" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">luôn bật · RAM 16 GB</text>
+<circle cx="70" cy="338" r="2.6" fill="#898781"/>
+<text x="80" y="342" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Argo CD core · App-of-Apps</text>
+<circle cx="70" cy="359" r="2.6" fill="#898781"/>
+<text x="80" y="363" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">kube-prometheus-stack</text>
+<circle cx="70" cy="380" r="2.6" fill="#898781"/>
+<text x="80" y="384" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">KEDA (chưa có ScaledObject)</text>
+<circle cx="70" cy="401" r="2.6" fill="#898781"/>
+<text x="80" y="405" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Traefik (có sẵn trong k3s)</text>
+<circle cx="70" cy="422" r="2.6" fill="#898781"/>
+<text x="80" y="426" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">device plugin + GPU exporter</text>
+<circle cx="70" cy="443" r="2.6" fill="#898781"/>
+<text x="80" y="447" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">vLLM 1,5B · 1 replica</text>
+<line x1="123.2" y1="478" x2="123.2" y2="482" stroke="#008300" stroke-width="1.5"/>
+<line x1="123.2" y1="516" x2="123.2" y2="520" stroke="#008300" stroke-width="1.5"/>
+<line x1="180.4" y1="478" x2="180.4" y2="482" stroke="#008300" stroke-width="1.5"/>
+<line x1="180.4" y1="516" x2="180.4" y2="520" stroke="#008300" stroke-width="1.5"/>
+<line x1="237.6" y1="478" x2="237.6" y2="482" stroke="#008300" stroke-width="1.5"/>
+<line x1="237.6" y1="516" x2="237.6" y2="520" stroke="#008300" stroke-width="1.5"/>
+<line x1="294.8" y1="478" x2="294.8" y2="482" stroke="#008300" stroke-width="1.5"/>
+<line x1="294.8" y1="516" x2="294.8" y2="520" stroke="#008300" stroke-width="1.5"/>
+<rect x="66" y="482" width="286" height="34" rx="5" fill="#edf6ed" stroke="#008300" stroke-width="1.4"/>
+<text x="209" y="503.5" font-size="11.5" font-weight="650" fill="#0b0b0b" text-anchor="middle">RTX 5060 · 8 GB</text>
+<text x="66" y="546" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">Argo CD đồng bộ 6 app từ Git</text>
+<rect x="424" y="272" width="318" height="290" rx="10" fill="#ffffff" stroke="#2a78d6" stroke-width="1.5"/>
+<text x="438" y="296" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">Laptop · k3s agent + máy làm việc</text>
+<text x="438" y="314" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">Ubuntu · gõ mọi lệnh ở đây</text>
+<circle cx="444" cy="338" r="2.6" fill="#898781"/>
+<text x="454" y="342" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">Ansible · kubectl · helm · vastai</text>
+<circle cx="444" cy="359" r="2.6" fill="#898781"/>
+<text x="454" y="363" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">device plugin + GPU exporter</text>
+<circle cx="444" cy="380" r="2.6" fill="#898781"/>
+<text x="454" y="384" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">vLLM khi scale lên 2 replica</text>
+<rect x="438" y="400" width="290" height="72" rx="8" fill="#eef4fc" stroke="#c9dcf3" stroke-width="1.2" stroke-dasharray="5 4"/>
+<text x="450" y="422" font-size="12.5" font-weight="650" fill="#0b0b0b" text-anchor="start">kind llm-sim (tách biệt)</text>
+<text x="450" y="442" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">Prometheus · KEDA · simulator</text>
+<text x="450" y="460" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">A2 scale 1 → 3 · bài kiểm thử T1–T5</text>
+<line x1="497.2" y1="478" x2="497.2" y2="482" stroke="#008300" stroke-width="1.5"/>
+<line x1="497.2" y1="516" x2="497.2" y2="520" stroke="#008300" stroke-width="1.5"/>
+<line x1="554.4" y1="478" x2="554.4" y2="482" stroke="#008300" stroke-width="1.5"/>
+<line x1="554.4" y1="516" x2="554.4" y2="520" stroke="#008300" stroke-width="1.5"/>
+<line x1="611.6" y1="478" x2="611.6" y2="482" stroke="#008300" stroke-width="1.5"/>
+<line x1="611.6" y1="516" x2="611.6" y2="520" stroke="#008300" stroke-width="1.5"/>
+<line x1="668.8" y1="478" x2="668.8" y2="482" stroke="#008300" stroke-width="1.5"/>
+<line x1="668.8" y1="516" x2="668.8" y2="520" stroke="#008300" stroke-width="1.5"/>
+<rect x="440" y="482" width="286" height="34" rx="5" fill="#edf6ed" stroke="#008300" stroke-width="1.4"/>
+<text x="583" y="503.5" font-size="11.5" font-weight="650" fill="#0b0b0b" text-anchor="middle">RTX 4050 · 6 GB</text>
+<text x="440" y="546" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">Ansible: local trên laptop, SSH tới PC</text>
+<path d="M422,392 L371,392" fill="none" stroke="#2a78d6" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a2a78d6)"/>
+<text x="396" y="384" font-size="11" font-weight="650" fill="#2a78d6" text-anchor="middle">SSH</text>
+<path d="M480,184 L480,204 Q480,212 472,212 L358,212 Q350,212 350,220 L350,269" fill="none" stroke="#52514e" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
+<rect x="280.4" y="195" width="159.1" height="18" rx="4" fill="#fcfcfb"/>
+<text x="360" y="207" font-size="11" font-weight="400" fill="#0b0b0b" text-anchor="middle">Argo CD kéo cấu hình (pull)</text>
+<path d="M674,270 L674,230 Q674,222 682,222 L752,222 Q760,222 760,214 L760,187" fill="none" stroke="#2a78d6" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a2a78d6)"/>
+<rect x="767" y="202" width="80.8" height="18" rx="4" fill="#fcfcfb"/>
+<text x="772" y="214" font-size="11" font-weight="400" fill="#2a78d6" text-anchor="start">git push · PR</text>
+<rect x="784" y="236" width="424" height="214" rx="12" fill="#fdf3ee" stroke="#eb6834" stroke-width="1.2"/>
+<text x="798" y="257" font-size="12.5" text-anchor="start"><tspan font-weight="650" fill="#0b0b0b">V0 · VM Vast</tspan><tspan font-weight="400" fill="#52514e">  17–18/10 · 3–4 giờ · ~1–2 USD</tspan></text>
+<circle cx="808" cy="286" r="2.6" fill="#898781"/>
+<text x="818" y="290" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">k3s single-node (cùng Ansible)</text>
+<circle cx="808" cy="307" r="2.6" fill="#898781"/>
+<text x="818" y="311" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">device plugin (Helm) · vLLM 7B</text>
+<circle cx="808" cy="328" r="2.6" fill="#898781"/>
+<text x="818" y="332" font-size="12" font-weight="400" fill="#0b0b0b" text-anchor="start">đo: bootstrap, fio, TPOT batch 1/16/32</text>
+<line x1="880.8" y1="360" x2="880.8" y2="364" stroke="#008300" stroke-width="1.5"/>
+<line x1="880.8" y1="398" x2="880.8" y2="402" stroke="#008300" stroke-width="1.5"/>
+<line x1="957.6" y1="360" x2="957.6" y2="364" stroke="#008300" stroke-width="1.5"/>
+<line x1="957.6" y1="398" x2="957.6" y2="402" stroke="#008300" stroke-width="1.5"/>
+<line x1="1034.4" y1="360" x2="1034.4" y2="364" stroke="#008300" stroke-width="1.5"/>
+<line x1="1034.4" y1="398" x2="1034.4" y2="402" stroke="#008300" stroke-width="1.5"/>
+<line x1="1111.2" y1="360" x2="1111.2" y2="364" stroke="#008300" stroke-width="1.5"/>
+<line x1="1111.2" y1="398" x2="1111.2" y2="402" stroke="#008300" stroke-width="1.5"/>
+<rect x="804" y="364" width="384" height="34" rx="5" fill="#edf6ed" stroke="#008300" stroke-width="1.4"/>
+<text x="996" y="385.5" font-size="11.5" font-weight="650" fill="#0b0b0b" text-anchor="middle">RTX 4090 · 24 GB</text>
+<text x="804" y="430" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">kubectl qua SSH tunnel 127.0.0.1:16443</text>
+<path d="M744,332 L781,332" fill="none" stroke="#eb6834" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#aeb6834)"/>
+<text x="763" y="324" font-size="11" font-weight="650" fill="#eb6834" text-anchor="middle">SSH</text>
+<rect x="784" y="470" width="424" height="92" rx="10" fill="#ffffff" stroke="#898781" stroke-width="1.2" stroke-dasharray="5 4"/>
+<text x="800" y="496" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">Mac (phụ)</text>
+<text x="800" y="518" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">SSH vào laptop; mở Grafana, Argo CD, Prometheus</text>
+<text x="800" y="538" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">trong trình duyệt qua ssh -L (port-forward)</text>
+<path d="M782,516 L745,516" fill="none" stroke="#898781" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="5 4" marker-end="url(#a898781)"/>
+<text x="32" y="624" font-size="11.5" font-weight="400" fill="#898781" text-anchor="start">Không vẽ: Tailscale (truy cập từ xa vào PC và laptop), Secret tạo tay (grafana-admin, vllm-api-key) cho tới khi có Sealed Secrets ở W4.</text>
+</svg>
