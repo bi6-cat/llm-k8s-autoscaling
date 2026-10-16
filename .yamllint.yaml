@@ -1,0 +1,23 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# .yamllint.yaml
+# Khái niệm: Cấu hình yamllint, bộ kiểm tra cú pháp và phong cách YAML (thụt lề, key trùng…).
+# Mục đích:  CI và `make lint` chạy `yamllint -s .` (-s = cảnh báo cũng tính là lỗi) để bắt lỗi YAML
+#            trước khi Argo CD áp lên cluster. Một lỗi thụt lề có thể làm cả Application hỏng.
+# Tham khảo: docs/huong-dan/w2.md §2.2, CONTRIBUTING.md §3
+# ──────────────────────────────────────────────────────────────────────────────
+extends: default                       # bắt đầu từ bộ luật mặc định của yamllint, chỉ nới vài luật dưới đây
+ignore: |
+  docs/
+  infra/ansible/roles/*/templates/
+# docs/: chỉ có Markdown. templates/: file Jinja2 (.j2) chứa {{ }}, {% %} nên không phải YAML hợp lệ
+# cho tới khi Ansible điền giá trị.
+rules:
+  line-length: disable                 # manifest có URL và PromQL dài, cắt dòng sẽ khó đọc hơn
+  document-start: disable              # không bắt buộc dòng `---` ở đầu file
+  comments: {min-spaces-from-content: 1}   # comment cuối dòng chỉ cần cách code 1 dấu cách (mặc định 2)
+  truthy: {allowed-values: ["true", "false", "on"], check-keys: false}
+  # truthy: YAML coi yes/no/on/off là boolean, dễ gây nhầm. Chỉ cho true/false; "on" được phép vì
+  # GitHub Actions bắt buộc có key `on:`. check-keys: false để không báo lỗi chính key `on` đó.
+  indentation: {spaces: 2, indent-sequences: whatever}
+  # Thụt 2 dấu cách. indent-sequences: whatever = danh sách (`- x`) thụt hay không thụt so với key cha
+  # đều được, vì Helm values và manifest Kubernetes dùng cả hai kiểu.
