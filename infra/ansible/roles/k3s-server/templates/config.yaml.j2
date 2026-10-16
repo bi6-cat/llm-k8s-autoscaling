@@ -1,0 +1,49 @@
+{# Jinja2 template: Ansible thay {{ biến }} rồi ghi ra /etc/rancher/k3s/config.yaml.
+   Mục đích: mọi cờ của k3s (k3s-server) nằm trong Git thay vì trên dòng lệnh cài đặt.
+   Cách đọc: {{ x }} = chèn giá trị biến x; {% if %}/{% for %} = điều kiện, vòng lặp.
+   Giá trị biến lấy từ infra/ansible/inventory/group_vars/{all,home,cloud}.yaml.
+   Comment bắt đầu bằng # (YAML) vẫn nằm trong file trên máy, để ai mở file đó cũng hiểu.
+   Tham khảo: docs/huong-dan/w2.md §3.3–§3.4 #}
+# Quản lý bởi Ansible (role k3s-server). Sửa trong Git, không sửa tay trên máy.
+# k3s đọc file này khi khởi động; mỗi key tương ứng một cờ dòng lệnh `k3s server --<key>`.
+
+# Quyền đọc file kubeconfig k3s tự sinh (/etc/rancher/k3s/k3s.yaml).
+# Mặc định 0600 (chỉ root đọc). 0644 để Ansible lấy file về laptop mà không cần sudo.
+write-kubeconfig-mode: "0644"
+
+# IP mà node "khai báo" với cluster; pod trên node khác dùng IP này để nói chuyện với node.
+# Ghi rõ để k3s không chọn nhầm card mạng (ví dụ card Tailscale hay docker0).
+node-ip: {{ node_ip }}
+
+# tls-san = các tên/IP thêm vào chứng chỉ TLS của API server (SAN = Subject Alternative Name).
+# kubectl kiểm tra địa chỉ mình gọi có nằm trong chứng chỉ không; thiếu thì báo lỗi
+# "x509: certificate is valid for …, not …". Ở nhà thêm tên MagicDNS và IP Tailscale của PC
+# để Trình gọi kubectl từ xa qua Tailscale được (biến k3s_tls_sans ở group_vars/home.yaml).
+tls-san:
+  - {{ node_ip }}
+{% for s in k3s_tls_sans %}
+  - {{ s }}
+{% endfor %}
+{% if gpu_node %}
+
+# Gắn nhãn cho node có GPU. Deployment vLLM chọn node bằng nodeSelector theo nhãn này,
+# nên pod vLLM chỉ được xếp lên máy có GPU (serving/base/deployment.yaml).
+node-label:
+  - nvidia.com/gpu.present=true
+{% endif %}
+
+# Tham số cho kube-controller-manager (thành phần chạy các vòng điều khiển, trong đó có HPA).
+# HPA (Horizontal Pod Autoscaler) mặc định 15 s mới tính lại số pod một lần. Hạ xuống 5 s để
+# autoscaling phản ứng nhanh hơn: tổng trễ ≈ scrape Prometheus 5 s + HPA 5 s (bài T2 yêu cầu ≤ 15 s).
+kube-controller-manager-arg:
+  - horizontal-pod-autoscaler-sync-period=5s
+{% if k3s_kubelet_args %}
+
+# Tham số thêm cho kubelet (agent chạy trên mỗi node, khởi động và theo dõi container).
+# Chỉ VM thuê dùng: cpu-manager-policy=static cho pod "Guaranteed" giữ riêng lõi CPU, tránh
+# nhiễu số đo; reserved-cpus chừa vài lõi cho hệ điều hành (group_vars/cloud.yaml).
+kubelet-arg:
+{% for a in k3s_kubelet_args %}
+  - {{ a }}
+{% endfor %}
+{% endif %}

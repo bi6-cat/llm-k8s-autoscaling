@@ -1,0 +1,25 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# infra/ansible/inventory/home.yaml
+# Khái niệm: Inventory = danh sách máy Ansible quản lý, chia thành nhóm lồng nhau. Tên nhóm
+#            (k3s_server, k3s_agent) là thứ site.yml dùng trong `hosts:`; nhóm `home` cho phép áp biến
+#            chung từ group_vars/home.yaml.
+# Mục đích:  Mô tả cluster nhà: PC là server (control-plane + GPU), laptop là agent (GPU phụ).
+#            ⚠ Sửa IP và user theo máy thật trước khi chạy (các giá trị dưới đây là mẫu).
+# Tham khảo: docs/huong-dan/w2.md §3.2
+# ──────────────────────────────────────────────────────────────────────────────
+all:
+  children:
+    home:
+      children:
+        k3s_server:
+          hosts:
+            pc:                               # tên gọi trong Ansible, không cần trùng hostname thật
+              ansible_host: 192.168.1.10      # <PC_IP>: IP LAN tĩnh của PC (W1 §1)
+        k3s_agent:
+          hosts:
+            laptop:
+              ansible_host: 192.168.1.11      # <LAPTOP_IP>; xoá cả khối `laptop` nếu chỉ chạy 1 node
+              ansible_connection: local       # Ansible đang chạy trên chính laptop: chạy lệnh tại chỗ, không SSH
+              is_laptop: true                 # role common bật chế độ không ngủ khi gập màn hình
+      vars:
+        ansible_user: quang                   # <SSH_USER>: user Ubuntu, có sudo không cần mật khẩu

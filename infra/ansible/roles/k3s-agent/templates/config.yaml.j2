@@ -1,0 +1,20 @@
+{# Jinja2 template: Ansible thay {{ biến }} rồi ghi ra /etc/rancher/k3s/config.yaml trên máy agent.
+   Mục đích: mọi cờ của k3s agent nằm trong Git thay vì trên dòng lệnh cài đặt.
+   Cách đọc: {{ x }} = chèn giá trị biến x; {% if %} = điều kiện. hostvars[<máy>].<biến> = đọc biến của
+   máy KHÁC; groups['k3s_server'][0] = máy đầu tiên trong nhóm k3s_server (PC hoặc VM).
+   Tham khảo: docs/huong-dan/w2.md §3.3–§3.4 #}
+# Quản lý bởi Ansible (role k3s-agent). Sửa trong Git, không sửa tay trên máy.
+# File chứa token join cluster nên chỉ root đọc được (mode 0600).
+
+# Địa chỉ API server của PC mà agent kết nối tới (IP LAN của server, cổng 6443)
+server: https://{{ hostvars[groups['k3s_server'][0]].node_ip }}:6443
+# Token do role k3s-server đọc từ /var/lib/rancher/k3s/server/node-token (cùng lần chạy playbook)
+token: {{ hostvars[groups['k3s_server'][0]].k3s_token }}
+# IP của chính máy agent; ghi rõ để k3s không chọn nhầm card Docker/Tailscale (xem template của server)
+node-ip: {{ node_ip }}
+{% if gpu_node %}
+
+# Nhãn để device plugin và pod vLLM chọn được node này (giống server)
+node-label:
+  - nvidia.com/gpu.present=true
+{% endif %}

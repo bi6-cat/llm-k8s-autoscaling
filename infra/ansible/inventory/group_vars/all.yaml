@@ -1,0 +1,29 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# infra/ansible/inventory/group_vars/all.yaml
+# Khái niệm: group_vars/<nhóm>.yaml = biến tự gắn cho mọi máy thuộc nhóm đó. `all` áp cho MỌI máy; file
+#            của nhóm cụ thể hơn (home.yaml, cloud.yaml) ghi đè giá trị cùng tên ở đây.
+#            Giá trị dạng "{{ … }}" là biểu thức Jinja2, Ansible tính lúc chạy.
+# Mục đích:  Một chỗ duy nhất ghim phiên bản k3s, Argo CD và các giá trị mặc định cho các role.
+# Tham khảo: docs/huong-dan/w2.md §3.2
+# ──────────────────────────────────────────────────────────────────────────────
+# Phiên bản: phải trùng docs/phien-ban.md
+k3s_version: v1.36.5+k3s1
+argocd_version: v3.5.4
+# (Địa chỉ repo Git mà Argo CD đọc nằm ngay trong từng Application ở platform/argocd/, không ở đây.)
+
+# IP mà k3s dùng cho node: IP của card mạng có default route (LAN ở nhà, IP nội bộ trên VM).
+# ansible_default_ipv4 là "fact" Ansible tự thu thập từ máy đích lúc bắt đầu play.
+node_ip: "{{ ansible_default_ipv4.address }}"
+# Mọi node đều có GPU (PC 5060, laptop 4050, VM thuê) → gắn nhãn nvidia.com/gpu.present (k3s config)
+gpu_node: true
+# Chỉ laptop đặt true (trong inventory/home.yaml)
+is_laptop: false
+# Tham số thêm cho kubelet; chỉ cloud dùng (group_vars/cloud.yaml)
+k3s_kubelet_args: []
+# Tên/IP thêm vào chứng chỉ API server; chỉ nhà dùng (group_vars/home.yaml)
+k3s_tls_sans: []
+# Mặc định không cài Argo CD; nhóm home bật
+argocd_enabled: false
+
+# Kubeconfig lấy về máy chạy Ansible (laptop), lưu ở ~/.kube/<kubeconfig_name>.yaml
+kubeconfig_local_dir: "{{ lookup('env', 'HOME') }}/.kube"

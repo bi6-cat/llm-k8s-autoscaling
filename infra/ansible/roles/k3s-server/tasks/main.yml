@@ -1,0 +1,98 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# infra/ansible/roles/k3s-server/tasks/main.yml
+# Khái niệm: k3s = bản Kubernetes gọn nhẹ đóng trong một binary (có sẵn containerd, Traefik, CoreDNS,
+#            local-path). Server = node chạy control-plane (API server, scheduler, controller-manager)
+#            và cũng chạy workload như node thường.
+# Mục đích:  Cài k3s server đúng phiên bản ghim, đọc token cho agent và kéo kubeconfig về laptop.
+# Tham khảo: docs/huong-dan/w2.md §3.3, §3.4
+# ──────────────────────────────────────────────────────────────────────────────
+
+- name: Thư mục cấu hình k3s
+  ansible.builtin.file: {path: /etc/rancher/k3s, state: directory, mode: "0755"}
+
+# Ghi config.yaml TRƯỚC khi cài: script cài k3s đọc file này ngay lần khởi động đầu tiên.
+# `register` lưu kết quả để task "Áp cấu hình mới" biết file có đổi không.
+- name: File cấu hình k3s server
+  ansible.builtin.template:
+    src: config.yaml.j2
+    dest: /etc/rancher/k3s/config.yaml
+    mode: "0600"                   # chỉ root đọc được
+  register: k3s_config
+
+# rc != 0 = chưa cài k3s; stdout chứa phiên bản đang chạy (ví dụ "k3s version v1.36.5+k3s1 …").
+- name: Phiên bản k3s đang cài (nếu có)
+  ansible.builtin.command: k3s --version
+  register: k3s_installed
+  changed_when: false
+  failed_when: false
+
+- name: Tải script cài k3s
+  ansible.builtin.get_url:
+    url: https://get.k3s.io
+    dest: /usr/local/bin/k3s-install.sh
+    mode: "0755"
+
+# Chỉ chạy script khi chưa cài hoặc đang chạy phiên bản khác bản đã ghim (cài mới hoặc nâng cấp).
+# Script đọc phiên bản và vai trò từ biến môi trường INSTALL_K3S_*.
+- name: Cài hoặc nâng k3s server
+  ansible.builtin.command: /usr/local/bin/k3s-install.sh
+  environment:
+    INSTALL_K3S_VERSION: "{{ k3s_version }}"
+    INSTALL_K3S_EXEC: server
+  when: k3s_installed.rc != 0 or k3s_version not in k3s_installed.stdout
+  changed_when: true
+
+# Trường hợp còn lại: k3s đã đúng phiên bản nhưng config.yaml vừa đổi → restart để đọc lại cấu hình.
+# (Nếu vừa cài/nâng cấp ở task trên thì script đã khởi động k3s với cấu hình mới rồi.)
+- name: Áp cấu hình mới nếu file cấu hình đổi
+  ansible.builtin.systemd_service: {name: k3s, state: restarted}
+  when: k3s_config.changed and k3s_installed.rc == 0 and k3s_version in k3s_installed.stdout
+
+# `k3s kubectl` = kubectl đi kèm k3s, tự dùng kubeconfig của server: chạy được ngay trên PC.
+- name: Chờ node Ready
+  ansible.builtin.command: k3s kubectl wait node --all --for=condition=Ready --timeout=300s
+  changed_when: false
+
+# Kiểm tra sớm: thiếu RuntimeClass này thì pod vLLM không thấy GPU (thường do toolkit cài sau k3s).
+- name: RuntimeClass nvidia phải tồn tại (k3s tạo khi thấy nvidia-container-runtime)
+  ansible.builtin.command: k3s kubectl get runtimeclass nvidia
+  changed_when: false
+
+# Token là "mật khẩu" để agent join cluster. slurp đọc file từ máy đích, trả về dạng base64.
+- name: Đọc token để agent join
+  ansible.builtin.slurp: {src: /var/lib/rancher/k3s/server/node-token}
+  register: node_token
+
+# set_fact gắn biến k3s_token vào host server; template của agent đọc qua hostvars[<server>].k3s_token.
+- name: Lưu token cho play của agent
+  ansible.builtin.set_fact:
+    k3s_token: "{{ node_token.content | b64decode | trim }}"
+
+# fetch: chép file TỪ máy đích VỀ máy chạy Ansible (ngược với copy). flat: true = lưu đúng đường dẫn
+# dest, không tạo thư mục con theo tên host.
+- name: Lấy kubeconfig về máy chạy Ansible
+  ansible.builtin.fetch:
+    src: /etc/rancher/k3s/k3s.yaml
+    dest: "{{ kubeconfig_local_dir }}/{{ kubeconfig_name }}.yaml"
+    flat: true
+
+# Kubeconfig k3s sinh ra trỏ tới 127.0.0.1 (chỉ đúng khi đứng trên chính PC). Thay bằng địa chỉ mà
+# laptop gọi tới được. delegate_to: localhost + become: false = sửa file trên laptop, bằng user thường.
+- name: Sửa địa chỉ API server trong kubeconfig
+  ansible.builtin.replace:
+    path: "{{ kubeconfig_local_dir }}/{{ kubeconfig_name }}.yaml"
+    regexp: 'https://127\.0\.0\.1:6443'
+    replace: "{{ kubeconfig_server }}"
+  delegate_to: localhost
+  become: false
+
+# k3s đặt mọi tên là "default". Đổi thành llm-home / llm-cloud để gộp nhiều kubeconfig (KUBECONFIG=a:b)
+# mà không trùng tên, và chọn cluster bằng `kubectl --context llm-home`.
+# Regex: dòng kết thúc bằng "name: default", "cluster: default"… → giữ phần trước (\1), thay "default".
+- name: Đổi tên cluster/user/context "default" thành tên môi trường
+  ansible.builtin.replace:
+    path: "{{ kubeconfig_local_dir }}/{{ kubeconfig_name }}.yaml"
+    regexp: '(name|cluster|user|current-context): default$'
+    replace: '\1: {{ kubeconfig_name }}'
+  delegate_to: localhost
+  become: false

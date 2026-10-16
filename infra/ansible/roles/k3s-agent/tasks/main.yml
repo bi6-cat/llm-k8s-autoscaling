@@ -1,0 +1,51 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# infra/ansible/roles/k3s-agent/tasks/main.yml
+# Khái niệm: Agent = node worker: chỉ chạy pod, không chạy control-plane. Agent join vào server bằng
+#            địa chỉ server + token (ghi trong config.yaml).
+# Mục đích:  Cài k3s agent trên laptop 4050 và gắn nhãn GPU để pod vLLM được xếp lịch tới.
+#            Cấu trúc giống hệt role k3s-server (xem comment chi tiết ở đó); chỉ khác vai trò `agent`,
+#            tên service `k3s-agent` và bước chờ cuối.
+# Tham khảo: docs/huong-dan/w2.md §3.3
+# ──────────────────────────────────────────────────────────────────────────────
+
+- name: Thư mục cấu hình k3s
+  ansible.builtin.file: {path: /etc/rancher/k3s, state: directory, mode: "0755"}
+
+- name: File cấu hình k3s agent (chứa token, chỉ root đọc được)
+  ansible.builtin.template:
+    src: config.yaml.j2
+    dest: /etc/rancher/k3s/config.yaml
+    mode: "0600"
+  register: k3s_config
+
+- name: Phiên bản k3s đang cài (nếu có)
+  ansible.builtin.command: k3s --version
+  register: k3s_installed
+  changed_when: false
+  failed_when: false
+
+- name: Tải script cài k3s
+  ansible.builtin.get_url:
+    url: https://get.k3s.io
+    dest: /usr/local/bin/k3s-install.sh
+    mode: "0755"
+
+# INSTALL_K3S_EXEC: agent → script tạo service k3s-agent thay vì k3s
+- name: Cài hoặc nâng k3s agent
+  ansible.builtin.command: /usr/local/bin/k3s-install.sh
+  environment:
+    INSTALL_K3S_VERSION: "{{ k3s_version }}"
+    INSTALL_K3S_EXEC: agent
+  when: k3s_installed.rc != 0 or k3s_version not in k3s_installed.stdout
+  changed_when: true
+
+- name: Áp cấu hình mới nếu file cấu hình đổi
+  ansible.builtin.systemd_service: {name: k3s-agent, state: restarted}
+  when: k3s_config.changed and k3s_installed.rc == 0 and k3s_version in k3s_installed.stdout
+
+# Agent không có kubectl quản trị, nên hỏi từ server: delegate_to chạy lệnh trên PC, nhưng biến
+# ansible_hostname vẫn là của máy agent (tên node trong Kubernetes = hostname của máy).
+- name: Chờ node này Ready (hỏi từ server)
+  ansible.builtin.command: k3s kubectl wait node {{ ansible_hostname }} --for=condition=Ready --timeout=300s
+  delegate_to: "{{ groups['k3s_server'][0] }}"
+  changed_when: false
