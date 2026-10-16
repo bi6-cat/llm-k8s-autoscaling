@@ -165,7 +165,7 @@ Mỗi khó khăn riêng của GPU có một cách xử lý trong thiết kế:
 - **Kế hoạch:** 4 tuần đầu xây dựng và vận hành thử ở nhà, xen hai phiên thuê GPU nhỏ; tuần thứ 5 là lần thuê liền để đánh giá; dữ liệu đóng băng giữa tháng 11; phần còn lại dành cho viết luận văn ([Kế hoạch §1–§2](chi-tiet/06-ke-hoach-quan-ly.md#1-lịch-và-mốc)).
 - **Rủi ro chính:** thiếu thời gian viết trước hạn nộp; không thuê được đúng loại máy vào đúng cuối tuần; phạm vi rút gọn chưa được duyệt; hội đồng đánh giá đồ án thiên về cài đặt. Mỗi rủi ro có biện pháp phòng ngừa và kế hoạch B ([Kế hoạch §9](chi-tiet/06-ke-hoach-quan-ly.md#9-rủi-ro)).
 - **Sản phẩm bàn giao:** Git repository; bộ vận hành (dashboard, cảnh báo có unit test, runbook); công cụ đánh giá; dữ liệu đánh giá và nhật ký vận hành; hướng dẫn tái lập và vận hành; luận văn kèm bảng nghiệm thu; slide và demo ([Kế hoạch §10–§11](chi-tiet/06-ke-hoach-quan-ly.md#10-sản-phẩm-bàn-giao)).
-- **Đề nghị với GVHD:** xác nhận phạm vi rút gọn, kế hoạch 9 tuần và hình thức demo **trước 16/10/2026**; họp khoảng 2 tuần một lần và rà soát kỹ tại mỗi mốc.
+- **Làm việc với GVHD:** báo cáo khoảng 2 tuần một lần và tại mỗi mốc ([Kế hoạch §7](chi-tiet/06-ke-hoach-quan-ly.md#7-quy-trình-làm-việc-và-nhịp-với-gvhd)).
 
 ---
 
@@ -183,7 +183,7 @@ Mỗi giá trị (yêu cầu, chỉ tiêu, SLO, kịch bản, tham số, cấu h
 | 5 | [Môi trường và đánh giá](chi-tiet/05-moi-truong-danh-gia.md) | Máy nhà và simulator; Vast.ai chế độ VM; burn-in; Makefile; chi phí; dự phòng GCP; các phiên thuê; ĐG1–ĐG3; máy tạo tải; VH1–VH6; chỉ số; bảng nghiệm thu | 6, 8, 17 | 3.6, 4.1, 4.11, 5 |
 | 6 | [Kế hoạch và quản lý](chi-tiet/06-ke-hoach-quan-ly.md) | Lịch 9 tuần, mốc, đường găng, người-giờ, hợp đồng giao diện, cắt giảm, rủi ro, sản phẩm bàn giao, cấu trúc repo, luận văn, slide, demo, hướng mở rộng | 9 | 6 |
 
-Quyết định: [docs/adr/](adr/) ([ADR-001](adr/001-cac-lua-chon-ban-dau.md), [ADR-002](adr/002-chuyen-trong-tam-sang-van-hanh.md), [ADR-004](adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md), [ADR-005](adr/005-sua-thiet-ke-sau-review.md); ADR-003 dành cho kết quả đo năng lực). Review thiết kế: [docs/review/](review/review-2026-10-08.md).
+Quyết định: [docs/adr/](adr/) ([ADR-001](adr/001-cac-lua-chon-ban-dau.md), [ADR-002](adr/002-chuyen-trong-tam-sang-van-hanh.md), [ADR-004](adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md), [ADR-005](adr/005-sua-thiet-ke-sau-review.md); ADR-003 dành cho kết quả đo năng lực).
 
 **Lộ trình đọc gợi ý**
 - *Để hiểu nền tảng:* 1 → 2 → 3 → 4.

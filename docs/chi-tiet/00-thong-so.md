@@ -185,7 +185,7 @@ B\* và KV\* là số request đồng thời trung bình và mức KV-cache trê
 | `replicas` | **Không đặt** (HPA quản lý) |
 | GPU | `nvidia.com/gpu: 1` mỗi pod |
 | CPU, RAM | Cloud: requests = limits, `cpu: 6`, `memory: 24Gi` (QoS Guaranteed). Nhà: request `cpu: 2`, `memory: 4–6Gi`; limit `memory: 8Gi` |
-| `/dev/shm` | `emptyDir: {medium: Memory, sizeLimit: 8Gi}` |
+| `/dev/shm` | `emptyDir: {medium: Memory}`; `sizeLimit` cloud `8Gi`, nhà `1Gi` (tính vào giới hạn RAM của pod) |
 | `startupProbe` | `/health`, chu kỳ 5 s, `failureThreshold: 120` (tối đa 10 phút) |
 | `readinessProbe` | `/health`, chu kỳ 5 s |
 | `livenessProbe` | `/health`, chu kỳ 10 s, `failureThreshold: 6` |
@@ -194,7 +194,7 @@ B\* và KV\* là số request đồng thời trung bình và mức KV-cache trê
 | `strategy` | `RollingUpdate`, `maxSurge: 0`, `maxUnavailable: 1`; khi chỉ có 1 replica thì nâng `minReplicaCount` lên 2 trước khi cập nhật |
 | `progressDeadlineSeconds` | 900 |
 | `imagePullPolicy` | `IfNotPresent` |
-| Lưu model | Cloud: hostPath trên NVMe (`/mnt/nvme/models`), compile cache ở `/mnt/nvme/vllm-cache`. Nhà: PVC `model-cache` (local-path) |
+| Lưu model | Cloud: hostPath `/mnt/nvme/cache` trên NVMe (model ở `hf/`, compile cache ở `vllm/`). Nhà: hostPath `/var/lib/llm-cache` trên từng node (model và compile cache), vì PVC `local-path` chỉ gắn được vào một node |
 
 ### 9.3. KEDA và HPA
 

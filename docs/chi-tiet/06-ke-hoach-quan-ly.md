@@ -6,7 +6,7 @@
 - Kế hoạch **9 tuần** từ 08/10 đến hạn nộp khoảng **08/12/2026**. Mỗi tuần có việc chính, sản phẩm kiểm chứng được và **điểm dừng** khi chậm.
 - W1–W4 dành cho xây dựng và vận hành thử ở nhà và trên simulator, xen hai phiên thuê nhỏ (V0, V1). **Toàn bộ đánh giá trên GPU thuê dồn vào một lần thuê liền 07–08/11** (V2). **Đóng băng dữ liệu 15/11**, muộn nhất 22/11; sau đó chỉ viết.
 - Khối lượng phạm vi rút gọn khoảng **169–251 người-giờ**, vừa quỹ giờ khi mỗi người làm khoảng 12–15 giờ/tuần. Phân công theo tính năng dọc: Quang "chạy được trên GPU", Trình "tự scale và đo được" ([§5.1](#51-phân-công)).
-- Sổ rủi ro gồm **28 rủi ro**; rủi ro lớn nhất là **thiếu thời gian viết**, **không có máy 4 × 4090 vào cuối tuần**, và **GVHD chưa duyệt phạm vi rút gọn**.
+- Sổ rủi ro gồm **28 rủi ro**; rủi ro lớn nhất là **thiếu thời gian viết**, **không có máy 4 × 4090 vào cuối tuần**, và **đồ án bị xem là thiên về cài đặt** (R21).
 - 7 sản phẩm bàn giao kèm tiêu chí nghiệm thu; luận văn 55–65 trang, chương 4 "Triển khai và vận hành" dài nhất; 13 hướng mở rộng.
 
 ---
@@ -27,7 +27,7 @@
 
 | Mốc | Ngày | Tiêu chí hoàn thành (chi tiết ở §3) |
 |---|---|---|
-| **M1** | 18/10 | Nền tảng tối thiểu chạy ở nhà qua Argo CD; V0 đạt; đã chốt cloud; GVHD đã trả lời |
+| **M1** | 18/10 | Nền tảng tối thiểu chạy ở nhà qua Argo CD; V0 đạt; đã chốt cloud |
 | **M2** | 01/11 | Vận hành thử đạt ở nhà và trên simulator; runner chạy 2 lượt không cần can thiệp trên V1 |
 | **M3** | 15/11 (muộn nhất 22/11) | Dữ liệu đánh giá đầy đủ, đã sao lưu và đóng băng; có ADR-003 |
 | **M4** | 29/11 | Bản thảo đủ 6 chương gửi GVHD |
@@ -63,7 +63,7 @@ Việc gắn với máy: các bước cài đặt trên PC (driver, k3s server) 
 - [ ] Simulator chạy trên kind; A2 scale 1 → 3 trên simulator.
 - [ ] Repo có CI chạy xanh.
 - [ ] V0 đạt: k3s có GPU trong VM Vast, vLLM 7B trả lời, đã đo `fio` và TPOT.
-- [ ] Đã chốt cloud (ADR-004 K6); GVHD đã trả lời về phạm vi rút gọn.
+- [ ] Đã chốt cloud (ADR-004 K6).
 
 ### M2 (01/11): vận hành thử đạt
 - [ ] A1, A2 qua bài kiểm thử T1–T7 (trên simulator và GPU nhà).
@@ -108,7 +108,7 @@ Viết chương 2–4 (W5–W7) ─► bản thảo (29/11) ─► bản cuối 
 
 - **Đường găng:** cài GPU nhà → nền tảng ở nhà → vận hành thử → V1 → **V2** → phân tích → chương 5 → bản thảo. Gần như không có độ dư; mỗi tuần có điểm dừng ở §2.
 - **Có thời gian đệm:** dashboard, cảnh báo, runner và autoscaling làm trên simulator song song với phần GPU thật.
-- **Phụ thuộc bên ngoài:** có máy 4 × 4090 chế độ VM vào cuối tuần 07–08/11; GVHD trả lời trước 16/10.
+- **Phụ thuộc bên ngoài:** có máy 4 × 4090 chế độ VM vào cuối tuần 07–08/11.
 
 ---
 
@@ -296,7 +296,7 @@ Thứ tự cắt: Could → Should, theo [Thông số §5](00-thong-so.md#5-mứ
 | R22 | Kỹ thuật | Cảnh báo báo giả nhiều, hoặc không bao giờ kêu | Kênh chat bị "spam"; VH6 không thấy cảnh báo | 2 | 1 | 2 | `promtool test rules`; ngưỡng trùng biên bucket | Chỉnh ngưỡng hoặc cửa sổ; ghi lý do vào ADR |
 | R23 | Kỹ thuật | vLLM không chạy trên RTX 5060 (sm_120) | Arch list không có `sm_120`; lỗi CUDA khi khởi động | 2 | 2 | 4 | Thử ngay W1; thử image NGC hoặc tự build trong ≤ 4 giờ | Laptop 4050; thuê 1 GPU |
 | R24 | Tiến độ | Không đủ thời gian viết luận văn trước 08/12 | Tới 15/11 chưa có bản nháp chương 2–4 | 3 | 3 | **9** | Bắt đầu viết từ W5; dùng bộ tài liệu này làm bản nháp; đóng băng dữ liệu 15/11 | Thu hẹp chương 5; không đo thêm sau 22/11 |
-| R25 | Phạm vi | GVHD không đồng ý phạm vi rút gọn hoặc demo bằng video | Không có trả lời trước 16/10; trả lời yêu cầu thêm | 2 | 3 | **6** | Xin xác nhận bằng văn bản trước 16/10; chuẩn bị phương án live bằng simulator | §8 |
+| R25 | Phạm vi | GVHD không đồng ý phạm vi rút gọn hoặc demo bằng video | GVHD yêu cầu thêm ở một buổi báo cáo | 1 | 3 | 3 | **Đã giảm 15/10:** GVHD không yêu cầu duyệt chi tiết (ADR-004 §7); vẫn báo cáo theo §7; chuẩn bị phương án live bằng simulator | §8 |
 | R26 | Đánh giá | N2b và N7 trượt vì backlog kẹt ở pod cũ | KB2-mini ở nhà cho thấy hồi phục lâu | 2 | 2 | 4 | Đo KB2-mini ở W3; tách N2a/N2b; định nghĩa "page giả" | Báo cáo kèm phân tích; hướng mở rộng E1 |
 | R27 | Hạ tầng | Node chủ ở nhà thiếu RAM (16 GB) | OOM, pod bị evict | 2 | 1 | 2 | Ubuntu server; request vLLM nhỏ; Argo CD core; retention ngắn | Tách giám sát sang laptop; giảm stack |
 | R28 | Hạ tầng | (Chỉ khi dùng GCP) quota bị từ chối, hết L4, hoặc bị trừ tiền thẻ | Yêu cầu quota bị từ chối; quên tắt VM | 2 | 2 | 4 | Xin quota sớm; budget alert; runner `shutdown -h` | Kế hoạch Z |
@@ -314,7 +314,7 @@ Thứ tự cắt: Could → Should, theo [Thông số §5](00-thong-so.md#5-mứ
 - **Kế hoạch B:** GCP g2/L4. **Kế hoạch Z:** chạy ở nhà, chỉ rút kết luận định tính.
 
 **R25. GVHD không đồng ý phạm vi rút gọn**
-- **Phòng ngừa:** gửi email 1 trang trong W1 nêu rõ phạm vi, lịch, cloud, demo; xin trả lời trước 16/10.
+- **Phòng ngừa:** đã gửi email 1 trang trong W1. Ngày 15/10: GVHD không yêu cầu duyệt chi tiết, chỉ cần làm được việc; xác suất hạ xuống 1. Vẫn báo cáo tiến độ đều ở các buổi trong §7.
 - **Kế hoạch B:** các phương án ở §8; ma trận đủ 28 lượt vẫn nằm trong ngân sách.
 
 **R21. Hội đồng cho rằng đồ án thiên về cài đặt**
@@ -367,53 +367,7 @@ Runbook cho các cảnh báo của nền tảng nằm ở `docs/runbooks/` ([V�
 
 ### 10.2. Cấu trúc repository
 
-```text
-llm-k8s-autoscaling/
-├── README.md                      # giới thiệu, sơ đồ, quick start, liên kết tài liệu
-├── Makefile                       # các lệnh ở Môi trường §3.7
-├── infra/
-│   ├── provision/                 # script thuê/burn-in/huỷ VM (CLI vastai)
-│   └── ansible/
-│       ├── inventory/             # máy nhà (tĩnh) và VM thuê (sinh tự động)
-│       └── roles/                 # common, chrony, nvidia, k3s-server, k3s-agent, nvme, firewall, argocd-bootstrap
-├── platform/                      # values Helm theo môi trường, quản lý bởi Argo CD
-│   ├── gpu/values-{home,cloud}.yaml           # device plugin + exporter GPU
-│   ├── kube-prometheus-stack/values.yaml       # gồm cấu hình Alertmanager
-│   ├── keda/values.yaml
-│   ├── sealed-secrets/
-│   └── argocd/{root-app.yaml, apps/}
-├── serving/
-│   ├── base/                      # deployment (không có replicas), service, podmonitor, middleware Traefik, networkpolicy, prefetch job, prepull ds
-│   └── overlays/{home,cloud}/
-├── autoscaling/
-│   ├── official/                  # A2 (Argo CD quản lý)
-│   └── eval/                      # S1, S4, A1, A2, A3, A4 dùng khi đánh giá
-├── observability/
-│   ├── rules/                     # recording rule cho SLI
-│   ├── alerts/                    # quy tắc cảnh báo + tests/ cho promtool
-│   └── dashboards/*.json          # Serving và GPU, Autoscaling, SLO và chi phí
-├── loadgen/                       # gói Python: schedule.py, prompts.py, client.py, cli.py, tests/
-├── experiments/
-│   ├── runner/                    # áp cấu hình, reset, chạy, thu thập, sao lưu, checkpoint
-│   ├── ops/                       # script cho VH2–VH4
-│   ├── matrix.yaml
-│   └── capacity.yaml
-├── analysis/
-│   ├── build_tables.py            # + tests/
-│   ├── notebooks/
-│   └── figures/                   # hình xuất cho luận văn
-├── runs/                          # (gitignore) dữ liệu thô, đồng bộ với R2
-└── docs/
-    ├── mo-ta-chi-tiet-do-an.md    # bản mô tả gửi GVHD
-    ├── chi-tiet/                  # 7 tài liệu thiết kế và kế hoạch
-    ├── adr/                       # nhật ký quyết định
-    ├── review/                    # báo cáo review thiết kế
-    ├── runbooks/                  # một file cho mỗi cảnh báo
-    ├── diagrams/, images/         # mã sinh sơ đồ và ảnh
-    └── nhat-ky/                   # nhật ký tuần, nhật ký vận hành, các phiên thuê
-```
-
-Hợp đồng giao diện giữa các phần nằm ở §6 của tài liệu này. Các lệnh `make` nằm ở [Môi trường §3.7](05-moi-truong-danh-gia.md#37-tự-động-hoá-bằng-makefile).
+Cấu trúc thư mục (cả phần đã có lẫn phần sẽ thêm) và quy tắc đặt file mới nằm ở [CONTRIBUTING §1](../../CONTRIBUTING.md#1-thư-mục). Chỉ giữ một nguồn để cây thư mục không lệch với repo thật. Hợp đồng giao diện giữa các phần nằm ở §6 của tài liệu này. Các lệnh `make` nằm ở [Môi trường §3.7](05-moi-truong-danh-gia.md#37-tự-động-hoá-bằng-makefile).
 
 ### 10.3. Quy ước
 

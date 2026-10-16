@@ -47,7 +47,7 @@
 
 | Namespace | Thành phần | Ghi chú |
 |---|---|---|
-| `llm-serving` | Deployment `vllm`, Service, PodMonitor, ScaledObject; PVC `model-cache` (chỉ ở nhà) | Workload chính |
+| `llm-serving` | Deployment `vllm`, Service, PodMonitor, ScaledObject | Workload chính |
 | `keda` | KEDA operator, metrics API server, admission webhook | Helm chart `kedacore/keda` |
 | `monitoring` | Prometheus Operator, Prometheus, **Alertmanager**, Grafana, kube-state-metrics, node-exporter | Helm chart `kube-prometheus-stack` |
 | `gpu` | Device plugin, exporter GPU | Helm chart của NVIDIA |
@@ -95,77 +95,19 @@ Giá trị cụ thể nằm ở [Thông số §9.2](00-thong-so.md#92-deployment
 
 ### 3.2. Manifest mẫu
 
-Deployment vLLM ở overlay `cloud` (rút gọn). Mọi giá trị lấy theo [Thông số §9](00-thong-so.md#9-tham-số-triển-khai):
+Manifest thật nằm trong repo, mỗi dòng có comment giải thích: [serving/base/deployment.yaml](../../serving/base/deployment.yaml) (phần chung) và các overlay [home](../../serving/overlays/home/patch-vllm.yaml), [cloud](../../serving/overlays/cloud/patch-vllm.yaml), [sim](../../serving/overlays/sim/patch-sim.yaml). Giá trị theo [Thông số §9](00-thong-so.md#9-tham-số-triển-khai). Các điểm then chốt:
 
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: vllm
-  namespace: llm-serving
-spec:
-  # không có trường replicas: HPA quản lý (§18.3)
-  strategy:
-    type: RollingUpdate
-    rollingUpdate: {maxSurge: 0, maxUnavailable: 1}   # không kẹt khi hết GPU trống (Vận hành §5)
-  progressDeadlineSeconds: 900
-  selector:
-    matchLabels: {app: vllm}
-  template:
-    metadata:
-      labels: {app: vllm}
-    spec:
-      terminationGracePeriodSeconds: 180   # > preStop 20 s + shutdown-timeout 150 s
-      nodeSelector:
-        nvidia.com/gpu.present: "true"
-      containers:
-        - name: vllm
-          image: vllm/vllm-openai@sha256:…  # ghim theo digest
-          imagePullPolicy: IfNotPresent
-          args:
-            - --model=/models/Qwen2.5-7B-Instruct
-            - --served-model-name=qwen2.5-7b
-            - --max-model-len=8192
-            - --max-num-seqs=64
-            - --gpu-memory-utilization=0.90
-            - --no-enable-prefix-caching    # chỉ khi đánh giá
-            - --shutdown-timeout=150        # làm nốt request khi nhận SIGTERM (mặc định 0 = huỷ)
-            - --api-key=$(VLLM_API_KEY)
-          env:
-            - name: VLLM_API_KEY
-              valueFrom: {secretKeyRef: {name: vllm-api-key, key: key}}
-            - {name: VLLM_CACHE_ROOT, value: /cache/vllm}
-          ports:
-            - {name: http, containerPort: 8000}
-          resources:
-            limits: {nvidia.com/gpu: 1, cpu: "6", memory: 24Gi}
-            requests: {cpu: "6", memory: 24Gi}
-          volumeMounts:
-            - {name: models, mountPath: /models, readOnly: true}
-            - {name: vllm-cache, mountPath: /cache/vllm}
-            - {name: dshm, mountPath: /dev/shm}
-          startupProbe:                     # cho phép tới 10 phút khởi động
-            httpGet: {path: /health, port: http}
-            periodSeconds: 5
-            failureThreshold: 120
-          readinessProbe:
-            httpGet: {path: /health, port: http}
-            periodSeconds: 5
-          livenessProbe:
-            httpGet: {path: /health, port: http}
-            periodSeconds: 10
-            failureThreshold: 6
-          lifecycle:
-            preStop:                        # chờ Endpoints cập nhật rồi mới SIGTERM
-              exec: {command: ["sleep", "20"]}
-      volumes:
-        - name: models
-          hostPath: {path: /mnt/nvme/models, type: Directory}
-        - name: vllm-cache
-          hostPath: {path: /mnt/nvme/vllm-cache, type: DirectoryOrCreate}
-        - name: dshm
-          emptyDir: {medium: Memory, sizeLimit: 8Gi}
-```
+| Điểm | Giá trị | Vì sao |
+|---|---|---|
+| `replicas` | Không đặt | HPA quản lý; tránh tranh chấp với Argo CD (§18.3) |
+| `strategy` | `maxSurge: 0, maxUnavailable: 1` | Không kẹt khi mọi GPU đã có pod ([Vận hành §5](04-van-hanh.md#5-cập-nhật-phiên-bản-khi-gpu-đã-dùng-hết)) |
+| `runtimeClassName` | `nvidia` | k3s không đặt runtime NVIDIA làm mặc định; thiếu thì container không thấy GPU |
+| `--shutdown-timeout` | `150` | Làm nốt request khi nhận SIGTERM (mặc định 0 = huỷ) ([ADR-005](../adr/005-sua-thiet-ke-sau-review.md) T1) |
+| `terminationGracePeriodSeconds` | `180` | > preStop 20 s + shutdown-timeout 150 s |
+| `preStop` | `sleep: {seconds: 20}` (hành động có sẵn của Kubernetes) | Chờ Endpoints cập nhật trước SIGTERM; không cần image có lệnh `sleep` |
+| API key | Biến môi trường `VLLM_API_KEY` từ Secret | vLLM tự đọc; khoá không hiện trong `ps` hay `kubectl describe` |
+| Cache | Một volume `/cache`: `HF_HOME=/cache/hf`, `VLLM_CACHE_ROOT=/cache/vllm` | Giữ cả model lẫn compile cache giữa các lần khởi động (nền của L2) |
+| `--no-enable-prefix-caching` | Có | Để số đo không bị cache làm đẹp và các cấu hình so sánh công bằng |
 
 ### 3.3. Lưu trữ model: các phương án
 
@@ -177,7 +119,7 @@ spec:
 | Đóng model vào image | Image chứa luôn weights | Một artifact duy nhất | Image khoảng 25 GB, pull rất lâu | Không khuyến nghị |
 | Stream từ object storage | `--load-format runai_streamer` | Không cần ổ cục bộ | Phụ thuộc băng thông object storage | Hướng mở rộng |
 
-**Khuyến nghị:** ở nhà, dùng PVC `model-cache` (local-path, thực chất là ổ cục bộ). Trên VM thuê (một node), dùng L2: một Job `model-prefetch` tải model về `/mnt/nvme/models`, rồi Deployment mount `hostPath` ở chế độ chỉ đọc. Đồ án chỉ đo L0 và L2, vì trên một máy thuê không có ổ mạng tương đương để đo L1 một cách thực tế.
+**Khuyến nghị:** ở nhà, dùng `hostPath` `/var/lib/llm-cache` trên **từng node** (chứa cả model lẫn compile cache). Không dùng PVC `local-path`, vì PVC này chỉ gắn được vào một node: pod vLLM thứ hai chạy trên laptop sẽ bị Pending. Trên VM thuê (một node), dùng L2: `hostPath` `/mnt/nvme/cache` trên ổ NVMe, và một Job `model-prefetch` (W4) tải model vào đó trước khi scale. Đồ án chỉ đo L0 và L2, vì trên một máy thuê không có ổ mạng tương đương để đo L1 một cách thực tế.
 
 ### 3.4. Service và cân bằng tải
 
@@ -211,11 +153,12 @@ serving/
 │   ├── model-prefetch-job.yaml
 │   └── prepull-daemonset.yaml
 └── overlays/
-    ├── home/                # model 1,5B, PVC model-cache, requests nhỏ
-    └── cloud/               # model 7B, hostPath NVMe, QoS Guaranteed
+    ├── home/                # model 1,5B, hostPath /var/lib/llm-cache trên từng node, requests nhỏ
+    ├── cloud/               # model 7B, hostPath NVMe, QoS Guaranteed
+    └── sim/                 # llm-d-inference-sim thay cho vLLM, cùng Deployment và Service
 ```
 
-Hai overlay chỉ khác các giá trị trong [Thông số §9.1–§9.2](00-thong-so.md#91-vllm). Cấu trúc toàn bộ repository nằm ở [Kế hoạch §10.2](06-ke-hoach-quan-ly.md#102-cấu-trúc-repository).
+Overlay `sim` cho phép simulator dùng **đúng** Deployment, Service và ScaledObject như vLLM thật, chỉ khác image và tham số. Các file `middleware.yaml`, `networkpolicy.yaml`, `model-prefetch-job.yaml`, `prepull-daemonset.yaml` được thêm ở W3–W4. Hai overlay `home` và `cloud` chỉ khác các giá trị trong [Thông số §9.1–§9.2](00-thong-so.md#91-vllm). Cấu trúc toàn bộ repository nằm ở [CONTRIBUTING §1](../../CONTRIBUTING.md#1-thư-mục).
 
 ---
 
@@ -739,21 +682,23 @@ Có thể dựng từ dashboard mẫu của vLLM để tiết kiệm thời gian
 ### 18.1. Mô hình App-of-Apps
 
 ```text
-argocd/
-├── root-app.yaml            # Application trỏ vào thư mục apps/
-└── apps/
-    ├── gpu.yaml             # device plugin + exporter GPU, values theo môi trường
-    ├── monitoring.yaml      # kube-prometheus-stack + rules + dashboards
+platform/argocd/
+├── root-app-<env>.yaml          # Application gốc, trỏ vào apps/<env>/ (env = home | cloud)
+└── apps/<env>/                  # mỗi file một Application con
+    ├── gpu-device-plugin.yaml   # chart NVIDIA device plugin
+    ├── gpu-exporter.yaml        # exporter GPU (kustomize)
+    ├── monitoring.yaml          # kube-prometheus-stack
+    ├── monitoring-extras.yaml   # PodMonitor cho Traefik; sau thêm rules, dashboards
     ├── keda.yaml
-    ├── serving.yaml         # Kustomize overlay home|cloud
-    └── autoscaling.yaml     # chỉ trỏ autoscaling/official/ (A2)
+    ├── serving.yaml             # serving/overlays/<env>
+    └── autoscaling.yaml         # (W3) chỉ trỏ autoscaling/official/overlays/<env> (A2)
 ```
 
-Argo CD cài ở bản core (không có dex, notifications, applicationset) để nhẹ trên máy nhà. Cập nhật phiên bản được sync khi có người theo dõi; **không dùng sync window** ([ADR-005](../adr/005-sua-thiet-ke-sau-review.md) T2).
+Argo CD cài ở bản core (không có API server, UI và dex) để nhẹ trên máy nhà; xem giao diện bằng `argocd admin dashboard` khi cần. Cập nhật phiên bản được sync khi có người theo dõi; **không dùng sync window** ([ADR-005](../adr/005-sua-thiet-ke-sau-review.md) T2).
 
 ### 18.2. Cấu hình autoscaling: trong Git, tạm tách khi đánh giá
 
-- **Khi vận hành:** cấu hình chính thức (A2) nằm trong `autoscaling/official/`, là Application riêng `autoscaling` do Argo CD quản lý như mọi thứ khác. Application chỉ trỏ tới thư mục này, không trỏ cả `autoscaling/` ([ADR-005](../adr/005-sua-thiet-ke-sau-review.md) T7).
+- **Khi vận hành:** cấu hình chính thức (A2) nằm trong `autoscaling/official/` (`base/` + `overlays/<env>/`, vì `maxReplicaCount` và `threshold` khác nhau theo môi trường), là Application riêng `autoscaling` do Argo CD quản lý như mọi thứ khác. Application chỉ trỏ tới overlay của môi trường đó, không trỏ cả `autoscaling/` ([ADR-005](../adr/005-sua-thiet-ke-sau-review.md) T7).
 - **Khi đánh giá:** cấu hình phải đổi theo từng lượt (S1, S4, A1, A2). Runner **tắt auto-sync** của Application `autoscaling`, rồi áp từng cấu hình bằng `kubectl apply` từ `autoscaling/eval/`. S1 và S4 dùng `kubectl scale`; Argo CD không đưa về, vì Git không có trường `replicas` [cần kiểm chứng với server-side diff].
 - **Hết đợt đánh giá:** runner **xoá mọi ScaledObject khác A2**, rồi mới bật lại auto-sync. Nếu không, admission webhook của KEDA sẽ chặn A2 và Application ở trạng thái Degraded.
 
