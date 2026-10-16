@@ -1,7 +1,7 @@
 # Quy ước code và thư mục
 
 Áp dụng cho cả hai người và cho AI agent. Khi quy ước ở đây khác với code đang có, sửa code theo quy ước (hoặc sửa quy ước trong cùng PR, kèm lý do).
-Thiết kế gốc của cấu trúc repo: [Kế hoạch §10.2](docs/chi-tiet/06-ke-hoach-quan-ly.md#102-cấu-trúc-repository). File này là **trạng thái thực tế** và được ưu tiên khi hai bên lệch nhau.
+Đây là nguồn duy nhất về cấu trúc thư mục; tài liệu khác chỉ link tới đây.
 
 ## 1. Thư mục
 
@@ -15,7 +15,7 @@ llm-k8s-autoscaling/
 │   └── provision/                # script thuê/huỷ VM; CHỈ nơi này phụ thuộc nhà cung cấp
 ├── platform/                     # thành phần nền (Helm values, kustomize) do Argo CD quản lý
 │   ├── argocd/                   # root-app-<env>.yaml, apps/<env>/<thành phần>.yaml
-│   └── <thành phần>/             # gpu/, keda/, kube-prometheus-stack/, sealed-secrets/ …
+│   └── <thành phần>/             # gpu/, keda/, kube-prometheus-stack/, sealed-secrets/ (W4) …
 ├── serving/{base, overlays/{home,cloud,sim}}/     # vLLM
 ├── autoscaling/
 │   ├── official/{base, overlays/<env>}/           # A2 chính thức (Argo CD quản lý)
@@ -24,7 +24,7 @@ llm-k8s-autoscaling/
 ├── observability/{rules, alerts{,/tests}, dashboards}/
 ├── loadgen/                      # gói Python: loadgen/<module>.py, tests/
 ├── experiments/                  # runner/, ops/ (VH2–VH4), matrix.yaml, capacity.yaml
-├── analysis/                     # build_tables.py, tests/, figures/ (hình cho luận văn)
+├── analysis/                     # build_tables.py, tests/, notebooks/ (khám phá), figures/ (hình cho luận văn)
 ├── runs/                         # (gitignore) dữ liệu thô của các lượt chạy
 └── docs/
     ├── chi-tiet/, huong-dan/     # thiết kế; hướng dẫn theo tuần
@@ -88,7 +88,7 @@ Tên file và thư mục: chữ thường, nối bằng `-`, không dấu (`scal
 
 - Recording rule đặt tên theo dạng `level:metric:operation`, ví dụ `llm:ttft_bad_ratio:rate5m`.
 - Cảnh báo đặt tên PascalCase có tiền tố (`LLM…`, `Keda…`). Bắt buộc có nhãn `severity: page|ticket` và annotation `runbook_url`.
-- Mỗi cảnh báo bắt buộc có **ba thứ trong cùng PR**: quy tắc trong `observability/alerts/`, unit test trong `alerts/tests/` (`promtool test rules`) và runbook `docs/runbooks/<TênCảnhBáo>.md` theo mẫu `LLMSLOBurnFast.md`.
+- Mỗi cảnh báo bắt buộc có **ba thứ trong cùng PR**: quy tắc trong `observability/alerts/`, unit test trong `alerts/tests/` (`promtool test rules`) và runbook `docs/runbooks/<TênCảnhBáo>.md` theo mẫu ở [Vận hành §4.2](docs/chi-tiet/04-van-hanh.md#42-ví-dụ-llmsloburnfast).
 - ScaledObject dùng biểu thức PromQL gốc, không dùng recording rule, vì recording rule thêm một chu kỳ trễ.
 - Dashboard lưu ở dạng JSON đã export, bỏ `id` và đặt `uid` cố định.
 
@@ -104,6 +104,7 @@ Tên file và thư mục: chữ thường, nối bằng `-`, không dấu (`scal
 
 - **Shell:** `#!/usr/bin/env bash` + `set -euo pipefail`; `cd` về gốc repo ở đầu script; nhận tham số dạng lệnh con (`vast.sh rent …`).
 - **Ansible:** module ghi tên đầy đủ (`ansible.builtin.apt`), `name:` của task viết tiếng Việt, task phải idempotent (chạy lại không đổi gì). `command`/`shell` phải có `changed_when` hoặc `creates`.
+- **Comment cuối dòng không phải chỗ nào cũng được:** `.gitignore` không có comment cuối dòng (`abc  # x` bị hiểu là một mẫu), và trong Makefile `X := a  # c` làm biến dính dấu cách. Ở hai loại file này, comment luôn nằm trên dòng riêng.
 - **Makefile:** mỗi target có comment `## mô tả` để hiện trong `make help`. Lệnh chưa làm vẫn khai báo, in "chưa làm" rồi `exit 1`. Biến dài (phiên bản, tên cluster) đặt ở đầu file.
 
 ## 7. Git và PR
