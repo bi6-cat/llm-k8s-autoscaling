@@ -1,0 +1,26 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# platform/argocd/root-app-home.yaml
+# Khái niệm: Application (CRD của Argo CD) = "đồng bộ thư mục X trong Git vào cluster". App-of-Apps:
+#            Application gốc này trỏ vào một thư mục mà mỗi file trong đó lại là một Application con.
+# Mục đích:  Đây là thứ DUY NHẤT áp bằng tay (qua role argocd-bootstrap). Thêm một thành phần mới vào
+#            cluster nhà = thêm một file Application vào platform/argocd/apps/home/ rồi merge vào main.
+# Tham khảo: docs/huong-dan/w2.md §4.1, §4.3
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root-home
+  namespace: argocd                    # mọi Application phải nằm trong namespace của Argo CD
+spec:
+  project: default                     # AppProject mặc định: không giới hạn repo/namespace (đủ cho đồ án)
+  source:
+    repoURL: https://github.com/bi6-cat/llm-k8s-autoscaling.git   # repo public: không cần khoá để đọc
+    targetRevision: main               # chỉ những gì đã merge vào main mới lên cluster
+    path: platform/argocd/apps/home    # thư mục chứa các Application con
+  destination:
+    server: https://kubernetes.default.svc   # chính cluster đang chạy Argo CD
+    namespace: argocd                  # các Application con cũng được tạo trong namespace argocd
+  syncPolicy:
+    # automated: tự sync khi Git đổi (không cần bấm). prune: xoá khỏi Git thì xoá khỏi cluster.
+    # selfHeal: ai sửa tay trên cluster thì Argo CD đưa về đúng như Git (sau vài giây).
+    automated: {prune: true, selfHeal: true}

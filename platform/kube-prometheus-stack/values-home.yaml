@@ -1,0 +1,46 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# platform/kube-prometheus-stack/values-home.yaml
+# Khái niệm: Values ghi đè cho cluster nhà. Helm gộp values theo thứ tự: values.yaml rồi file này.
+# Mục đích:  PC chỉ có 16 GB RAM và còn chạy vLLM: giới hạn RAM từng thành phần, giữ dữ liệu ngắn, và
+#            ghim mọi thứ có trạng thái lên PC (node luôn bật; laptop có thể tắt bất cứ lúc nào).
+# Tham khảo: docs/huong-dan/w2.md §6.1, Thông số §9.4
+# ──────────────────────────────────────────────────────────────────────────────
+prometheus:
+  prometheusSpec:
+    # Giữ dữ liệu 3 ngày hoặc tối đa 4 GB, cái nào tới trước. Ở nhà chỉ cần dữ liệu vài ngày để phát
+    # triển dashboard và cảnh báo; số liệu đánh giá chính lấy trên máy thuê.
+    retention: 3d
+    retentionSize: 4GB
+    resources:
+      requests: {cpu: 200m, memory: 1Gi}
+      limits: {memory: 2560Mi}
+    # Chỉ chạy trên node control-plane (PC). Nhãn này k3s tự gắn cho node server.
+    nodeSelector: {node-role.kubernetes.io/control-plane: "true"}
+    # Lưu dữ liệu trên ổ PC qua PVC local-path (storage class có sẵn của k3s). PVC local-path gắn chặt
+    # với node đã tạo nó, nên càng phải ghim Prometheus vào PC.
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: local-path
+          accessModes: [ReadWriteOnce]           # chỉ một node mount được (đủ cho 1 Prometheus)
+          resources: {requests: {storage: 10Gi}}
+alertmanager:
+  alertmanagerSpec:
+    resources:
+      requests: {cpu: 10m, memory: 32Mi}
+      limits: {memory: 128Mi}
+    nodeSelector: {node-role.kubernetes.io/control-plane: "true"}
+grafana:
+  resources:
+    requests: {cpu: 50m, memory: 128Mi}
+    limits: {memory: 384Mi}
+  nodeSelector: {node-role.kubernetes.io/control-plane: "true"}
+# Hai thành phần không có trạng thái: không cần ghim node, chỉ giới hạn RAM
+prometheusOperator:
+  resources:
+    requests: {cpu: 50m, memory: 64Mi}
+    limits: {memory: 256Mi}
+kube-state-metrics:
+  resources:
+    requests: {cpu: 20m, memory: 64Mi}
+    limits: {memory: 192Mi}

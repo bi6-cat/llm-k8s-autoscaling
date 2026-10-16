@@ -1,0 +1,105 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# serving/base/deployment.yaml
+# Khái niệm: Deployment quản lý một nhóm pod giống hệt nhau (ở đây: pod vLLM, mỗi pod giữ 1 GPU) và
+#            thay pod dần dần khi cấu hình đổi (rolling update).
+#            vLLM = server phục vụ LLM, API tương thích OpenAI (/v1/chat/completions), có streaming.
+# Mục đích:  Trái tim của tầng serving. Điểm then chốt:
+#   - KHÔNG đặt replicas → HPA (do KEDA tạo) toàn quyền số pod, không tranh với Argo CD.
+#   - startupProbe dài (cold start nạp model), preStop + --shutdown-timeout để tắt êm (Hình 13).
+#   - maxSurge 0: rolling update không đòi thêm GPU khi mọi GPU đã bận.
+# Overlay thêm model, tham số theo GPU, RAM và chỗ lưu cache (serving/overlays/<env>/).
+# Tham khảo: docs/huong-dan/w2.md §8.1, Thông số §9.2
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vllm
+  namespace: llm-serving
+  labels: {app: vllm}
+spec:
+  # Không đặt replicas: HPA của KEDA quản lý. Nếu Git có `replicas`, Argo CD (selfHeal) sẽ kéo số pod
+  # về giá trị đó mỗi lần HPA scale, hai bên giành nhau (Kiến trúc §18.3).
+  strategy:
+    type: RollingUpdate
+    # maxSurge 0: không tạo pod mới TRƯỚC khi tắt pod cũ, vì pod mới cần GPU mà mọi GPU có thể đều đang
+    # bận → pod mới Pending mãi, cập nhật kẹt. maxUnavailable 1: tắt 1 pod cũ trước rồi mới tạo pod mới.
+    # Khi chỉ có 1 replica thì phải nâng minReplicaCount lên 2 trước khi cập nhật (Vận hành §5, ADR-005 T2).
+    rollingUpdate: {maxSurge: 0, maxUnavailable: 1}
+  # Cho cập nhật tối đa 15 phút trước khi báo thất bại (kéo image + nạp model lâu hơn mặc định 10 phút)
+  progressDeadlineSeconds: 900
+  selector:
+    matchLabels: {app: vllm}           # Deployment quản lý pod có nhãn này; Service, PodMonitor cũng vậy
+  template:
+    metadata:
+      labels: {app: vllm}
+    spec:
+      # Chạy bằng runtime NVIDIA. k3s không đặt runtime này làm mặc định: thiếu dòng này thì container
+      # không thấy GPU dù đã xin nvidia.com/gpu.
+      runtimeClassName: nvidia
+      nodeSelector:
+        nvidia.com/gpu.present: "true" # chỉ xếp lên node có GPU (nhãn gắn lúc join k3s)
+      # Thời gian tối đa từ lúc bắt đầu tắt pod tới lúc bị kill cưỡng bức (SIGKILL).
+      # Phải > preStop 20 s + shutdown-timeout 150 s, nếu không request dài bị cắt giữa chừng.
+      terminationGracePeriodSeconds: 180
+      containers:
+        - name: vllm
+          image: vllm/vllm-openai      # tag + digest gắn ở kustomization.yaml
+          imagePullPolicy: IfNotPresent    # đã có image trên node thì không kéo lại (image ~10 GB)
+          args:                            # overlay nối thêm model và tham số theo GPU vào cuối danh sách
+            - --port=8000
+            # Tắt prefix caching: prompt đánh giá lặp lại thì cache làm TTFT nhanh bất thường, số đo
+            # không phản ánh tải thật và các cấu hình không so sánh công bằng được.
+            - --no-enable-prefix-caching
+            # Khi nhận SIGTERM, cho request đang chạy tối đa 150 s để chạy xong thay vì huỷ ngay
+            # (mặc định 0 = huỷ). Đây là cách sửa lỗi "scale-down cắt request" (ADR-005 T1, VH1).
+            - --shutdown-timeout=150
+          env:
+            # vLLM tự đọc biến này làm API key: request tới /v1/* phải có "Authorization: Bearer <key>".
+            # Dùng biến môi trường thay vì cờ --api-key để khoá không hiện trong `ps` hay `kubectl describe`.
+            # Secret vllm-api-key tạo tay (w2.md §4.4); Sealed Secrets thay ở W4.
+            - name: VLLM_API_KEY
+              valueFrom: {secretKeyRef: {name: vllm-api-key, key: key}}
+            # Model tải từ Hugging Face lưu ở /cache/hf; compile cache (torch.compile, CUDA graph) ở
+            # /cache/vllm. Cùng một volume để giữ cả hai giữa các lần khởi động (nền của mức L2).
+            - {name: HF_HOME, value: /cache/hf}
+            - {name: VLLM_CACHE_ROOT, value: /cache/vllm}
+          ports:
+            - {name: http, containerPort: 8000}   # Service, PodMonitor, probe gọi cổng theo tên `http`
+          resources:
+            # Xin đúng 1 GPU; device plugin giao cho pod một GPU riêng. Overlay thêm CPU/RAM.
+            limits: {nvidia.com/gpu: 1}
+          volumeMounts:
+            - {name: cache, mountPath: /cache}
+            # PyTorch dùng /dev/shm (bộ nhớ chia sẻ) giữa các tiến trình; mặc định của container chỉ 64 MB.
+            - {name: dshm, mountPath: /dev/shm}
+          # Ba loại probe đều gọi /health (không cần API key):
+          #   startupProbe: chờ khởi động xong mới bắt đầu kiểm hai probe kia. 5 s × 120 lần = tối đa 10
+          #     phút cho kéo image, tải và nạp model. Hết hạn mà chưa đạt thì restart container.
+          #   readinessProbe: đạt thì pod mới được Service gửi request; trượt thì bị rút khỏi Service.
+          #   livenessProbe: trượt 6 lần liên tiếp (60 s) thì coi là treo và restart container.
+          startupProbe:
+            httpGet: {path: /health, port: http}
+            periodSeconds: 5
+            failureThreshold: 120
+          readinessProbe:
+            httpGet: {path: /health, port: http}
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: {path: /health, port: http}
+            periodSeconds: 10
+            failureThreshold: 6
+          lifecycle:
+            # Khi tắt pod, Kubernetes đồng thời gửi SIGTERM và rút pod khỏi Service; việc rút mất vài giây
+            # mới lan tới mọi node. Ngủ 20 s trước SIGTERM để không request mới nào bị gửi tới pod đang tắt.
+            # Dùng hành động `sleep` có sẵn của Kubernetes thay vì `exec: sleep`, vì image simulator không
+            # có lệnh sleep.
+            preStop:
+              sleep: {seconds: 20}
+      volumes:
+        - name: cache
+          emptyDir: {}                 # thư mục tạm, mất khi pod mất; overlay home/cloud thay bằng hostPath
+        - name: dshm
+          # medium: Memory = dùng RAM (tmpfs). sizeLimit tính vào giới hạn RAM của pod.
+          emptyDir: {medium: Memory, sizeLimit: 8Gi}
+# Lưu ý: overlay home/cloud dùng JSON patch theo CHỈ SỐ (volumes/0 = cache, volumes/1 = dshm,
+# containers/0 = vllm). Đổi thứ tự ở đây thì phải sửa các overlay (w2.md §8.2).

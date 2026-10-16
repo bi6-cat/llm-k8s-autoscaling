@@ -1,0 +1,11 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# autoscaling/official/base/kustomization.yaml
+# Khái niệm: Base của cấu hình autoscaling VẬN HÀNH chính thức (A2), do Argo CD quản lý (từ W3 ở nhà).
+#            Khác với autoscaling/eval/ (W3+): các cấu hình chỉ dùng khi đánh giá, runner áp tay.
+# Mục đích:  Overlay theo môi trường chỉ đổi maxReplicaCount và threshold (nhà 2, simulator 3, cloud 4).
+# Tham khảo: docs/huong-dan/w2.md §9.1, Kiến trúc §18.2
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - scaledobject-a2.yaml

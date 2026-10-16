@@ -1,0 +1,67 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# .github/workflows/ci.yaml
+# Khái niệm: GitHub Actions = máy ảo của GitHub tự chạy các lệnh khi có sự kiện (mở PR, push).
+#            Workflow gồm nhiều job chạy song song; mỗi job là một máy sạch, chạy các step theo thứ tự.
+#            Job nào lỗi thì PR hiện dấu đỏ; branch protection chặn merge khi còn đỏ.
+# Mục đích:  Bắt lỗi trước khi Argo CD áp lên cluster: YAML sai, kustomize không build được, manifest sai
+#            schema, playbook Ansible lỗi cú pháp, link tài liệu hỏng.
+# Chạy thử trên máy: `make lint` làm gần như các job yaml, manifests, ansible.
+# Tham khảo: docs/huong-dan/w2.md §10
+# ──────────────────────────────────────────────────────────────────────────────
+name: ci
+on:
+  pull_request:            # mọi PR, vào bất kỳ nhánh nào
+  push:
+    branches: [main]       # và mỗi lần main thay đổi (sau merge), để chắc main luôn xanh
+
+jobs:
+  # Cú pháp và phong cách YAML theo .yamllint.yaml
+  yaml:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7          # tải code của commit đang kiểm tra về máy ảo
+      - run: pipx install yamllint && yamllint -s .
+
+  # Manifest Kubernetes: build bằng kustomize rồi kiểm schema bằng kubeconform
+  manifests:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Cài kubeconform
+        # kubeconform: so từng object với JSON schema của Kubernetes (trường có tồn tại không, đúng kiểu không)
+        run: curl -sSL https://github.com/yannh/kubeconform/releases/download/v0.8.0/kubeconform-linux-amd64.tar.gz | sudo tar xz -C /usr/local/bin kubeconform
+      - name: kustomize build + kubeconform
+        run: |
+          set -euo pipefail
+          # Schema cho CRD (PodMonitor, ScaledObject, Application…) lấy từ CRDs-catalog. Các biến {{.Group}}…
+          # do kubeconform điền theo từng object. Không có schema này, kubeconform bỏ qua mọi CRD.
+          CRDS='https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
+          # Build từng thư mục kustomize (thư mục có kustomization.yaml) rồi kiểm.
+          # -strict: báo lỗi cả trường thừa (thường là gõ sai tên trường).
+          for d in serving/overlays/* autoscaling/official/overlays/* platform/gpu/exporter platform/kube-prometheus-stack/extras; do
+            echo "== $d"
+            kubectl kustomize "$d" | kubeconform -strict -summary -schema-location default -schema-location "$CRDS"
+          done
+          # Application của Argo CD là file YAML thường (không qua kustomize), kiểm trực tiếp
+          echo "== platform/argocd"
+          kubeconform -strict -summary -schema-location default -schema-location "$CRDS" platform/argocd
+
+  # Playbook Ansible: chỉ kiểm cú pháp (không SSH tới máy nào)
+  ansible:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - run: pipx install --include-deps ansible
+      # Các module ansible.posix.* và community.general.* nằm trong collection riêng, phải cài thêm
+      - run: ansible-galaxy collection install ansible.posix community.general
+      - run: cd infra/ansible && ansible-playbook -i inventory/home.yaml site.yml --syntax-check
+
+  # Link tương đối trong tài liệu phải trỏ tới file có thật
+  docs:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: lycheeverse/lychee-action@v2
+        with:
+          # --offline: chỉ kiểm link tới file trong repo, không gọi Internet (nhanh, không lỗi vặt vì mạng)
+          args: --offline --no-progress 'docs/**/*.md' README.md CONTRIBUTING.md AGENTS.md

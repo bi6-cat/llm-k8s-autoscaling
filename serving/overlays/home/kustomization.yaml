@@ -1,0 +1,16 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# serving/overlays/home/kustomization.yaml
+# Khái niệm: Overlay `home` = base + Ingress + patch tham số cho GPU 6–8 GB (RTX 5060, RTX 4050).
+# Mục đích:  Argo CD (Application `serving`) sync thư mục này lên cluster nhà.
+# Xem kết quả: kubectl kustomize serving/overlays/home
+# Tham khảo: docs/huong-dan/w2.md §8.2
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base                         # lấy toàn bộ base
+  - ingress.yaml                       # thêm đường vào qua Traefik (chỉ nhà có)
+patches:
+  # Áp patch-vllm.yaml (JSON patch) lên đúng Deployment tên vllm
+  - path: patch-vllm.yaml
+    target: {kind: Deployment, name: vllm}

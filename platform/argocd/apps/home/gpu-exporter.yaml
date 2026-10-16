@@ -1,0 +1,25 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# platform/argocd/apps/home/gpu-exporter.yaml
+# Khái niệm: Application đồng bộ một thư mục kustomize trong repo của mình (không dùng chart).
+# Mục đích:  Cài exporter metric GPU (DaemonSet + PodMonitor) từ platform/gpu/exporter.
+#            Metric GPU là tín hiệu của cấu hình A1 và các panel GPU trên dashboard.
+# Tham khảo: docs/huong-dan/w2.md §4.3, §5
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: gpu-exporter
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/bi6-cat/llm-k8s-autoscaling.git
+    targetRevision: main
+    path: platform/gpu/exporter        # thư mục có kustomization.yaml: Argo CD tự chạy kustomize build
+  destination: {server: https://kubernetes.default.svc, namespace: gpu}
+  syncPolicy:
+    automated: {prune: true, selfHeal: true}
+    # SkipDryRunOnMissingResource: PodMonitor là CRD do kube-prometheus-stack cài. Lần sync đầu CRD có
+    # thể chưa có; tuỳ chọn này bỏ qua bước kiểm thử khô, `retry` sẽ sync lại khi CRD đã có.
+    syncOptions: [CreateNamespace=true, SkipDryRunOnMissingResource=true]
+    retry: {limit: 10, backoff: {duration: 15s, factor: 2, maxDuration: 5m}}

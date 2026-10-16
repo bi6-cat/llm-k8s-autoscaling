@@ -1,0 +1,29 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# infra/kind/kind-config.yaml
+# Khái niệm: kind ("Kubernetes IN Docker") chạy mỗi node Kubernetes là một container Docker. Dựng/xoá
+#            cả cluster trong vài phút, nên hợp để thử nghiệm và phá hỏng có chủ đích (T4, drain node).
+# Mục đích:  Cluster 3 node cho simulator trên laptop, tách biệt hẳn với cluster nhà.
+#            Đặt chu kỳ sync HPA = 5 s giống k3s, để thời gian scale đo trên simulator khớp với thật.
+# Dùng:      make sim-up (tạo), make sim-down (xoá)
+# Tham khảo: docs/huong-dan/w2.md §9.1
+# ──────────────────────────────────────────────────────────────────────────────
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: llm-sim                          # context kubectl sẽ là kind-llm-sim
+nodes:
+  # Node control-plane. kubeadmConfigPatches sửa cấu hình mà kubeadm (công cụ dựng cluster bên trong
+  # kind) dùng: thêm cờ cho kube-controller-manager, nơi chạy vòng lặp HPA (mặc định 15 s).
+  - role: control-plane
+    image: kindest/node:v1.37.0        # ghim phiên bản Kubernetes (docs/phien-ban.md)
+    kubeadmConfigPatches:
+      - |
+        kind: ClusterConfiguration
+        controllerManager:
+          extraArgs:
+            - name: horizontal-pod-autoscaler-sync-period
+              value: "5s"
+  # Hai worker: đủ để pod simulator trải ra nhiều node, và để thử drain node (VH3) mà không mất cluster.
+  - role: worker
+    image: kindest/node:v1.37.0
+  - role: worker
+    image: kindest/node:v1.37.0

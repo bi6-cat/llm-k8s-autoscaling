@@ -1,0 +1,27 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# autoscaling/tests/t4-block-keda-to-prometheus.yaml
+# Khái niệm: NetworkPolicy = tường lửa giữa các pod, khai báo bằng nhãn. Khi một pod bị NetworkPolicy
+#            chọn, chỉ những nguồn được liệt kê trong `ingress.from` mới gọi vào pod đó được.
+# Mục đích:  Bài T4: cắt đường KEDA → Prometheus để kiểm chứng fallback (KEDA lỗi 3 lần → lên max).
+#            CHỈ dùng tạm trên simulator; xoá ngay sau khi thử (`kubectl delete -f <file này>`).
+#            Đây cũng là cách gây sự cố cho VH4 (ADR-005 T6): Operator và Argo CD không hoàn tác nó.
+# Tham khảo: docs/huong-dan/w2.md §9.3
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: t4-block-keda
+  namespace: monitoring
+spec:
+  podSelector:
+    matchLabels: {app.kubernetes.io/name: prometheus}   # áp lên pod Prometheus
+  policyTypes: [Ingress]               # chỉ lọc chiều VÀO Prometheus
+  ingress:
+    # Cho phép mọi namespace TRỪ keda gọi vào (Grafana, kubectl port-forward vẫn dùng được).
+    # Nhãn kubernetes.io/metadata.name do Kubernetes tự gắn cho mọi namespace, giá trị = tên namespace.
+    - from:
+        - namespaceSelector:
+            matchExpressions:
+              - {key: kubernetes.io/metadata.name, operator: NotIn, values: [keda]}
+# Nếu sau 30 s vẫn không thấy fallback: có thể CNI của kind không thực thi NetworkPolicy; làm T4 theo
+# cách khác ở w2.md §9.3.

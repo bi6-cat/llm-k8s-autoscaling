@@ -1,0 +1,48 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# platform/gpu/exporter/daemonset.yaml
+# Khái niệm: DaemonSet = chạy đúng một pod trên mỗi node thoả nodeSelector (thêm node GPU là tự có pod).
+#            Exporter = chương trình đọc số liệu (ở đây từ `nvidia-smi`) và mở cổng /metrics theo định
+#            dạng Prometheus.
+# Mục đích:  Metric GPU: utilization, VRAM, nhiệt độ, công suất. GPU GeForce (5060, 4050, 4090) không
+#            hỗ trợ đủ DCGM, nên dùng nvidia_gpu_exporter (đọc nvidia-smi). Metric không có label pod
+#            (ADR-005 T9). Viết tay thay vì dùng chart vì chart đã chuyển sang OCI; ~40 dòng là đủ.
+# Tham khảo: docs/huong-dan/w2.md §5
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: nvidia-gpu-exporter
+  labels: {app: nvidia-gpu-exporter}
+spec:
+  selector:
+    matchLabels: {app: nvidia-gpu-exporter}    # DaemonSet quản lý các pod có nhãn này
+  template:
+    metadata:
+      labels: {app: nvidia-gpu-exporter}       # PodMonitor cũng chọn pod theo nhãn này
+    spec:
+      runtimeClassName: nvidia                 # runtime NVIDIA gắn driver và nvidia-smi vào container
+      nodeSelector:
+        nvidia.com/gpu.present: "true"         # chỉ chạy trên node có GPU
+      # Chạy bằng user thường + seccomp mặc định: exporter chỉ đọc, không cần quyền root
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: exporter
+          image: docker.io/utkuozdemir/nvidia_gpu_exporter:1.15.1   # ghim (docs/phien-ban.md)
+          env:
+            # Thấy mọi GPU qua runtime NVIDIA mà KHÔNG xin nvidia.com/gpu. Nếu xin, device plugin sẽ
+            # giao hẳn GPU cho exporter và pod vLLM không còn GPU để xin.
+            - {name: NVIDIA_VISIBLE_DEVICES, value: all}
+            # utility = chỉ gắn công cụ quản lý (nvidia-smi, NVML), không gắn thư viện tính toán CUDA
+            - {name: NVIDIA_DRIVER_CAPABILITIES, value: utility}
+          ports:
+            - {name: metrics, containerPort: 9835}   # PodMonitor gọi cổng theo tên `metrics`
+          # requests: lượng tài nguyên scheduler giữ chỗ. limits.memory: vượt thì container bị kill (OOM).
+          # Không đặt limit CPU để exporter không bị bóp CPU giữa lúc đọc số liệu.
+          resources:
+            requests: {cpu: 20m, memory: 32Mi}       # 20m = 0,02 lõi CPU
+            limits: {memory: 128Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}              # bỏ mọi quyền đặc biệt của Linux
