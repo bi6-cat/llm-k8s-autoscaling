@@ -7,6 +7,7 @@
 - **Tầng 2 (GPU thuê):** **Vast.ai chế độ VM, 4 × RTX 4090, thuê trọn máy**. Toàn bộ ĐG1–ĐG3 đo trong **một lần thuê liền** cuối tuần 07–08/11 (khoảng 20–22 giờ), runner chạy qua đêm. Dự phòng: máy Vast khác, rồi GCP g2/L4.
 - **Chi phí:** ước tính 30–75 USD tiền thật cho 4 phiên thuê (V0–V3), dưới trần 150 USD.
 - **Đánh giá để nghiệm thu**, không phải nghiên cứu thống kê. Ba lớp: kiểm thử chức năng, **kịch bản vận hành VH1–VH6**, và **ĐG1–ĐG3** trên GPU thuê. ĐG2 so sánh S1, S4, A1, A2 dưới **3 kịch bản tải của đề cương**, tổng **17 lượt**.
+- **Kiểm chứng lý thuyết LT1–LT8** (§19): dự đoán bằng công thức có sẵn rồi đo ở nhà hoặc trên simulator, để phần xây dựng có chiều sâu phân tích mà không tốn máy thuê.
 - Số liệu báo cáo dạng **trung bình kèm min–max**, có vẽ từng lượt. Sản phẩm cuối cùng là **bảng nghiệm thu**.
 
 > Các lệnh dưới đây là **khung tham khảo**. Tên gói, cờ và đường dẫn có thể thay đổi theo phiên bản, nên luôn đối chiếu với tài liệu chính thức của k3s, NVIDIA, vLLM và Vast.ai tại thời điểm cài đặt.
@@ -624,3 +625,28 @@ Máy tạo tải tự kiểm tra cả phía gửi (độ lệch lịch, CPU) l�
 
 **Nếu một yêu cầu không đạt thì sao?**
 Đó vẫn là một kết quả. Bảng nghiệm thu ghi rõ "không đạt", luận văn phân tích nguyên nhân và đề xuất cách sửa. Ví dụ nếu N2a không đạt vì cold start dài, phần phân tích dùng số đo 8 pha để chỉ ra pha nào cần tối ưu tiếp.
+
+---
+
+## 19. Kiểm chứng lý thuyết LT1–LT8
+
+**Mục đích:** để phần xây dựng không chỉ là "đã cài X". Với mỗi cơ chế quan trọng, dùng lý thuyết đã có ([Kiến thức nền](02-kien-thuc-nen.md)) **dự đoán** hành vi của hệ thống trên đúng phần cứng của mình, rồi **đo** để kiểm chứng và **giải thích** chỗ lệch. Luận văn trình bày mỗi mục theo mẫu *lý thuyết → dự đoán → số đo → giải thích*.
+
+**Nguyên tắc chọn:** số liệu phải dễ lấy. Mọi mục đều chạy được ở **nhà hoặc trên simulator** trong W3–W4, lấy số từ những gì hệ thống đã có sẵn (Prometheus, log vLLM, event Kubernetes, `requests.csv` của máy tạo tải), không cần thuê máy. Mục nào làm lại được trên RTX 4090 ở V2 mà không tốn thêm lượt chạy thì ghi thêm.
+
+> **Về số liệu ở nhà:** §1 nói tầng 1 "không dùng số liệu hiệu năng". Quy tắc đó vẫn giữ cho ĐG1–ĐG3: không trộn số đo 5060 với số đo 4090. LT1–LT8 là ngoại lệ có chủ đích: chúng kiểm chứng **quan hệ** (công thức có đúng không), không báo cáo hiệu năng tuyệt đối của nền tảng.
+
+| Mã | Lý thuyết | Dự đoán (tính trước khi đo) | Lấy số đo | Ở đâu | Mã việc | Người-giờ |
+|---|---|---|---|---|---|---|
+| **LT1** | Decode bị giới hạn bởi băng thông bộ nhớ ([Kiến thức nền §1.5](02-kien-thuc-nen.md#15-giới-hạn-trên-của-tốc-độ-decode-theo-gpu)): TPOT ≳ kích thước weights ÷ băng thông | Qwen2.5-1.5B BF16 ≈ 3,1 GB → 5060 (~448 GB/s) ≥ ~7 ms/token; 4050 (~192 GB/s) ≥ ~16 ms/token; tỷ lệ TPOT hai máy ≈ tỷ lệ băng thông (~2,3) | TPOT với 1 request (batch = 1), 20 lần mỗi máy; V2: TPOT ở mức λ thấp nhất của ĐG1 (7B trên 4090, dự đoán ≥ ~15 ms) | Nhà (+ V2) | Q8 | 1–2 |
+| **LT2** | Dung lượng KV-cache ([§1.3–§1.4](02-kien-thuc-nen.md#13-kv-cache)): byte/token = 2 × số lớp × số KV head × head_dim × số byte | Qwen2.5-1.5B: 2 × 28 × 2 × 128 × 2 B ≈ 28 KB/token → từ VRAM còn lại sau weights, tính số token KV và số request đồng thời tối đa ở `max-model-len` | Dòng "Maximum concurrency…" và số block KV vLLM in khi khởi động; `vllm:kv_cache_usage_perc` lúc tải cao | Nhà | Q8 | 1 |
+| **LT3** | Continuous batching ([§2.2](02-kien-thuc-nen.md#22-continuous-batching)): khi còn giới hạn bởi bộ nhớ, tăng batch gần như không làm chậm từng token; quá điểm gãy thì TPOT tăng nhanh | Throughput tăng gần tuyến tính theo số request đồng thời rồi bão hoà; điểm gãy nằm gần B\* | Vẽ thêm đường throughput và TPOT theo mức đồng thời từ dữ liệu **ĐG1-mini** đã có (§8) | Nhà (+ V2 từ ĐG1) | Q8 | 1 |
+| **LT4** | Phân rã cold start ([Kiến trúc §7](03-kien-truc-autoscaling.md#7-cold-start-chi-tiết)): thời gian nạp weights ≈ dung lượng model ÷ tốc độ đọc đĩa (hoặc RAM nếu đã cache) | Từ `fio` dự đoán pha nạp model; dự đoán pha chiếm thời gian lớn nhất ở L0 và L2 | Log 8 pha (bộ đọc log của TR5) khi scale 1 → 2 ở nhà, có và không `drop_caches` | Nhà (+ V2 từ ĐG3) | Q8 | 1–2 |
+| **LT5** | Định luật Little ([Kiến trúc §10.2](03-kien-truc-autoscaling.md#102-a2-số-request-đồng-thời-running--waiting)): số request trong hệ thống = λ × thời gian lưu lại (E2E) | `running + waiting` trung bình ≈ λ × E2E trung bình, lệch < 15% | Prometheus (`vllm:num_requests_running`, `…waiting`) và `requests.csv` của **mọi** lượt tải, không cần chạy thêm | Nhà, simulator, V2 | TR8 | 1 |
+| **LT6** | GPU utilization bão hoà ([§4.4](02-kien-thuc-nen.md#44-vì-sao-gpu_util-bão-hoà)) | GPU util ≈ 100% ngay từ tải vừa, trong khi `waiting` chênh nhau nhiều lần giữa tải vừa và quá tải → GPU util không phân biệt được hai trạng thái, còn A2 thì có | Một lượt tải tăng dần (0,3 → 1,5 C) ở nhà; đọc util và `waiting` từ Prometheus | Nhà (+ V2 từ A1) | TR8 | 2 |
+| **LT7** | Thuật toán HPA ([§3.1](02-kien-thuc-nen.md#31-thuật-toán-hpa)): desired = ⌈tổng metric ÷ target⌉; trễ phản ứng = chu kỳ scrape + polling KEDA + chu kỳ HPA + tạo pod | Với scrape 5 s, polling 5 s, HPA 5 s: quyết định scale sau ≤ ~15 s; số replica đúng bằng công thức ở mỗi mức tải | Mốc thời gian event (`kubectl get events`, trạng thái HPA) trong bài T2 trên simulator, 5 lần | Simulator | TR8 | 1 |
+| **LT8** | Cảnh báo theo burn rate ([§5.2](02-kien-thuc-nen.md#52-cảnh-báo-theo-tốc-độ-tiêu-hao-burn-rate)) | Với tỷ lệ request xấu x, `LLMSLOBurnFast` kêu khi x > 20%, sau khoảng `for` + thời gian để cửa sổ 5m vượt ngưỡng; dưới 20% thì không kêu | Simulator: tăng độ trễ giả lập để có x = 10%, 30%, 60%; ghi thời điểm cảnh báo chuyển sang firing (cũng là dữ liệu cho VH6) | Simulator | TR8 | 2 |
+
+**Tổng:** khoảng 10–12 người-giờ, chia đều: Q8 (LT1–LT4) cho Quang, TR8 (LT5–LT8) cho Trình ([Kế hoạch §5.1](06-ke-hoach-quan-ly.md#51-phân-công)). Các thông số dùng để dự đoán (băng thông GPU, cấu hình model) phải kiểm tra lại bằng `nvidia-smi -q` và `config.json` của model trước khi tính.
+
+**Kết quả:** mỗi mục một dòng trong `docs/nhat-ky/van-hanh.md` (dự đoán, số đo, lệch bao nhiêu, vì sao) và một biểu đồ hoặc bảng nhỏ trong `analysis/figures/`. Lệch lớn so với dự đoán **không phải thất bại**: giải thích được vì sao lệch (overhead của kernel, CUDA graph, chia sẻ GPU với màn hình…) cũng là kết quả.

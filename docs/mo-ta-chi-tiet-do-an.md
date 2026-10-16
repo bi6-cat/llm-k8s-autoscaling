@@ -9,7 +9,7 @@
 | Trình |  | Chia đều như nhau |
 | Quang |  | Chia đều như nhau |
 
-Phân công chi tiết sẽ chốt sau ([Kế hoạch §5](chi-tiet/06-ke-hoach-quan-ly.md#5-gói-công-việc-và-ước-lượng-người-giờ)).
+Phân công theo tính năng dọc, chốt 15/10/2026 ([Kế hoạch §5.1](chi-tiet/06-ke-hoach-quan-ly.md#51-phân-công)).
 
 ---
 
@@ -242,7 +242,7 @@ Tên đề tài và bảy mục tiêu trong đề cương được **giữ nguy�
 | "Autoscaling Response Time" | Tách thành độ trễ phát hiện, cold start (theo từng pha) và thời gian hồi phục SLO; thêm phần rút ngắn cold start |
 | "P95/P99 Latency, TTFT, Throughput, Resource Utilization" | Bổ sung TPOT, SLO attainment, tỷ lệ lỗi; "resource utilization" được báo cáo bằng GPU-giờ, token/GPU-giờ, GPU utilization trung bình và CPU/RAM của pod |
 | Giám sát metric serving và GPU | Mở rộng thành SLO, cảnh báo theo burn rate và runbook |
-| Phân công | Phân công chi tiết chốt sau; vai trò DevOps/SRE/Cloud vẫn là một trọng tâm của đồ án |
+| Phân công | Chia theo tính năng dọc ([Kế hoạch §5.1](chi-tiet/06-ke-hoach-quan-ly.md#51-phân-công)); vai trò DevOps/SRE/Cloud vẫn là một trọng tâm của đồ án |
 | (chưa có) | Yêu cầu F/N và bảng nghiệm thu; phần vận hành (scale-down không cắt request, cập nhật khi hết GPU, sự cố, dựng lại, bảo mật, chi phí); môi trường hai tầng; dự toán chi phí; kế hoạch đến hạn nộp; quản lý rủi ro |
 
 Bản mô tả 1.0 có thêm câu hỏi nghiên cứu, giả thuyết, hai kịch bản tải KB4 và KB5 và một thiết kế thí nghiệm thống kê; bản 2.0 bỏ các phần này để quay về đúng đề cương ([ADR-002](adr/002-chuyen-trong-tam-sang-van-hanh.md)).

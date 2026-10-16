@@ -23,7 +23,7 @@
 |---|---|
 | Hạn nộp luận văn | ~**08/12/2026**. Ngày bảo vệ: chưa có |
 | Quỹ giờ | 2 người × 8–15 giờ/tuần, tổng ~135–270 người-giờ đến hạn nộp |
-| Phân công | Tạm chưa phân công ([ADR-004](../adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md) K13) |
+| Phân công | Quang: hạ tầng, serving, vòng đời pod, runner, năng lực; Trình: GitOps, autoscaling, giám sát, cảnh báo, tải, phân tích ([Kế hoạch §5.1](06-ke-hoach-quan-ly.md#51-phân-công)) |
 | Máy nhà | Xem [§10.1](#101-máy-nhà) |
 | Cloud | Chính: Vast.ai chế độ VM, 4 × RTX 4090. Dự phòng: máy Vast khác, rồi GCP g2/L4 ([§10.2](#102-gpu-thuê)) |
 | Tiền | Xem [§11](#11-ngân-sách) |

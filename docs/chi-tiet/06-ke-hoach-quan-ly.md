@@ -5,7 +5,7 @@
 **Tóm tắt nhanh**
 - Kế hoạch **9 tuần** từ 08/10 đến hạn nộp khoảng **08/12/2026**. Mỗi tuần có việc chính, sản phẩm kiểm chứng được và **điểm dừng** khi chậm.
 - W1–W4 dành cho xây dựng và vận hành thử ở nhà và trên simulator, xen hai phiên thuê nhỏ (V0, V1). **Toàn bộ đánh giá trên GPU thuê dồn vào một lần thuê liền 07–08/11** (V2). **Đóng băng dữ liệu 15/11**, muộn nhất 22/11; sau đó chỉ viết.
-- Khối lượng phạm vi rút gọn khoảng **169–251 người-giờ**, vừa quỹ giờ khi mỗi người làm khoảng 12–15 giờ/tuần. Phân công tạm chưa chốt.
+- Khối lượng phạm vi rút gọn khoảng **169–251 người-giờ**, vừa quỹ giờ khi mỗi người làm khoảng 12–15 giờ/tuần. Phân công theo tính năng dọc: Quang "chạy được trên GPU", Trình "tự scale và đo được" ([§5.1](#51-phân-công)).
 - Sổ rủi ro gồm **28 rủi ro**; rủi ro lớn nhất là **thiếu thời gian viết**, **không có máy 4 × 4090 vào cuối tuần**, và **GVHD chưa duyệt phạm vi rút gọn**.
 - 7 sản phẩm bàn giao kèm tiêu chí nghiệm thu; luận văn 55–65 trang, chương 4 "Triển khai và vận hành" dài nhất; 13 hướng mở rộng.
 
@@ -72,6 +72,7 @@ Việc gắn với máy: các bước cài đặt trên PC (driver, k3s server) 
 - [ ] Bảo mật tối thiểu đạt checklist ([Vận hành §8](04-van-hanh.md#8-bảo-mật-tối-thiểu)).
 - [ ] VH1, VH2 (gồm ca 1 replica), VH6 đạt ở nhà.
 - [ ] ĐG1-mini xong; có `capacity-home.json`.
+- [ ] LT1–LT8 có kết quả (dự đoán, số đo, giải thích) trong `docs/nhat-ky/van-hanh.md` ([Môi trường §19](05-moi-truong-danh-gia.md#19-kiểm-chứng-lý-thuyết-lt1lt8)).
 - [ ] Máy tạo tải đạt tiêu chí tự kiểm tra; runner chạy 2 lượt **không cần can thiệp** trên V1; `make bootstrap` dựng xong VM dưới 30 phút.
 
 ### M3 (15/11, muộn nhất 22/11): xong đánh giá
@@ -113,7 +114,7 @@ Viết chương 2–4 (W5–W7) ─► bản thảo (29/11) ─► bản cuối 
 
 ## 5. Gói công việc và ước lượng người-giờ
 
-**Phân công:** tạm chưa chốt ([ADR-004](../adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md) K13). Trường thường yêu cầu luận văn ghi rõ đóng góp của từng người, nên phải chốt cách ghi trước khi viết (W5). Minh chứng đóng góp: lịch sử commit và PR (ai viết, ai review), issue được gán, nhật ký tuần và biên bản họp GVHD.
+**Phân công:** chốt ngày 15/10/2026, chi tiết ở [§5.1](#51-phân-công). Minh chứng đóng góp: lịch sử commit và PR (ai viết, ai review), issue được gán, **nhật ký làm việc cá nhân** (`docs/nhat-ky/lam-viec/<người>/`), nhật ký tuần và biên bản họp GVHD.
 
 Ước lượng dưới đây giả định nhóm chưa từng dùng vLLM, GPU trên Kubernetes và Argo CD; thời gian học được tính vào từng gói.
 
@@ -128,6 +129,68 @@ Viết chương 2–4 (W5–W7) ─► bản thảo (29/11) ─► bản cuối 
 | WP7 Đánh giá | Máy tạo tải, runner, ĐG1–ĐG3, VH1–VH6, xử lý số liệu | 55–85 | 30–45 | Gồm khoảng 15–20 giờ trực các phiên thuê |
 | WP8 Luận văn, slide, video | Viết, hình, slide, video | 110–170 | 55–80 | 1,2–1,5 giờ/trang khi đã có bản nháp từ bộ tài liệu này; video 8–12 giờ |
 | **Tổng** | | **330–515** | **169–251** | Quỹ giờ 135–270 → chỉ vừa khi mỗi người làm ≥ 12 giờ/tuần |
+
+### 5.1. Phân công
+
+**Nguyên tắc**
+- Hai người **cùng vai trò** (DevOps/SRE), chia theo **tính năng dọc**. Ai sở hữu tính năng nào thì làm trọn tính năng đó: thiết kế chi tiết, code và manifest, kiểm thử, phần giám sát liên quan, runbook, rồi viết mục luận văn tương ứng. Người còn lại review PR (bắt buộc từ W3).
+- Mọi việc trên cluster đều làm được từ xa qua Tailscale (Trình có quyền kubectl và SSH đầy đủ). Chỉ các việc **phải có mặt cạnh máy** do Quang làm: cài OS và driver, khởi động lại khi máy treo, cắm dây. Phần này tốn khoảng 3–5 giờ cho cả dự án, đã tính khi cân giờ.
+- Laptop 4050 chỉ bật khi cần 2 GPU (VH2, VH3 drain node, KB2-mini 1 → 2 replica). Ngoài các lúc đó, cluster nhà chạy một node là PC.
+- **Học chéo:** mỗi người chạy ít nhất một kịch bản VH thuộc phần của người kia. VH5 ở nhà do **Trình** dựng lại cluster theo README, đúng yêu cầu N8 "người thứ hai dựng lại".
+
+**Quang: "chạy được trên GPU"** (hạ tầng → serving → vòng đời pod → đo năng lực)
+
+| Mã | Tính năng | Gói | Người-giờ |
+|---|---|---|---|
+| Q1 | Hạ tầng nhà: Ansible k3s (PC + laptop), NVIDIA, device plugin, GPU exporter | WP1, WP3 | 9–12 |
+| Q2 | Cloud: `vast.sh`, Ansible cho VM, overlay `cloud`, `make bootstrap`; phiên V0 | WP1 | 5–8 |
+| Q3 | Serving vLLM: Deployment, probe, preStop, lưu trữ model, overlay `home`, ghim digest | WP3 | 12–18 |
+| Q4 | Cold start: L2 (pre-pull, compile cache), đo 8 pha, L0/L2 trên V2 | WP3 | 8–12 |
+| Q5 | Vòng đời pod an toàn: test graceful shutdown, rolling update (ADR-005), VH1, VH2, VH3 | WP6, WP7 | 8–12 |
+| Q6 | Runner (áp cấu hình, reset, thu thập, đẩy R2, checkpoint) và ĐG1 → `capacity.json`, ADR-003 | WP7 | 12–16 |
+| Q7 | VH5 trên VM (bootstrap từ máy trắng), sổ chi phí | WP6 | 3–5 |
+| Q8 | Kiểm chứng lý thuyết LT1–LT4: giới hạn decode, KV-cache, batching, cold start ([Môi trường §19](05-moi-truong-danh-gia.md#19-kiểm-chứng-lý-thuyết-lt1lt8)) | WP7 | 4–6 |
+| | **Cộng** (chưa tính luận văn, chưa tính trực V2) | | **61–89** |
+
+**Trình: "tự scale và đo được"** (GitOps → autoscaling → giám sát, cảnh báo → tải và phân tích)
+
+| Mã | Tính năng | Gói | Người-giờ |
+|---|---|---|---|
+| TR1 | GitOps và CI: Argo CD core, App-of-Apps, CI, Sealed Secrets | WP2 | 12–18 |
+| TR2 | Simulator và autoscaling: kind + simulator, ScaledObject A1–A4, `behavior`, T1–T7 (simulator và GPU nhà) | WP4 | 8–12 |
+| TR3 | Giám sát và SLO: kube-prometheus-stack, PodMonitor, recording rule, 3 dashboard | WP5 | 9–13 |
+| TR4 | Cảnh báo: 6 cảnh báo + `promtool`, Alertmanager → Telegram, 6 runbook | WP5, WP6 | 10–14 |
+| TR5 | Máy tạo tải v1, bộ đọc log 8 pha (`parse_vllm_log`) | WP7, WP3 | 8–11 |
+| TR6 | VH4 (mất nguồn metric), VH6 (cảnh báo đúng), bảo mật tối thiểu (API key, rate limit, NetworkPolicy) | WP6, WP7 | 5–8 |
+| TR7 | Phân tích: `build_tables.py`, biểu đồ C1–C6, số liệu cho bảng nghiệm thu | WP7 | 8–12 |
+| TR8 | Kiểm chứng lý thuyết LT5–LT8: định luật Little, GPU util bão hoà, trễ HPA, burn rate ([Môi trường §19](05-moi-truong-danh-gia.md#19-kiểm-chứng-lý-thuyết-lt1lt8)) | WP7 | 6–7 |
+| | **Cộng** (chưa tính luận văn, chưa tính trực V2) | | **66–95** |
+
+Phần Trình nhỉnh hơn khoảng 5–6 giờ, bù cho các việc phải có mặt cạnh máy của Quang. **Việc chung:** trực V2 (cả hai, chia ca, mỗi người khoảng 10 giờ); V1 do Quang chính, Trình online; họp tuần; review PR của nhau.
+
+**Theo tuần (W2–W5)**
+
+| Tuần | Quang | Trình |
+|---|---|---|
+| W2 (còn lại, 15–18/10) | Q1: k3s trên PC (+ laptop); vLLM `home` (Q3); `vast.sh` + V0 (Q2) | Simulator trên kind + T1–T5 (TR2); sau khi k3s lên: Argo CD + các app, kube-prometheus-stack (TR1, TR3); CI |
+| W3 | Test graceful shutdown (Q5); overlay `cloud` (Q2); ĐG1-mini → `capacity-home.json` (Q6); **LT1, LT2** (Q8) | A1, A2 trên GPU nhà (TR2); recording rule, 6 cảnh báo, Telegram (TR4); 3 dashboard (TR3); máy tạo tải v1 (TR5); **LT7** (TR8) |
+| W4 | Rolling update + VH2 (Q5); L2 (Q4); runner (Q6); **LT3, LT4** (Q8); **V1** | 6 runbook (TR4); Sealed Secrets (TR1); file ma trận; bộ đọc log 8 pha (TR5); VH4 ở nhà (TR6); **LT5, LT6, LT8** (TR8) |
+| W5 | VH1, VH3 ở nhà (Q5); script VH5 (Q7); chuẩn bị V2; viết phần mình ở chương 2–3 | `build_tables.py` (TR7); VH6 ở nhà; bảo mật tối thiểu (TR6); viết phần mình ở chương 2–3 |
+| W5–W6 | **V2** (cả hai) | **V2** (cả hai) |
+
+Nếu một người chậm, người kia nhận việc theo thứ tự ưu tiên của [§8](#8-dự-phòng-và-cắt-giảm-phạm-vi), không chờ.
+
+**Luận văn:** mỗi người viết các mục về tính năng mình sở hữu, **lấy từ nhật ký làm việc cá nhân** (do AI agent của từng người ghi theo quy tắc trong `AGENTS.md`).
+
+| Chương | Quang | Trình |
+|---|---|---|
+| 1. Giới thiệu | Toàn chương | Review |
+| 2. Cơ sở lý thuyết | LLM inference, vLLM, GPU trên K8s | Autoscaling K8s, SLO, GitOps, giải pháp liên quan |
+| 3. Thiết kế | 3.2 Kiến trúc tổng thể, 3.3 phần serving, 3.5 Vận hành, 3.6 Môi trường | 3.1 Yêu cầu, 3.3 phần autoscaling, 3.4 Giám sát, SLO, cảnh báo |
+| 4. Triển khai và vận hành | 4.1, 4.3, 4.5, 4.8, 4.9, 4.11 (chi phí, năng lực) | 4.2, 4.4, 4.6, 4.7, 4.10, 4.11 (công cụ đánh giá) |
+| 5. Đánh giá | Môi trường, năng lực, cold start, VH1–VH3, VH5 | Autoscaling so với tĩnh (C1–C6), VH4, VH6, bảng nghiệm thu |
+| 6. Kết luận | Review | Toàn chương |
+| Ghép và định dạng | Slide, video demo | Luận văn (khuôn trường, hình, tài liệu tham khảo) |
 
 ---
 
@@ -159,6 +222,7 @@ Nhờ hợp đồng này, dashboard, cảnh báo, autoscaling và runner đượ
 | Họp nhóm | Hằng tuần, 30 phút | Tuần trước làm gì, tuần này làm gì, đang vướng gì; rà rủi ro (5 phút) | Ghi chú trong `docs/nhat-ky/tuan-XX.md` |
 | Nhật ký quyết định | Khi có quyết định lớn | `docs/adr/NNN-<ten>.md` | Giải thích được mọi lựa chọn khi bảo vệ |
 | Nhật ký vận hành | Sau mỗi kịch bản VH, mỗi sự cố, mỗi phiên thuê | `docs/nhat-ky/van-hanh.md` | Bằng chứng cho chương 4 và 5 |
+| Nhật ký làm việc cá nhân | Sau mỗi phiên làm việc (AI agent tự ghi theo `AGENTS.md`) | `docs/nhat-ky/lam-viec/<người>/tuan-XX.md` | Nguyên liệu viết luận văn; minh chứng đóng góp từng người |
 
 **Học chéo:** trước W8, mỗi người tự demo được toàn hệ thống: từ `make home-up`, qua một lần cảnh báo và xử lý theo runbook, tới biểu đồ C1.
 
@@ -185,13 +249,13 @@ Nhờ hợp đồng này, dashboard, cảnh báo, autoscaling và runner đượ
 | **GVHD không đồng ý phạm vi rút gọn** | Đòi ma trận đủ 28 lượt: thêm khoảng 6 giờ máy 4 GPU (~10–15 USD), vẫn trong ngân sách. Đòi demo trực tiếp với GPU: mang PC đi hoặc dùng Tailscale. Đòi lịch 16 tuần: không khả thi với hạn 08/12, cần GVHD và trường xác nhận lại hạn |
 | **Tới 18/10 không có offer Vast đạt tiêu chí** | Chuyển sang GCP ([Môi trường §5](05-moi-truong-danh-gia.md#5-dự-phòng-gcp-và-kế-hoạch-z)); nếu chỉ được 2 GPU thì N = 2 và viết lại N3 theo N ở ADR-003 |
 | **Trễ 1 tuần ở M2** | Bỏ các mục Could; nếu V2 vẫn chưa sẵn sàng thì dời V2 sang 14–15/11 (mất phiên dự phòng) |
-| **Runner chưa chạy trọn ở V1** | V2 bỏ A1 × KB3 và bỏ L0 |
+| **Runner chưa chạy trọn ở V1** | V2 giảm số lượt lặp của mọi ô (tối thiểu 1 lượt/ô) và bỏ KB3 của S1. **Không bỏ A1 và L0**: đây là đối chứng cho đóng góp 2 và 3 |
 | **V2: sau 3 giờ chạy ma trận mà < 70% lượt hợp lệ** | Dừng VM, sửa, dồn phần còn lại sang V3 |
 | **Máy hỏng giữa V2** | Giữ các kịch bản đã chạy trọn bộ cấu hình; V3 chạy lại trọn kịch bản bị hỏng và ĐG1 trên máy mới; ghi `session_id` |
 | **Hoàn toàn không thuê được GPU** (kế hoạch Z) | Ở nhà với model 1,5B, N = 2, hoặc trên simulator; số liệu hiệu năng chỉ minh hoạ ([Môi trường §5](05-moi-truong-danh-gia.md#5-dự-phòng-gcp-và-kế-hoạch-z)) |
 | **Một người phải nghỉ 1–2 tuần** | Người còn lại làm tiếp các việc thuộc đường găng; tạm dừng việc viết; báo GVHD |
 
-Thứ tự cắt: Could → Should, theo [Thông số §5](00-thong-so.md#5-mức-độ-thành-công). **Không lùi ngày đóng băng dữ liệu quá 22/11**; bản thảo có thể thu hẹp chương 5 thay vì trễ hạn nộp.
+Thứ tự cắt: Could → Should, theo [Thông số §5](00-thong-so.md#5-mức-độ-thành-công). **Không cắt các ca đối chứng** (A1, S1/S4, L0, ca đối chứng của graceful shutdown và VH2c) và **không cắt LT1–LT8**, vì đây là phần biến đồ án từ "đã cài" thành "đã chứng minh" (R21). Khi cần cắt, giảm số lượt lặp hoặc bỏ mục Could trước. **Không lùi ngày đóng băng dữ liệu quá 22/11**; bản thảo có thể thu hẹp chương 5 thay vì trễ hạn nộp.
 
 ---
 
@@ -228,7 +292,7 @@ Thứ tự cắt: Could → Should, theo [Thông số §5](00-thong-so.md#5-mứ
 | R18 | Kỹ thuật | DCGM không chạy trên GPU GeForce | `dcgm-exporter` lỗi hoặc thiếu metric | 3 | 1 | 3 | Dùng `nvidia_gpu_exporter` ngay từ đầu | Đổi truy vấn A1 |
 | R19 | Đo lường | RTX 4090 giảm xung vì nhiệt giữa phiên | Xung nhịp giảm, nhiệt > 83 °C, TTFT tăng dần | 2 | 2 | 4 | Burn-in kiểm tra nhiệt độ; panel GPU; kiểm tra năng lực giữa phiên | Dừng, báo cáo; có thể khoá xung nhịp (`nvidia-smi -lgc`) |
 | R20 | Phạm vi | Phần vận hành phình to | Có issue mới không gắn với yêu cầu F/N nào | 2 | 2 | 4 | Tiêu chí vào/ra phạm vi ([Bài toán §12.4](01-bai-toan-yeu-cau.md#124-tiêu-chí-vào-và-ra-phạm-vi-trong-lúc-làm)); Must/Should/Could | Đưa vào hướng mở rộng |
-| R21 | Bảo vệ | Hội đồng đánh giá đồ án thiên về cài đặt, thiếu chiều sâu | GVHD nhận xét như vậy | 2 | 2 | 4 | Mỗi phần cài đặt gắn với một vấn đề riêng của GPU/LLM và có số đo; bảng nghiệm thu | Nhấn mạnh phần phân tích trong chương 5 |
+| R21 | Bảo vệ | Hội đồng đánh giá đồ án thiên về cài đặt, thiếu chiều sâu | GVHD nhận xét như vậy | 2 | 2 | 4 | Mỗi phần cài đặt gắn với một vấn đề riêng của GPU/LLM và có số đo; kiểm chứng lý thuyết LT1–LT8; giữ mọi ca đối chứng; bảng nghiệm thu | Nhấn mạnh phần phân tích trong chương 5 |
 | R22 | Kỹ thuật | Cảnh báo báo giả nhiều, hoặc không bao giờ kêu | Kênh chat bị "spam"; VH6 không thấy cảnh báo | 2 | 1 | 2 | `promtool test rules`; ngưỡng trùng biên bucket | Chỉnh ngưỡng hoặc cửa sổ; ghi lý do vào ADR |
 | R23 | Kỹ thuật | vLLM không chạy trên RTX 5060 (sm_120) | Arch list không có `sm_120`; lỗi CUDA khi khởi động | 2 | 2 | 4 | Thử ngay W1; thử image NGC hoặc tự build trong ≤ 4 giờ | Laptop 4050; thuê 1 GPU |
 | R24 | Tiến độ | Không đủ thời gian viết luận văn trước 08/12 | Tới 15/11 chưa có bản nháp chương 2–4 | 3 | 3 | **9** | Bắt đầu viết từ W5; dùng bộ tài liệu này làm bản nháp; đóng băng dữ liệu 15/11 | Thu hẹp chương 5; không đo thêm sau 22/11 |
@@ -255,7 +319,11 @@ Thứ tự cắt: Could → Should, theo [Thông số §5](00-thong-so.md#5-mứ
 
 **R21. Hội đồng cho rằng đồ án thiên về cài đặt**
 - **Vì sao đáng chú ý:** đồ án chủ ý dành khoảng 70% cho xây dựng và vận hành. Nếu trình bày như một danh sách "đã cài X, đã cài Y", hội đồng dễ đánh giá thấp.
-- **Phòng ngừa:** trình bày theo cặp **vấn đề → cách xử lý → số đo**. Ví dụ: "vLLM mặc định huỷ request khi bị tắt" → "`--shutdown-timeout` + preStop" → "VH1: 0 lỗi, ca đối chứng có lỗi". Bảng nghiệm thu là xương sống của chương 5.
+- **Phòng ngừa:**
+  - Kiểm chứng lý thuyết **LT1–LT8** ([Môi trường §19](05-moi-truong-danh-gia.md#19-kiểm-chứng-lý-thuyết-lt1lt8)): dùng công thức có sẵn dự đoán hành vi trên đúng phần cứng của nhóm, đo ở nhà hoặc trên simulator, giải thích chỗ lệch. Có kết quả từ W3–W4, trước V2.
+  - **Giữ mọi ca đối chứng** khi cắt phạm vi (§8).
+  - Phần cài đặt chi tiết đưa ra phụ lục và README; thân luận văn chỉ giữ vấn đề, cách xử lý và số đo.
+  - Trình bày theo cặp **vấn đề → cách xử lý → số đo**. Ví dụ: "vLLM mặc định huỷ request khi bị tắt" → "`--shutdown-timeout` + preStop" → "VH1: 0 lỗi, ca đối chứng có lỗi". Bảng nghiệm thu là xương sống của chương 5.
 - **Kế hoạch B:** tăng phần phân tích trong chương 5 bằng dữ liệu đã có (hành vi của A1, phân rã cold start).
 
 ### 9.4. Ngưỡng cảnh báo ngân sách
@@ -349,6 +417,8 @@ Hợp đồng giao diện giữa các phần nằm ở §6 của tài liệu nà
 
 ### 10.3. Quy ước
 
+Quy ước chi tiết (thư mục thực tế, YAML, Python, cảnh báo, Git và PR) ở [CONTRIBUTING.md](../../CONTRIBUTING.md). Tóm tắt:
+
 - **Nhánh:** `main` luôn chạy được; phát triển trên `feat/*`, `fix/*`; merge qua PR có review.
 - **Commit:** tiếng Anh hoặc tiếng Việt, thống nhất một kiểu, dạng `<phạm vi>: <mô tả>`, ví dụ `alerts: add LLMPodPending`.
 - **Ghim phiên bản:** image theo digest; chart theo phiên bản; Python bằng lockfile; model theo revision.
@@ -415,7 +485,7 @@ dataset/
 | 6. Kết luận | Tổng kết, hạn chế, hướng phát triển | §12 | 2–3 |
 | Phụ lục | Manifest chính, quy tắc cảnh báo, một số runbook, bảng phiên bản, số liệu đầy đủ | – | tuỳ |
 
-Người viết từng phần chốt cùng phân công. Tính trên ba chương 3–5, phần xây dựng và vận hành (chương 3, 4) chiếm khoảng **70–75%**, phần đánh giá (chương 5) khoảng **25–30%**.
+Người viết từng phần: xem [§5.1](#51-phân-công). Tính trên ba chương 3–5, phần xây dựng và vận hành (chương 3, 4) chiếm khoảng **70–75%**, phần đánh giá (chương 5) khoảng **25–30%**.
 
 **Danh mục hình đề xuất cho luận văn:** Hình 1–17 của bộ tài liệu này (thay bản minh hoạ bằng số liệu thật ở Hình 5 và 15), cộng các biểu đồ kết quả C1–C6, ảnh chụp dashboard và một tin nhắn cảnh báo thật.
 
