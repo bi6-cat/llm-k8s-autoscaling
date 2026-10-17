@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="528" viewBox="0 0 1240 528" role="img" aria-label="Tám pha khởi động một pod vLLM: scheduling, chuẩn bị pod, pull image, khởi động tiến trình, tải model, nạp weights, compile và CUDA graph, probe; pod giữ GPU suốt quá trình" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+<title>Tám pha khởi động một pod vLLM: scheduling, chuẩn bị pod, pull image, khởi động tiến trình, tải model, nạp weights, compile và CUDA graph, probe; pod giữ GPU suốt quá trình</title>
+<defs><marker id="a52514e" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path d="M0,1 L10,5 L0,9 z" fill="#52514e"/></marker></defs>
+<rect x="0.5" y="0.5" width="1239" height="527" rx="14" fill="#fcfcfb" stroke="#e4e3de"/>
+<text x="32" y="38" font-size="19" font-weight="700" fill="#0b0b0b" text-anchor="start">Tám pha khởi động (cold start) một pod vLLM</text>
+<text x="32" y="61" font-size="13" font-weight="400" fill="#52514e" text-anchor="start">Ước lượng cho model 7–8B ở mức L0 (chưa tối ưu); nhãn dưới mỗi pha cho biết pha đó có tránh được không</text>
+<rect x="32" y="80" width="90.8" height="18" rx="9" fill="#e6f6f0" stroke="#1baf7a" stroke-width="1"/>
+<circle cx="41" cy="89" r="3.5" fill="#1baf7a"/>
+<text x="48" y="93" font-size="10.5" font-weight="600" fill="#0b0b0b" text-anchor="start">bỏ qua được</text>
+<rect x="138.8" y="80" width="100.2" height="18" rx="9" fill="#fdf3dc" stroke="#c98500" stroke-width="1"/>
+<circle cx="147.8" cy="89" r="3.5" fill="#c98500"/>
+<text x="154.8" y="93" font-size="10.5" font-weight="600" fill="#0b0b0b" text-anchor="start">rút ngắn được</text>
+<rect x="255" y="80" width="120" height="18" rx="9" fill="#f4f3ef" stroke="#898781" stroke-width="1"/>
+<circle cx="264" cy="89" r="3.5" fill="#898781"/>
+<text x="271" y="93" font-size="10.5" font-weight="600" fill="#0b0b0b" text-anchor="start">không tránh được</text>
+<rect x="32" y="110" width="274" height="138" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<circle cx="56" cy="135" r="12" fill="#52514e"/>
+<text x="56" y="139.5" font-size="12.5" font-weight="700" fill="#ffffff" text-anchor="middle">1</text>
+<text x="76" y="140" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">Scheduling</text>
+<text x="48" y="168" font-size="13" font-weight="700" fill="#0b0b0b" text-anchor="start">≈ 1–2 s</text>
+<text x="48" y="188" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">chọn node còn GPU trống;</text>
+<text x="48" y="205" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">GPU bị giữ từ thời điểm này</text>
+<rect x="48" y="218" width="120" height="18" rx="9" fill="#f4f3ef" stroke="#898781" stroke-width="1"/>
+<circle cx="57" cy="227" r="3.5" fill="#898781"/>
+<text x="64" y="231" font-size="10.5" font-weight="600" fill="#0b0b0b" text-anchor="start">không tránh được</text>
+<rect x="330" y="110" width="274" height="138" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<circle cx="354" cy="135" r="12" fill="#52514e"/>
+<text x="354" y="139.5" font-size="12.5" font-weight="700" fill="#ffffff" text-anchor="middle">2</text>
+<text x="374" y="140" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">Chuẩn bị pod</text>
+<text x="346" y="168" font-size="13" font-weight="700" fill="#0b0b0b" text-anchor="start">≈ 2–5 s</text>
+<text x="346" y="188" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">cấp IP, mount volume,</text>
+<text x="346" y="205" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">device plugin gán GPU cụ thể</text>
+<rect x="346" y="218" width="120" height="18" rx="9" fill="#f4f3ef" stroke="#898781" stroke-width="1"/>
+<circle cx="355" cy="227" r="3.5" fill="#898781"/>
+<text x="362" y="231" font-size="10.5" font-weight="600" fill="#0b0b0b" text-anchor="start">không tránh được</text>
+<rect x="628" y="110" width="274" height="138" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<circle cx="652" cy="135" r="12" fill="#52514e"/>
+<text x="652" y="139.5" font-size="12.5" font-weight="700" fill="#ffffff" text-anchor="middle">3</text>
+<text x="672" y="140" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">Pull image</text>
+<text x="644" y="168" font-size="13" font-weight="700" fill="#0b0b0b" text-anchor="start">≈ 60–180 s</text>
+<text x="644" y="188" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">tải và giải nén image</text>
+<text x="644" y="205" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">vLLM cỡ ~10 GB</text>
+<rect x="644" y="218" width="198.8" height="18" rx="9" fill="#e6f6f0" stroke="#1baf7a" stroke-width="1"/>
+<circle cx="653" cy="227" r="3.5" fill="#1baf7a"/>
+<text x="660" y="231" font-size="10.5" font-weight="600" fill="#0b0b0b" text-anchor="start">bỏ qua được nhờ pre-pull image</text>
+<rect x="926" y="110" width="274" height="138" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<circle cx="950" cy="135" r="12" fill="#52514e"/>
+<text x="950" y="139.5" font-size="12.5" font-weight="700" fill="#ffffff" text-anchor="middle">4</text>
+<text x="970" y="140" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">Khởi động tiến trình</text>
+<text x="942" y="168" font-size="13" font-weight="700" fill="#0b0b0b" text-anchor="start">≈ 5–15 s</text>
+<text x="942" y="188" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">import torch, vllm;</text>
+<text x="942" y="205" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">khởi tạo CUDA context</text>
+<rect x="942" y="218" width="120" height="18" rx="9" fill="#f4f3ef" stroke="#898781" stroke-width="1"/>
+<circle cx="951" cy="227" r="3.5" fill="#898781"/>
+<text x="958" y="231" font-size="10.5" font-weight="600" fill="#0b0b0b" text-anchor="start">không tránh được</text>
+<rect x="32" y="306" width="274" height="138" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<circle cx="56" cy="331" r="12" fill="#52514e"/>
+<text x="56" y="335.5" font-size="12.5" font-weight="700" fill="#ffffff" text-anchor="middle">5</text>
+<text x="76" y="336" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">Tải model</text>
+<text x="48" y="364" font-size="13" font-weight="700" fill="#0b0b0b" text-anchor="start">≈ 150 s</text>
+<text x="48" y="384" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">tải ~15 GB safetensors</text>
+<text x="48" y="401" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">từ Hugging Face</text>
+<rect x="48" y="414" width="188.8" height="18" rx="9" fill="#e6f6f0" stroke="#1baf7a" stroke-width="1"/>
+<circle cx="57" cy="423" r="3.5" fill="#1baf7a"/>
+<text x="64" y="427" font-size="10.5" font-weight="600" fill="#0b0b0b" text-anchor="start">bỏ qua được nhờ model cache</text>
+<rect x="330" y="306" width="274" height="138" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<circle cx="354" cy="331" r="12" fill="#52514e"/>
+<text x="354" y="335.5" font-size="12.5" font-weight="700" fill="#ffffff" text-anchor="middle">6</text>
+<text x="374" y="336" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">Nạp weights → GPU</text>
+<text x="346" y="364" font-size="13" font-weight="700" fill="#0b0b0b" text-anchor="start">≈ 10–60 s</text>
+<text x="346" y="384" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">đĩa → RAM → VRAM;</text>
+<text x="346" y="401" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">NVMe nhanh, ổ mạng chậm</text>
+<rect x="346" y="414" width="201" height="18" rx="9" fill="#fdf3dc" stroke="#c98500" stroke-width="1"/>
+<circle cx="355" cy="423" r="3.5" fill="#c98500"/>
+<text x="362" y="427" font-size="10.5" font-weight="600" fill="#0b0b0b" text-anchor="start">rút ngắn được nhờ NVMe cục bộ</text>
+<rect x="628" y="306" width="274" height="138" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<circle cx="652" cy="331" r="12" fill="#52514e"/>
+<text x="652" y="335.5" font-size="12.5" font-weight="700" fill="#ffffff" text-anchor="middle">7</text>
+<text x="672" y="336" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">Compile · KV · graph</text>
+<text x="644" y="364" font-size="13" font-weight="700" fill="#0b0b0b" text-anchor="start">≈ 20–60 s</text>
+<text x="644" y="384" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">torch.compile, đo bộ nhớ,</text>
+<text x="644" y="401" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">cấp KV-cache, capture graph</text>
+<rect x="644" y="414" width="208.4" height="18" rx="9" fill="#fdf3dc" stroke="#c98500" stroke-width="1"/>
+<circle cx="653" cy="423" r="3.5" fill="#c98500"/>
+<text x="660" y="427" font-size="10.5" font-weight="600" fill="#0b0b0b" text-anchor="start">rút ngắn được nhờ compile cache</text>
+<rect x="926" y="306" width="274" height="138" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<circle cx="950" cy="331" r="12" fill="#52514e"/>
+<text x="950" y="335.5" font-size="12.5" font-weight="700" fill="#ffffff" text-anchor="middle">8</text>
+<text x="970" y="336" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">Probe → Ready</text>
+<text x="942" y="364" font-size="13" font-weight="700" fill="#0b0b0b" text-anchor="start">≈ 5–10 s</text>
+<text x="942" y="384" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">mở cổng 8000, probe OK,</text>
+<text x="942" y="401" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">pod vào Endpoints</text>
+<rect x="942" y="414" width="120" height="18" rx="9" fill="#f4f3ef" stroke="#898781" stroke-width="1"/>
+<circle cx="951" cy="423" r="3.5" fill="#898781"/>
+<text x="958" y="427" font-size="10.5" font-weight="600" fill="#0b0b0b" text-anchor="start">không tránh được</text>
+<path d="M306,179 L330,179" fill="none" stroke="#52514e" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
+<path d="M604,179 L628,179" fill="none" stroke="#52514e" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
+<path d="M902,179 L926,179" fill="none" stroke="#52514e" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
+<path d="M306,375 L330,375" fill="none" stroke="#52514e" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
+<path d="M604,375 L628,375" fill="none" stroke="#52514e" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
+<path d="M902,375 L926,375" fill="none" stroke="#52514e" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
+<path d="M1063,248 L1063,269 Q1063,277 1055,277 L177,277 Q169,277 169,285 L169,306" fill="none" stroke="#52514e" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
+<line x1="32" y1="468" x2="1200" y2="468" stroke="#0b0b0b" stroke-width="1.3"/>
+<line x1="32" y1="462" x2="32" y2="474" stroke="#0b0b0b" stroke-width="1.3"/>
+<line x1="1200" y1="462" x2="1200" y2="474" stroke="#0b0b0b" stroke-width="1.3"/>
+<rect x="373.3" y="459" width="485.4" height="19" rx="4" fill="#fcfcfb"/>
+<text x="616" y="472" font-size="12" font-weight="600" fill="#0b0b0b" text-anchor="middle">từ pha 1: pod đã giữ GPU (tính vào GPU-giờ) nhưng chưa phục vụ request nào</text>
+<text x="32" y="510" font-size="12.5" text-anchor="start"><tspan font-weight="650" fill="#0b0b0b">Tổng (ước lượng): </tspan><tspan font-weight="400" fill="#52514e">L0 ≈ 4–8 phút · L1 ≈ 2,5–7 phút · L2 ≈ 0,5–1,5 phút</tspan><tspan font-weight="400" fill="#898781">  — sẽ được thay bằng số đo thực tế</tspan></text>
+</svg>

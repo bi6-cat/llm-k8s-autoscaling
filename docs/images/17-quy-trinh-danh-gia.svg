@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="620" viewBox="0 0 1240 620" role="img" aria-label="Quy trình phiên đánh giá chính: thuê và dựng từ máy trắng, triển khai, đo năng lực, vòng lặp 17 lượt, cold start và kịch bản vận hành, sao lưu, huỷ máy và phân tích" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+<title>Quy trình phiên đánh giá chính: thuê và dựng từ máy trắng, triển khai, đo năng lực, vòng lặp 17 lượt, cold start và kịch bản vận hành, sao lưu, huỷ máy và phân tích</title>
+<defs><marker id="a52514e" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path d="M0,1 L10,5 L0,9 z" fill="#52514e"/></marker></defs>
+<rect x="0.5" y="0.5" width="1239" height="619" rx="14" fill="#fcfcfb" stroke="#e4e3de"/>
+<text x="32" y="38" font-size="19" font-weight="700" fill="#0b0b0b" text-anchor="start">Quy trình tự động của phiên đánh giá chính trên GPU thuê</text>
+<text x="32" y="61" font-size="13" font-weight="400" fill="#52514e" text-anchor="start">Một lần thuê liền ~20–22 giờ; mọi bước chạy bằng script để dựng lại được và rút ngắn thời gian thuê GPU</text>
+<rect x="32" y="86" width="344" height="100" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<circle cx="56" cy="111" r="12" fill="#52514e"/>
+<text x="56" y="115.5" font-size="12.5" font-weight="700" fill="#ffffff" text-anchor="middle">1</text>
+<text x="76" y="116" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">Thuê máy &amp; dựng từ đầu</text>
+<text x="48" y="142" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">vastai: thuê VM 4 GPU, burn-in rút gọn</text>
+<text x="48" y="159.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">Ansible + Argo CD; đo thời gian (VH5)</text>
+<rect x="448" y="86" width="344" height="100" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<circle cx="472" cy="111" r="12" fill="#52514e"/>
+<text x="472" y="115.5" font-size="12.5" font-weight="700" fill="#ffffff" text-anchor="middle">2</text>
+<text x="492" y="116" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">Triển khai nền tảng</text>
+<text x="464" y="142" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">Argo CD sync: giám sát, cảnh báo,</text>
+<text x="464" y="159.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">KEDA, vLLM; tắt auto-sync autoscaling</text>
+<rect x="864" y="86" width="344" height="100" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<circle cx="888" cy="111" r="12" fill="#52514e"/>
+<text x="888" y="115.5" font-size="12.5" font-weight="700" fill="#ffffff" text-anchor="middle">3</text>
+<text x="908" y="116" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">Đo năng lực</text>
+<text x="880" y="142" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">quét tốc độ → tìm C của 1 replica</text>
+<text x="880" y="159.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">chốt SLO, target A1, A2 (ADR-003)</text>
+<path d="M376,136 L448,136" fill="none" stroke="#52514e" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
+<path d="M792,136 L864,136" fill="none" stroke="#52514e" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
+<path d="M1036,186 L1036,234" fill="none" stroke="#52514e" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
+<rect x="32" y="234" width="1176" height="216" rx="14" fill="#f4f3ef" stroke="#c3c2b7" stroke-width="1.2"/>
+<circle cx="56" cy="259" r="12" fill="#52514e"/>
+<text x="56" y="263.5" font-size="12.5" font-weight="700" fill="#ffffff" text-anchor="middle">4</text>
+<text x="76" y="264" font-size="13.5" text-anchor="start"><tspan font-weight="650" fill="#0b0b0b">Vòng lặp đánh giá autoscaling</tspan><tspan font-weight="400" fill="#52514e">  4 cấu hình × 3 kịch bản, 1–3 lượt mỗi ô = 17 lượt · runner (Python), chạy qua đêm</tspan></text>
+<rect x="52" y="286" width="172" height="96" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="66" y="310" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">a. Áp cấu hình</text>
+<text x="66" y="334" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">S1, S4 hoặc</text>
+<text x="66" y="352" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">ScaledObject A1/A2</text>
+<path d="M224,334 L246,334" fill="none" stroke="#52514e" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
+<rect x="246" y="286" width="172" height="96" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="260" y="310" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">b. Reset</text>
+<text x="260" y="334" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">về 1 replica,</text>
+<text x="260" y="352" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">chờ hệ thống ổn định</text>
+<path d="M418,334 L440,334" fill="none" stroke="#52514e" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
+<rect x="440" y="286" width="172" height="96" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="454" y="310" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">c. Warm-up</text>
+<text x="454" y="334" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">2 phút tải nhẹ</text>
+<text x="454" y="352" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">(không tính kết quả)</text>
+<path d="M612,334 L634,334" fill="none" stroke="#52514e" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
+<rect x="634" y="286" width="172" height="96" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="648" y="310" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">d. Chạy kịch bản</text>
+<text x="648" y="334" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">λ(t) theo KB1–KB3,</text>
+<text x="648" y="352" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">log từng request</text>
+<path d="M806,334 L828,334" fill="none" stroke="#52514e" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
+<rect x="828" y="286" width="172" height="96" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="842" y="310" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">e. Thu thập</text>
+<text x="842" y="334" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">CSV, Prometheus,</text>
+<text x="842" y="352" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">sự kiện pod, cảnh báo</text>
+<path d="M1000,334 L1022,334" fill="none" stroke="#52514e" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
+<rect x="1022" y="286" width="172" height="96" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="1036" y="310" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">f. Cooldown</text>
+<text x="1036" y="334" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">chờ scale-down,</text>
+<text x="1036" y="352" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">kiểm tra dữ liệu</text>
+<path d="M1108,382 L1108,416 Q1108,424 1100,424 L146,424 Q138,424 138,416 L138,382" fill="none" stroke="#52514e" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="5 4" marker-end="url(#a52514e)"/>
+<rect x="581.3" y="416" width="83.4" height="18" rx="4" fill="#f4f3ef"/>
+<text x="623" y="428" font-size="11" font-weight="400" fill="#0b0b0b" text-anchor="middle">lượt tiếp theo</text>
+<path d="M1036,450 L1036,494" fill="none" stroke="#52514e" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
+<rect x="864" y="494" width="344" height="100" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<circle cx="888" cy="519" r="12" fill="#52514e"/>
+<text x="888" y="523.5" font-size="12.5" font-weight="700" fill="#ffffff" text-anchor="middle">5</text>
+<text x="908" y="524" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">Cold start &amp; vận hành</text>
+<text x="880" y="550" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">L0/L2; rolling update, xoá pod,</text>
+<text x="880" y="567.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">chặn Prometheus, kiểm tra cảnh báo</text>
+<rect x="448" y="494" width="344" height="100" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<circle cx="472" cy="519" r="12" fill="#52514e"/>
+<text x="472" y="523.5" font-size="12.5" font-weight="700" fill="#ffffff" text-anchor="middle">6</text>
+<text x="492" y="524" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">Sao lưu, huỷ máy, phân tích</text>
+<text x="464" y="550" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">đẩy dữ liệu lên R2; huỷ instance;</text>
+<text x="464" y="567.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">pandas: bảng và biểu đồ</text>
+<path d="M864,544 L792,544" fill="none" stroke="#52514e" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
+<rect x="32" y="494" width="344" height="100" rx="10" fill="#fcfcfb" stroke="#52514e" stroke-width="1.2" stroke-dasharray="5 4"/>
+<text x="48" y="524" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">Kết quả</text>
+<text x="48" y="550" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">bảng nghiệm thu N1–N8,</text>
+<text x="48" y="567.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">khuyến nghị cấu hình vận hành</text>
+<path d="M448,544 L376,544" fill="none" stroke="#52514e" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
+</svg>

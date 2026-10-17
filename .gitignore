@@ -1,0 +1,33 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# .gitignore
+# Khái niệm: Danh sách file và thư mục Git bỏ qua (không hiện trong `git status`, không commit được
+#            bằng `git add .`). Mỗi dòng là một mẫu: `x/` = thư mục, `*` = chuỗi bất kỳ.
+# Mục đích:  Không bao giờ commit bí mật (.env, kubeconfig), trạng thái thuê máy (.vast/), dữ liệu thô
+#            (runs/) và rác sinh tự động (cache Python, cài đặt editor cá nhân).
+# Lưu ý:     .gitignore KHÔNG có comment cuối dòng: `abc  # x` bị hiểu là mẫu "abc  # x".
+#            Comment phải nằm trên dòng riêng, bắt đầu bằng #.
+# Tham khảo: docs/huong-dan/w2.md §2.2
+# ──────────────────────────────────────────────────────────────────────────────
+
+# --- Rác sinh tự động -----------------------------------------------------------
+# Python tự sinh bytecode khi import module
+__pycache__/
+# Môi trường ảo Python (uv/venv), mỗi máy tự tạo
+.venv/
+# Cài đặt editor cá nhân, mỗi người một kiểu
+.vscode/
+
+# --- Dữ liệu ---------------------------------------------------------------------
+# Dữ liệu thô của các lượt đánh giá: nặng, được sao lưu lên Cloudflare R2 thay vì Git
+runs/
+
+# --- Bí mật và trạng thái cục bộ ------------------------------------------------
+# Giá trị riêng từng người (mẫu ở .env.example)
+.env
+# Instance Vast đang thuê, giờ bắt đầu, cost.log (do infra/provision/vast.sh ghi)
+.vast/
+# Kubeconfig chứa chứng chỉ quản trị cluster: lộ ra là mất quyền kiểm soát cluster
+*.kubeconfig
+kubeconfig*
+# Inventory của VM thuê, do `vast.sh inventory` sinh, chứa IP công khai của máy
+infra/ansible/inventory/cloud.yaml
