@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="470" viewBox="0 0 1240 470" role="img" aria-label="Sáu bước kiểm tra vLLM trên RTX 5060 trong W1, mỗi bước có lệnh kiểm tra đạt hay không; nhánh xử lý khi hỏng và điểm dừng sau 4 giờ" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+<title>Sáu bước kiểm tra vLLM trên RTX 5060 trong W1, mỗi bước có lệnh kiểm tra đạt hay không; nhánh xử lý khi hỏng và điểm dừng sau 4 giờ</title>
+<defs><marker id="a52514e" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path d="M0,1 L10,5 L0,9 z" fill="#52514e"/></marker><marker id="aeb6834" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path d="M0,1 L10,5 L0,9 z" fill="#eb6834"/></marker><marker id="a0ca30c" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path d="M0,1 L10,5 L0,9 z" fill="#0ca30c"/></marker></defs>
+<rect x="0.5" y="0.5" width="1239" height="469" rx="14" fill="#fcfcfb" stroke="#e4e3de"/>
+<text x="32" y="38" font-size="19" font-weight="700" fill="#0b0b0b" text-anchor="start">W1 · Kiểm tra vLLM trên RTX 5060</text>
+<text x="32" y="61" font-size="13" font-weight="400" fill="#52514e" text-anchor="start">Mỗi bước có một lệnh cho biết đạt hay không; hỏng thì thử theo nhánh bên dưới, tổng thời gian thử ≤ 4 giờ</text>
+<rect x="32" y="96" width="178" height="104" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<circle cx="56" cy="121" r="12" fill="#2a78d6"/>
+<text x="56" y="125.5" font-size="12.5" font-weight="700" fill="#ffffff" text-anchor="middle">1</text>
+<text x="76" y="126" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">Driver</text>
+<text x="48" y="152" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">nvidia-smi: ≥ 575, bản open</text>
+<text x="48" y="169.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">compute_cap = 12.0</text>
+<path d="M212,148 L228.6,148" fill="none" stroke="#52514e" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
+<rect x="231.6" y="96" width="178" height="104" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<circle cx="255.6" cy="121" r="12" fill="#2a78d6"/>
+<text x="255.6" y="125.5" font-size="12.5" font-weight="700" fill="#ffffff" text-anchor="middle">2</text>
+<text x="275.6" y="126" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">Toolkit</text>
+<text x="247.6" y="152" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">docker run --gpus all</text>
+<text x="247.6" y="169.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">thấy RTX 5060</text>
+<path d="M411.6,148 L428.2,148" fill="none" stroke="#52514e" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
+<rect x="431.2" y="96" width="178" height="104" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<circle cx="455.2" cy="121" r="12" fill="#2a78d6"/>
+<text x="455.2" y="125.5" font-size="12.5" font-weight="700" fill="#ffffff" text-anchor="middle">3</text>
+<text x="475.2" y="126" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">Image sm_120</text>
+<text x="447.2" y="152" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">torch arch list có sm_120</text>
+<text x="447.2" y="169.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">ghim digest -cu129</text>
+<path d="M611.2,148 L627.8,148" fill="none" stroke="#52514e" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
+<rect x="630.8" y="96" width="178" height="104" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<circle cx="654.8" cy="121" r="12" fill="#2a78d6"/>
+<text x="654.8" y="125.5" font-size="12.5" font-weight="700" fill="#ffffff" text-anchor="middle">4</text>
+<text x="674.8" y="126" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">Chạy 1,5B</text>
+<text x="646.8" y="152" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">log: GPU KV cache size</text>
+<text x="646.8" y="169.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">ghi VRAM, thời gian</text>
+<path d="M810.8,148 L827.4,148" fill="none" stroke="#52514e" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
+<rect x="830.4" y="96" width="178" height="104" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<circle cx="854.4" cy="121" r="12" fill="#2a78d6"/>
+<text x="854.4" y="125.5" font-size="12.5" font-weight="700" fill="#ffffff" text-anchor="middle">5</text>
+<text x="874.4" y="126" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">API + metric</text>
+<text x="846.4" y="152" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">stream có usage, [DONE]</text>
+<text x="846.4" y="169.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">bucket TTFT le=&quot;2.5&quot;</text>
+<path d="M1010.4,148 L1027,148" fill="none" stroke="#52514e" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
+<rect x="1030" y="96" width="178" height="104" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<circle cx="1054" cy="121" r="12" fill="#2a78d6"/>
+<text x="1054" y="125.5" font-size="12.5" font-weight="700" fill="#ffffff" text-anchor="middle">6</text>
+<text x="1074" y="126" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">Drain khi tắt</text>
+<text x="1046" y="152" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">--shutdown-timeout 150</text>
+<text x="1046" y="169.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">stream chạy hết</text>
+<rect x="32" y="262" width="577.2" height="86" rx="10" fill="#fdf3ee" stroke="#eb6834" stroke-width="1.3"/>
+<text x="46" y="288" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">Hỏng ở bước 1–3</text>
+<text x="46" y="312" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">nâng driver ≥ 580 (dùng được image CUDA 13)</text>
+<text x="46" y="330" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">thử image NGC nvcr.io/nvidia/vllm hoặc bản vLLM mới hơn</text>
+<path d="M320.6,202 L320.6,259" fill="none" stroke="#eb6834" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="5 4" marker-end="url(#aeb6834)"/>
+<rect x="630.8" y="262" width="178" height="86" rx="10" fill="#fdf3ee" stroke="#eb6834" stroke-width="1.3"/>
+<text x="644.8" y="288" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">OOM / lỗi compile</text>
+<text x="644.8" y="312" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">--gpu-memory-utilization</text>
+<text x="644.8" y="330" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">0.80; --enforce-eager</text>
+<path d="M719.8,202 L719.8,259" fill="none" stroke="#eb6834" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="5 4" marker-end="url(#aeb6834)"/>
+<rect x="830.4" y="262" width="377.6" height="86" rx="10" fill="#edf6ed" stroke="#0ca30c" stroke-width="1.3"/>
+<text x="844.4" y="288" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">Đạt</text>
+<text x="844.4" y="312" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">ghi digest, revision, KV cache vào nhật ký</text>
+<text x="844.4" y="330" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">W2 dùng đúng image này trong k3s</text>
+<path d="M1119,202 L1119,259" fill="none" stroke="#0ca30c" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a0ca30c)"/>
+<rect x="32" y="372" width="1176" height="70" rx="10" fill="#ffffff" stroke="#d03b3b" stroke-width="1.4"/>
+<text x="48" y="400" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">Hết 4 giờ vẫn hỏng → điểm dừng</text>
+<text x="48" y="422" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Ghi biên bản (log, các cách đã thử). Từ W2, laptop RTX 4050 là node GPU chính cho vLLM; PC vẫn là k3s server (control plane, Argo CD, Prometheus).</text>
+</svg>

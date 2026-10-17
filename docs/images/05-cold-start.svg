@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="352" viewBox="0 0 1120 352" role="img" aria-label="Phân rã cold start minh hoạ: pull image và tải model chiếm phần lớn; cache model, pre-pull image và compile cache rút từ khoảng 5 phút xuống dưới 1 phút" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+<title>Phân rã cold start minh hoạ: pull image và tải model chiếm phần lớn; cache model, pre-pull image và compile cache rút từ khoảng 5 phút xuống dưới 1 phút</title>
+<defs></defs>
+<rect x="0.5" y="0.5" width="1119" height="351" rx="14" fill="#fcfcfb" stroke="#e4e3de"/>
+<text x="32" y="38" font-size="19" font-weight="700" fill="#0b0b0b" text-anchor="start">Phân rã thời gian cold start của một pod vLLM</text>
+<text x="32" y="61" font-size="13" font-weight="400" fill="#52514e" text-anchor="start">Số liệu MINH HOẠ (model 7–8B, image ~10 GB) — sẽ được thay bằng kết quả đo thực tế trong đồ án</text>
+<rect x="32" y="90" width="14" height="12" rx="3" fill="#2a78d6"/>
+<text x="52" y="100" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Scheduling</text>
+<rect x="136.5" y="90" width="14" height="12" rx="3" fill="#eb6834"/>
+<text x="156.5" y="100" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Pull image</text>
+<rect x="239" y="90" width="14" height="12" rx="3" fill="#1baf7a"/>
+<text x="259" y="100" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Tải model</text>
+<rect x="338" y="90" width="14" height="12" rx="3" fill="#eda100"/>
+<text x="358" y="100" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Nạp weight → GPU</text>
+<rect x="481.8" y="90" width="14" height="12" rx="3" fill="#e87ba4"/>
+<text x="501.8" y="100" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Compile · CUDA graph</text>
+<rect x="647.3" y="90" width="14" height="12" rx="3" fill="#008300"/>
+<text x="667.3" y="100" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Probe → Ready</text>
+<line x1="320" y1="126" x2="320" y2="310" stroke="#e1e0d9" stroke-width="1"/>
+<text x="320" y="328" font-size="11" font-weight="400" fill="#898781" text-anchor="middle">0 s</text>
+<line x1="420" y1="126" x2="420" y2="310" stroke="#e1e0d9" stroke-width="1"/>
+<text x="420" y="328" font-size="11" font-weight="400" fill="#898781" text-anchor="middle">50 s</text>
+<line x1="520" y1="126" x2="520" y2="310" stroke="#e1e0d9" stroke-width="1"/>
+<text x="520" y="328" font-size="11" font-weight="400" fill="#898781" text-anchor="middle">100 s</text>
+<line x1="620" y1="126" x2="620" y2="310" stroke="#e1e0d9" stroke-width="1"/>
+<text x="620" y="328" font-size="11" font-weight="400" fill="#898781" text-anchor="middle">150 s</text>
+<line x1="720" y1="126" x2="720" y2="310" stroke="#e1e0d9" stroke-width="1"/>
+<text x="720" y="328" font-size="11" font-weight="400" fill="#898781" text-anchor="middle">200 s</text>
+<line x1="820" y1="126" x2="820" y2="310" stroke="#e1e0d9" stroke-width="1"/>
+<text x="820" y="328" font-size="11" font-weight="400" fill="#898781" text-anchor="middle">250 s</text>
+<line x1="920" y1="126" x2="920" y2="310" stroke="#e1e0d9" stroke-width="1"/>
+<text x="920" y="328" font-size="11" font-weight="400" fill="#898781" text-anchor="middle">300 s</text>
+<line x1="1020" y1="126" x2="1020" y2="310" stroke="#e1e0d9" stroke-width="1"/>
+<text x="1020" y="328" font-size="11" font-weight="400" fill="#898781" text-anchor="middle">350 s</text>
+<text x="304" y="150" font-size="13" font-weight="650" fill="#0b0b0b" text-anchor="end">Không tối ưu</text>
+<text x="304" y="167" font-size="11" font-weight="400" fill="#52514e" text-anchor="end">image + model tải từ Internet</text>
+<rect x="320" y="138" width="2" height="28" rx="0" fill="#2a78d6"/>
+<rect x="324" y="138" width="178" height="28" rx="0" fill="#eb6834"/>
+<text x="413" y="181" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="middle">90 s</text>
+<rect x="504" y="138" width="298" height="28" rx="0" fill="#1baf7a"/>
+<text x="653" y="181" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="middle">150 s</text>
+<rect x="804" y="138" width="48" height="28" rx="0" fill="#eda100"/>
+<text x="828" y="181" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="middle">25 s</text>
+<rect x="854" y="138" width="88" height="28" rx="0" fill="#e87ba4"/>
+<text x="898" y="181" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="middle">45 s</text>
+<path d="M944,138 h14 q4,0 4,4 v20 q0,4 -4,4 h-14 z" fill="#008300"/>
+<text x="974" y="157" font-size="12.5" text-anchor="start"><tspan font-weight="700" fill="#0b0b0b">322 s</tspan><tspan font-weight="400" fill="#52514e">  ≈ 5,4 phút</tspan></text>
+<text x="304" y="214" font-size="13" font-weight="650" fill="#0b0b0b" text-anchor="end">Cache model trên PVC</text>
+<text x="304" y="231" font-size="11" font-weight="400" fill="#52514e" text-anchor="end">image vẫn phải pull</text>
+<rect x="320" y="202" width="2" height="28" rx="0" fill="#2a78d6"/>
+<rect x="324" y="202" width="178" height="28" rx="0" fill="#eb6834"/>
+<text x="413" y="245" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="middle">90 s</text>
+<rect x="504" y="202" width="118" height="28" rx="0" fill="#eda100"/>
+<text x="563" y="245" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="middle">60 s</text>
+<rect x="624" y="202" width="88" height="28" rx="0" fill="#e87ba4"/>
+<text x="668" y="245" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="middle">45 s</text>
+<path d="M714,202 h14 q4,0 4,4 v20 q0,4 -4,4 h-14 z" fill="#008300"/>
+<text x="744" y="221" font-size="12.5" text-anchor="start"><tspan font-weight="700" fill="#0b0b0b">207 s</tspan><tspan font-weight="400" fill="#52514e">  ≈ 3,5 phút</tspan></text>
+<text x="304" y="278" font-size="13" font-weight="650" fill="#0b0b0b" text-anchor="end">Tối ưu đầy đủ</text>
+<text x="304" y="295" font-size="11" font-weight="400" fill="#52514e" text-anchor="end">pre-pull · NVMe cục bộ · compile cache</text>
+<rect x="320" y="266" width="2" height="28" rx="0" fill="#2a78d6"/>
+<rect x="324" y="266" width="38" height="28" rx="0" fill="#eda100"/>
+<text x="343" y="309" font-size="10.5" font-weight="400" fill="#52514e" text-anchor="middle">20 s</text>
+<rect x="364" y="266" width="28" height="28" rx="0" fill="#e87ba4"/>
+<path d="M394,266 h6 q4,0 4,4 v20 q0,4 -4,4 h-6 z" fill="#008300"/>
+<text x="416" y="285" font-size="12.5" text-anchor="start"><tspan font-weight="700" fill="#0b0b0b">43 s</tspan><tspan font-weight="400" fill="#52514e">  ≈ 0,7 phút</tspan></text>
+</svg>
