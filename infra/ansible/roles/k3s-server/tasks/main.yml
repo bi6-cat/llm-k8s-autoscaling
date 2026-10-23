@@ -1,0 +1,106 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# infra/ansible/roles/k3s-server/tasks/main.yml
+# Khái niệm: k3s = bản Kubernetes gọn nhẹ đóng trong một binary (có sẵn containerd, Traefik, CoreDNS,
+#            local-path). Server = node chạy control-plane (API server, scheduler, controller-manager)
+#            và cũng chạy workload như node thường.
+# Mục đích:  Cài k3s server đúng phiên bản ghim, đọc token cho agent và kéo kubeconfig về laptop.
+# Tham khảo: docs/huong-dan/w2.md §3.3, §3.4
+# ──────────────────────────────────────────────────────────────────────────────
+
+- name: Thư mục cấu hình k3s
+  ansible.builtin.file: {path: /etc/rancher/k3s, state: directory, mode: "0755"}
+
+# Ghi config.yaml TRƯỚC khi cài: script cài k3s đọc file này ngay lần khởi động đầu tiên.
+# `register` lưu kết quả để task "Áp cấu hình mới" biết file có đổi không.
+- name: File cấu hình k3s server
+  ansible.builtin.template:
+    src: config.yaml.j2
+    dest: /etc/rancher/k3s/config.yaml
+    mode: "0600"                   # chỉ root đọc được
+  register: k3s_config
+
+# rc != 0 = chưa cài k3s; stdout chứa phiên bản đang chạy (ví dụ "k3s version v1.36.5+k3s1 …").
+- name: Phiên bản k3s đang cài (nếu có)
+  ansible.builtin.command: k3s --version
+  register: k3s_installed
+  changed_when: false
+  failed_when: false
+
+- name: Tải script cài k3s
+  ansible.builtin.get_url:
+    url: https://get.k3s.io
+    dest: /usr/local/bin/k3s-install.sh
+    mode: "0755"
+
+# Chỉ chạy script khi chưa cài hoặc đang chạy phiên bản khác bản đã ghim (cài mới hoặc nâng cấp).
+# Script đọc phiên bản và vai trò từ biến môi trường INSTALL_K3S_*.
+- name: Cài hoặc nâng k3s server
+  ansible.builtin.command: /usr/local/bin/k3s-install.sh
+  environment:
+    INSTALL_K3S_VERSION: "{{ k3s_version }}"
+    INSTALL_K3S_EXEC: server
+  when: k3s_installed.rc != 0 or k3s_version not in k3s_installed.stdout
+  changed_when: true
+
+# Trường hợp còn lại: k3s đã đúng phiên bản nhưng config.yaml vừa đổi → restart để đọc lại cấu hình.
+# (Nếu vừa cài/nâng cấp ở task trên thì script đã khởi động k3s với cấu hình mới rồi.)
+- name: Áp cấu hình mới nếu file cấu hình đổi
+  ansible.builtin.systemd_service: {name: k3s, state: restarted}
+  when: k3s_config.changed and k3s_installed.rc == 0 and k3s_version in k3s_installed.stdout
+
+# `k3s kubectl` = kubectl đi kèm k3s, tự dùng kubeconfig của server: chạy được ngay trên PC.
+# Ngay sau khi cài, kubelet chưa kịp đăng ký node nên `wait --all` thấy danh sách rỗng và lỗi ngay
+# ("no matching resources found") thay vì chờ. Gặp ngày 23/10: node Ready sau ~4 s.
+# → thử lại tối đa 30 lần, cách nhau 5 s, tới khi lệnh thành công (`until`).
+- name: Chờ node Ready
+  ansible.builtin.command: k3s kubectl wait node --all --for=condition=Ready --timeout=300s
+  register: node_ready
+  until: node_ready.rc == 0
+  retries: 30
+  delay: 5
+  changed_when: false
+
+# Kiểm tra sớm: thiếu RuntimeClass này thì pod vLLM không thấy GPU (thường do toolkit cài sau k3s).
+# Cũng thử lại vài lần vì k3s tạo RuntimeClass sau khi API server đã lên.
+- name: RuntimeClass nvidia phải tồn tại (k3s tạo khi thấy nvidia-container-runtime)
+  ansible.builtin.command: k3s kubectl get runtimeclass nvidia
+  register: rc_nvidia
+  until: rc_nvidia.rc == 0
+  retries: 12
+  delay: 5
+  changed_when: false
+
+# Token là "mật khẩu" để agent join cluster. slurp đọc file từ máy đích, trả về dạng base64.
+- name: Đọc token để agent join
+  ansible.builtin.slurp: {src: /var/lib/rancher/k3s/server/node-token}
+  register: node_token
+
+# set_fact gắn biến k3s_token vào host server; template của agent đọc qua hostvars[<server>].k3s_token.
+- name: Lưu token cho play của agent
+  ansible.builtin.set_fact:
+    k3s_token: "{{ node_token.content | b64decode | trim }}"
+
+# Đọc kubeconfig gốc trên server vào bộ nhớ (không sửa file gốc).
+- name: Đọc kubeconfig của k3s
+  ansible.builtin.slurp: {src: /etc/rancher/k3s/k3s.yaml}
+  register: k3s_kubeconfig
+
+# Sửa trong bộ nhớ rồi ghi MỘT lần về máy chạy Ansible. `copy` so checksum nên chạy lại không đổi gì
+# (cách cũ fetch rồi sửa tại chỗ thì lần nào cũng "changed", vì file đã sửa luôn khác file gốc).
+# Hai phép thay:
+#  1. k3s trỏ API server tới 127.0.0.1 (chỉ đúng khi đứng trên chính PC) → địa chỉ máy khác gọi tới được.
+#  2. k3s đặt mọi tên là "default" → llm-home / llm-cloud, để gộp nhiều kubeconfig (KUBECONFIG=a:b)
+#     không trùng tên và chọn cluster bằng `kubectl --context llm-home`. Regex: dòng kết thúc bằng
+#     "name: default", "cluster: default"… → giữ phần trước (\1), thay "default". (?m) = `$` khớp cuối mỗi dòng.
+# delegate_to: localhost + become: false = ghi file bằng user thường trên máy chạy Ansible.
+# mode 0600: file chứa chứng chỉ quản trị cluster, chỉ chủ file đọc được.
+- name: Ghi kubeconfig về máy chạy Ansible
+  ansible.builtin.copy:
+    content: >-
+      {{ k3s_kubeconfig.content | b64decode
+         | regex_replace('https://127\.0\.0\.1:6443', kubeconfig_server)
+         | regex_replace('(?m)(name|cluster|user|current-context): default$', '\1: ' ~ kubeconfig_name) }}
+    dest: "{{ kubeconfig_local_dir }}/{{ kubeconfig_name }}.yaml"
+    mode: "0600"
+  delegate_to: localhost
+  become: false

@@ -1,0 +1,19 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# platform/gpu/exporter/podmonitor.yaml
+# Khái niệm: PodMonitor (CRD của Prometheus Operator) = khai báo "hãy scrape các pod có nhãn này, ở
+#            cổng này, mỗi X giây". Operator đọc PodMonitor và tự sinh cấu hình scrape cho Prometheus.
+# Mục đích:  Prometheus thu metric GPU mỗi 5 s.
+# Tham khảo: docs/huong-dan/w2.md §5
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: nvidia-gpu-exporter            # namespace `gpu` do kustomization.yaml gán
+spec:
+  selector:
+    matchLabels: {app: nvidia-gpu-exporter}   # pod của DaemonSet ở daemonset.yaml
+  podMetricsEndpoints:
+    - port: metrics                    # tên cổng trong container (9835)
+      # 5 s thay vì 15 s mặc định: A1 scale theo GPU util, metric càng mới thì phản ứng càng nhanh
+      # (Thông số §9.4)
+      interval: 5s

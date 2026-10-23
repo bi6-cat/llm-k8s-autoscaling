@@ -1,0 +1,28 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# infra/ansible/inventory/home.yaml
+# Khái niệm: Inventory = danh sách máy Ansible quản lý, chia thành nhóm lồng nhau. Tên nhóm
+#            (k3s_server, k3s_agent) là thứ site.yml dùng trong `hosts:`; nhóm `home` cho phép áp biến
+#            chung từ group_vars/home.yaml.
+# Mục đích:  Mô tả cluster nhà: PC là server (control-plane + GPU), laptop là agent (GPU phụ).
+#            Ansible chạy ngay trên PC (PC đã đủ công cụ), nên PC dùng kết nối local, laptop qua SSH.
+# Tham khảo: docs/huong-dan/w2.md §3.2
+# ──────────────────────────────────────────────────────────────────────────────
+all:
+  children:
+    home:
+      children:
+        k3s_server:
+          hosts:
+            pc:                               # tên gọi trong Ansible, không cần trùng hostname thật
+              ansible_host: 192.168.0.100     # IP LAN của PC (zett-ubuntu-pc); cần DHCP reservation để không đổi
+              ansible_connection: local       # Ansible đang chạy trên chính PC: chạy lệnh tại chỗ, không SSH
+        k3s_agent:
+          # Tạm để trống: cluster chạy một node (PC) tới khi cần 2 GPU (W3: KB2-mini, VH2, VH3).
+          # Trước khi thêm laptop: driver phải ≥ 580 (image vLLM CUDA 13) và PC SSH được tới laptop bằng khoá.
+          # Khi thêm: thay `{}` bằng khối dưới (bỏ dấu #, thụt lề dưới `hosts:`).
+          #   laptop:
+          #     ansible_host: <LAPTOP_IP>
+          #     is_laptop: true               # role common bật chế độ không ngủ khi gập màn hình
+          hosts: {}
+      vars:
+        ansible_user: zett                    # user Ubuntu, có sudo không cần mật khẩu

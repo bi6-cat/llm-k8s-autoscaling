@@ -1,0 +1,19 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# infra/ansible/inventory/group_vars/home.yaml
+# Khái niệm: Biến riêng cho nhóm `home` (ghi đè all.yaml).
+# Mục đích:  Bật Argo CD, đặt tên kubeconfig và thêm tên/IP Tailscale vào chứng chỉ API server.
+#            Tên và IP Tailscale lấy từ `tailscale status` trên PC (23/10/2026).
+# Tham khảo: docs/huong-dan/w2.md §3.2
+# ──────────────────────────────────────────────────────────────────────────────
+env_name: home
+argocd_enabled: true
+# Tên context kubectl và tên file ~/.kube/llm-home.yaml
+kubeconfig_name: llm-home
+# Địa chỉ API server ghi vào kubeconfig: IP LAN của máy đầu tiên trong nhóm k3s_server.
+# 6443 là cổng mặc định của Kubernetes API server.
+# Người làm từ xa qua Tailscale (Trình) sửa `server:` trong kubeconfig thành https://zett-ubuntu-pc:6443.
+kubeconfig_server: "https://{{ hostvars[groups['k3s_server'][0]].ansible_host }}:6443"
+# Tên/IP thêm vào chứng chỉ API server để kubectl qua Tailscale không lỗi "x509: certificate is valid for…"
+k3s_tls_sans:
+  - zett-ubuntu-pc          # tên MagicDNS của PC
+  - 100.73.95.48            # IP Tailscale của PC (dải 100.64.0.0/10 nội bộ tailnet, không phải IP công khai)

@@ -1,0 +1,14 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# infra/ansible/roles/nvidia/handlers/main.yml
+# Khái niệm: Handler (xem roles/common/handlers): chỉ chạy khi task cài toolkit báo "changed".
+# Mục đích:  k3s chỉ dò nvidia-container-runtime lúc khởi động. Nếu toolkit được cài/nâng cấp SAU khi
+#            k3s đã chạy (ví dụ chạy lại playbook), phải restart k3s thì runtime mới được nhận.
+# Tham khảo: docs/huong-dan/w2.md §3.4
+# ──────────────────────────────────────────────────────────────────────────────
+# Máy server có service k3s, máy agent có k3s-agent. `list-unit-files` trả lỗi khi không có service đó,
+# nên mỗi dòng chỉ restart service thực sự tồn tại trên máy; lần dựng đầu (chưa có k3s) thì không làm gì.
+- name: Restart k3s
+  ansible.builtin.shell: |
+    if systemctl list-unit-files k3s.service >/dev/null 2>&1; then systemctl restart k3s; fi
+    if systemctl list-unit-files k3s-agent.service >/dev/null 2>&1; then systemctl restart k3s-agent; fi
+  changed_when: true

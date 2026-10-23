@@ -1,0 +1,13 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# platform/gpu/exporter/kustomization.yaml
+# Khái niệm: Kustomization = danh sách manifest gom lại thành một bộ; `kubectl kustomize <thư mục>`
+#            (hoặc Argo CD) đọc file này để build ra YAML cuối cùng.
+# Mục đích:  Gom DaemonSet exporter + PodMonitor, đặt chung namespace `gpu`.
+# Tham khảo: docs/huong-dan/w2.md §5
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: gpu                         # gán namespace cho mọi object bên dưới (file con không cần ghi)
+resources:
+  - daemonset.yaml
+  - podmonitor.yaml
