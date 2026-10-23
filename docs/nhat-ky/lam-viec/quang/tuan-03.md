@@ -27,6 +27,7 @@
   - Khi khởi động có cache, `torch.compile` vẫn mất 9,3 s và capture CUDA graph vẫn mất ~90 s, vì lệnh Docker chỉ mount `~/.cache/huggingface`, còn cache compile nằm ở `/root/.cache/vllm` không được giữ. Liên quan L2 (compile cache, Q4): manifest phải mount cả thư mục này.
   - Chưa làm phần còn lại của W1: laptop, kind + simulator, offer Vast, quota GCP.
 - **Liên kết:** `docs/nhat-ky/tuan-01.md`, `docs/huong-dan/w1.md` §1–§3.
+- **Dùng cho luận văn:** §4.3 (chọn image vLLM, lỗi `-cu129`); chương 5 phần cold start (486 s / 167 s và các pha); N4 graceful shutdown (bằng chứng drain và đối chứng trước khi lên k8s); LT2 (KV-cache 101.120 token trên 2,7 GiB ≈ 28 KB/token, khớp dự đoán 16/10). Nên chụp log `[shutdown] … mode=drain` và bảng kết quả `vllm bench`.
 
 ## 2026-10-23 – Chốt image vLLM `v0.31.0` (CUDA 13)
 
@@ -37,4 +38,33 @@
 - **Sự cố:** chưa sửa được `serving/base/kustomization.yaml` vì file này chỉ có trên nhánh `temp/w2-scaffold`; sửa khi tách nhánh serving.
 - **Liên kết:** `docs/phien-ban.md`, `docs/adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md` §7.
 - **Dùng cho luận văn:** §4.3 (chọn và ghim image, vì sao ghim digest, lỗi đóng gói của image `-cu129`).
-- **Dùng cho luận văn:** §4.3 (chọn image vLLM, lỗi `-cu129`); chương 5 phần cold start (486 s / 167 s và các pha); N4 graceful shutdown (bằng chứng drain và đối chứng trước khi lên k8s); LT2 (KV-cache 101.120 token trên 2,7 GiB ≈ 28 KB/token, khớp dự đoán 16/10). Nên chụp log `[shutdown] … mode=drain` và bảng kết quả `vllm bench`.
+
+## 2026-10-23 – k3s trên PC bằng Ansible, GPU trong Kubernetes (W2 §3, §5)
+
+- **Mã việc:** Q1 · **Môi trường:** nhà (PC `zett-ubuntu-pc`)
+- **Đã làm:**
+  1. Tạo nhánh `feat/ansible-k3s`, lấy `infra/ansible/` và `platform/gpu/` từ nhánh `temp/w2-scaffold`.
+  2. Sửa inventory theo máy thật: PC 192.168.0.100, user `zett`, `ansible_connection: local`; tên và IP Tailscale của PC vào `k3s_tls_sans`. Tạm bỏ laptop khỏi nhóm `k3s_agent`.
+  3. Chạy `ansible-playbook -i inventory/home.yaml site.yml -e argocd_enabled=false` trên PC. Lần 1 lỗi ở task "Chờ node Ready"; sửa role; lần 2 đạt; sửa tiếp để idempotent; lần 4 `changed=0`.
+  4. Kiểm tra cluster bằng kubeconfig `~/.kube/llm-home.yaml`, qua IP LAN, tên MagicDNS và IP Tailscale.
+  5. Cài device plugin bằng Helm (chart `nvidia-device-plugin` 0.20.1, release `nvdp`, namespace `gpu`, values `platform/gpu/device-plugin-values.yaml`); áp DaemonSet GPU exporter; chạy pod thử xin 1 GPU.
+- **Quyết định và lý do:**
+  - Chạy Ansible ngay trên PC thay vì từ laptop như `w2.md` §3: PC đã đủ công cụ (ansible-core 2.21.5, helm, kubectl, argocd, vastai); laptop chưa kiểm tra driver ≥ 580 và PC chưa SSH được tới máy `quangnv3-d8-u` (lỗi host key).
+  - Cluster một node (PC) tới W3: chỉ cần laptop khi chạy 2 replica (KB2-mini, VH2, VH3).
+  - Chưa cài Argo CD (`argocd_enabled=false`): role áp `platform/argocd/root-app-home.yaml`, mà thư mục `platform/argocd/` chưa có trên `main` (phần TR1 của Trình).
+  - Device plugin cài tạm bằng Helm, cùng chart, phiên bản, values và tên release như Application `gpu-device-plugin`, để Argo CD nhận quản lý sau. Chưa áp `podmonitor.yaml` vì CRD `PodMonitor` có cùng kube-prometheus-stack (TR3).
+- **Kết quả và số đo:**
+  - Ansible: lần đạt đầu tiên 23 s (k3s đã cài từ lần 1; lần 1 tới chỗ lỗi mất 84 s, gồm cài k3s). Lần chạy lại: `ok=23 changed=0 failed=0`.
+  - Node `zett-ubuntu-pc` `Ready`, k3s `v1.36.5+k3s1`, containerd `2.3.4-k3s1.36`, nhãn `nvidia.com/gpu.present=true`, RuntimeClass `nvidia` có. `config.yaml`: `tls-san` gồm IP LAN, `zett-ubuntu-pc`, IP Tailscale; `horizontal-pod-autoscaler-sync-period=5s`.
+  - `kubectl` gọi được qua `https://192.168.0.100:6443`, `https://zett-ubuntu-pc:6443` và IP Tailscale, không lỗi chứng chỉ.
+  - Pod hệ thống chạy: coredns, local-path-provisioner, metrics-server, traefik, svclb-traefik.
+  - Device plugin log `Registered device plugin for 'nvidia.com/gpu' with Kubelet`; node allocatable `nvidia.com/gpu: 1` (sau ~10 s). Pod thử (`runtimeClassName: nvidia`, limit `nvidia.com/gpu: 1`) in `GPU 0: NVIDIA GeForce RTX 5060`.
+  - Exporter: `nvidia_smi_memory_total_bytes` 8,55e9, `memory_used_bytes` 6,4e8, `power_draw_watts` 8,77, `temperature_gpu` 44, `utilization_gpu_ratio` 0 (máy rảnh).
+  - Swap đã tắt (trước đó 4 GB, đang dùng 2,2 GB); dòng swap trong `/etc/fstab` đã comment.
+- **Sự cố:**
+  - Task "Chờ node Ready" lỗi `error: no matching resources found` sau 0,16 s: `kubectl wait node --all` chạy khi kubelet chưa đăng ký node nên danh sách rỗng và lỗi ngay thay vì chờ; 4 s sau node đã Ready. Sửa: thêm `until/retries: 30/delay: 5`; làm tương tự cho kiểm tra RuntimeClass.
+  - Playbook không idempotent: mỗi lần chạy có 3 task `changed` (fetch kubeconfig rồi sửa tại chỗ, nên file đã sửa luôn khác file gốc và bị chép đè). Sửa: `slurp` file gốc, thay chuỗi bằng `regex_replace` trong bộ nhớ, ghi một lần bằng `copy` (mode 0600).
+  - Tự sửa nhật ký: mục "Chốt image" chèn nhầm làm dòng "Dùng cho luận văn" của mục "Làm bù W1" bị đẩy xuống cuối file; đã chuyển về đúng chỗ.
+- **Khác thiết kế:** Ansible chạy trên PC (không từ laptop); chưa có laptop agent; Argo CD chưa cài; device plugin và exporter tạm áp tay, chưa qua Argo CD; chưa có PodMonitor.
+- **Liên kết:** `infra/ansible/inventory/home.yaml`, `infra/ansible/inventory/group_vars/home.yaml`, `infra/ansible/roles/k3s-server/tasks/main.yml`, `platform/gpu/`.
+- **Dùng cho luận văn:** §4.1 (dựng cluster nhà bằng Ansible, idempotent, tls-san cho Tailscale); §4.3 (GPU trong Kubernetes: RuntimeClass, device plugin, exporter thay cho GPU Operator). Nên chụp `kubectl get nodes -o wide` và output pod thử `nvidia-smi -L`.
