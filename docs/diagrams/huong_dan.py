@@ -16,9 +16,9 @@ def fig_w1_vllm():
     s.header("W1 · Kiểm tra vLLM trên RTX 5060",
              "Mỗi bước có một lệnh cho biết đạt hay không; hỏng thì thử theo nhánh bên dưới, tổng thời gian thử ≤ 4 giờ")
     steps = [
-        ("Driver", ["nvidia-smi: ≥ 575, bản open", "compute_cap = 12.0"]),
+        ("Driver", ["nvidia-smi: ≥ 580, bản open", "compute_cap = 12.0"]),
         ("Toolkit", ["docker run --gpus all", "thấy RTX 5060"]),
-        ("Image sm_120", ["torch arch list có sm_120", "ghim digest -cu129"]),
+        ("Image sm_120", ["torch arch list có sm_120", "ghim digest v0.31.0"]),
         ("Chạy 1,5B", ["log: GPU KV cache size", "ghi VRAM, thời gian"]),
         ("API + metric", ["stream có usage, [DONE]", "bucket TTFT le=\"2.5\""]),
         ("Drain khi tắt", ["--shutdown-timeout 150", "stream chạy hết"]),
@@ -33,7 +33,7 @@ def fig_w1_vllm():
     # nhánh khi hỏng
     fy = 262
     fails = [
-        (0, 3, "Hỏng ở bước 1–3", ["nâng driver ≥ 580 (dùng được image CUDA 13)",
+        (0, 3, "Hỏng ở bước 1–3", ["nâng driver ≥ 580 (image CUDA 13)",
                                    "thử image NGC nvcr.io/nvidia/vllm hoặc bản vLLM mới hơn"]),
         (3, 4, "OOM / lỗi compile", ["--gpu-memory-utilization", "0.80; --enforce-eager"]),
         (4, 6, "Đạt", ["ghi digest, revision, KV cache vào nhật ký", "W2 dùng đúng image này trong k3s"]),

@@ -1,0 +1,40 @@
+# Nhật ký làm việc – Quang – Tuần 03 (19–25/10)
+
+## 2026-10-23 – Làm bù W1: vLLM trên RTX 5060
+
+- **Mã việc:** Q3 (chuẩn bị), rủi ro R23 · **Môi trường:** nhà (PC `zett-ubuntu-pc`, chạy bằng Docker)
+- **Đã làm:**
+  1. Kiểm tra PC theo `w1.md` §1–§2: RTX 5060, driver 595.99.02 bản open, compute_cap 12.0; Docker 29.1.3 có runtime `nvidia`; toolkit 1.20.1; container `nvidia/cuda:12.9.1-base` thấy GPU. Tất cả đã có sẵn, không cài gì thêm.
+  2. Kéo `vllm/vllm-openai:v0.31.0-cu129` (28 phút 45 giây ở ~11 MB/s, 37,7 GB sau giải nén). Digest khớp giá trị tham chiếu trong `w1.md`. Image có `sm_120`, torch thấy `NVIDIA GeForce RTX 5060 (12, 0)`.
+  3. Chạy vLLM bằng `-cu129`: chết sau 15 s.
+  4. Chuyển sang `vllm/vllm-openai:v0.31.0` (bản CUDA 13 đã có sẵn trên máy dưới tag `latest`, digest trùng tag `v0.31.0` trên Docker Hub): khởi động được.
+  5. Kiểm tra theo §3.4: health, `/v1/models`, streaming, metric, bucket TTFT, cờ, `vllm bench serve`.
+  6. Thử `--shutdown-timeout 150` (§3.5), rồi chạy lại với `--shutdown-timeout 0` làm ca đối chứng (đồng thời đo khởi động khi đã có cache model).
+- **Quyết định và lý do:** dùng `v0.31.0` (CUDA 13) cho lần thử, vì PC có driver 595 ≥ 580 và image đã có sẵn, không phải tải thêm ~30 GB. **Chưa đổi ghim trong repo**: `serving/base/kustomization.yaml` và `docs/phien-ban.md` vẫn ghi `-cu129`. Cần chọn giữa `v0.31.0` (laptop và VM phải có driver ≥ 580) và `v0.32.0-cu129` (chưa thử, chưa biết đã sửa lỗi chưa).
+- **Kết quả và số đo:**
+  - Khởi động lần đầu 486 s, trong đó tải và nạp model 327 s, `torch.compile` 10 s, capture CUDA graph 42 s + 38 s. Có cache model: 167 s (nạp weights 13 s, `torch.compile` 9,3 s, capture CUDA graph 42 s + 50 s, init engine 110 s).
+  - `GPU KV cache size: 101,120 tokens`, `Maximum concurrency for 4,096 tokens per request: 24.69x`; KV-cache 2,7 GiB; model 2,98 GiB; VRAM 6864/8151 MiB với `--gpu-memory-utilization 0.85`.
+  - Streaming: 67 dòng `data:`, usage 36 + 64 token, có `[DONE]`. Có `vllm:num_requests_running`, `vllm:num_requests_waiting`; bucket TTFT có `le="2.5"`; có cờ `--shutdown-timeout`, `--no-enable-prefix-caching`, `--api-key`.
+  - `vllm bench serve` (random, input 512, output 256, `--ignore-eos`, c=8, 64 prompt): 64/64 thành công; TTFT trung bình 224 ms, p50 249 ms, p99 344 ms; TPOT p50 9,30 ms, p99 10,03 ms; output 782 tok/s (đỉnh 896). Chỉ để kiểm tra máy chạy hợp lý, không phải số liệu đánh giá.
+  - Drain (`--shutdown-timeout 150`): SIGTERM khi stream 1000 token mới có 13 chunk; log `stopping engine client mode=drain timeout=150s`; stream nhận đủ 1000/1000 token, có `[DONE]` sau 8,6 s; container thoát sau 14,1 s.
+  - Đối chứng (`--shutdown-timeout 0`): log `mode=abort timeout=0s`; stream cắt sau 10 chunk, không có `[DONE]`, curl exit 18.
+- **Sự cố:**
+  - `v0.31.0-cu129` không khởi động được: `OSError: libnvrtc.so.13: cannot open shared object file` → `Could not load .../torchcodec/libtorchcodec_image.so`. Nguyên nhân: image có `torchcodec 0.17.0` (bản build cho CUDA 13) trong khi chỉ có `libnvrtc.so.12`; vLLM import `torchcodec` ngay lúc khởi động (`vllm.multimodal.audio`). Đã kiểm chứng bằng `python3 -c 'import torchcodec.decoders'`: lỗi trên `-cu129`, chạy được trên `v0.31.0` (`torchcodec 0.17.0+cu130`). Cách xử lý: tạm dùng `v0.31.0`; chưa thử build lại image hay `v0.32.0-cu129`.
+  - Ở ca đối chứng, engine bị kill ngay nhưng HTTP server dừng ở `Shutting down` và không tự thoát; Docker SIGKILL sau 160 s (exit 137). Ca drain không bị. Chưa rõ nguyên nhân, có thể do server chờ kết nối đang mở. Cần để ý ở W3: trong k8s thì `terminationGracePeriodSeconds` sẽ quyết định khi nào pod bị kill.
+  - Model 1,5B trả lời câu hỏi tiếng Việt bằng tiếng Trung. Không ảnh hưởng việc đo; prompt của máy tạo tải nên dùng tiếng Anh.
+- **Khác thiết kế:**
+  - `w1.md` §1 và `docs/phien-ban.md` chọn `-cu129`, nhưng bản này hỏng. Thực tế chạy `v0.31.0` (CUDA 13).
+  - Khi khởi động có cache, `torch.compile` vẫn mất 9,3 s và capture CUDA graph vẫn mất ~90 s, vì lệnh Docker chỉ mount `~/.cache/huggingface`, còn cache compile nằm ở `/root/.cache/vllm` không được giữ. Liên quan L2 (compile cache, Q4): manifest phải mount cả thư mục này.
+  - Chưa làm phần còn lại của W1: laptop, kind + simulator, offer Vast, quota GCP.
+- **Liên kết:** `docs/nhat-ky/tuan-01.md`, `docs/huong-dan/w1.md` §1–§3.
+
+## 2026-10-23 – Chốt image vLLM `v0.31.0` (CUDA 13)
+
+- **Mã việc:** Q3 · **Môi trường:** không
+- **Đã làm:** đổi ghim image từ `v0.31.0-cu129` sang `vllm/vllm-openai:v0.31.0@sha256:c1c9f6fd5c109ba7f0546a59f5b2f15fb87f64c77782e90a27b648b42a8e67c3` ở `docs/phien-ban.md`; sửa yêu cầu driver thành ≥ 580 ở `w1.md`, `w2.md`, `.env.example`; thêm lỗi `libnvrtc.so.13` vào bảng lỗi của `w1.md`; sửa chữ trong hình 18; thêm một dòng vào ADR-004 §7. Điền driver 595.99.02, toolkit 1.20.1, Ubuntu 26.04.1 của PC vào `phien-ban.md`.
+- **Quyết định và lý do:** chọn `v0.31.0` vì là bản duy nhất đã chạy thật trên 5060 và đã có trên PC. Bỏ `v0.32.0-cu129`: chưa thử, phải tải thêm ~30 GB trong khi ổ PC còn ~31 GB, và đổi minor version có thể đổi cờ hoặc metric đã kiểm tra.
+- **Khác thiết kế:** yêu cầu driver tăng từ ≥ 575 lên ≥ 580 cho mọi máy GPU. Laptop và template VM Vast chưa kiểm tra. Ubuntu trên PC là 26.04.1 bản desktop, không phải 24.04 server như `phien-ban.md` ghi trước đây.
+- **Sự cố:** chưa sửa được `serving/base/kustomization.yaml` vì file này chỉ có trên nhánh `temp/w2-scaffold`; sửa khi tách nhánh serving.
+- **Liên kết:** `docs/phien-ban.md`, `docs/adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md` §7.
+- **Dùng cho luận văn:** §4.3 (chọn và ghim image, vì sao ghim digest, lỗi đóng gói của image `-cu129`).
+- **Dùng cho luận văn:** §4.3 (chọn image vLLM, lỗi `-cu129`); chương 5 phần cold start (486 s / 167 s và các pha); N4 graceful shutdown (bằng chứng drain và đối chứng trước khi lên k8s); LT2 (KV-cache 101.120 token trên 2,7 GiB ≈ 28 KB/token, khớp dự đoán 16/10). Nên chụp log `[shutdown] … mode=drain` và bảng kết quả `vllm bench`.
