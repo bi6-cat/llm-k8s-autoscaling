@@ -1,0 +1,14 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# serving/overlays/cloud/kustomization.yaml
+# Khái niệm: Overlay `cloud` = base + patch cho VM thuê (RTX 4090 24 GB, model 7B).
+# Mục đích:  Dùng từ phiên V0. V0 áp tay (`kubectl apply -k serving/overlays/cloud`); từ W4 qua Argo CD.
+#            W3 thêm route Traefik riêng cho máy tạo tải, W4 thêm prefetch model (mức L2).
+# Tham khảo: docs/huong-dan/w2.md §11.3
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+patches:
+  - path: patch-vllm.yaml
+    target: {kind: Deployment, name: vllm}

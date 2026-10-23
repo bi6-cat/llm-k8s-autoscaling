@@ -1,0 +1,44 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# serving/overlays/cloud/patch-vllm.yaml
+# Khái niệm: JSON patch (cách đọc: serving/overlays/home/patch-vllm.yaml) cho model 7B trên GPU 24 GB.
+# Mục đích:  Model 7B, QoS Guaranteed (requests = limits, CPU nguyên) và cache trên ổ NVMe của VM.
+#            Giá trị theo cột "Cloud" ở Thông số §9.1–§9.2.
+# Tham khảo: docs/huong-dan/w2.md §11.3
+# ──────────────────────────────────────────────────────────────────────────────
+# V0: model tải từ Hugging Face ở lần khởi động đầu (mức L0); lần sau đã nằm sẵn trong cache trên NVMe.
+
+# Qwen2.5-7B (~15,2 GB ở BF16) vừa GPU 24 GB, còn ~6 GB cho KV-cache
+- op: add
+  path: /spec/template/spec/containers/0/args/-
+  value: --model=Qwen/Qwen2.5-7B-Instruct
+- op: add
+  path: /spec/template/spec/containers/0/args/-
+  value: --revision=a09a35458c702b33eeacc393d103063234e8bc28
+- op: add
+  path: /spec/template/spec/containers/0/args/-
+  value: --served-model-name=qwen2.5-7b
+# Prompt 512 + output 256 token của bài đánh giá dư sức nằm trong 8192
+- op: add
+  path: /spec/template/spec/containers/0/args/-
+  value: --max-model-len=8192
+- op: add
+  path: /spec/template/spec/containers/0/args/-
+  value: --max-num-seqs=64
+# VM không có màn hình nên được dùng 90% VRAM
+- op: add
+  path: /spec/template/spec/containers/0/args/-
+  value: --gpu-memory-utilization=0.90
+# QoS Guaranteed: requests = limits và CPU là số nguyên. Kết hợp CPU manager static
+# (group_vars/cloud.yaml), pod được giữ riêng 6 lõi CPU, không bị pod khác chen vào → số đo ổn định.
+- op: replace
+  path: /spec/template/spec/containers/0/resources
+  value:
+    requests: {cpu: "6", memory: 24Gi, nvidia.com/gpu: 1}
+    limits: {cpu: "6", memory: 24Gi, nvidia.com/gpu: 1}
+# Cache trên NVMe: thư mục do role common tạo (type Directory = phải có sẵn, không tự tạo).
+# Bên trong: hf/ (model, HF_HOME) và vllm/ (compile cache, VLLM_CACHE_ROOT).
+- op: replace
+  path: /spec/template/spec/volumes/0
+  value:
+    name: cache
+    hostPath: {path: /mnt/nvme/cache, type: Directory}

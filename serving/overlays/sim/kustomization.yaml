@@ -1,0 +1,15 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# serving/overlays/sim/kustomization.yaml
+# Khái niệm: Overlay `sim` = cùng base nhưng thay vLLM bằng simulator (llm-d-inference-sim).
+# Mục đích:  Thử autoscaling trên laptop không cần GPU, với ĐÚNG Deployment/Service/PodMonitor như thật.
+#            Nhờ vậy kết quả T1–T5 trên simulator áp dụng được cho vLLM thật.
+# Dùng:      make sim-up (áp bằng kubectl, không qua Argo CD)
+# Tham khảo: docs/huong-dan/w2.md §9.1
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+patches:
+  - path: patch-sim.yaml
+    target: {kind: Deployment, name: vllm}
