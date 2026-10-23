@@ -95,3 +95,17 @@
 - **Khác thiết kế:** triển khai bằng `kubectl apply` (chưa qua Argo CD); thiếu PodMonitor; thêm `enableServiceLinks: false` (thiết kế chưa có); image được kéo trước bằng `crictl` thay vì để kubelet kéo.
 - **Liên kết:** `serving/base/deployment.yaml`, `serving/base/kustomization.yaml`, `docs/huong-dan/w2.md` §13, `docs/nhat-ky/van-hanh.md`.
 - **Dùng cho luận văn:** §4.3 (Deployment vLLM, probe, cache trên hostPath, bẫy `VLLM_PORT`); §4.5 hoặc chương 5 cold start (155 s có cache, compile cache rút `torch.compile` từ ~10 s xuống 1,4 s); §4.9 vận hành (sự cố k3s và ổ SATA). Nên chụp output 401/200 và bảng `vllm bench` so với W1.
+
+## 2026-10-23 – Đo ổ hệ thống của PC sau sự cố k3s
+
+- **Mã việc:** Q1 · **Môi trường:** nhà (PC, `/dev/sda` Colorful SL500 256 GB SATA, k3s và vLLM đang chạy)
+- **Đã làm:** đọc SMART (`smartctl -H -A`); đo bằng `fio` trong `/var/lib/rancher`: fsync kiểu etcd (`--fdatasync=1 --bs=2300 --size=22m`) khi ổ rảnh, ghi tuần tự 4 GB `--direct=1` cùng lúc với fsync; chạy `fstrim -v /` rồi đo lại (ghi 2 GB, fsync rảnh).
+- **Kết quả và số đo:**
+  - SMART `PASSED`; Reallocated, Pending, Uncorrectable, Erase fail, CRC đều 0; Power_On_Hours 6262. Ổ không hỏng.
+  - fsync khi rảnh: p50 0,95 ms, p99 110 ms (sau TRIM: p99 60 ms). Khuyến nghị cho etcd/k3s: p99 < 10 ms.
+  - Ghi tuần tự kéo dài: 35 MB/s (4 GB trong 116 s); sau TRIM 33 MB/s (2 GB trong 62 s).
+  - fsync khi đang ghi tuần tự: p50 192 ms, p99 7,1 s, max 7,2 s. Khớp với sự cố k3s ("Slow SQL" rồi thoát).
+  - `fstrim` giải phóng 47,1 GiB nhưng không cải thiện tốc độ ghi; `fstrim.timer` vẫn bật (hằng tuần).
+  - k3s không restart trong lúc đo (`NRestarts=2` như trước).
+- **Quyết định và lý do:** chưa đổi gì. Ổ chỉ là vấn đề khi ghi lớn kéo dài; đọc model vẫn nhanh (nạp 2,98 GiB weights trong ~11 s). Các phương án (giới hạn ghi cố định cho k3s, chuyển dữ liệu sang NVMe) chờ Quang quyết.
+- **Dùng cho luận văn:** §3.6/§5 môi trường (hạn chế phần cứng nhà, vì sao số liệu chính thức đo trên máy thuê); mục "Hạn chế".
