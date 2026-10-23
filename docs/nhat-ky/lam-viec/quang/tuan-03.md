@@ -68,3 +68,30 @@
 - **Khác thiết kế:** Ansible chạy trên PC (không từ laptop); chưa có laptop agent; Argo CD chưa cài; device plugin và exporter tạm áp tay, chưa qua Argo CD; chưa có PodMonitor.
 - **Liên kết:** `infra/ansible/inventory/home.yaml`, `infra/ansible/inventory/group_vars/home.yaml`, `infra/ansible/roles/k3s-server/tasks/main.yml`, `platform/gpu/`.
 - **Dùng cho luận văn:** §4.1 (dựng cluster nhà bằng Ansible, idempotent, tls-san cho Tailscale); §4.3 (GPU trong Kubernetes: RuntimeClass, device plugin, exporter thay cho GPU Operator). Nên chụp `kubectl get nodes -o wide` và output pod thử `nvidia-smi -L`.
+
+## 2026-10-23 – vLLM chạy trong Kubernetes ở nhà (W2 §8)
+
+- **Mã việc:** Q3 · **Môi trường:** nhà (PC, k3s một node)
+- **Đã làm:**
+  1. Tạo nhánh `feat/serving` (nối sau `feat/ansible-k3s`), lấy `serving/` từ `temp/w2-scaffold`; sửa ghim image ở `serving/base/kustomization.yaml` sang `v0.31.0@sha256:c1c9f6fd…`.
+  2. Xoá hai image vLLM trong Docker (`-cu129` hỏng 37,7 GB và `v0.31.0` 32,3 GB) để lấy chỗ (ổ còn 22 GB → 87 GB). Quang đồng ý trước khi xoá.
+  3. Kéo image vào containerd của k3s bằng `k3s crictl pull` theo digest. Hai lần đầu k3s tự thoát (xem `docs/nhat-ky/van-hanh.md`); lần ba đặt giới hạn ghi 80 MB/s thì xong; gỡ giới hạn sau đó.
+  4. Tạo namespace `llm-serving` và Secret `vllm-api-key` (khoá ngẫu nhiên 48 ký tự hex, không lưu vào Git, không in ra). Chép cache model từ W1 (`~/hf-cache`, 2,9 GB) sang hostPath `/var/lib/llm-cache/hf`.
+  5. `kubectl apply -k serving/overlays/home`: pod restart 3 lần; sửa `enableServiceLinks: false`; apply lại: Ready.
+  6. Kiểm tra API qua Traefik (Ingress `llm.home`), khoá API, streaming; chạy `vllm bench` hai lần.
+- **Quyết định và lý do:**
+  - Apply tay bằng `kubectl` thay vì Argo CD: Argo CD chưa cài (TR1). Khi Argo CD lên, app `serving` sẽ nhận quản lý các tài nguyên này.
+  - Chưa áp `PodMonitor` (thiếu CRD, chờ kube-prometheus-stack của Trình); `kubectl apply -k` báo lỗi cho riêng object này, các object khác vẫn tạo.
+  - Chép sẵn cache model để khỏi tải lại; vì vậy số đo khởi động dưới đây là khởi động **có cache**, không phải L0.
+- **Kết quả và số đo:**
+  - Pod `vllm` 1/1 Running, 0 restart sau khi sửa. Container chạy → Ready: 155 s (04:52:38 → 04:55:13 UTC); nạp weights 10,9 s; `torch.compile` 1,41 s (W1 Docker 9–10 s, nhờ cache compile nằm trên hostPath qua `VLLM_CACHE_ROOT`); capture CUDA graph 44 s + 40 s; init engine 98,9 s.
+  - `GPU KV cache size: 112,160 tokens`, `Maximum concurrency: 27.38x` (Docker W1: 101.120 / 24,69x). Chưa tìm hiểu vì sao cao hơn.
+  - Qua Traefik: không khoá hoặc sai khoá → 401; đúng khoá → 200; `/health` không khoá → 200; streaming 25 dòng `data:`, có `[DONE]`, usage 36 + 22 token; gọi qua IP Tailscale → 200.
+  - `vllm bench` (cùng tham số W1: random 512/256, c=8, 64 prompt), hai lần: 64/64 thành công; TTFT trung bình 255 / 249 ms, p50 295 / 295 ms, p99 541 / 503 ms; TPOT p50 9,72 / 9,69 ms; output 744 / 746 tok/s. So W1 Docker: TPOT +4 %, throughput −5 % (trong ±10 %); **TTFT p50 +18 %, p99 +46–57 %** (vượt ±10 %, lặp lại ổn định nên không do làm nóng). Chưa rõ nguyên nhân.
+- **Sự cố:**
+  - Pod restart liên tục, log `ValueError: VLLM_PORT 'tcp://10.43.53.99:8000' appears to be a URI`: Service tên `vllm` khiến Kubernetes gắn biến kiểu Docker link `VLLM_PORT=tcp://…` vào pod, trùng tên biến cấu hình của vLLM; engine chết cuối giai đoạn khởi tạo (~2,5 phút mỗi lần). Sửa: `enableServiceLinks: false` ở `serving/base/deployment.yaml`.
+  - Khi rollout bản sửa, pod mới chờ ~3 phút mới được xếp lịch: `maxSurge: 0` nên phải chờ pod cũ trả GPU, mà pod cũ đang dở khởi tạo không thoát khi nhận SIGTERM, bị kill sau đủ `terminationGracePeriodSeconds: 180`. Giống hiện tượng "không tự thoát" ở ca đối chứng W1. Cần xem ở Q5 (W3).
+  - k3s tự thoát hai lần khi kéo image: ghi ở `docs/nhat-ky/van-hanh.md`.
+- **Khác thiết kế:** triển khai bằng `kubectl apply` (chưa qua Argo CD); thiếu PodMonitor; thêm `enableServiceLinks: false` (thiết kế chưa có); image được kéo trước bằng `crictl` thay vì để kubelet kéo.
+- **Liên kết:** `serving/base/deployment.yaml`, `serving/base/kustomization.yaml`, `docs/huong-dan/w2.md` §13, `docs/nhat-ky/van-hanh.md`.
+- **Dùng cho luận văn:** §4.3 (Deployment vLLM, probe, cache trên hostPath, bẫy `VLLM_PORT`); §4.5 hoặc chương 5 cold start (155 s có cache, compile cache rút `torch.compile` từ ~10 s xuống 1,4 s); §4.9 vận hành (sự cố k3s và ổ SATA). Nên chụp output 401/200 và bảng `vllm bench` so với W1.
