@@ -23,9 +23,12 @@ KPS_VERSION := 92.1.1
 KEDA_VERSION := 2.21.0
 # Loại máy thuê: v0 (1 GPU, thử) hoặc v2 (4 GPU, đánh giá). `?=` = chỉ gán nếu người gọi chưa truyền.
 MODE ?= v0
+# Đường dẫn promtool (đi kèm bản tải Prometheus). Không có trong PATH thì truyền vào:
+# make alerts-test PROMTOOL=/đường/dẫn/promtool
+PROMTOOL ?= promtool
 
 # .PHONY: các target này không phải tên file, make luôn chạy chúng (kể cả khi có file trùng tên)
-.PHONY: help home-up sim-up sim-down sim-test-load find rent bootstrap release lint
+.PHONY: help home-up sim-up sim-down sim-test-load find rent bootstrap release lint alerts-test
 
 # In mọi target có comment `## mô tả` cùng dòng. Thêm target mới thì nhớ viết `## …` để nó hiện ở đây.
 help: ## In danh sách lệnh
@@ -101,9 +104,27 @@ release: ## Huỷ instance Vast đang thuê
 # Giống CI (.github/workflows/ci.yaml) nhưng chạy trên máy mình, nhanh hơn chờ GitHub.
 lint: ## yamllint, kubectl kustomize, ansible syntax-check
 	yamllint -s .
-	for d in serving/overlays/* autoscaling/official/overlays/* platform/gpu/exporter platform/kube-prometheus-stack/extras; do \
+	for d in serving/overlays/* autoscaling/official/overlays/* platform/gpu/exporter platform/kube-prometheus-stack/extras observability; do \
 	  kubectl kustomize $$d >/dev/null || exit 1; done
 	cd $(ANSIBLE_DIR) && ansible-playbook -i inventory/home.yaml site.yml --syntax-check
+
+# promtool chỉ đọc file rule thuần (`groups:` ở gốc), còn repo lưu rule dạng PrometheusRule (CRD, có
+# apiVersion/kind/metadata, `groups:` nằm dưới `spec:`). Để chỉ giữ MỘT bản rule, target này:
+#   1) với mỗi file rule: lấy từ dòng `spec:` tới hết file (sed -n '/^spec:/,$$p'), bỏ chính dòng
+#      `spec:` (tail -n +2), bỏ 2 dấu cách thụt đầu dòng (sed 's/^  //'), ghi vào thư mục tạm cùng
+#      đường dẫn tương đối;
+#   2) chép file test sang cạnh đó, nên rule_files trong test (../llm.yaml…) vẫn đúng;
+#   3) promtool check rules (cú pháp, PromQL hợp lệ) rồi promtool test rules (unit test).
+# Vì vậy `spec:` phải là key cuối cùng trong mỗi file rule. `trap … EXIT` xoá thư mục tạm kể cả khi lỗi.
+alerts-test: ## promtool check + test rule trong observability/ (PROMTOOL=…)
+	@set -euo pipefail; tmp=$$(mktemp -d); trap 'rm -rf "$$tmp"' EXIT; \
+	for f in observability/rules/*.yaml observability/alerts/*.yaml; do \
+	  mkdir -p "$$tmp/$$(dirname "$$f")"; \
+	  sed -n '/^spec:/,$$p' "$$f" | tail -n +2 | sed 's/^  //' > "$$tmp/$$f"; \
+	done; \
+	cp -r observability/alerts/tests "$$tmp/observability/alerts/"; \
+	$(PROMTOOL) check rules "$$tmp"/observability/rules/*.yaml "$$tmp"/observability/alerts/*.yaml; \
+	$(PROMTOOL) test rules "$$tmp"/observability/alerts/tests/*.yaml
 
 # ── Lệnh đã đặt tên nhưng chưa làm ──────────────────────────────────────────────
 # Tên lấy từ Môi trường §3.7. Gọi bây giờ thì báo "chưa làm" và trả mã lỗi 1, để script gọi nó dừng lại.
