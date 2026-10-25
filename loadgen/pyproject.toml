@@ -1,0 +1,45 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# loadgen/pyproject.toml
+# Khái niệm: pyproject.toml = file khai báo một dự án Python: phiên bản Python, thư viện cần dùng, cấu
+#            hình công cụ (ruff, pytest). `uv` đọc file này, giải phụ thuộc và ghim phiên bản chính xác
+#            vào uv.lock, nên máy nào chạy `uv sync` cũng có đúng cùng bộ thư viện (CONTRIBUTING §5).
+# Mục đích:  Máy tạo tải open-loop (Môi trường §9). Chỉ cần một thư viện chạy: httpx (HTTP client có
+#            async và streaming). Mọi lệnh chạy từ GỐC REPO để `import loadgen` thấy thư mục này:
+#              uv run --project loadgen python -m loadgen --help
+#              uv run --project loadgen pytest loadgen
+#              uv run --project loadgen ruff check loadgen
+# Tham khảo: CONTRIBUTING §5, Môi trường §9
+# ──────────────────────────────────────────────────────────────────────────────
+[project]
+name = "loadgen"
+version = "0.1.0"
+description = "Máy tạo tải open-loop cho vLLM (đồ án autoscaling LLM trên Kubernetes)"
+requires-python = ">=3.11"           # cần asyncio.timeout (có từ 3.11)
+dependencies = [
+    "httpx>=0.28,<0.29",             # HTTP client async, đọc được response dạng stream (SSE)
+]
+
+[dependency-groups]
+# Chỉ dùng khi phát triển và trong CI, không cài vào image chạy tải
+dev = [
+    "pytest>=9.1,<10",
+    "ruff>=0.17,<0.18",
+]
+
+[tool.uv]
+# package = false: uv chỉ quản lý môi trường ảo và phụ thuộc, không đóng gói loadgen thành wheel.
+# Code được import thẳng từ thư mục loadgen/ khi chạy từ gốc repo (đúng bố cục loadgen/<module>.py
+# của CONTRIBUTING §1), nên không cần thêm tầng src/.
+package = false
+
+[tool.ruff]
+line-length = 110                    # CONTRIBUTING §5
+target-version = "py311"
+
+[tool.ruff.lint]
+# E/F: lỗi cơ bản (pyflakes, pycodestyle); I: thứ tự import; UP: cú pháp Python mới; B: lỗi hay gặp
+# (bugbear); ASYNC: lỗi riêng của code async (ví dụ gọi hàm chặn trong coroutine).
+select = ["E", "F", "I", "UP", "B", "ASYNC"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
