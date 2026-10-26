@@ -1,0 +1,77 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# observability/rules/slo.yaml
+# Khái niệm: PrometheusRule = CRD của Prometheus Operator chứa các "rule" để Prometheus tính định kỳ.
+#            Recording rule = câu PromQL được tính sẵn mỗi chu kỳ và lưu thành một chuỗi mới có tên
+#            riêng (`record:`), để cảnh báo và dashboard đọc lại cho nhanh, khỏi tính lại nhiều lần.
+#            SLI (Service Level Indicator) = đại lượng đo chất lượng phục vụ, ở đây là tỷ lệ request xấu.
+# Mục đích:  Tính SLI cho hai SLO ở Thông số §6: TTFT ≤ 2,5 s (95% request) và 99% request không trả 5xx.
+#            Cảnh báo LLMSLOBurnFast, LLMErrorRateHigh (observability/alerts/llm.yaml) đọc các chuỗi này.
+# Lưu ý:     `spec:` phải là key cuối cùng của file: `make alerts-test` cắt mọi thứ từ `spec:` trở xuống
+#            thành file rule thuần cho promtool.
+# Tham khảo: Vận hành §2.3, Thông số §6, CONTRIBUTING §4
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: llm-slo-rules
+  # Values của kube-prometheus-stack đặt ruleSelectorNilUsesHelmValues: false, nên Prometheus nhận mọi
+  # PrometheusRule trong cluster mà không cần label `release` (Kiến trúc §17.1).
+  namespace: monitoring
+spec:
+  groups:
+    - name: llm-slo.rules
+      # Không ghi `interval`: dùng evaluationInterval chung của Prometheus (15 s). Cửa sổ ngắn nhất ở
+      # đây là 1 phút, nên 15 s đủ mịn (mỗi cửa sổ có ≥ 4 lần tính).
+      rules:
+        # ── TTFT: tỷ lệ request có thời gian tới token đầu > 2,5 s ──────────────────────────────
+        # Histogram trong Prometheus gồm các bộ đếm tích luỹ:
+        #   _count            = tổng số request đã có token đầu;
+        #   _bucket{le="2.5"} = số request có TTFT ≤ 2,5 s ("le" = less or equal).
+        # rate(x[1m]) = tốc độ tăng trung bình mỗi giây trong 1 phút qua.
+        # Vậy (tổng − tốt) / tổng = tỷ lệ request xấu trong cửa sổ.
+        #
+        # Khi không có traffic: (0 − 0)/0 = NaN, mọi so sánh với NaN đều sai, nên cảnh báo im lặng (đúng
+        # ý muốn: không có request thì không ai bị ảnh hưởng). Unit test "im lặng khi không có traffic"
+        # giữ hành vi này (Vận hành §2.3).
+        #
+        # le="2.5": phải trùng một biên bucket có thật, nếu không truy vấn rỗng và cảnh báo không bao
+        # giờ kêu. Đã đối chiếu mã nguồn vLLM v0.31.0 (vllm/v1/metrics/buckets.py, TIME_TO_FIRST_TOKEN_
+        # BUCKETS có 2.5). Còn phải xác nhận trên /metrics của pod thật: curl <pod>:8000/metrics.
+        #
+        # namespace="llm-serving": nhãn này do Prometheus gắn theo pod được scrape (PodMonitor), không
+        # phải do vLLM. sum(...) gộp mọi pod: SLO tính cho cả dịch vụ, không theo từng pod.
+        - record: llm:ttft_bad_ratio:rate1m
+          expr: |
+            (
+              sum(rate(vllm:time_to_first_token_seconds_count{namespace="llm-serving"}[1m]))
+              - sum(rate(vllm:time_to_first_token_seconds_bucket{namespace="llm-serving", le="2.5"}[1m]))
+            )
+            / sum(rate(vllm:time_to_first_token_seconds_count{namespace="llm-serving"}[1m]))
+        # Cửa sổ 5 phút: cửa sổ "dài" của LLMSLOBurnFast (rút ngắn từ 1 giờ cho lượt đánh giá 20–25 phút)
+        - record: llm:ttft_bad_ratio:rate5m
+          expr: |
+            (
+              sum(rate(vllm:time_to_first_token_seconds_count{namespace="llm-serving"}[5m]))
+              - sum(rate(vllm:time_to_first_token_seconds_bucket{namespace="llm-serving", le="2.5"}[5m]))
+            )
+            / sum(rate(vllm:time_to_first_token_seconds_count{namespace="llm-serving"}[5m]))
+        # Cửa sổ 30 phút: cho dashboard SLO và cảnh báo phụ LLMSLOBurnSlow (Could, chưa làm)
+        - record: llm:ttft_bad_ratio:rate30m
+          expr: |
+            (
+              sum(rate(vllm:time_to_first_token_seconds_count{namespace="llm-serving"}[30m]))
+              - sum(rate(vllm:time_to_first_token_seconds_bucket{namespace="llm-serving", le="2.5"}[30m]))
+            )
+            / sum(rate(vllm:time_to_first_token_seconds_count{namespace="llm-serving"}[30m]))
+
+        # ── Tỷ lệ lỗi: request trả 5xx, đo ở Traefik (cửa vào) ──────────────────────────────────
+        # Đo ở Traefik chứ không ở vLLM, vì khi không còn pod Ready thì vLLM không thấy request nào,
+        # chỉ Traefik thấy và trả 502/503.
+        # service=~"llm-serving-.*": Traefik đặt tên service theo dạng <namespace>-<service>-<cổng>@kubernetes;
+        # Ingress ở serving/overlays/home trỏ cổng theo tên `http`, nên tên dự kiến là
+        # llm-serving-vllm-http@kubernetes (cần kiểm chứng trên cluster nhà).
+        # code=~"5..": regex, mọi mã 500–599.
+        - record: llm:error_ratio:rate5m
+          expr: |
+            sum(rate(traefik_service_requests_total{service=~"llm-serving-.*", code=~"5.."}[5m]))
+            / sum(rate(traefik_service_requests_total{service=~"llm-serving-.*"}[5m]))

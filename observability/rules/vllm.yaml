@@ -1,0 +1,40 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# observability/rules/vllm.yaml
+# Khái niệm: Recording rule (xem observability/rules/slo.yaml) cho các đại lượng dashboard vẽ liên tục.
+# Mục đích:  Tính sẵn tải, KV-cache, TTFT p95 và tốc độ sinh token của cả dịch vụ, để 3 dashboard (TR3)
+#            mở nhanh. ScaledObject KHÔNG dùng các chuỗi này: recording rule thêm một chu kỳ trễ
+#            (CONTRIBUTING §4), nên ScaledObject giữ biểu thức gốc.
+# Lưu ý:     `spec:` phải là key cuối cùng của file (xem `make alerts-test`).
+# Tham khảo: Kiến trúc §17.2
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: vllm-rules
+  namespace: monitoring
+spec:
+  groups:
+    - name: vllm.rules
+      # Tính mỗi 5 s, bằng chu kỳ scrape vLLM (Thông số §9.4), để dashboard thấy được bước nhảy của
+      # tải và số replica khi đánh giá. Tính nhanh hơn chu kỳ scrape cũng không có dữ liệu mới.
+      interval: 5s
+      rules:
+        # Số request đồng thời của cả dịch vụ = đang chạy trên GPU + đang chờ trong hàng đợi.
+        # Đây cũng là tín hiệu của A2; dashboard Autoscaling vẽ nó cạnh threshold × số replica.
+        - record: llm:concurrency:sum
+          expr: |
+            sum(vllm:num_requests_running{namespace="llm-serving"})
+            + sum(vllm:num_requests_waiting{namespace="llm-serving"})
+        # Tổng tỷ lệ KV-cache đang dùng (0–1 mỗi pod, nên tổng của N pod là 0–N). Tín hiệu của A3.
+        - record: llm:kv_usage:sum
+          expr: sum(vllm:kv_cache_usage_perc{namespace="llm-serving"})
+        # TTFT phân vị 95 trong 1 phút qua. histogram_quantile nội suy tuyến tính trong bucket, nên chỉ
+        # là ước lượng (sai số cỡ độ rộng bucket, ví dụ 1–2,5 s). Nghiệm thu dùng log client, không dùng số này.
+        # sum by (le): gộp mọi pod nhưng giữ nhãn le, vì histogram_quantile cần đủ các bucket.
+        - record: llm:ttft_p95:1m
+          expr: |
+            histogram_quantile(0.95,
+              sum by (le) (rate(vllm:time_to_first_token_seconds_bucket{namespace="llm-serving"}[1m])))
+        # Số token sinh ra mỗi giây của cả dịch vụ: dùng cho thông lượng và chi phí trên 1 triệu token.
+        - record: llm:gen_tokens:rate1m
+          expr: sum(rate(vllm:generation_tokens_total{namespace="llm-serving"}[1m]))
