@@ -1,0 +1,234 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# observability/alerts/tests/llm-test.yaml
+# Khái niệm: Unit test cho rule của Prometheus, chạy bằng `promtool test rules`. Mỗi test tự tạo dữ liệu
+#            giả (input_series), cho Prometheus "chạy" rule trên đó theo thời gian, rồi so:
+#            - alert_rule_test: tại thời điểm eval_time, những cảnh báo nào đang FIRING (pending không tính);
+#            - promql_expr_test: một câu PromQL trả về đúng giá trị mong đợi.
+#            Cú pháp giá trị: "a+bxn" = n+1 mẫu a, a+b, a+2b…; "axn" = a lặp lại n+1 lần;
+#            "_" = thiếu mẫu. Mỗi mẫu cách nhau `interval`.
+# Mục đích:  Bắt hai loại lỗi mà chỉ đọc PromQL khó thấy: cảnh báo KHÔNG BAO GIỜ kêu (tên metric/nhãn
+#            sai, biểu thức rỗng) và cảnh báo kêu GIẢ (không có traffic, pod Pending bị tính là NotReady).
+# Chạy:      make alerts-test (Makefile tách `spec:` của PrometheusRule thành file rule thuần, rồi gọi promtool).
+#            rule_files dưới đây là đường dẫn tương đối tính từ thư mục chứa file test này.
+# Tham khảo: Vận hành §3.1 (nguyên tắc 5), CONTRIBUTING §4
+# ──────────────────────────────────────────────────────────────────────────────
+rule_files:
+  - ../../rules/slo.yaml
+  - ../llm.yaml
+
+# Prometheus tính rule mỗi 15 s, giống evaluationInterval trên cluster
+evaluation_interval: 15s
+
+tests:
+  # ── LLMSLOBurnFast ─────────────────────────────────────────────────────────────────────────
+  # 40 request/phút suốt 30 phút. Phút 0–10: tất cả TTFT ≤ 2,5 s. Phút 10–20: chỉ một nửa đạt (bucket
+  # le="2.5" tăng 5 thay vì 10 mỗi 15 s), tức 50% request xấu. Từ phút 20: hồi phục, lại đạt hết.
+  # Tính tay: cửa sổ 5 phút vượt 20% xấu từ khoảng phút 12; thêm for 1m → firing từ khoảng phút 13.
+  - name: LLMSLOBurnFast kêu khi 50% request chậm, tắt ngay khi hồi phục
+    interval: 15s
+    input_series:
+      - series: 'vllm:time_to_first_token_seconds_count{namespace="llm-serving", pod="vllm-a"}'
+        values: '0+10x120'
+      - series: 'vllm:time_to_first_token_seconds_bucket{namespace="llm-serving", pod="vllm-a", le="2.5"}'
+        values: '0+10x40 405+5x39 610+10x40'
+    promql_expr_test:
+      # Phút 20: cửa sổ 5 phút nằm trọn trong giai đoạn xấu → đúng 50%
+      - expr: llm:ttft_bad_ratio:rate5m
+        eval_time: 20m
+        exp_samples:
+          - labels: 'llm:ttft_bad_ratio:rate5m'
+            value: 0.5
+    alert_rule_test:
+      - eval_time: 9m
+        alertname: LLMSLOBurnFast
+        exp_alerts: []
+      # Phút 11: cửa sổ 1 phút đã 50% xấu nhưng cửa sổ 5 phút mới ~10% → chưa kêu (chống nhiễu ngắn)
+      - eval_time: 11m
+        alertname: LLMSLOBurnFast
+        exp_alerts: []
+      - eval_time: 15m
+        alertname: LLMSLOBurnFast
+        exp_alerts:
+          - exp_labels: {severity: page}
+            exp_annotations:
+              summary: "Hơn 20% request phải chờ token đầu tiên quá 2,5 s (5 phút và 1 phút gần nhất)"
+              description: "Burn rate TTFT ≥ 4 so với SLO 95%. Xem dashboard Autoscaling: replica mong muốn so với đang có, pod đang khởi động."
+              runbook_url: "https://github.com/bi6-cat/llm-k8s-autoscaling/blob/main/docs/runbooks/LLMSLOBurnFast.md"
+      # Phút 22: cửa sổ 5 phút vẫn ~30% xấu, nhưng cửa sổ 1 phút đã 0% → phải tắt. Đây là lý do có
+      # cửa sổ ngắn: không có nó, cảnh báo còn kêu thêm vài phút sau khi đã hết vi phạm.
+      - eval_time: 22m
+        alertname: LLMSLOBurnFast
+        exp_alerts: []
+
+  # Không có traffic: bộ đếm đứng yên → (0 − 0)/0 = NaN → không kêu. Giữ hành vi này khi sửa công thức.
+  - name: LLMSLOBurnFast im lặng khi không có traffic
+    interval: 15s
+    input_series:
+      - series: 'vllm:time_to_first_token_seconds_count{namespace="llm-serving", pod="vllm-a"}'
+        values: '100x80'
+      - series: 'vllm:time_to_first_token_seconds_bucket{namespace="llm-serving", pod="vllm-a", le="2.5"}'
+        values: '90x80'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: LLMSLOBurnFast
+        exp_alerts: []
+
+  # ── LLMErrorRateHigh ───────────────────────────────────────────────────────────────────────
+  # 400 request 200/phút. Từ phút 10 có thêm 8 request 503/phút (~2% > 1%). Chuỗi 503 chưa tồn tại
+  # trước phút 10 ("_"), giống Traefik thật: chuỗi theo mã chỉ xuất hiện khi có request đầu tiên mang mã đó.
+  - name: LLMErrorRateHigh kêu khi ~2% request trả 503
+    interval: 15s
+    input_series:
+      - series: 'traefik_service_requests_total{service="llm-serving-vllm-http@kubernetes", code="200"}'
+        values: '0+100x80'
+      - series: 'traefik_service_requests_total{service="llm-serving-vllm-http@kubernetes", code="503"}'
+        values: '_x40 0+2x40'
+      # Service khác trên cùng Traefik đang lỗi 100%: không được tính vào SLI của vLLM
+      - series: 'traefik_service_requests_total{service="monitoring-kps-grafana-80@kubernetes", code="500"}'
+        values: '0+50x80'
+    alert_rule_test:
+      - eval_time: 9m
+        alertname: LLMErrorRateHigh
+        exp_alerts: []
+      - eval_time: 15m
+        alertname: LLMErrorRateHigh
+        exp_alerts:
+          - exp_labels: {severity: page}
+            exp_annotations:
+              summary: "Hơn 1% request tới vLLM trả lỗi 5xx trong 5 phút gần nhất"
+              description: "Đo ở Traefik. Thường do không còn pod Ready (503) hoặc pod chết giữa chừng (502)."
+              runbook_url: "https://github.com/bi6-cat/llm-k8s-autoscaling/blob/main/docs/runbooks/LLMErrorRateHigh.md"
+
+  # ── LLMAtMaxReplicas ───────────────────────────────────────────────────────────────────────
+  # 4/4 replica suốt 30 phút. Hàng đợi > 0 từ đầu → kêu sau 15 phút. Ca thứ hai: 4/4 nhưng hàng đợi rỗng
+  # (tải cao mà vẫn phục vụ kịp) → không kêu.
+  - name: LLMAtMaxReplicas kêu khi max replica và vẫn có request chờ
+    interval: 1m
+    input_series:
+      - series: 'kube_horizontalpodautoscaler_status_current_replicas{namespace="llm-serving", horizontalpodautoscaler="keda-hpa-vllm-a2"}'
+        values: '4x30'
+      - series: 'kube_horizontalpodautoscaler_spec_max_replicas{namespace="llm-serving", horizontalpodautoscaler="keda-hpa-vllm-a2"}'
+        values: '4x30'
+      - series: 'vllm:num_requests_waiting{namespace="llm-serving", pod="vllm-a"}'
+        values: '3x30'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: LLMAtMaxReplicas
+        exp_alerts: []
+      - eval_time: 20m
+        alertname: LLMAtMaxReplicas
+        exp_alerts:
+          - exp_labels: {severity: ticket, namespace: llm-serving, horizontalpodautoscaler: keda-hpa-vllm-a2}
+            exp_annotations:
+              summary: "HPA keda-hpa-vllm-a2 chạy tối đa replica 15 phút mà vẫn có request phải chờ"
+              description: "Autoscaling đã hết dư địa. Cần thêm GPU hoặc giới hạn tải."
+              runbook_url: "https://github.com/bi6-cat/llm-k8s-autoscaling/blob/main/docs/runbooks/LLMAtMaxReplicas.md"
+
+  - name: LLMAtMaxReplicas im lặng khi max replica nhưng hàng đợi rỗng
+    interval: 1m
+    input_series:
+      - series: 'kube_horizontalpodautoscaler_status_current_replicas{namespace="llm-serving", horizontalpodautoscaler="keda-hpa-vllm-a2"}'
+        values: '4x30'
+      - series: 'kube_horizontalpodautoscaler_spec_max_replicas{namespace="llm-serving", horizontalpodautoscaler="keda-hpa-vllm-a2"}'
+        values: '4x30'
+      - series: 'vllm:num_requests_waiting{namespace="llm-serving", pod="vllm-a"}'
+        values: '0x30'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: LLMAtMaxReplicas
+        exp_alerts: []
+
+  # ── LLMPodPending, LLMPodNotReady ──────────────────────────────────────────────────────────
+  # Hai pod suốt 20 phút:
+  #   vllm-pending: Pending (chưa có GPU), dĩ nhiên cũng không Ready → chỉ được kêu LLMPodPending;
+  #   vllm-stuck:   Running nhưng không Ready (ví dụ vLLM treo lúc nạp model) → chỉ được kêu LLMPodNotReady.
+  # Pod Pending của namespace khác không được tính.
+  - name: Pod Pending và pod Running-không-Ready kêu đúng cảnh báo của mình
+    interval: 1m
+    input_series:
+      - series: 'kube_pod_status_phase{namespace="llm-serving", pod="vllm-pending", phase="Pending"}'
+        values: '1x20'
+      - series: 'kube_pod_status_phase{namespace="llm-serving", pod="vllm-pending", phase="Running"}'
+        values: '0x20'
+      - series: 'kube_pod_status_ready{namespace="llm-serving", pod="vllm-pending", condition="false"}'
+        values: '1x20'
+      - series: 'kube_pod_status_phase{namespace="llm-serving", pod="vllm-stuck", phase="Pending"}'
+        values: '0x20'
+      - series: 'kube_pod_status_phase{namespace="llm-serving", pod="vllm-stuck", phase="Running"}'
+        values: '1x20'
+      - series: 'kube_pod_status_ready{namespace="llm-serving", pod="vllm-stuck", condition="false"}'
+        values: '1x20'
+      - series: 'kube_pod_status_phase{namespace="monitoring", pod="vllm-lookalike", phase="Pending"}'
+        values: '1x20'
+    alert_rule_test:
+      - eval_time: 9m
+        alertname: LLMPodPending
+        exp_alerts: []
+      - eval_time: 11m
+        alertname: LLMPodPending
+        exp_alerts:
+          - exp_labels: {severity: ticket, namespace: llm-serving, pod: vllm-pending}
+            exp_annotations:
+              summary: "Pod vllm-pending nằm Pending hơn 10 phút"
+              description: "Thường do hết GPU (rolling update bị kẹt, hoặc maxReplicaCount lớn hơn số GPU)."
+              runbook_url: "https://github.com/bi6-cat/llm-k8s-autoscaling/blob/main/docs/runbooks/LLMPodPending.md"
+      - eval_time: 14m
+        alertname: LLMPodNotReady
+        exp_alerts: []
+      - eval_time: 16m
+        alertname: LLMPodNotReady
+        exp_alerts:
+          - exp_labels: {severity: page, namespace: llm-serving, pod: vllm-stuck}
+            exp_annotations:
+              summary: "Pod vllm-stuck chạy hơn 15 phút mà chưa Ready"
+              description: "Lâu hơn cold start tối đa. Xem log: kubectl -n llm-serving logs vllm-stuck."
+              runbook_url: "https://github.com/bi6-cat/llm-k8s-autoscaling/blob/main/docs/runbooks/LLMPodNotReady.md"
+
+  # ── LLMPodCrashLooping ─────────────────────────────────────────────────────────────────────
+  # Mô phỏng CrashLoopBackOff thật: container luân phiên 2 phút chờ khởi động lại (chuỗi = 1) và
+  # 1 phút đang chạy. Lúc đang chạy, kube-state-metrics không còn xuất chuỗi này, và Prometheus ghi một
+  # "staleness marker" để chuỗi biến mất ngay; promtool mô phỏng bằng từ khoá `stale`.
+  # (Dùng "_" thì không đúng: "_" chỉ là thiếu mẫu, Prometheus vẫn lấy lại mẫu cũ trong 5 phút.)
+  # Nếu biểu thức không có max_over_time, `for:` bị đặt lại mỗi lần chạy và test này đỏ.
+  - name: LLMPodCrashLooping kêu dù container luân phiên chạy và chờ
+    interval: 1m
+    input_series:
+      - series: 'kube_pod_container_status_waiting_reason{namespace="llm-serving", pod="vllm-a", container="vllm", reason="CrashLoopBackOff"}'
+        values: '1 1 stale 1 1 stale 1 1 stale 1 1 stale 1 1 stale 1 1 stale 1 1 stale'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: LLMPodCrashLooping
+        exp_alerts: []
+      - eval_time: 12m
+        alertname: LLMPodCrashLooping
+        exp_alerts:
+          - exp_labels: {severity: page, namespace: llm-serving, pod: vllm-a, container: vllm}
+            exp_annotations:
+              summary: "Container vllm của pod vllm-a crash liên tục hơn 5 phút"
+              description: "Xem log lần chạy trước: kubectl -n llm-serving logs vllm-a --previous."
+              runbook_url: "https://github.com/bi6-cat/llm-k8s-autoscaling/blob/main/docs/runbooks/LLMPodCrashLooping.md"
+
+  # ── KedaScalerErrors ───────────────────────────────────────────────────────────────────────
+  # vllm-a2: Prometheus hỏng từ phút 5, mỗi 15 s thêm 3 lỗi (KEDA hỏi mỗi 5 s) → phải kêu.
+  # vllm-a1: chỉ một lỗi lẻ ở phút 5 → không được kêu. Kiểm ở 6m45s, khi lỗi lẻ còn nằm trong cửa sổ
+  # 2 phút (kiểm muộn hơn thì lỗi đã ra khỏi cửa sổ, test không phân biệt được ngưỡng ≥ 3 với ≥ 1).
+  # Nhãn namespace của KEDA đã bị đổi thành exported_namespace như khi scrape thật.
+  - name: KedaScalerErrors kêu khi lỗi liên tục, bỏ qua lỗi lẻ
+    interval: 15s
+    input_series:
+      - series: 'keda_scaler_detail_errors_total{namespace="keda", exported_namespace="llm-serving", scaledObject="vllm-a2", scaler="prometheusScaler", triggerIndex="0", metric="s0-prometheus", type="scaledobject"}'
+        values: '0x20 0+3x40'
+      - series: 'keda_scaler_detail_errors_total{namespace="keda", exported_namespace="llm-serving", scaledObject="vllm-a1", scaler="prometheusScaler", triggerIndex="0", metric="s0-prometheus", type="scaledobject"}'
+        values: '0x20 1x40'
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: KedaScalerErrors
+        exp_alerts: []
+      - eval_time: 6m45s
+        alertname: KedaScalerErrors
+        exp_alerts:
+          - exp_labels: {severity: page, scaledObject: vllm-a2}
+            exp_annotations:
+              summary: "KEDA không lấy được metric cho ScaledObject vllm-a2"
+              description: "Autoscaling đang chạy chế độ fallback (giữ số replica cố định). Kiểm tra Prometheus và đường mạng KEDA → Prometheus."
+              runbook_url: "https://github.com/bi6-cat/llm-k8s-autoscaling/blob/main/docs/runbooks/KedaScalerErrors.md"
