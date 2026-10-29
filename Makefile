@@ -102,9 +102,13 @@ release: ## Huỷ instance Vast đang thuê
 
 # ── Kiểm tra trước khi mở PR ────────────────────────────────────────────────────
 # Giống CI (.github/workflows/ci.yaml) nhưng chạy trên máy mình, nhanh hơn chờ GitHub.
+# Danh sách thư mục kustomize là đích cuối của repo; thư mục nào chưa có (phần chưa làm, hoặc glob `*`
+# không khớp nên shell giữ nguyên chữ `*`) thì in "bỏ qua" thay vì báo lỗi, để lint không đỏ oan
+# trong lúc các phần còn đang làm dở, mà vẫn thấy rõ thư mục nào chưa được kiểm.
 lint: ## yamllint, kubectl kustomize, ansible syntax-check
 	yamllint -s .
 	for d in serving/overlays/* autoscaling/official/overlays/* platform/gpu/exporter platform/kube-prometheus-stack/extras observability; do \
+	  if [ ! -d "$$d" ]; then echo "lint: bỏ qua $$d (chưa có)"; continue; fi; \
 	  kubectl kustomize $$d >/dev/null || exit 1; done
 	cd $(ANSIBLE_DIR) && ansible-playbook -i inventory/home.yaml site.yml --syntax-check
 
