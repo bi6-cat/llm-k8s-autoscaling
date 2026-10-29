@@ -39,3 +39,39 @@
   - Alertmanager → Telegram (TR4 phần sau), có tính tới việc kube-prometheus-stack đã có sẵn các cảnh báo mặc định (`KubePodCrashLooping`, `KubeHpaMaxedOut`…) trùng ý với một số cảnh báo ở đây.
 - **Liên kết:** nhánh `feat/tr4-alerts`; `observability/`, `docs/runbooks/`, `Makefile`.
 - **Dùng cho luận văn:** §4.6–4.8 (SLI/SLO, cảnh báo burn rate, runbook); phần kiểm thử cảnh báo bằng `promtool test rules` + mutation test (bảng 11 mutation). Hình 7 (SLO → cảnh báo → runbook) đã có.
+
+## 2026-10-25 – Máy tạo tải open-loop v1 (TR5)
+
+- **Mã việc:** TR5 · **Môi trường:** không (máy cá nhân Windows; chưa chạy với vLLM hay simulator)
+- **Đã làm:**
+  1. Tạo nhánh `feat/tr5-loadgen` từ `origin/main` (thư mục mới, không phụ thuộc scaffold).
+  2. Viết gói `loadgen/`: `scenarios.py` (λ(t) và pha của KB1, KB2, KB3 theo Thông số §7, cộng chế độ `CONST` cho các mức λ của ĐG1), `schedule.py` (lịch Poisson bằng thinning, seed theo kịch bản và số thứ tự lượt), `prompts.py` (prompt tổng hợp), `sender.py` (gửi theo lịch, đọc SSE, ghi CSV), `checks.py` (tự kiểm tra Môi trường §17), `__main__.py` (dòng lệnh `python -m loadgen`, có `--dry-run`).
+  3. `pyproject.toml` + `uv.lock` (httpx 0.28.1; dev: pytest 9.1.1, ruff 0.17.2). 41 test trong `loadgen/tests/`.
+- **Quyết định và lý do:**
+  - Bố cục: uv project dạng `package = false`, code import thẳng từ `loadgen/` khi chạy ở gốc repo, đúng bố cục `loadgen/<module>.py` của CONTRIBUTING §1, không thêm tầng `src/`. Lệnh: `uv run --project loadgen pytest loadgen`.
+  - **Không dùng tokenizer.** Prompt ghép từ 310 từ tiếng Anh, mỗi từ đúng 1 token với tokenizer Qwen2.5. Đã kiểm bằng `tokenizers` 0.22.1 trên `tokenizer.json` ở revision đã ghim; model nhà và cloud dùng chung một file (cùng sha256 `c0382117…`). Đo được: n từ + phần đầu "Request <id>:" = n + 8 token (với n = 256, 640, 1024). Số token thật (cả chat template) lấy từ `usage.prompt_tokens`. Lý do: `transformers` quá nặng cho pod tạo tải.
+  - Seed sinh bằng SHA-256 của `(kịch bản, số thứ tự lượt, luồng)`, không dùng `hash()` của Python (đổi giữa các lần chạy). Hai luồng riêng cho thời điểm gửi và độ dài prompt. Có test ghi cứng giá trị seed để phát hiện ai đó vô tình đổi cách sinh.
+  - Bẫy của httpx đã xử lý và có test:
+    - client mặc định giới hạn 100 kết nối, khiến open-loop lặng lẽ thành closed-loop khi > 100 request đồng thời → đặt `max_connections=None`;
+    - `timeout` của httpx tính cho từng thao tác chứ không cho cả request → bọc bằng `asyncio.timeout(120)`.
+  - Bộ điều phối ngủ lặp tới đúng `t_sched`, vì `asyncio.sleep` có thể dậy sớm một khoảng bằng độ phân giải đồng hồ → không bao giờ gửi trước lịch.
+  - CSV flush sau mỗi dòng (runner phát hiện treo khi 60 s không có dòng mới); mở file bằng mode `x` để không ghi đè lượt cũ. Khoá API đọc từ biến môi trường `LOADGEN_API_KEY`, không qua tham số dòng lệnh.
+- **Kết quả và số đo:**
+  - `pytest`: 41 passed trên Python 3.11, 3.12 và 3.15 (Windows). `ruff format --check`, `ruff check`: đạt.
+  - Mutation test (13 cách làm hỏng code: pool 100, bỏ timeout, closed-loop, tính chunk `role` là token đầu, bỏ `include_usage`, ngủ một lần, sai hệ số KB2/KB3, seed bằng `hash()`, bỏ thinning…): 12/13 bị bắt. Cái còn lại ("dùng chung một luồng ngẫu nhiên") là mutation tương đương: `poisson_times` sinh xong mọi thời điểm trước khi rút độ dài prompt, nên hành vi không đổi.
+  - `--dry-run` KB2, C = 1,2 req/s: 2644 request; pha pre khoảng 0,4–0,7 req/s, spike 3,0–3,8 req/s (kỳ vọng 3,6), drop 0,45–0,72 req/s (kỳ vọng 0,6). Số đếm theo từng phút nên dao động kiểu Poisson.
+  - Smoke test dòng lệnh với server SSE giả trên 127.0.0.1, CONST 5 req/s × 10 s: 57/57 request, 0 lỗi; lệch lịch p50 9 ms, p99 18–19 ms; độ trễ event loop p99 7 ms, max 34 ms; CPU tối đa 6,6–15,3% một lõi. Số đo trên Windows (đồng hồ hẹn giờ thô hơn Linux), không phải trong pod.
+  - **Chưa chạy với vLLM thật hay llm-d-inference-sim**, nên chưa kiểm được `ignore_eos` và định dạng chunk `usage` của server thật.
+- **Sự cố:**
+  - Test "không giới hạn kết nối" (socket thật, 150 request) đỏ 5/15 lần trên Python 3.11 Windows. Thăm dò cho thấy kết nối loopback đầu tiên mất ~0,35 s, làm mọi TTFT cùng tăng (0,65–0,88 s), không phải do pool. Đổi tiêu chí sang độ chênh TTFT (max − min < 0,5 s, server giữ 1 s): 0/12 lần đỏ trên 3.11, 0/6 trên 3.15, mutation "pool 100" vẫn bị bắt.
+  - Mutation "pool 100" lúc đầu viết sai: `httpx.Limits()` không tham số là không giới hạn; giới hạn 100 chỉ là `DEFAULT_LIMITS` của client.
+  - Docker Desktop tự tắt khi khởi động: log ghi `POST /license/reject` (điều khoản bản quyền bị từ chối). Không tự chấp nhận thay Trình. Vì vậy chưa chạy được simulator.
+  - Công cụ Bash của agent lỗi tạm thời ở khâu kiểm tra quyền nhiều lần; chuyển sang PowerShell.
+- **Khác thiết kế:**
+  - `requests.csv` thêm cột `id` và `n_in_target` (số từ đã lên lịch); `n_in` là `usage.prompt_tokens` của server, gồm cả chat template (Môi trường §14.2 ghi `n_in` là số token của prompt). Cần Quang đồng ý vì runner và `build_tables.py` đọc file này (Kế hoạch §6, giao diện "Dữ liệu").
+  - Thêm file `loadgen.json` (tham số, seed, `t0_unix`, pha, kết quả tự kiểm tra) để runner gộp vào `metadata.json` và `checks.json`.
+  - CPU đo theo tỷ lệ **một lõi** (event loop chỉ chạy trên một luồng); thiết kế ghi "CPU < 70%" mà không nói tính trên gì.
+  - Độ trễ event loop: thiết kế chỉ ghi "không có khoảng nghẽn bất thường", không có ngưỡng số, nên v1 chỉ báo cáo p99 và max, chưa chấm đạt/trượt. Cần chốt ngưỡng ở `00-thong-so.md`.
+- **Còn phải làm:** chạy với simulator (cần Docker hoặc kind) và với vLLM ở nhà; image + Pod Guaranteed cho máy tạo tải trong cluster (Môi trường §3.6); route Traefik riêng cho máy tạo tải (Thông số §7); job `python` trong CI.
+- **Liên kết:** nhánh `feat/tr5-loadgen`; `loadgen/`.
+- **Dùng cho luận văn:** chương môi trường đánh giá (Môi trường §9): open-loop và lý do; phép thinning; cách sinh prompt không cần tokenizer; các bẫy của client HTTP (pool, timeout, đồng hồ) và cách test bắt chúng (mutation test). Có thể vẽ hình: λ(t) của KB2 và số request mỗi phút từ `--dry-run`.
