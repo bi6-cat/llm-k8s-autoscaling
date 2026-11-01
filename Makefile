@@ -28,7 +28,7 @@ MODE ?= v0
 PROMTOOL ?= promtool
 
 # .PHONY: các target này không phải tên file, make luôn chạy chúng (kể cả khi có file trùng tên)
-.PHONY: help home-up sim-up sim-down sim-test-load find rent bootstrap release lint alerts-test
+.PHONY: help home-up sim-up sim-down sim-test-load find rent bootstrap release lint alerts-test alerts-coverage
 
 # In mọi target có comment `## mô tả` cùng dòng. Thêm target mới thì nhớ viết `## …` để nó hiện ở đây.
 help: ## In danh sách lệnh
@@ -116,7 +116,8 @@ lint: ## yamllint, kubectl kustomize, ansible syntax-check
 #   2) chép file test sang cạnh đó, nên rule_files trong test (../llm.yaml…) vẫn đúng;
 #   3) promtool check rules (cú pháp, PromQL hợp lệ) rồi promtool test rules (unit test).
 # Vì vậy `spec:` phải là key cuối cùng trong mỗi file rule. `trap … EXIT` xoá thư mục tạm kể cả khi lỗi.
-alerts-test: ## promtool check + test rule trong observability/ (PROMTOOL=…)
+# `alerts-test: alerts-coverage` = chạy alerts-coverage trước (kiểm nhanh, không cần promtool).
+alerts-test: alerts-coverage ## Đủ test/runbook, rồi promtool check + test rule trong observability/ (PROMTOOL=…)
 	@set -euo pipefail; tmp=$$(mktemp -d); trap 'rm -rf "$$tmp"' EXIT; \
 	for f in observability/rules/*.yaml observability/alerts/*.yaml; do \
 	  mkdir -p "$$tmp/$$(dirname "$$f")"; \
@@ -125,6 +126,36 @@ alerts-test: ## promtool check + test rule trong observability/ (PROMTOOL=…)
 	cp -r observability/alerts/tests "$$tmp/observability/alerts/"; \
 	$(PROMTOOL) check rules "$$tmp"/observability/rules/*.yaml "$$tmp"/observability/alerts/*.yaml; \
 	$(PROMTOOL) test rules "$$tmp"/observability/alerts/tests/*.yaml
+
+# CONTRIBUTING §4: mỗi cảnh báo phải có đủ quy tắc, unit test và runbook. promtool không bắt được việc thiếu
+# test (không có test thì không có gì để trượt), nên target này kiểm riêng:
+#   1) tên cảnh báo theo thứ tự trong file, lấy từ dòng `- alert: <Tên>` ở cả rules/ lẫn alerts/ (để cảnh
+#      báo đặt nhầm chỗ cũng bị kiểm). `sed -nE 's/…/\2/p'`: chỉ in dòng khớp, sau khi thay cả dòng bằng
+#      nhóm bắt được thứ hai (tên cảnh báo);
+#   2) mỗi tên phải có `alertname: <Tên>` trong alerts/tests/ (cách file test của promtool gọi cảnh báo cần
+#      kiểm) và có file docs/runbooks/<Tên>.md;
+#   3) tên runbook trong các runbook_url (phần giữa docs/runbooks/ và .md) phải trùng danh sách tên cảnh báo,
+#      đúng thứ tự: mỗi cảnh báo trỏ tới runbook của chính nó. Bắt lỗi thiếu runbook_url, và lỗi chép từ cảnh
+#      báo khác mà quên sửa tên.
+# Dòng bắt đầu bằng `::error::` được GitHub Actions tô đỏ trên trang PR; chạy trên máy thì chỉ là chữ thường.
+alerts-coverage: ## Mỗi cảnh báo có unit test và runbook (CONTRIBUTING §4)
+	@set -euo pipefail; files="observability/rules/*.yaml observability/alerts/*.yaml"; \
+	names=$$(sed -nE 's/^[[:space:]]*(- )?alert:[[:space:]]*"?([A-Za-z0-9_]+)"?([[:space:]]+#.*)?$$/\2/p' $$files); \
+	runbooks=$$(sed -nE 's#^[[:space:]]*runbook_url:.*/docs/runbooks/([A-Za-z0-9_]+)\.md.*$$#\1#p' $$files); \
+	if [ -z "$$names" ]; then echo "::error::Không đọc được tên cảnh báo nào trong observability/"; exit 1; fi; \
+	fail=0; \
+	while read -r n; do \
+	  grep -qE "alertname:[[:space:]]*\"?$$n\"?([[:space:]]|$$)" observability/alerts/tests/*.yaml \
+	    || { echo "::error::Cảnh báo $$n chưa có unit test trong observability/alerts/tests/"; fail=1; }; \
+	  [ -f "docs/runbooks/$$n.md" ] \
+	    || { echo "::error::Cảnh báo $$n chưa có runbook docs/runbooks/$$n.md"; fail=1; }; \
+	done <<< "$$names"; \
+	if [ "$$names" != "$$runbooks" ]; then \
+	  echo "::error::runbook_url không khớp tên cảnh báo (cột trái: cảnh báo, cột phải: runbook_url)"; \
+	  paste <(echo "$$names") <(echo "$$runbooks"); fail=1; \
+	fi; \
+	echo "alerts-coverage: đã kiểm $$(wc -l <<< "$$names") cảnh báo"; \
+	exit $$fail
 
 # ── Lệnh đã đặt tên nhưng chưa làm ──────────────────────────────────────────────
 # Tên lấy từ Môi trường §3.7. Gọi bây giờ thì báo "chưa làm" và trả mã lỗi 1, để script gọi nó dừng lại.

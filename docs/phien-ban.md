@@ -23,6 +23,7 @@ Tra ngày 09/10/2026; các dòng của CI tra ngày 01/11/2026. Đổi phiên b�
 | kubectl (CI) | `v1.36.5`, trùng k3s | `.github/workflows/ci.yaml` |
 | Schema CRD cho kubeconform | `datreeio/CRDs-catalog` commit `5a706a68…` (01/11/2026) | `.github/workflows/ci.yaml` |
 | promtool (CI) | `3.15.0`, trùng Prometheus của chart kube-prometheus-stack 92.1.1 | `.github/workflows/ci.yaml` |
-| yamllint, actionlint, lychee (CI) | `1.38.0`, `1.7.12`, `0.24.2` | `.github/workflows/ci.yaml` |
+| yamllint (CI) | `1.38.0`; phụ thuộc giải theo mốc 01/11/2026 (PyYAML 6.0.3, pathspec 1.1.1) | `.github/workflows/ci.yaml` |
+| actionlint, shellcheck, lychee (CI) | `1.7.12`, `0.11.0`, `0.24.2` | `.github/workflows/ci.yaml` |
 | uv, Python (CI cho `loadgen/`) | `0.13.1`; Python `3.11` và `3.15` | `.github/workflows/ci.yaml` |
 | GitHub Actions | `actions/checkout@v7.0.1`, `astral-sh/setup-uv@v10.3.2`, ghim theo commit SHA | `.github/workflows/ci.yaml` |

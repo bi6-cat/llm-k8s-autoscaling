@@ -7,9 +7,10 @@
 #            Prometheus sai hoặc cảnh báo thiếu test/runbook, code Python lỗi, link tài liệu hỏng.
 #            Chỉ kiểm những gì đã có trên main. Job helm và ansible (Kế hoạch §10.4, w2 §10) thêm khi
 #            platform/ và infra/ lên main; job manifests và docs tự nhận thư mục mới, không phải sửa.
-# Ghim:      Công cụ tải đúng phiên bản cố định và kiểm sha256 trước khi chạy. Action ghim theo commit
-#            SHA: tag như v7 có thể bị dời sang commit khác, SHA thì không. Đổi phiên bản: sửa khối
-#            `env:` bên dưới và docs/phien-ban.md trong cùng PR.
+# Ghim:      File chạy (kubectl, promtool, shellcheck…) tải đúng phiên bản và kiểm sha256 trước khi chạy.
+#            Công cụ Python cài bằng uv: loadgen ghim qua uv.lock; yamllint ghim phiên bản và ngày giải
+#            phụ thuộc. Action ghim theo commit SHA: tag như v7 có thể bị dời sang commit khác, SHA thì
+#            không. Đổi phiên bản: sửa khối `env:` bên dưới và docs/phien-ban.md trong cùng PR.
 # Trên máy:  lệnh tương đương ghi ở comment đầu mỗi job.
 # Tham khảo: Kế hoạch §10.4, docs/huong-dan/w2.md §10. Dựa trên bản nháp của Quang (temp/w2-scaffold, 12c4e27).
 # ──────────────────────────────────────────────────────────────────────────────
@@ -26,11 +27,13 @@ on:
 permissions:
   contents: read
 
-# Push thêm commit vào cùng một PR thì huỷ lần chạy cũ đang dở. Trên main thì không huỷ, để lần merge
-# nào cũng có kết quả riêng.
+# PR: push thêm commit thì huỷ lần chạy cũ đang dở của chính PR đó (cùng group, vì cùng ref của PR).
+# Push vào main và chạy tay: mỗi lần chạy một group riêng (run_id), nên không bị huỷ cũng không phải chờ.
+# Lưu ý: mỗi group chỉ có một lần đang chạy và MỘT lần chờ; lần chờ cũ bị huỷ khi có lần mới, kể cả khi
+# cancel-in-progress: false. Nếu main dùng chung một group, merge liên tiếp sẽ làm mất CI của merge ở giữa.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: true
 
 # Mọi `run:` chạy bằng `bash -eo pipefail`: dừng ở lệnh lỗi đầu tiên, kể cả lệnh lỗi nằm giữa `a | b`.
 # Không khai báo thì GitHub dùng `bash -e`, thiếu pipefail.
@@ -52,7 +55,13 @@ env:
   LYCHEE_SHA256: "1f4e0ef7f6554a6ed33dd7ac144fb2e1bbed98598e7af973042fc5cd43951c9a"
   ACTIONLINT_VERSION: "1.7.12"
   ACTIONLINT_SHA256: "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8"
+  SHELLCHECK_VERSION: "0.11.0"
+  SHELLCHECK_SHA256: "b7af85e41cc99489dcc21d66c6d5f3685138f06d34651e6d34b42ec6d54fe6f6"
   YAMLLINT_VERSION: "1.38.0"
+  # uv chỉ dùng các bản thư viện phát hành trước mốc này khi cài yamllint, nên phụ thuộc của nó cũng cố
+  # định (PyYAML 6.0.3, pathspec 1.1.1). Không đặt làm biến UV_EXCLUDE_NEWER chung: biến đó đổi cả cách uv
+  # đọc uv.lock của loadgen, làm `--locked` báo lockfile lỗi thời.
+  YAMLLINT_EXCLUDE_NEWER: "2026-11-01T00:00:00Z"
   UV_VERSION: "0.13.1"
 
 jobs:
@@ -68,16 +77,18 @@ jobs:
         with:
           persist-credentials: false
 
-      # yamllint đọc .yamllint.yaml ở gốc repo; -s (strict): cảnh báo cũng tính là lỗi.
-      # pipx (có sẵn trên runner Ubuntu) cài công cụ Python vào môi trường riêng của nó.
-      - name: yamllint
-        run: |
-          pipx install "yamllint==${YAMLLINT_VERSION}"
-          yamllint -s .
+      # setup-uv cài uv (trình quản lý Python và công cụ Python); job này dùng nó để chạy yamllint.
+      # Không bật cache: yamllint cài trong vài giây, cache chỉ cần cho job python.
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e  # v10.3.2
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: false
 
-      # actionlint kiểm file workflow: key sai, biểu thức ${{ }} sai, input không có ở action; và soát các
-      # khối `run:` bằng shellcheck (có sẵn trên runner). yamllint không bắt được các lỗi này vì YAML vẫn hợp lệ.
-      - name: Cài actionlint
+      # actionlint kiểm file workflow: key sai, biểu thức ${{ }} sai, input không có ở action. Nó tự gọi
+      # shellcheck (nếu có trong PATH) để soát các khối `run:`. yamllint không bắt được các lỗi này vì YAML
+      # vẫn hợp lệ. Cài shellcheck bản ghim thay cho bản có sẵn trên runner, để kết quả không đổi khi GitHub
+      # cập nhật image, và trùng với bản dùng trên máy.
+      - name: Cài actionlint và shellcheck
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/bin" && cd "$RUNNER_TEMP"    # RUNNER_TEMP: thư mục tạm, xoá sau mỗi job
@@ -87,10 +98,30 @@ jobs:
           # sha256sum -c: so mã băm của file vừa tải với mã đã ghim; khác là dừng (file bị sửa hoặc tải hỏng)
           echo "${ACTIONLINT_SHA256}  ${f}" | sha256sum -c -
           tar -xzf "$f" -C bin actionlint
-          # Thư mục ghi vào file $GITHUB_PATH được thêm vào PATH cho các step SAU của job này
+          f="shellcheck-v${SHELLCHECK_VERSION}.linux.x86_64.tar.gz"
+          curl -fsSLo "$f" "https://github.com/koalaman/shellcheck/releases/download/v${SHELLCHECK_VERSION}/${f}"
+          echo "${SHELLCHECK_SHA256}  ${f}" | sha256sum -c -
+          # --strip-components=1 bỏ thư mục shellcheck-vX.Y.Z/ ở đầu đường dẫn trong gói
+          tar -xzf "$f" -C bin --strip-components=1 "shellcheck-v${SHELLCHECK_VERSION}/shellcheck"
+          # Thư mục ghi vào file $GITHUB_PATH được thêm vào ĐẦU PATH cho các step sau của job này, nên bản
+          # ghim ở đây được dùng thay cho /usr/bin/shellcheck của runner.
+          # Lưu ý: không để dòng comment nào bắt đầu bằng chữ "shellcheck" ngay sau dấu #, vì shellcheck hiểu
+          # đó là chỉ thị (kiểu "# shellcheck disable=…") và báo lỗi SC1072 khi nó không đúng cú pháp.
           echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
+      # yamllint đọc .yamllint.yaml ở gốc repo; -s (strict): cảnh báo cũng tính là lỗi.
+      # uvx = chạy một công cụ Python trong môi trường tạm, không cài vào máy.
+      # if: !cancelled() = vẫn chạy khi step trước lỗi (trừ khi cả lần chạy bị huỷ), để một lần CI báo đủ
+      # mọi lỗi. Lưu ý: phải bọc trong ${{ }}, vì YAML hiểu dấu `!` ở đầu giá trị là một tag.
+      - name: yamllint
+        if: ${{ !cancelled() }}
+        run: uvx --exclude-newer "$YAMLLINT_EXCLUDE_NEWER" --from "yamllint==${YAMLLINT_VERSION}" yamllint -s .
+
       - name: actionlint
-        run: actionlint -color
+        if: ${{ !cancelled() }}
+        run: |
+          shellcheck --version | sed -n 2p   # in phiên bản shellcheck đang dùng, để dễ đối chiếu
+          actionlint -color
 
   # ── manifests: build từng thư mục kustomize rồi kiểm schema, không cần cluster ──
   # Bắt: đường dẫn patch sai (kustomize build lỗi); trường gõ sai hoặc không tồn tại trong Deployment,
@@ -134,11 +165,13 @@ jobs:
           # được kiểm ngay khi lên main. `xargs -r -n1 dirname`: đổi đường dẫn file thành thư mục chứa nó.
           mapfile -t dirs < <(git ls-files '*kustomization.yaml' | xargs -r -n1 dirname | sort -u)
           if [ "${#dirs[@]}" -eq 0 ]; then echo "::error::Không thấy kustomization.yaml nào"; exit 1; fi
+          # -cache: lưu schema đã tải vào thư mục này, để các thư mục kustomize sau không tải lại
+          mkdir -p "$RUNNER_TEMP/kubeconform-cache"
           for d in "${dirs[@]}"; do
             echo "::group::$d"            # gom log của mỗi thư mục thành một mục gập được trên GitHub
             # -strict: báo lỗi cả trường thừa (thường là gõ sai tên trường), không chỉ trường sai kiểu
             kubectl kustomize "$d" | kubeconform -strict -summary -kubernetes-version "$K8S_VERSION" \
-              -schema-location default -schema-location "$crds"
+              -cache "$RUNNER_TEMP/kubeconform-cache" -schema-location default -schema-location "$crds"
             echo "::endgroup::"
           done
 
@@ -165,41 +198,12 @@ jobs:
           tar -xzf "$f" -C bin --strip-components=1 "prometheus-${PROMETHEUS_VERSION}.linux-amd64/promtool"
           echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
 
-      # Gọi chính target của Makefile, để CI và máy cá nhân chạy cùng một công thức (tách phần `spec:` của
-      # PrometheusRule thành file rule thuần rồi mới gọi promtool; xem comment trong Makefile).
-      - name: promtool check rules + test rules
+      # Gọi chính target của Makefile, để CI và máy cá nhân chạy cùng một công thức. alerts-test chạy
+      # alerts-coverage trước: mỗi cảnh báo có unit test và runbook (CONTRIBUTING §4), điều promtool không
+      # bắt được. Sau đó tách phần `spec:` của PrometheusRule thành file rule thuần, rồi chạy promtool check
+      # rules và promtool test rules. Chi tiết ở comment trong Makefile.
+      - name: make alerts-test
         run: make alerts-test
-
-      # CONTRIBUTING §4: mỗi cảnh báo phải có đủ quy tắc, unit test và runbook. promtool không bắt được việc
-      # thiếu test (không có test thì không có gì để trượt), nên kiểm riêng ở đây.
-      - name: Mỗi cảnh báo có unit test và runbook
-        run: |
-          set -euo pipefail
-          # Tên cảnh báo theo thứ tự trong file, lấy từ dòng `- alert: <Tên>`. `sed -nE 's/…/\2/p'`: chỉ in
-          # những dòng khớp, sau khi thay cả dòng bằng nhóm bắt được thứ hai (tên cảnh báo).
-          names=$(sed -nE 's/^[[:space:]]*(- )?alert:[[:space:]]*"?([A-Za-z0-9_]+)"?([[:space:]]+#.*)?$/\2/p' observability/alerts/*.yaml)
-          # Tên runbook trong annotation runbook_url (phần giữa docs/runbooks/ và .md), cũng theo thứ tự
-          runbooks=$(sed -nE 's#^[[:space:]]*runbook_url:.*/docs/runbooks/([A-Za-z0-9_]+)\.md.*$#\1#p' observability/alerts/*.yaml)
-          if [ -z "$names" ]; then echo "::error::Không đọc được tên cảnh báo nào trong observability/alerts/"; exit 1; fi
-          fail=0
-          while read -r n; do
-            # File test của promtool gọi cảnh báo cần kiểm bằng `alertname: <Tên>`
-            if ! grep -qE "alertname:[[:space:]]*\"?${n}\"?([[:space:]]|$)" observability/alerts/tests/*.yaml; then
-              echo "::error::Cảnh báo $n chưa có unit test trong observability/alerts/tests/"; fail=1
-            fi
-            if [ ! -f "docs/runbooks/$n.md" ]; then
-              echo "::error::Cảnh báo $n chưa có runbook docs/runbooks/$n.md"; fail=1
-            fi
-          done <<< "$names"
-          # Hai danh sách phải trùng nhau theo thứ tự: mỗi cảnh báo có đúng một runbook_url trỏ tới runbook
-          # của chính nó. Bắt lỗi thiếu runbook_url, và lỗi chép từ cảnh báo khác mà quên sửa tên.
-          if [ "$names" != "$runbooks" ]; then
-            echo "::error::runbook_url không khớp tên cảnh báo (cột trái: cảnh báo, cột phải: runbook_url)"
-            paste <(echo "$names") <(echo "$runbooks")
-            fail=1
-          fi
-          echo "Đã kiểm $(wc -l <<< "$names") cảnh báo"
-          exit "$fail"
 
   # ── python: lint, format và unit test cho loadgen/ ──
   # Trên máy: uv run --project loadgen pytest loadgen   (và ruff check / ruff format --check như dưới)
@@ -229,12 +233,16 @@ jobs:
 
       # --locked: dừng nếu uv.lock không còn khớp pyproject.toml (sửa phụ thuộc mà quên `uv lock`), thay vì
       # lặng lẽ giải lại phụ thuộc rồi test trên bộ thư viện khác với bộ đã ghim.
-      - name: ruff check
-        run: uv run --project loadgen --locked ruff check loadgen
-      - name: ruff format --check
-        run: uv run --project loadgen --locked ruff format --check loadgen
       - name: pytest
         run: uv run --project loadgen --locked pytest loadgen
+      # ruff cho cùng kết quả ở mọi bản Python (target-version cố định trong pyproject.toml), nên chỉ chạy ở
+      # một phần tử của matrix. !cancelled(): vẫn chạy khi pytest lỗi (giải thích ở job yaml).
+      - name: ruff check
+        if: ${{ !cancelled() && matrix.python-version == '3.15' }}
+        run: uv run --project loadgen --locked ruff check loadgen
+      - name: ruff format --check
+        if: ${{ !cancelled() && matrix.python-version == '3.15' }}
+        run: uv run --project loadgen --locked ruff format --check loadgen
 
   # ── docs: link tương đối và anchor (#mục) trong tài liệu phải trỏ tới chỗ có thật ──
   # Trên máy: lychee --offline --include-fragments --no-progress 'docs/**/*.md' '*.md'
