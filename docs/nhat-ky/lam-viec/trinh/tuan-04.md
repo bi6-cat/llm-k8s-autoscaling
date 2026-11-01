@@ -56,3 +56,15 @@
 - **Còn thiếu:** Branch protection với các job làm required checks: Quang là admin repo. Gộp `make lint` với job `manifests` (target `lint` của Quang, scaffold sẽ sửa): hỏi Quang. Để lại sau lượt soát 2: gom 4 khối tải công cụ thành một script (làm khi thêm job `helm`); kiểm cảnh báo nằm ngoài `observability/` (CONTRIBUTING §4 quy định cảnh báo ở `observability/alerts/`).
 - **Liên kết:** PR #5; commit `9c84000`, `6257173`, `afa8b40` trên nhánh `feat/tr1-ci`; `.github/workflows/ci.yaml`, `Makefile`, `docs/phien-ban.md`.
 - **Dùng cho luận văn:** §4.2 (GitOps, CI): bảng các job và lỗi mỗi job bắt được; cách ghim công cụ (sha256, commit SHA, `--exclude-newer`). Hình nên có: ảnh trang check của PR #5 với 6 job xanh (chưa chụp).
+
+## 2026-11-01 – TR1: job `docs` bỏ qua link theo từng file chưa có, không theo cả thư mục
+
+- **Mã việc:** TR1 · **Môi trường:** không (máy Windows, lychee cục bộ)
+- **Đã làm:** Khi làm TR2, nhánh `feat/tr2-sim` thêm một phần `infra/` (`kind/`), `platform/` (`keda/`, `kube-prometheus-stack/`) và `autoscaling/`. Chạy lychee với đúng logic của job `docs` thì có 31 lỗi. Sửa step "Kiểm link và anchor": lấy mọi link Markdown trỏ vào `serving/`, `autoscaling/`, `platform/`, `infra/`, tính đường dẫn từ gốc repo, và chỉ bỏ qua đường dẫn nào chưa có trên nhánh; trước đây bỏ qua cả thư mục khi thư mục chưa có.
+- **Quyết định và lý do:** Bỏ qua theo thư mục chỉ đúng khi thư mục chưa có gì. Code lên `main` dần theo từng PR, nên một thư mục có thể mới có một phần (`platform/keda/` đã có, `platform/argocd/` chưa); khi đó mọi link tới phần chưa có làm job đỏ. Bỏ qua theo file thì link (cả anchor) tới mọi file đã có vẫn được kiểm. Dấu chấm trong tên file viết thành `[.]`, vì trong regex "." là ký tự bất kỳ.
+- **Kết quả và số đo** (lychee 0.24.2 trên máy, chạy nguyên văn khối `run:` tách bằng yq):
+  - `feat/tr1-ci`: bỏ qua 51 đường dẫn chưa có; 414 link đạt, 0 lỗi (bằng logic cũ).
+  - `feat/tr2-sim`: logic cũ 31 lỗi (30 link vào file chưa có trong `infra/`, `platform/`; 1 link tới `.github/workflows/ci.yaml`, vì nhánh tách từ `main` chưa có file này). Logic mới bỏ qua 42 đường dẫn, 422 link đạt, chỉ còn lỗi `ci.yaml`; lỗi này hết khi PR #5 merge, vì CI kiểm bản gộp với `main`.
+  - actionlint (shellcheck 0.11.0) và yamllint: đạt.
+- **Sự cố:** Lần thử đầu escape dấu chấm bằng `\&` trong sed: dấu `\` bị mất trên đường truyền lệnh vào shell, dấu chấm thành `&`, nên không exclude nào khớp (47 lỗi). Đổi sang `[.]`, không cần escape.
+- **Liên kết:** PR #5; `.github/workflows/ci.yaml` (commit cùng mục này).

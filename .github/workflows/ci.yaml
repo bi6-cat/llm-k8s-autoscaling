@@ -277,14 +277,28 @@ jobs:
         run: |
           set -euo pipefail
           # Tài liệu (w2.md, Kiến trúc) đã link tới file trong serving/, autoscaling/, platform/, infra/, nhưng
-          # các thư mục này còn ở nhánh scaffold chưa merge. Chỉ bỏ qua link tới thư mục CHƯA có trên nhánh
-          # đang kiểm: thư mục nào lên main thì link tới nó tự được kiểm lại, không phải sửa file này.
-          # Regex khớp cả link tới chính thư mục, có hoặc không có "/" cuối (../infra, ../infra/, ../infra#x).
+          # code lên main dần theo từng PR. Chỉ bỏ qua link tới FILE (hoặc thư mục) CHƯA có trên nhánh đang
+          # kiểm: file nào lên main thì link tới nó tự được kiểm lại, không phải sửa file này. Bỏ qua theo
+          # từng file chứ không theo cả thư mục, vì một thư mục có thể mới có một phần (platform/keda/ đã có
+          # mà platform/argocd/ chưa): bỏ qua cả thư mục thì link tới file đã có không được kiểm, còn kiểm cả
+          # thư mục thì link tới file chưa có làm job đỏ.
+          #   grep -rhoE: lấy phần "](<đường dẫn>" của mọi link Markdown trỏ vào 4 thư mục trên
+          #               (-r đệ quy, -h bỏ tên file, -o chỉ in phần khớp, -E regex mở rộng);
+          #   sed: bỏ "](" cùng các "../", "./" ở đầu, còn lại đường dẫn tính từ gốc repo;
+          #   ${p%/}: bỏ "/" cuối của link tới thư mục; regex exclude khớp cả khi có "/", "#…" hay "?…" sau đó;
+          #   [.] thay cho ".": trong regex, "." là "ký tự bất kỳ", còn [.] chỉ khớp đúng dấu chấm.
           skip=()
-          for d in serving autoscaling platform infra; do
-            if [ ! -e "$d" ]; then skip+=(--exclude "^file://.*/${d}([/#?]|$)"); fi
-          done
-          echo "Bỏ qua link tới thư mục chưa có: ${skip[*]:-(không có)}"
+          missing=()
+          while IFS= read -r p; do
+            p="${p%/}"
+            if [ ! -e "$p" ]; then
+              missing+=("$p")
+              skip+=(--exclude "^file://.*/$(printf '%s' "$p" | sed 's/[.]/[.]/g')/?([#?]|$)")
+            fi
+          done < <(grep -rhoE '\]\((\.\./|\./)*(serving|autoscaling|platform|infra)(/[^)#? ]*)?' docs ./*.md \
+                   | sed -E 's#^\]\((\.\./|\./)*##' | sort -u)
+          echo "Bỏ qua link tới ${#missing[@]} đường dẫn chưa có trên nhánh:"
+          if (( ${#missing[@]} )); then printf '  %s\n' "${missing[@]}"; fi
           # --offline: chỉ kiểm link tới file trong repo, không gọi Internet (nhanh, không đỏ vì mạng chập chờn).
           # --include-fragments: kiểm cả anchor có thật trong file đích, ví dụ #51-phân-công.
           # Glob để trong nháy đơn để lychee tự mở rộng (bash chỉ hiểu ** khi bật globstar).
