@@ -18,6 +18,7 @@ Tra ngày 09/10/2026. Đổi phiên bản: sửa ở đây và ở file dùng n�
 | Model nhà | `Qwen/Qwen2.5-1.5B-Instruct@989aa7980e4cf806f80c7fef2b1adb7bc71aa306` | `serving/overlays/home` |
 | Model cloud | `Qwen/Qwen2.5-7B-Instruct@a09a35458c702b33eeacc393d103063234e8bc28` | `serving/overlays/cloud` |
 | llm-d-inference-sim | `v0.12.0` | `serving/overlays/sim` |
-| kind / node image | `v0.33.0` / `kindest/node:v1.37.0` | laptop; image ở `infra/kind/kind-config.yaml` |
+| kind / node image | `v0.33.0` / `kindest/node:v1.37.0@sha256:a1ed56cf…0ae5` | máy simulator; image ở `infra/kind/kind-config.yaml` |
+| Helm, kubectl (máy simulator) | `v4.3.1`, `v1.36.5` (= kubectl của CI) | `make sim-up` |
 | kubeconform (CI) | `v0.8.0` | `.github/workflows/ci.yaml` |
 | GitHub Actions | `actions/checkout@v7`, `lycheeverse/lychee-action@v2` | `.github/workflows/ci.yaml` |

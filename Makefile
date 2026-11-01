@@ -18,6 +18,10 @@ ANSIBLE_DIR := infra/ansible
 # Tên cluster kind của simulator; context kubectl tương ứng là kind-llm-sim
 KIND_CLUSTER := llm-sim
 SIM := --context kind-$(KIND_CLUSTER)
+# Overlay `sim` của serving (Deployment chạy simulator thay vLLM). Nhánh đang đứng chưa có serving/
+# thì chép thư mục serving/ từ nhánh có nó ra ngoài repo, rồi truyền vào:
+# make sim-up SIM_SERVING=<thư mục chép ra>/serving/overlays/sim
+SIM_SERVING ?= serving/overlays/sim
 # Phiên bản chart: phải trùng docs/phien-ban.md và Application trong platform/argocd/apps/home/
 KPS_VERSION := 92.1.1
 KEDA_VERSION := 2.21.0
@@ -28,7 +32,7 @@ MODE ?= v0
 PROMTOOL ?= promtool
 
 # .PHONY: các target này không phải tên file, make luôn chạy chúng (kể cả khi có file trùng tên)
-.PHONY: help home-up sim-up sim-down sim-test-load find rent bootstrap release lint alerts-test
+.PHONY: help home-up sim-up sim-down sim-test-load sim-test find rent bootstrap release lint alerts-test
 
 # In mọi target có comment `## mô tả` cùng dòng. Thêm target mới thì nhớ viết `## …` để nó hiện ở đây.
 help: ## In danh sách lệnh
@@ -68,7 +72,7 @@ sim-up: ## Dựng kind + Prometheus + KEDA + simulator + A2 trên laptop
 	  --version $(KEDA_VERSION) -n keda --create-namespace -f platform/keda/values.yaml --wait
 #	6) Simulator (overlay sim của serving) rồi ScaledObject A2. Phải chờ Deployment xong trước, vì
 #	   ScaledObject trỏ tới Deployment `vllm`.
-	kubectl $(SIM) apply -k serving/overlays/sim
+	kubectl $(SIM) apply -k $(SIM_SERVING)
 	kubectl $(SIM) -n llm-serving rollout status deploy/vllm --timeout=5m
 	kubectl $(SIM) apply -k autoscaling/official/overlays/sim
 
@@ -80,6 +84,12 @@ sim-down: ## Xoá cluster simulator
 sim-test-load: ## Tải đồng thời cho T2 (C=25, DUR=120s); cần port-forward ở terminal khác
 	hey -z $${DUR:-120s} -c $${C:-25} -m POST -T application/json -D autoscaling/tests/request-sim.json \
 	  http://localhost:8000/v1/chat/completions
+
+# Chạy T1–T5 tự động (tự mở port-forward, tự bơm tải), chấm đạt/trượt theo bảng ở w2.md §9.3, ghi log
+# mỗi giây vào runs/sim/. Cả 5 bài mất khoảng 25 phút, phần lớn là chờ scale-down (cửa sổ 300 s + 60 s
+# mỗi pod). Một bài: make sim-test T=t4 (t2 gồm cả T3).
+sim-test: ## Chạy T1–T5 trên simulator, chấm đạt/trượt (T=t1|t2|t4|t5|all)
+	autoscaling/tests/run-t1-t5.sh $${T:-all}
 
 # ── Máy thuê trên Vast.ai ───────────────────────────────────────────────────────
 # Mọi thao tác với Vast nằm trong infra/provision/vast.sh; ở đây chỉ đặt tên ngắn cho chúng.

@@ -1,0 +1,33 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# infra/kind/kind-config.yaml
+# Khái niệm: kind ("Kubernetes IN Docker") chạy mỗi node Kubernetes là một container Docker. Dựng/xoá
+#            cả cluster trong vài phút, nên hợp để thử nghiệm và phá hỏng có chủ đích (T4, drain node).
+# Mục đích:  Cluster 3 node cho simulator, tách biệt hẳn với cluster nhà.
+#            Đặt chu kỳ sync HPA = 5 s giống k3s, để thời gian scale đo trên simulator khớp với thật.
+# Dùng:      make sim-up (tạo), make sim-down (xoá)
+# Tham khảo: docs/huong-dan/w2.md §9.1, w1.md §5.3, Thông số §9.3.
+#            Dựa trên bản nháp của Quang (temp/w2-scaffold, 12c4e27).
+# ──────────────────────────────────────────────────────────────────────────────
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: llm-sim                          # context kubectl sẽ là kind-llm-sim (Makefile: KIND_CLUSTER)
+nodes:
+  # Node control-plane. kubeadmConfigPatches sửa cấu hình mà kubeadm (công cụ dựng cluster bên trong
+  # kind) dùng: thêm cờ cho kube-controller-manager, nơi chạy vòng lặp HPA (mặc định 15 s).
+  # kind ≥ 0.33 dùng kubeadm API v1beta4, nên extraArgs là danh sách name/value (bản cũ là map).
+  - role: control-plane
+    # Ghim theo digest (CONTRIBUTING §2): tag có thể bị đẩy lại sang image khác, digest thì không.
+    # Digest lấy từ release notes của kind v0.33.0, bản kind ghim ở docs/phien-ban.md.
+    image: kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5
+    kubeadmConfigPatches:
+      - |
+        kind: ClusterConfiguration
+        controllerManager:
+          extraArgs:
+            - name: horizontal-pod-autoscaler-sync-period
+              value: "5s"
+  # Hai worker: đủ để pod simulator trải ra nhiều node, và để thử drain node (VH3) mà không mất cluster.
+  - role: worker
+    image: kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5
+  - role: worker
+    image: kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5
