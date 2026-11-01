@@ -18,3 +18,37 @@
   - Chạy thẳng `promtool test rules observability/alerts/tests/llm-test.yaml` báo `field kind not found in type rulefmt.RuleGroups`, vì rule lưu dạng CRD `PrometheusRule`. Recipe `make alerts-test` tách phần `spec:` trước khi gọi promtool.
 - **Còn thiếu:** `make lint` trọn vẹn (cần `ansible-playbook` và các thư mục chỉ có trong scaffold) và `make sim-*` (cần kind, Docker) vẫn chưa chạy được trên máy này. Hướng xử lý: CI (TR1) và WSL2.
 - **Liên kết:** sự cố CRLF đã ghi trong mục TR4 của `tuan-03.md`.
+
+## 2026-11-01 – TR1: CI bằng GitHub Actions cho phần đã có trên `main`
+
+- **Mã việc:** TR1 · **Môi trường:** không (máy cá nhân Windows 11 + Git Bash). CI chưa chạy trên GitHub.
+- **Đã làm:**
+  1. Đọc Kế hoạch §10.4, w2 §10, CONTRIBUTING; xem bản nháp `ci.yaml` của Quang (67 dòng, `temp/w2-scaffold`, commit `12c4e27`, chưa chạy lần nào).
+  2. Viết `.github/workflows/ci.yaml` mới, chỉ kiểm thư mục đã có trên `main` (`observability/`, `loadgen/`, `docs/`). 5 job: `yaml` (yamllint, actionlint kèm shellcheck), `manifests` (kustomize build rồi kubeconform `-strict`, tự tìm mọi `kustomization.yaml`), `alerts` (`make alerts-test`), `python` (pytest trên Python 3.11 và 3.15, ruff), `docs` (lychee `--offline --include-fragments`).
+  3. Thêm target `make alerts-coverage`: mỗi cảnh báo phải có unit test, có runbook, và `runbook_url` trỏ đúng runbook của nó. `alerts-test` chạy target này trước. Cập nhật `docs/phien-ban.md`.
+  4. Chạy `/code-review high`, được 9 điểm. Commit thứ hai sửa 7 điểm; điểm promtool trên máy đã xử lý trước đó trong phiên; điểm "thiếu nhật ký" là mục này.
+- **Quyết định và lý do:**
+  - Cách lấy bản nháp theo bạn chốt hôm nay: viết file mới dựa trên bản nháp, ghi nguồn trong commit. Không cherry-pick commit scaffold, vì commit đó gom nhiều file chưa chạy và ghi "do not merge".
+  - Ghim mọi công cụ. File chạy tải đúng phiên bản và kiểm sha256; mã băm đối chiếu giữa file checksum của bản phát hành và `digest` GitHub hiển thị. Action ghim theo commit SHA. yamllint chạy qua `uvx --exclude-newer` để cố định cả PyYAML 6.0.3 và pathspec 1.1.1. Chọn setup-uv v10.3.2 (22/10, chỉ thêm checksum), không dùng v10.3.3 vì mới ra 4 ngày.
+  - promtool 3.15.0, trùng Prometheus của chart kube-prometheus-stack 92.1.1 (tra `values.yaml` của chart), để PromQL được kiểm bằng đúng bộ phân tích cú pháp sẽ chạy nó. Nâng promtool trên máy từ 3.13.4 lên 3.15.0 cho khớp.
+  - Bỏ `lycheeverse/lychee-action`, tải lychee trực tiếp: action này không kiểm sha256 của lychee, và đưa tham số qua `eval`.
+  - Job `docs` chỉ bỏ qua link tới thư mục chưa có trên nhánh đang kiểm (`serving/`, `autoscaling/`, `platform/`, `infra/`). Thư mục nào lên `main` thì link tới nó tự được kiểm lại.
+  - Thiết kế không chốt phiên bản Python, nên test trên 3.11 (bản thấp nhất `requires-python` cam kết) và 3.15 (bản đang dùng).
+  - `concurrency`: PR dùng group theo ref, push thêm commit thì huỷ lần chạy cũ. Mỗi lần push vào `main` có group riêng (`run_id`), vì GitHub chỉ giữ một lần chờ cho mỗi group và huỷ lần chờ cũ hơn.
+- **Kết quả và số đo** (đều chạy trên máy):
+  - yamllint và actionlint (shellcheck 0.11.0): đạt. `make alerts-test`: `alerts-coverage` kiểm 7 cảnh báo; `promtool check rules` 4 + 4 + 7 rule SUCCESS; `promtool test rules` SUCCESS.
+  - kubeconform cho `observability/`: 3 PrometheusRule hợp lệ; bản cố ý gõ sai `expr` thành `expre` bị bắt.
+  - lychee: 489 link, 414 đạt, 0 lỗi, 75 bỏ qua (link http do `--offline`, cộng link tới 4 thư mục chưa merge). Nếu không loại trừ thì có 56 lỗi, và cả 56 đều trỏ vào thư mục chỉ có ở scaffold (52 ở `w2.md`, 4 ở Kiến trúc). Anchor sai bị bắt (`Cannot find fragment`).
+  - pytest: 41 passed trên Python 3.11.17 và 3.15.0; ruff đạt.
+  - Tách nguyên văn các khối `run:` khỏi `ci.yaml` rồi chạy trên bản sao cố ý làm hỏng: thiếu runbook, `runbook_url` trỏ nhầm, thiếu test, cảnh báo đặt nhầm vào `rules/` đều bị bắt. 5 bước cài công cụ tải đúng URL, sha256 khớp, ra file chạy Linux (ELF).
+- **Sự cố:**
+  - kubeconform trên máy không tải được schema: chương trình Go tự hỏi DNS 8.8.4.4 và bị timeout, trong khi `curl` và `gh` vẫn ra mạng. Cách làm: tải schema bằng `curl` về thư mục cục bộ. Vị trí schema `default` chỉ kiểm được trên GitHub.
+  - Script tách `run:` bằng Python ghi CRLF trên Windows. bash của Git Bash bỏ qua CR nên lần thử đầu vẫn đạt, nhưng như vậy không giống runner Linux. Sửa: ghi byte với LF, rồi chạy lại toàn bộ.
+  - actionlint báo SC1072 vì một dòng comment bắt đầu bằng chữ "shellcheck", bị shellcheck hiểu là chỉ thị. Sửa câu chữ và ghi chú bẫy ngay tại chỗ.
+  - `make.exe` bản ezwinports làm vỡ chữ có dấu trong output của recipe. Chỉ ảnh hưởng hiển thị.
+- **Khác thiết kế:**
+  - Kế hoạch §10.4 có job `yaml` (kèm kubeconform) và job `kustomize` riêng. Tôi theo w2 §10: job `manifests` build kustomize rồi chạy kubeconform, vì kubeconform cần manifest đã build.
+  - Kế hoạch đặt kiểm tra "mọi cảnh báo có runbook" ở job `docs`. Tôi đặt ở `make alerts-coverage` (job `alerts`), kiểm luôn unit test, để chạy được cả trên máy.
+  - Chưa có job `helm`, `ansible` (thư mục chưa lên `main`) và `secrets` (gitleaks, mức Could). Thêm ngoài thiết kế: actionlint, kiểm anchor, ma trận hai bản Python.
+- **Liên kết:** commit `9c84000`, `6257173` trên nhánh `feat/tr1-ci` (chưa push); `.github/workflows/ci.yaml`, `Makefile`, `docs/phien-ban.md`.
+- **Dùng cho luận văn:** §4.2 (GitOps, CI): bảng các job và lỗi mỗi job bắt được; cách ghim công cụ (sha256, commit SHA, `--exclude-newer`). Hình nên có: ảnh tab Actions với các job xanh sau lần chạy đầu (chưa có).
