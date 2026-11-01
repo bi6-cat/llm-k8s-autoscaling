@@ -1,0 +1,275 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# .github/workflows/ci.yaml
+# Khái niệm: GitHub Actions = dịch vụ của GitHub tự chạy lệnh trên máy ảo (runner) khi có sự kiện như mở
+#            PR hoặc push. Workflow gồm nhiều job chạy song song; mỗi job là một máy ảo sạch, chạy các
+#            step theo thứ tự. Job lỗi thì PR hiện dấu đỏ; branch protection chặn merge khi còn đỏ.
+# Mục đích:  Bắt lỗi trước khi merge vào main (nhánh Argo CD đọc): YAML sai, manifest sai schema, rule
+#            Prometheus sai hoặc cảnh báo thiếu test/runbook, code Python lỗi, link tài liệu hỏng.
+#            Chỉ kiểm những gì đã có trên main. Job helm và ansible (Kế hoạch §10.4, w2 §10) thêm khi
+#            platform/ và infra/ lên main; job manifests và docs tự nhận thư mục mới, không phải sửa.
+# Ghim:      Công cụ tải đúng phiên bản cố định và kiểm sha256 trước khi chạy. Action ghim theo commit
+#            SHA: tag như v7 có thể bị dời sang commit khác, SHA thì không. Đổi phiên bản: sửa khối
+#            `env:` bên dưới và docs/phien-ban.md trong cùng PR.
+# Trên máy:  lệnh tương đương ghi ở comment đầu mỗi job.
+# Tham khảo: Kế hoạch §10.4, docs/huong-dan/w2.md §10. Dựa trên bản nháp của Quang (temp/w2-scaffold, 12c4e27).
+# ──────────────────────────────────────────────────────────────────────────────
+name: ci
+
+on:
+  pull_request:                   # mọi PR, vào bất kỳ nhánh nào
+  push:
+    branches: [main]              # và mỗi lần main đổi (sau merge), để chắc main luôn xanh
+  workflow_dispatch:              # nút "Run workflow" ở tab Actions, để chạy lại bằng tay
+
+# Quyền của GITHUB_TOKEN (token GitHub cấp cho mỗi lần chạy): chỉ đọc code. CI không push, không bình
+# luận, nên không cần quyền ghi; một action bị chiếm quyền cũng không sửa được repo.
+permissions:
+  contents: read
+
+# Push thêm commit vào cùng một PR thì huỷ lần chạy cũ đang dở. Trên main thì không huỷ, để lần merge
+# nào cũng có kết quả riêng.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Mọi `run:` chạy bằng `bash -eo pipefail`: dừng ở lệnh lỗi đầu tiên, kể cả lệnh lỗi nằm giữa `a | b`.
+# Không khai báo thì GitHub dùng `bash -e`, thiếu pipefail.
+defaults:
+  run:
+    shell: bash
+
+env:
+  # Phiên bản công cụ, khớp docs/phien-ban.md. SHA256 lấy từ file checksum đi kèm từng bản phát hành
+  # (kubectl: file .sha256 trên dl.k8s.io) và đã đối chiếu với mã băm GitHub hiển thị cho file đó.
+  K8S_VERSION: "1.36.5"           # = k3s v1.36.5+k3s1 của cluster nhà và VM thuê: bản kubectl và schema để kiểm
+  KUBECTL_SHA256: "33bc88a24c3b09cf55bfd59e6ca977881b61fc3f25ab65bc80c65b430248648e"
+  KUBECONFORM_VERSION: "0.8.0"
+  KUBECONFORM_SHA256: "9bc2bffbf71f261128533edaf912153948b7ff238f9a531ae6d34466ec287883"
+  CRDS_CATALOG_REF: "5a706a682055810fb66ffa9006b5dc68399cf533"   # commit của datreeio/CRDs-catalog ngày 01/11/2026
+  PROMETHEUS_VERSION: "3.15.0"    # = Prometheus trong chart kube-prometheus-stack 92.1.1; promtool nằm trong gói này
+  PROMETHEUS_SHA256: "2a542df32eac02ee17b9d844fb2aa1de00dafa5476579ba8a3ba862e9d572ea0"
+  LYCHEE_VERSION: "0.24.2"
+  LYCHEE_SHA256: "1f4e0ef7f6554a6ed33dd7ac144fb2e1bbed98598e7af973042fc5cd43951c9a"
+  ACTIONLINT_VERSION: "1.7.12"
+  ACTIONLINT_SHA256: "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8"
+  YAMLLINT_VERSION: "1.38.0"
+  UV_VERSION: "0.13.1"
+
+jobs:
+  # ── yaml: cú pháp và phong cách mọi file YAML, cộng chính file workflow này ──
+  # Trên máy: yamllint -s .   rồi   actionlint
+  yaml:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10           # chặn job treo; mặc định GitHub chờ tới 6 giờ
+    steps:
+      # Tải code của commit đang kiểm về máy ảo. persist-credentials: false = không để token git lại
+      # trong .git/config, vì không step nào cần push.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      # yamllint đọc .yamllint.yaml ở gốc repo; -s (strict): cảnh báo cũng tính là lỗi.
+      # pipx (có sẵn trên runner Ubuntu) cài công cụ Python vào môi trường riêng của nó.
+      - name: yamllint
+        run: |
+          pipx install "yamllint==${YAMLLINT_VERSION}"
+          yamllint -s .
+
+      # actionlint kiểm file workflow: key sai, biểu thức ${{ }} sai, input không có ở action; và soát các
+      # khối `run:` bằng shellcheck (có sẵn trên runner). yamllint không bắt được các lỗi này vì YAML vẫn hợp lệ.
+      - name: Cài actionlint
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/bin" && cd "$RUNNER_TEMP"    # RUNNER_TEMP: thư mục tạm, xoá sau mỗi job
+          f="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          # curl -f: lỗi HTTP thì dừng; -sS: không in tiến độ nhưng vẫn in lỗi; -L: đi theo chuyển hướng
+          curl -fsSLo "$f" "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${f}"
+          # sha256sum -c: so mã băm của file vừa tải với mã đã ghim; khác là dừng (file bị sửa hoặc tải hỏng)
+          echo "${ACTIONLINT_SHA256}  ${f}" | sha256sum -c -
+          tar -xzf "$f" -C bin actionlint
+          # Thư mục ghi vào file $GITHUB_PATH được thêm vào PATH cho các step SAU của job này
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - name: actionlint
+        run: actionlint -color
+
+  # ── manifests: build từng thư mục kustomize rồi kiểm schema, không cần cluster ──
+  # Bắt: đường dẫn patch sai (kustomize build lỗi); trường gõ sai hoặc không tồn tại trong Deployment,
+  # PrometheusRule, ScaledObject…
+  # Trên máy: kubectl kustomize <thư mục> | kubeconform -strict -summary -kubernetes-version 1.36.5 \
+  #             -schema-location default -schema-location '<địa chỉ CRDs-catalog như bên dưới>'
+  manifests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      # kubectl dùng cho `kubectl kustomize` (kustomize nhúng sẵn trong kubectl). Runner có sẵn kubectl
+      # nhưng phiên bản đổi theo image của GitHub, nên tải bản trùng cluster.
+      # kubeconform: so từng object với JSON schema (trường có tồn tại không, đúng kiểu không).
+      - name: Cài kubectl và kubeconform
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/bin" && cd "$RUNNER_TEMP"
+          curl -fsSLo bin/kubectl "https://dl.k8s.io/release/v${K8S_VERSION}/bin/linux/amd64/kubectl"
+          echo "${KUBECTL_SHA256}  bin/kubectl" | sha256sum -c -
+          chmod +x bin/kubectl
+          f="kubeconform-linux-amd64.tar.gz"
+          curl -fsSLo "$f" "https://github.com/yannh/kubeconform/releases/download/v${KUBECONFORM_VERSION}/${f}"
+          echo "${KUBECONFORM_SHA256}  ${f}" | sha256sum -c -
+          tar -xzf "$f" -C bin kubeconform
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
+      - name: kustomize build + kubeconform
+        run: |
+          set -euo pipefail
+          # CRD (Custom Resource Definition) = loại tài nguyên do phần mềm cài thêm định nghĩa, như
+          # PrometheusRule, ScaledObject. Schema của chúng lấy từ CRDs-catalog; kubeconform tự điền
+          # {{.Group}}, {{.ResourceKind}}, {{.ResourceAPIVersion}} theo từng object, ví dụ PrometheusRule →
+          # monitoring.coreos.com/prometheusrule_v1.json. `default` = schema của tài nguyên gốc Kubernetes
+          # (Deployment, Service…) theo K8S_VERSION. Không tìm được schema thì kubeconform báo lỗi, không bỏ qua.
+          crds="https://raw.githubusercontent.com/datreeio/CRDs-catalog/${CRDS_CATALOG_REF}/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json"
+          # Tìm mọi thư mục có kustomization.yaml mà Git đang theo dõi, nên serving/, autoscaling/, platform/
+          # được kiểm ngay khi lên main. `xargs -r -n1 dirname`: đổi đường dẫn file thành thư mục chứa nó.
+          mapfile -t dirs < <(git ls-files '*kustomization.yaml' | xargs -r -n1 dirname | sort -u)
+          if [ "${#dirs[@]}" -eq 0 ]; then echo "::error::Không thấy kustomization.yaml nào"; exit 1; fi
+          for d in "${dirs[@]}"; do
+            echo "::group::$d"            # gom log của mỗi thư mục thành một mục gập được trên GitHub
+            # -strict: báo lỗi cả trường thừa (thường là gõ sai tên trường), không chỉ trường sai kiểu
+            kubectl kustomize "$d" | kubeconform -strict -summary -kubernetes-version "$K8S_VERSION" \
+              -schema-location default -schema-location "$crds"
+            echo "::endgroup::"
+          done
+
+  # ── alerts: rule Prometheus đúng cú pháp, unit test đạt, mỗi cảnh báo đủ test và runbook ──
+  # Trên máy: make alerts-test   (Windows: chạy trong Git Bash, thêm SHELL=bash)
+  alerts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      # promtool nằm trong gói phát hành của Prometheus. Dùng đúng bản Prometheus chạy trong cluster, để
+      # PromQL được kiểm bằng cùng bộ phân tích cú pháp sẽ tính nó thật.
+      - name: Cài promtool
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/bin" && cd "$RUNNER_TEMP"
+          f="prometheus-${PROMETHEUS_VERSION}.linux-amd64.tar.gz"
+          curl -fsSLo "$f" "https://github.com/prometheus/prometheus/releases/download/v${PROMETHEUS_VERSION}/${f}"
+          echo "${PROMETHEUS_SHA256}  ${f}" | sha256sum -c -
+          # Chỉ lấy file promtool; --strip-components=1 bỏ thư mục prometheus-x.y.z.linux-amd64/ ở đầu đường dẫn
+          tar -xzf "$f" -C bin --strip-components=1 "prometheus-${PROMETHEUS_VERSION}.linux-amd64/promtool"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
+      # Gọi chính target của Makefile, để CI và máy cá nhân chạy cùng một công thức (tách phần `spec:` của
+      # PrometheusRule thành file rule thuần rồi mới gọi promtool; xem comment trong Makefile).
+      - name: promtool check rules + test rules
+        run: make alerts-test
+
+      # CONTRIBUTING §4: mỗi cảnh báo phải có đủ quy tắc, unit test và runbook. promtool không bắt được việc
+      # thiếu test (không có test thì không có gì để trượt), nên kiểm riêng ở đây.
+      - name: Mỗi cảnh báo có unit test và runbook
+        run: |
+          set -euo pipefail
+          # Tên cảnh báo theo thứ tự trong file, lấy từ dòng `- alert: <Tên>`. `sed -nE 's/…/\2/p'`: chỉ in
+          # những dòng khớp, sau khi thay cả dòng bằng nhóm bắt được thứ hai (tên cảnh báo).
+          names=$(sed -nE 's/^[[:space:]]*(- )?alert:[[:space:]]*"?([A-Za-z0-9_]+)"?([[:space:]]+#.*)?$/\2/p' observability/alerts/*.yaml)
+          # Tên runbook trong annotation runbook_url (phần giữa docs/runbooks/ và .md), cũng theo thứ tự
+          runbooks=$(sed -nE 's#^[[:space:]]*runbook_url:.*/docs/runbooks/([A-Za-z0-9_]+)\.md.*$#\1#p' observability/alerts/*.yaml)
+          if [ -z "$names" ]; then echo "::error::Không đọc được tên cảnh báo nào trong observability/alerts/"; exit 1; fi
+          fail=0
+          while read -r n; do
+            # File test của promtool gọi cảnh báo cần kiểm bằng `alertname: <Tên>`
+            if ! grep -qE "alertname:[[:space:]]*\"?${n}\"?([[:space:]]|$)" observability/alerts/tests/*.yaml; then
+              echo "::error::Cảnh báo $n chưa có unit test trong observability/alerts/tests/"; fail=1
+            fi
+            if [ ! -f "docs/runbooks/$n.md" ]; then
+              echo "::error::Cảnh báo $n chưa có runbook docs/runbooks/$n.md"; fail=1
+            fi
+          done <<< "$names"
+          # Hai danh sách phải trùng nhau theo thứ tự: mỗi cảnh báo có đúng một runbook_url trỏ tới runbook
+          # của chính nó. Bắt lỗi thiếu runbook_url, và lỗi chép từ cảnh báo khác mà quên sửa tên.
+          if [ "$names" != "$runbooks" ]; then
+            echo "::error::runbook_url không khớp tên cảnh báo (cột trái: cảnh báo, cột phải: runbook_url)"
+            paste <(echo "$names") <(echo "$runbooks")
+            fail=1
+          fi
+          echo "Đã kiểm $(wc -l <<< "$names") cảnh báo"
+          exit "$fail"
+
+  # ── python: lint, format và unit test cho loadgen/ ──
+  # Trên máy: uv run --project loadgen pytest loadgen   (và ruff check / ruff format --check như dưới)
+  python:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    strategy:
+      # matrix: chạy job này hai lần song song, mỗi lần một phiên bản Python. 3.11 là bản thấp nhất mà
+      # pyproject.toml cam kết (requires-python >=3.11); 3.15 là bản đang dùng khi phát triển.
+      # fail-fast: false = một bản lỗi vẫn để bản kia chạy xong, để biết lỗi có riêng ở một phiên bản không.
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.15"]   # Lưu ý: phải để trong nháy, không thì YAML đọc 3.10 thành số 3.1
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      # setup-uv cài uv (trình quản lý Python và thư viện), chọn Python theo matrix (uv tự tải nếu runner
+      # chưa có), và lưu cache thư viện theo uv.lock để lần chạy sau cài nhanh hơn.
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e  # v10.3.2
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+          cache-dependency-glob: loadgen/uv.lock
+
+      # --locked: dừng nếu uv.lock không còn khớp pyproject.toml (sửa phụ thuộc mà quên `uv lock`), thay vì
+      # lặng lẽ giải lại phụ thuộc rồi test trên bộ thư viện khác với bộ đã ghim.
+      - name: ruff check
+        run: uv run --project loadgen --locked ruff check loadgen
+      - name: ruff format --check
+        run: uv run --project loadgen --locked ruff format --check loadgen
+      - name: pytest
+        run: uv run --project loadgen --locked pytest loadgen
+
+  # ── docs: link tương đối và anchor (#mục) trong tài liệu phải trỏ tới chỗ có thật ──
+  # Trên máy: lychee --offline --include-fragments --no-progress 'docs/**/*.md' '*.md'
+  docs:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Tải lychee trực tiếp thay cho lycheeverse/lychee-action: action đó không kiểm sha256 của lychee
+      # nó tải về, và đưa tham số qua `eval` nên dễ sai khi có regex.
+      - name: Cài lychee
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/bin" && cd "$RUNNER_TEMP"
+          f="lychee-x86_64-unknown-linux-gnu.tar.gz"
+          curl -fsSLo "$f" "https://github.com/lycheeverse/lychee/releases/download/lychee-v${LYCHEE_VERSION}/${f}"
+          echo "${LYCHEE_SHA256}  ${f}" | sha256sum -c -
+          tar -xzf "$f" -C bin --strip-components=1 lychee-x86_64-unknown-linux-gnu/lychee
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
+      - name: Kiểm link và anchor
+        run: |
+          set -euo pipefail
+          # Tài liệu (w2.md, Kiến trúc) đã link tới file trong serving/, autoscaling/, platform/, infra/, nhưng
+          # các thư mục này còn ở nhánh scaffold chưa merge. Chỉ bỏ qua link tới thư mục CHƯA có trên nhánh
+          # đang kiểm: thư mục nào lên main thì link tới nó tự được kiểm lại, không phải sửa file này.
+          skip=()
+          for d in serving autoscaling platform infra; do
+            if [ ! -e "$d" ]; then skip+=(--exclude "^file://.*/${d}/"); fi
+          done
+          echo "Bỏ qua link tới thư mục chưa có: ${skip[*]:-(không có)}"
+          # --offline: chỉ kiểm link tới file trong repo, không gọi Internet (nhanh, không đỏ vì mạng chập chờn).
+          # --include-fragments: kiểm cả anchor có thật trong file đích, ví dụ #51-phân-công.
+          # Glob để trong nháy đơn để lychee tự mở rộng (bash chỉ hiểu ** khi bật globstar).
+          lychee --offline --include-fragments --no-progress "${skip[@]}" 'docs/**/*.md' '*.md'
