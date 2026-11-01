@@ -43,3 +43,30 @@
   - T1–T5 chạy tự động bằng `make sim-test`; hướng dẫn gốc chạy tay bằng ba terminal (vẫn giữ trong w2 §9.3).
 - **Liên kết:** nhánh `feat/tr2-sim` (commit cùng mục này); log thô ở `runs/sim/` trên máy Trình (không commit).
 - **Dùng cho luận văn:** chương "Triển khai và vận hành" (Kiến trúc §15): bảng T1–T5 kèm số đo; hình số replica theo thời gian ở T2–T3 vẽ từ log mỗi giây (chưa vẽ); sự cố T4 (NetworkPolicy và conntrack) là ví dụ "cách gây sự cố cũng phải được kiểm chứng". LT7 (TR8, Môi trường §19) cần T2 chạy 5 lần; hiện có 2 lần: quyết định scale sau 1 s và 6 s (dự đoán ≤ ~15 s).
+
+## 2026-11-01 – TR2: soát bằng `/code-review high`, KEDA tắt keep-alive, chạy lại T1–T5
+
+- **Mã việc:** TR2 · **Môi trường:** simulator (kind trong WSL2)
+- **Đã làm:**
+  1. Chạy `/code-review high` trên `feat/tr2-sim` (commit `076afbe`): 9 điểm, đều ở `run-t1-t5.sh` và Makefile.
+  2. Đối chiếu điểm "KEDA có biến tắt keep-alive" với mã nguồn KEDA v2.21.0: `pkg/util/http.go` đọc `KEDA_HTTP_DISABLE_KEEP_ALIVE` (mặc định false) và gán vào `DisableKeepAlives` của transport HTTP dùng chung; scaler Prometheus tạo client bằng `kedautil.CreateHTTPClient` nên theo biến này. `helm template` cho thấy khối `env:` cấp cao nhất của chart vào cả 3 thành phần.
+  3. Sửa theo cả 9 điểm, chạy lại `make sim-up` và `make sim-test` (lần 3).
+- **Quyết định và lý do:**
+  - `platform/keda/values.yaml` đặt `KEDA_HTTP_DISABLE_KEEP_ALIVE=true` và bỏ bước xoá pod keda-operator ở T4. NetworkPolicy có tác dụng ngay từ lần hỏi kế tiếp, đúng như VH4 (ADR-005 T6) giả định; T4 đo từ lúc áp policy chứ không từ một lần khởi động lại operator (trong lúc khởi động lại, HPA không lấy được metric nào). Chi phí: thêm một lần bắt tay TCP trong cluster cho mỗi lần hỏi. Cách xoá pod giữ lại làm cách tạm trong w2 §9.3. Biến này áp cả ở nhà và cloud, nên hỏi Quang trong PR.
+  - Tách lệnh tải ra `autoscaling/tests/load-sim.sh`, dùng chung cho `make sim-test-load` và `make sim-test`, để hai cách chạy gửi đúng một kiểu tải. Script dùng port-forward có sẵn ở cổng 8000, chưa có thì tự mở; bị dừng giữa chừng thì tự tắt hey và port-forward.
+  - `run-t1-t5.sh` đọc max, fallback, threshold và câu PromQL từ chính ScaledObject, tính C = 2,5 × threshold; sửa overlay thì bài thử đổi theo.
+  - T1 kiểm cả metric 0. T4 kiểm thêm: trước khi áp policy KEDA có 0 lỗi, gỡ policy thì lỗi về 0, để nối lỗi với đúng policy. Không đặt cận dưới cho thời gian fallback, vì lần 2 thấy lỗi thứ 2 và thứ 3 chỉ cách nhau 2 s. T5 hỏi thẳng Prometheus qua API server để chắc tải đã tới simulator: A2 cao nhất phải ≥ 21, tức không tạm dừng thì đã lên 3 replica.
+  - Hàm đọc trạng thái không làm dừng script khi kubectl lỗi thoáng qua (`set -e`). `make sim-up` kiểm `SIM_SERVING` trước tiên, thiếu thì báo ngay thay vì lỗi ở bước 6 sau khoảng 8 phút.
+- **Kết quả và số đo:**
+  - `make sim-up` thiếu `SIM_SERVING`: dừng sau 0 s, in hướng dẫn. Có `SIM_SERVING`: 57 s (chỉ nâng cấp hai release Helm); keda-operator mới có `KEDA_HTTP_DISABLE_KEEP_ALIVE=true`.
+  - Lần 3 (`make sim-test`, 22:33–22:52; mã thoát 0, 5/5 đạt):
+    - T1: `desired=1`, metric 0 suốt 120 s. Đạt.
+    - T2: `desired=3` sau **8 s**; metric HPA 8,334 ≈ 25 ÷ 3; hey 731/731 phản hồi 200 (3,81 request/s). Đạt.
+    - T3: giữ 3 trong 304 s tính từ hạn dừng của hey, về 1 sau thêm 61 s. Đạt.
+    - T4 (không xoá pod): áp policy lúc 22:44:51; lỗi lần 1 ở +11 s, lần 3 ở +19 s; fallback ở **+24 s** (`desired=3`, `Fallback=True`, `numberOfFailures=4`). Gỡ policy thì lỗi về 0 ngay (0 s). 3 pod KEDA không khởi động lại lần nào. Đạt (tiêu chí ≤ 30 s; w2 ghi khoảng 15–30 s).
+    - T5: `spec=1`, `ready=1` ở cả 71 lần đọc (mỗi giây) trong 60 s có tải; A2 cao nhất 25 (cần ≥ 21); hey 246/246 phản hồi 200 (3,49 request/s). Đạt.
+  - LT7: 3 mẫu thời gian quyết định ở T2: 1 s, 6 s, 8 s (dự đoán ≤ ~15 s).
+  - Mỗi lần `kubectl annotate` ScaledObject (T5), webhook KEDA 2.21.0 in cảnh báo: `PollingInterval is configured but is not relevant for scaling. It only affects scaling when minReplicaCount = 0, idleReplicaCount is set, or useCachedMetrics is enabled`. Khớp với comment trong `scaledobject-a2.yaml`: với A2 (min 1), chu kỳ sync 5 s của HPA quyết định scale 1↔N. Theo chính cảnh báo này, `pollingInterval` khi đó chỉ còn quyết định KEDA làm mới trạng thái và event của ScaledObject nhanh đến đâu.
+- **Khác thiết kế:** T4 không cần bước thêm, nhưng KEDA phải tắt keep-alive (thiết kế không nói tới keep-alive).
+- **Liên kết:** nhánh `feat/tr2-sim` (commit cùng mục này); `platform/keda/values.yaml`, `autoscaling/tests/`, `Makefile`, `docs/huong-dan/w2.md`.
+- **Dùng cho luận văn:** chương "Triển khai và vận hành": T4 trước và sau khi tắt keep-alive (0 lỗi trong 120 s, so với fallback sau 24 s) cho thấy cách gây sự cố cũng phải được kiểm chứng.
