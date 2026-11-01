@@ -21,7 +21,7 @@
 
 ## 2026-11-01 – TR1: CI bằng GitHub Actions cho phần đã có trên `main`
 
-- **Mã việc:** TR1 · **Môi trường:** không (máy cá nhân Windows 11 + Git Bash). CI chưa chạy trên GitHub.
+- **Mã việc:** TR1 · **Môi trường:** không (máy cá nhân Windows 11 + Git Bash; GitHub Actions)
 - **Đã làm:**
   1. Đọc Kế hoạch §10.4, w2 §10, CONTRIBUTING; xem bản nháp `ci.yaml` của Quang (67 dòng, `temp/w2-scaffold`, commit `12c4e27`, chưa chạy lần nào).
   2. Viết `.github/workflows/ci.yaml` mới, chỉ kiểm thư mục đã có trên `main` (`observability/`, `loadgen/`, `docs/`). 5 job: `yaml` (yamllint, actionlint kèm shellcheck), `manifests` (kustomize build rồi kubeconform `-strict`, tự tìm mọi `kustomization.yaml`), `alerts` (`make alerts-test`), `python` (pytest trên Python 3.11 và 3.15, ruff), `docs` (lychee `--offline --include-fragments`).
@@ -36,13 +36,14 @@
   - Thiết kế không chốt phiên bản Python, nên test trên 3.11 (bản thấp nhất `requires-python` cam kết) và 3.15 (bản đang dùng).
   - `concurrency`: PR dùng group theo ref, push thêm commit thì huỷ lần chạy cũ. Mỗi lần push vào `main` có group riêng (`run_id`), vì GitHub chỉ giữ một lần chờ cho mỗi group và huỷ lần chờ cũ hơn.
   - Đọc YAML bằng yq thay cho regex (sau lượt soát 2). Regex bỏ sót tên cảnh báo trong nháy đơn và khi sót thì lặng lẽ cho qua. yq hiểu mọi kiểu viết, báo lỗi khi YAML hỏng, và gắn đúng severity, `runbook_url` với từng cảnh báo. Đổi lại, `make alerts-test` cần thêm yq trên máy, giống promtool.
-- **Kết quả và số đo** (đều chạy trên máy):
+- **Kết quả và số đo** (trên máy, trừ dòng cuối):
   - yamllint và actionlint (shellcheck 0.11.0): đạt. `make alerts-test`: `alerts-coverage` kiểm 7 cảnh báo; `promtool check rules` 4 + 4 + 7 rule SUCCESS; `promtool test rules` SUCCESS.
   - kubeconform cho `observability/`: 3 PrometheusRule hợp lệ; bản cố ý gõ sai `expr` thành `expre` bị bắt.
   - lychee: 489 link, 414 đạt, 0 lỗi, 75 bỏ qua (link http do `--offline`, cộng link tới 4 thư mục chưa merge). Nếu không loại trừ thì có 56 lỗi, và cả 56 đều trỏ vào thư mục chỉ có ở scaffold (52 ở `w2.md`, 4 ở Kiến trúc). Anchor sai bị bắt (`Cannot find fragment`).
   - pytest: 41 passed trên Python 3.11.17 và 3.15.0; ruff đạt.
   - `make alerts-coverage` trên 10 bản sao cố ý làm hỏng đều dừng, lỗi gắn đúng tên cảnh báo: thiếu runbook; `runbook_url` trỏ nhầm; severity sai; thiếu severity; chỉ có test "không bắn"; `alertname` chỉ nằm trong comment; tên trong nháy đơn; cảnh báo đặt vào `rules/`; YAML hỏng (yq báo dòng lỗi); thiếu yq. Key `"spec":` có nháy (YAML hợp lệ nhưng sed không tách được) bị chốt mới của `alerts-test` bắt.
   - Tách nguyên văn các khối `run:` khỏi `ci.yaml` rồi chạy: 4 bước cài (7 công cụ) tải đúng URL, sha256 khớp, ra file chạy Linux (ELF). Step kiểm link bỏ qua đúng link tới thư mục chưa có, kể cả `../infra` không có `/` cuối, và vẫn bắt link hỏng thật.
+  - **GitHub Actions, lần chạy đầu của PR #5:** cả 6 job xanh: `yaml` 9 s, `manifests` 4 s, `alerts` 9 s, `python (3.11)` 13 s, `python (3.15)` 12 s, `docs` 5 s. Log khớp số đo trên máy: kubeconform tải schema qua mạng và thấy 3 PrometheusRule hợp lệ (Skipped: 0); `alerts-coverage` kiểm 7 cảnh báo; pytest 41 passed ở cả hai bản Python; lychee 414 link đạt, 0 lỗi, 75 bỏ qua; actionlint dùng shellcheck 0.11.0 đã ghim.
 - **Sự cố:**
   - kubeconform trên máy không tải được schema: chương trình Go tự hỏi DNS 8.8.4.4 và bị timeout, trong khi `curl` và `gh` vẫn ra mạng. Cách làm: tải schema bằng `curl` về thư mục cục bộ. Vị trí schema `default` chỉ kiểm được trên GitHub.
   - Script tách `run:` bằng Python ghi CRLF trên Windows. bash của Git Bash bỏ qua CR nên lần thử đầu vẫn đạt, nhưng như vậy không giống runner Linux. Sửa: ghi byte với LF, rồi chạy lại toàn bộ.
@@ -52,6 +53,6 @@
   - Kế hoạch §10.4 có job `yaml` (kèm kubeconform) và job `kustomize` riêng. Tôi theo w2 §10: job `manifests` build kustomize rồi chạy kubeconform, vì kubeconform cần manifest đã build.
   - Kế hoạch đặt kiểm tra "mọi cảnh báo có runbook" ở job `docs`. Tôi đặt ở `make alerts-coverage` (job `alerts`), kiểm luôn unit test, để chạy được cả trên máy.
   - Chưa có job `helm`, `ansible` (thư mục chưa lên `main`) và `secrets` (gitleaks, mức Could). Thêm ngoài thiết kế: actionlint, kiểm anchor, ma trận hai bản Python.
-- **Còn thiếu:** CI chưa chạy trên GitHub (cần push). Branch protection với các job làm required checks: Quang là admin repo. Gộp `make lint` với job `manifests` (target `lint` của Quang, scaffold sẽ sửa): hỏi Quang. Để lại sau lượt soát 2: gom 4 khối tải công cụ thành một script (làm khi thêm job `helm`); kiểm cảnh báo nằm ngoài `observability/` (CONTRIBUTING §4 quy định cảnh báo ở `observability/alerts/`).
-- **Liên kết:** commit `9c84000`, `6257173`, `afa8b40` trên nhánh `feat/tr1-ci` (chưa push); `.github/workflows/ci.yaml`, `Makefile`, `docs/phien-ban.md`.
-- **Dùng cho luận văn:** §4.2 (GitOps, CI): bảng các job và lỗi mỗi job bắt được; cách ghim công cụ (sha256, commit SHA, `--exclude-newer`). Hình nên có: ảnh tab Actions với các job xanh sau lần chạy đầu (chưa có).
+- **Còn thiếu:** Branch protection với các job làm required checks: Quang là admin repo. Gộp `make lint` với job `manifests` (target `lint` của Quang, scaffold sẽ sửa): hỏi Quang. Để lại sau lượt soát 2: gom 4 khối tải công cụ thành một script (làm khi thêm job `helm`); kiểm cảnh báo nằm ngoài `observability/` (CONTRIBUTING §4 quy định cảnh báo ở `observability/alerts/`).
+- **Liên kết:** PR #5; commit `9c84000`, `6257173`, `afa8b40` trên nhánh `feat/tr1-ci`; `.github/workflows/ci.yaml`, `Makefile`, `docs/phien-ban.md`.
+- **Dùng cho luận văn:** §4.2 (GitOps, CI): bảng các job và lỗi mỗi job bắt được; cách ghim công cụ (sha256, commit SHA, `--exclude-newer`). Hình nên có: ảnh trang check của PR #5 với 6 job xanh (chưa chụp).
