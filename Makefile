@@ -50,6 +50,8 @@ home-up: ## Dựng k3s + Argo CD trên PC và laptop (Ansible)
 # Cluster kind tách biệt với cluster nhà. Ở đây cài thẳng bằng helm/kubectl (không qua Argo CD) vì
 # cluster này dựng đi dựng lại liên tục và không cần đồng bộ với Git.
 sim-up: ## Dựng kind + Prometheus + KEDA + simulator + A2 trên laptop
+#	0) Kiểm tra trước overlay simulator có thật, để không chờ khoảng 8 phút (bước 1–5) rồi mới lỗi ở bước 6
+	@test -d $(SIM_SERVING) || { echo "Không thấy $(SIM_SERVING). Nhánh này chưa có serving/: chép từ nhánh có nó ra ngoài repo rồi gọi make sim-up SIM_SERVING=<thư mục>/serving/overlays/sim"; exit 1; }
 #	1) Tạo cluster nếu chưa có (`grep -qx` = khớp nguyên dòng, im lặng)
 	kind get clusters | grep -qx $(KIND_CLUSTER) || kind create cluster --config infra/kind/kind-config.yaml
 #	2) Khai báo kho chart Helm (--force-update: cập nhật nếu đã có)
@@ -79,17 +81,17 @@ sim-up: ## Dựng kind + Prometheus + KEDA + simulator + A2 trên laptop
 sim-down: ## Xoá cluster simulator
 	kind delete cluster --name $(KIND_CLUSTER)
 
-# Bơm tải cho bài T2: `hey` giữ C request đồng thời trong DUR giây. Cần port-forward cổng 8000 ở terminal
-# khác (w2.md §9.3). `$${DUR:-120s}` = biến môi trường DUR, mặc định 120s. Gọi: make sim-test-load C=25 DUR=180s
-sim-test-load: ## Tải đồng thời cho T2 (C=25, DUR=120s); cần port-forward ở terminal khác
-	hey -z $${DUR:-120s} -c $${C:-25} -m POST -T application/json -D autoscaling/tests/request-sim.json \
-	  http://localhost:8000/v1/chat/completions
+# Bơm tải cho bài T2: `hey` giữ C request đồng thời trong DUR giây (autoscaling/tests/load-sim.sh, cùng file
+# make sim-test dùng). Dùng port-forward cổng 8000 đang mở ở terminal khác (w2.md §9.3), chưa có thì tự mở.
+# `$${DUR:-120s}` = biến môi trường DUR, mặc định 120s. Gọi: make sim-test-load C=25 DUR=180s
+sim-test-load: ## Tải đồng thời cho T2 (C=25, DUR=120s)
+	CTX=kind-$(KIND_CLUSTER) autoscaling/tests/load-sim.sh $${C:-25} $${DUR:-120s}
 
-# Chạy T1–T5 tự động (tự mở port-forward, tự bơm tải), chấm đạt/trượt theo bảng ở w2.md §9.3, ghi log
-# mỗi giây vào runs/sim/. Cả 5 bài mất khoảng 25 phút, phần lớn là chờ scale-down (cửa sổ 300 s + 60 s
-# mỗi pod). Một bài: make sim-test T=t4 (t2 gồm cả T3).
+# Chạy T1–T5 tự động (tự bơm tải qua load-sim.sh), chấm đạt/trượt theo bảng ở w2.md §9.3, ghi log mỗi giây
+# vào runs/sim/. Cả 5 bài mất khoảng 20 phút, phần lớn là chờ scale-down (cửa sổ 300 s + 60 s mỗi pod).
+# Một bài: make sim-test T=t4 (t2 gồm cả T3).
 sim-test: ## Chạy T1–T5 trên simulator, chấm đạt/trượt (T=t1|t2|t4|t5|all)
-	autoscaling/tests/run-t1-t5.sh $${T:-all}
+	CTX=kind-$(KIND_CLUSTER) autoscaling/tests/run-t1-t5.sh $${T:-all}
 
 # ── Máy thuê trên Vast.ai ───────────────────────────────────────────────────────
 # Mọi thao tác với Vast nằm trong infra/provision/vast.sh; ở đây chỉ đặt tên ngắn cho chúng.

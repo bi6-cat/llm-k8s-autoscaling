@@ -6,22 +6,23 @@
 #            dừng autoscaling. Trong lúc chạy, mỗi giây ghi một dòng trạng thái HPA vào log.
 # Mục đích:  Thay ba terminal chạy tay ở w2.md §9.3 bằng một lệnh: đo thời gian chính xác tới giây
 #            và chấm đạt/trượt theo đúng tiêu chí của bảng đó. Log thô là tư liệu cho chương "Triển
-#            khai và vận hành" (Kiến trúc §15).
+#            khai và vận hành" (Kiến trúc §15) và cho LT7 (Môi trường §19).
 # Dùng:      make sim-test (sau make sim-up), hoặc chỉ một bài: make sim-test T=t4
 #            Bài: t1 | t2 (gồm T3, vì T3 là pha "tắt tải" ngay sau T2) | t4 | t5 | all (mặc định)
-# Cần:       kubectl, jq, hey; context kind-llm-sim; ScaledObject vllm-a2 đã áp (overlay sim).
+# Cần:       kubectl, jq, curl, hey; ScaledObject vllm-a2 đã áp (overlay sim). CTX = context kubectl
+#            (mặc định kind-llm-sim; Makefile truyền kind-$(KIND_CLUSTER)).
 # Tham khảo: docs/huong-dan/w2.md §9.3, Kiến trúc §12, §15, Thông số §9.3
 # ──────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 cd "$(dirname "$0")/../.."             # về gốc repo, để đường dẫn tương đối dưới đây đúng ở mọi nơi gọi
 
 TEST=${1:-all}
-K=(kubectl --context kind-llm-sim)    # mảng bash: "${K[@]}" mở ra đúng từng từ, kể cả khi có dấu cách
+export CTX=${CTX:-kind-llm-sim}        # export: load-sim.sh (tiến trình con) dùng cùng context
+K=(kubectl --context "$CTX")           # mảng bash: "${K[@]}" mở ra đúng từng từ, kể cả khi có dấu cách
 N=(-n llm-serving)
-HPA=keda-hpa-vllm-a2                   # HPA do KEDA tạo cho ScaledObject vllm-a2 (tên = keda-hpa-<tên SO>)
-MAX=3                                  # maxReplicaCount của overlay sim (autoscaling/official/overlays/sim)
+SO=vllm-a2
+HPA=keda-hpa-$SO                       # HPA do KEDA tạo cho ScaledObject (tên = keda-hpa-<tên SO>)
 LOG=runs/sim/$(date +%Y%m%d-%H%M%S)-t1-t5.log    # runs/ nằm trong .gitignore: dữ liệu thô không commit
-mkdir -p "$(dirname "$LOG")"
 RESULTS=()                             # mỗi phần tử: "T2 ĐẠT: …" để in tổng kết ở cuối
 
 now() { date +%s; }
@@ -29,27 +30,34 @@ say() { echo "$(now) $(date +%T) $*" | tee -a "$LOG"; }
 result() { RESULTS+=("$1"); say "KẾT QUẢ $1"; }
 
 # ── Đọc trạng thái ──────────────────────────────────────────────────────────────
-# desired: số replica HPA muốn; current: số replica HPA đang tính (= replicas của Deployment).
-# Cả hai rỗng khi HPA không tồn tại (lúc tạm dừng, KEDA xoá HPA).
-desired() { "${K[@]}" "${N[@]}" get hpa "$HPA" -o jsonpath='{.status.desiredReplicas}' 2>/dev/null || true; }
-current() { "${K[@]}" "${N[@]}" get hpa "$HPA" -o jsonpath='{.status.currentReplicas}' 2>/dev/null || true; }
-# metric: giá trị HPA đang thấy, đã chia cho số replica (AverageValue), dạng số lượng Kubernetes
-metric() {
-  "${K[@]}" "${N[@]}" get hpa "$HPA" -o jsonpath='{.status.currentMetrics[0].external.current.averageValue}' \
-    2>/dev/null || true
-}
-# replicas: số replica Deployment đang được đặt (do HPA hoặc do KEDA khi tạm dừng)
-replicas() { "${K[@]}" "${N[@]}" get deploy vllm -o jsonpath='{.spec.replicas}'; }
+# Hàm đọc trả chuỗi rỗng khi lỗi (`|| true`): dưới `set -e`, một lần API server chập chờn trong phép gán
+# `x=$(…)` sẽ làm dừng cả script giữa chừng.
+# hpa <trường>: một trường trong status của HPA; rỗng khi HPA không tồn tại (lúc tạm dừng, KEDA xoá HPA)
+hpa() { "${K[@]}" "${N[@]}" get hpa "$HPA" -o jsonpath="{.status.$1}" 2>/dev/null || true; }
+desired() { hpa desiredReplicas; }     # số replica HPA muốn
+current() { hpa currentReplicas; }     # số replica HPA đang tính (= replicas của Deployment)
+metric() { hpa 'currentMetrics[0].external.current.averageValue'; }   # đã chia cho số replica (AverageValue)
+# so <jsonpath>: một trường của ScaledObject
+so() { "${K[@]}" "${N[@]}" get scaledobject "$SO" -o jsonpath="$1" 2>/dev/null || true; }
+failures() { so '{.status.health.*.numberOfFailures}'; }   # số lần lỗi liên tiếp khi KEDA gọi Prometheus
+# replicas: số replica Deployment đang được đặt (do HPA, hoặc do KEDA khi tạm dừng)
+replicas() { "${K[@]}" "${N[@]}" get deploy vllm -o jsonpath='{.spec.replicas}' 2>/dev/null || true; }
 # qty: đổi số lượng kiểu Kubernetes sang số thường: "8334m" (m = mili) = 8,334; "25" = 25
 qty() { awk -v q="$1" 'BEGIN { if (q ~ /m$/) { sub(/m$/, "", q); q = q / 1000 } printf "%.3f", q }'; }
+# a2: giá trị câu PromQL của trigger lúc này, hỏi thẳng Prometheus qua API server (không qua KEDA, không cần
+# port-forward). T5 dùng nó để biết tải có thật sự tới simulator không, vì lúc tạm dừng không có HPA.
+a2() {
+  "${K[@]}" get --raw "$PROM/api/v1/query?query=$QUERY" 2>/dev/null \
+    | jq -r '.data.result[0].value[1] // "0"' 2>/dev/null || echo 0
+}
 
 # Ghi mỗi giây một dòng: epoch, giờ, desired, current (HPA), spec/ready (Deployment), metric HPA đang
-# thấy (dạng "8333m" = 8,333), số lần lỗi liên tiếp KEDA gọi Prometheus, điều kiện Fallback của SO.
-# Một lệnh kubectl lấy cả 3 object; --ignore-not-found: thiếu HPA (lúc tạm dừng) thì in "-" chứ không lỗi.
+# thấy, số lần lỗi liên tiếp KEDA gọi Prometheus, điều kiện Fallback của SO. Một lệnh kubectl lấy cả 3
+# object; --ignore-not-found: thiếu HPA (lúc tạm dừng) thì in "-" chứ không lỗi.
 # jq: first(…) // {} = lấy object đầu tiên đúng kind, không có thì dùng {} để các trường ra "-".
 watch_loop() {
   while true; do
-    "${K[@]}" "${N[@]}" get hpa/"$HPA" deploy/vllm scaledobject/vllm-a2 -o json --ignore-not-found 2>/dev/null | jq -r '
+    "${K[@]}" "${N[@]}" get hpa/"$HPA" deploy/vllm scaledobject/"$SO" -o json --ignore-not-found 2>/dev/null | jq -r '
       (.items // []) as $it
       | (first($it[] | select(.kind == "HorizontalPodAutoscaler")) // {}) as $h
       | (first($it[] | select(.kind == "Deployment")) // {}) as $d
@@ -76,13 +84,6 @@ wait_for() {
   echo "quá-hạn"; return 1
 }
 
-# load <C> <thời lượng>: hey giữ đúng C request đồng thời (mỗi "worker" gửi xong mới gửi tiếp) trong
-# thời lượng đó, qua port-forward cổng 8000. Body: request chat ngắn, max_tokens 200 (request-sim.json).
-load() {
-  hey -z "$2" -c "$1" -m POST -T application/json -D autoscaling/tests/request-sim.json \
-    http://localhost:8000/v1/chat/completions >> "$LOG.hey" 2>&1
-}
-
 # Mỗi bài bắt đầu từ trạng thái nghỉ: 1 replica. Sau T2/T4, về 1 mất khoảng 6 phút (300 s + 60 s).
 ensure_idle() {
   say "chờ về trạng thái nghỉ (1 replica)"
@@ -96,109 +97,142 @@ t1() {  # T1: không tải 120 s → giữ 1 replica, metric 0
   local t0 bad=0
   t0=$(now)
   while (( $(now) - t0 < 120 )); do
-    [ "$(desired)" = 1 ] || bad=$((bad + 1))
+    { [ "$(desired)" = 1 ] && [ "$(qty "$(metric)")" = 0.000 ]; } || bad=$((bad + 1))
     sleep 2
   done
-  if (( bad == 0 )); then result "T1 ĐẠT: desired=1 suốt 120 s"; else result "T1 TRƯỢT: $bad lần desired≠1"; fi
+  if (( bad == 0 )); then result "T1 ĐẠT: desired=1, metric=0 suốt 120 s"
+  else result "T1 TRƯỢT: $bad lần đọc có desired≠1 hoặc metric≠0"; fi
 }
 
-t2() {  # T2: C=25 request đồng thời (2,5 × threshold 10) → desired=3 trong ≤ 15 s, và metric HPA ≈ 25 ÷ số
-        # replica. T3: tắt tải → giữ 3 trong 300 s (cửa sổ ổn định), rồi bớt 1 pod mỗi 60 s (Thông số §9.3).
-  local c=25 t_load
+t2() {  # T2: C request đồng thời (2,5 × threshold) → desired=UP trong ≤ 15 s, metric HPA ≈ C ÷ số replica.
+        # T3: tắt tải → giữ UP trong 300 s (cửa sổ ổn định), rồi bớt 1 pod mỗi 60 s (Thông số §9.3).
+  local t_load pid up m e
   ensure_idle
-  say "T2 bắt đầu: hey C=$c trong 180 s"
+  say "T2 bắt đầu: hey C=$C trong 180 s"
   t_load=$(now)
-  load $c 180s &
-  local pid=$! up m e
-  up=$(wait_for desired $MAX 60 || true)
-  # Đọc metric khi HPA đã tính với 3 replica: đợi current=3, thêm 2 chu kỳ sync (5 s) cho chắc
-  wait_for current $MAX 30 >/dev/null || true
+  autoscaling/tests/load-sim.sh "$C" 180s >> "$LOG.hey" 2>&1 &
+  pid=$!
+  up=$(wait_for desired "$UP" 60 || true)
+  # Đọc metric khi HPA đã tính với UP replica: đợi current=UP, thêm 2 chu kỳ sync (5 s) cho chắc
+  wait_for current "$UP" 30 >/dev/null || true
   sleep 10
   m=$(qty "$(metric)")
-  # Mong đợi e = 25 ÷ 3 ≈ 8,33. Cho lệch ±15%: mỗi worker của hey có khoảng hở ngắn giữa hai request.
-  # awk `exit !(…)`: điều kiện đúng thì thoát mã 0, nên dùng thẳng được trong `if`.
-  e=$(awk -v c=$c -v r=$MAX 'BEGIN { printf "%.3f", c / r }')
+  # Mong đợi e = C ÷ UP (25 ÷ 3 ≈ 8,33). Cho lệch ±15%: mỗi worker của hey có khoảng hở ngắn giữa hai
+  # request. awk `exit !(…)`: điều kiện đúng thì thoát mã 0, nên dùng thẳng được trong `if`.
+  e=$(awk -v c="$C" -v r="$UP" 'BEGIN { printf "%.3f", c / r }')
   if [[ $up =~ ^[0-9]+$ ]] && (( up <= 15 )) \
      && awk -v m="$m" -v e="$e" 'BEGIN { exit !(m >= 0.85 * e && m <= 1.15 * e) }'; then
-    result "T2 ĐẠT: desired=$MAX sau $up s (tiêu chí ≤ 15 s); metric HPA = $m ≈ $c ÷ $MAX"
+    result "T2 ĐẠT: desired=$UP sau $up s (tiêu chí ≤ 15 s); metric HPA = $m ≈ $C ÷ $UP"
   else
-    result "T2 TRƯỢT: desired=$MAX sau $up s (tiêu chí ≤ 15 s); metric HPA = $m (mong đợi ≈ $c ÷ $MAX)"
+    result "T2 TRƯỢT: desired=$UP sau $up s (tiêu chí ≤ 15 s); metric HPA = $m (mong đợi ≈ $e)"
   fi
-  wait "$pid" || true                  # hey báo lỗi (ví dụ port-forward đứt) thì vẫn đi tiếp sang T3
+  wait "$pid" || true                  # hey hoặc port-forward lỗi thì vẫn đi tiếp sang T3 (log ở $LOG.hey)
+
   # Mốc 0 của T3 là hạn dừng của hey (t_load + 180 s), KHÔNG phải lúc tiến trình hey thoát: tới hạn, hey
   # thôi gửi request mới nhưng còn chờ các request dở dang (tới ~10 s với 200 token × 50 ms). Đo từ lúc hey
   # thoát thì T3 ngắn đi đúng khoảng đó (lần chạy 01/11: 291 s thay vì 301 s).
-  local t_end=$(( t_load + 180 )) t2at d2 d1
+  local t_end=$(( t_load + 180 )) t_mid="" d_mid d_one
   say "T3 bắt đầu: hết tải (hey thôi gửi request mới lúc $(date -d "@$t_end" +%T))"
-  if wait_for desired 2 600 >/dev/null; then t2at=$(now); d2=$(( t2at - t_end )); else d2="quá-hạn"; fi
-  if [ -n "${t2at:-}" ] && wait_for desired 1 300 >/dev/null; then d1=$(( $(now) - t2at )); else d1="quá-hạn"; fi
-  # Cửa sổ 300 s tính từ lần cuối HPA còn muốn 3: ngay sau hạn dừng, cộng độ trễ scrape 5 s + sync 5 s,
-  # nên cho tới 330 s. Bước 2 → 1 không được nhanh hơn 60 s (policy). Cận dưới trừ 2 s vì thời gian chỉ
-  # đọc được theo từng giây.
-  if [[ $d2 =~ ^[0-9]+$ && $d1 =~ ^[0-9]+$ ]] && (( d2 >= 298 && d2 <= 330 && d1 >= 58 && d1 <= 90 )); then
-    result "T3 ĐẠT: giữ $MAX trong $d2 s sau khi hết tải rồi về 2; về 1 sau thêm $d1 s (tiêu chí 300–330 s; 60–90 s)"
+  if wait_for desired $(( UP - 1 )) 600 >/dev/null; then t_mid=$(now); d_mid=$(( t_mid - t_end )); else d_mid="quá-hạn"; fi
+  if [ -n "$t_mid" ] && wait_for desired 1 300 >/dev/null; then d_one=$(( $(now) - t_mid )); else d_one="quá-hạn"; fi
+  # Cửa sổ 300 s tính từ lần cuối HPA còn muốn UP: ngay sau hạn dừng, cộng độ trễ scrape 5 s + sync 5 s,
+  # nên cho tới 330 s. Bước sau không được nhanh hơn 60 s (policy). Cận dưới trừ 2 s vì thời gian chỉ đọc
+  # được theo từng giây.
+  if [[ $d_mid =~ ^[0-9]+$ && $d_one =~ ^[0-9]+$ ]] \
+     && (( d_mid >= 298 && d_mid <= 330 && d_one >= 58 && d_one <= 90 )); then
+    result "T3 ĐẠT: giữ $UP trong $d_mid s sau khi hết tải rồi về $(( UP - 1 )); về 1 sau thêm $d_one s (tiêu chí 300–330 s; 60–90 s)"
   else
-    result "T3 TRƯỢT: về 2 sau $d2 s, về 1 sau thêm $d1 s (tiêu chí 300–330 s; 60–90 s)"
+    result "T3 TRƯỢT: về $(( UP - 1 )) sau $d_mid s, về 1 sau thêm $d_one s (tiêu chí 300–330 s; 60–90 s)"
   fi
 }
 
-t4() {  # T4: NetworkPolicy chặn KEDA → Prometheus → sau 3 lần lỗi, fallback lên max (15–30 s)
+t4() {  # T4: NetworkPolicy chặn KEDA → Prometheus → sau 3 lần lỗi, fallback lên FALLBACK replica (≤ 30 s)
+  local ka f0 up f rec
   ensure_idle
+  # NetworkPolicy chỉ chặn kết nối MỚI. KEDA phải mở kết nối mới cho mỗi lần hỏi (KEDA_HTTP_DISABLE_KEEP_ALIVE
+  # trong platform/keda/values.yaml); thiếu biến này thì kết nối keep-alive cũ vẫn đi qua và T4 trượt oan.
+  ka=$("${K[@]}" -n keda get deploy keda-operator \
+         -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="KEDA_HTTP_DISABLE_KEEP_ALIVE")].value}' \
+         2>/dev/null || true)
+  if [ "$ka" != true ]; then
+    result "T4 TRƯỢT: keda-operator chưa có KEDA_HTTP_DISABLE_KEEP_ALIVE=true (platform/keda/values.yaml); chạy lại make sim-up"
+    return
+  fi
+  # Trước khi chặn, KEDA phải khoẻ (0 lỗi); sau khi gỡ, lỗi phải hết. Hai điều này nối lỗi với đúng policy.
+  f0=$(failures)
+  if [ "${f0:-0}" != 0 ]; then result "T4 TRƯỢT: trước khi áp policy, KEDA đã lỗi $f0 lần"; return; fi
   say "T4 bắt đầu: áp NetworkPolicy chặn keda → Prometheus"
   "${K[@]}" apply -f autoscaling/tests/t4-block-keda-to-prometheus.yaml >> "$LOG"
-  # Lưu ý: NetworkPolicy chỉ chặn kết nối MỚI. KEDA giữ kết nối keep-alive tới Prometheus (hỏi mỗi 5 s nên
-  # kết nối không bao giờ rảnh để đóng), và kết nối đã mở vẫn đi qua (conntrack). Lần chạy 01/11: áp policy
-  # 120 s mà KEDA không lỗi lần nào, dù pod mới trong ns keda bị chặn thật. Vì vậy xoá pod keda-operator để
-  # pod mới phải mở kết nối mới. Dùng `delete pod` chứ không `rollout restart`: restart sửa template của
-  # Deployment, Argo CD ở nhà sẽ hoàn tác. Mốc 0 của T4 là lúc operator mới Ready.
-  "${K[@]}" -n keda delete pod -l app=keda-operator >> "$LOG"
-  sleep 2                              # chờ ReplicaSet tạo pod mới, để `wait` dưới đây có pod mà chờ
-  "${K[@]}" -n keda wait --for=condition=Ready pod -l app=keda-operator --timeout=120s >> "$LOG"
-  say "T4: keda-operator mới đã Ready"
-  local up f
-  up=$(wait_for desired $MAX 120 || true)
-  f=$("${K[@]}" "${N[@]}" get scaledobject vllm-a2 -o jsonpath='{.status.health.*.numberOfFailures}')
+  up=$(wait_for desired "$FALLBACK" 120 || true)
+  f=$(failures)
   "${K[@]}" delete -f autoscaling/tests/t4-block-keda-to-prometheus.yaml >> "$LOG"
   say "T4: đã gỡ NetworkPolicy"
-  if [[ $up =~ ^[0-9]+$ ]] && (( up <= 30 )) && (( ${f:-0} >= 3 )); then
-    result "T4 ĐẠT: fallback lên $MAX sau $up s, numberOfFailures=$f (tiêu chí ≤ 30 s, ≥ 3 lần lỗi)"
+  rec=$(wait_for failures 0 30 || true)
+  # Không đặt cận dưới: lần chạy 01/11 thấy lỗi thứ 2 và thứ 3 chỉ cách nhau 2 s (KEDA hỏi cả theo HPA lẫn
+  # theo vòng polling của nó), nên 3 lần lỗi có thể đến sớm hơn 3 chu kỳ sync HPA.
+  if [[ $up =~ ^[0-9]+$ && $rec =~ ^[0-9]+$ ]] && (( up <= 30 && ${f:-0} >= 3 )); then
+    result "T4 ĐẠT: fallback lên $FALLBACK sau $up s, numberOfFailures=$f; gỡ policy thì hết lỗi sau $rec s (tiêu chí ≤ 30 s, ≥ 3 lỗi)"
   else
-    result "T4 TRƯỢT: lên $MAX sau $up s, numberOfFailures=${f:-?} (tiêu chí ≤ 30 s, ≥ 3 lần lỗi)"
+    result "T4 TRƯỢT: lên $FALLBACK sau $up s, numberOfFailures=${f:-?}, hết lỗi sau $rec s (tiêu chí ≤ 30 s, ≥ 3 lỗi)"
   fi
 }
 
 t5() {  # T5: annotation paused-replicas=1 → giữ đúng 1 replica dù có tải (KEDA xoá HPA khi tạm dừng)
+  local pid peak=1 peak_a2=0 r a need
   ensure_idle
-  say "T5 bắt đầu: paused-replicas=1 rồi hey C=25 trong 60 s"
-  "${K[@]}" "${N[@]}" annotate scaledobject vllm-a2 autoscaling.keda.sh/paused-replicas="1" --overwrite >> "$LOG"
+  say "T5 bắt đầu: paused-replicas=1 rồi hey C=$C trong 60 s"
+  "${K[@]}" "${N[@]}" annotate scaledobject "$SO" autoscaling.keda.sh/paused-replicas="1" --overwrite >> "$LOG"
   sleep 10                             # chờ KEDA xử lý annotation (xoá HPA) trước khi bơm tải
-  load 25 60s &
-  local pid=$! peak=1 r
+  autoscaling/tests/load-sim.sh "$C" 60s >> "$LOG.hey" 2>&1 &
+  pid=$!
   while kill -0 "$pid" 2>/dev/null; do   # kill -0: chỉ hỏi tiến trình còn sống không, không gửi tín hiệu
-    r=$(replicas); (( r > peak )) && peak=$r
+    r=$(replicas)
+    [[ $r =~ ^[0-9]+$ ]] && (( r > peak )) && peak=$r
+    a=$(a2)
+    peak_a2=$(awk -v a="$a" -v p="$peak_a2" 'BEGIN { m = (a + 0 > p + 0) ? a : p; print m }')
     sleep 1
   done
-  "${K[@]}" "${N[@]}" annotate scaledobject vllm-a2 autoscaling.keda.sh/paused-replicas- >> "$LOG"   # "-" cuối = xoá
+  wait "$pid" || true
+  "${K[@]}" "${N[@]}" annotate scaledobject "$SO" autoscaling.keda.sh/paused-replicas- >> "$LOG"   # "-" cuối = xoá
   say "T5: đã gỡ annotation"
-  if (( peak == 1 )); then result "T5 ĐẠT: giữ 1 replica suốt 60 s có tải"; else result "T5 TRƯỢT: lên $peak replica"; fi
+  # Giữ 1 replica chỉ có nghĩa khi tải thật sự tới simulator: A2 phải đủ để lên UP nếu không tạm dừng,
+  # tức ⌈A2 ÷ threshold⌉ ≥ UP, tức A2 ≥ (UP − 1) × threshold + 1.
+  need=$(( (UP - 1) * THRESHOLD + 1 ))
+  if (( peak == 1 )) && awk -v a="$peak_a2" -v n="$need" 'BEGIN { exit !(a + 0 >= n) }'; then
+    result "T5 ĐẠT: giữ 1 replica suốt 60 s có tải; A2 cao nhất $peak_a2 (≥ $need: không tạm dừng thì đã lên $UP)"
+  else
+    result "T5 TRƯỢT: replica cao nhất $peak, A2 cao nhất $peak_a2 (cần đúng 1 replica và A2 ≥ $need)"
+  fi
 }
 
 # ── Chạy ────────────────────────────────────────────────────────────────────────
-for c in kubectl jq hey; do command -v "$c" >/dev/null || { echo "thiếu $c"; exit 1; }; done
-"${K[@]}" "${N[@]}" get scaledobject vllm-a2 >/dev/null || { echo "chưa có ScaledObject vllm-a2: chạy make sim-up trước"; exit 1; }
+for c in kubectl jq curl hey; do command -v "$c" >/dev/null || { echo "thiếu $c"; exit 1; }; done
+"${K[@]}" "${N[@]}" get scaledobject "$SO" >/dev/null || { echo "chưa có ScaledObject $SO: chạy make sim-up trước"; exit 1; }
 
+# Thông số lấy từ chính ScaledObject (overlay sim), không viết cứng, để sửa overlay thì bài thử đổi theo.
+MAX=$(so '{.spec.maxReplicaCount}')
+FALLBACK=$(so '{.spec.fallback.replicas}')
+THRESHOLD=$(so '{.spec.triggers[0].metadata.threshold}')
+[[ $MAX =~ ^[0-9]+$ && $FALLBACK =~ ^[0-9]+$ && $THRESHOLD =~ ^[0-9]+$ ]] \
+  || { echo "ScaledObject $SO thiếu maxReplicaCount, fallback.replicas hoặc threshold nguyên"; exit 1; }
+(( MAX >= 3 )) || { echo "T1–T5 cần maxReplicaCount ≥ 3 (đang là $MAX)"; exit 1; }
+C=$(( THRESHOLD * 5 / 2 ))             # 2,5 × threshold (w2.md §9.3): threshold 10 → 25 request đồng thời
+UP=$(( (C + THRESHOLD - 1) / THRESHOLD ))   # desired mong đợi ở T2 = ⌈C ÷ threshold⌉ = 3
+# Câu PromQL và địa chỉ Prometheus lấy đúng từ trigger, để T5 kiểm cùng tín hiệu KEDA dùng. serverAddress
+# dạng http://<service>.<namespace>.svc:<cổng> → đường proxy của API server tới Service đó.
+# @uri (jq): mã hoá câu PromQL để đặt được vào URL.
+QUERY=$(jq -rn --arg q "$(so '{.spec.triggers[0].metadata.query}')" '$q | @uri')
+PROM=$(so '{.spec.triggers[0].metadata.serverAddress}' \
+  | sed -E 's#^http://([^.]+)\.([^.]+)\.svc(\.cluster\.local)?:([0-9]+).*#/api/v1/namespaces/\2/services/http:\1:\4/proxy#')
+
+mkdir -p "$(dirname "$LOG")"
+say "cấu hình: max=$MAX fallback=$FALLBACK threshold=$THRESHOLD → C=$C, T2 mong đợi desired=$UP"
 watch_loop &
-WATCH=$!
-# port-forward chỉ chuyển tới MỘT pod, nên mọi tải dồn vào pod đầu tiên. Tín hiệu A2 vẫn đúng vì là
-# tổng của mọi pod (w2.md §9.3, "Giới hạn của cách bơm tải này").
-"${K[@]}" "${N[@]}" port-forward svc/vllm 8000:8000 >/dev/null 2>&1 &
-PF=$!
-# Dọn dẹp cả khi dừng giữa chừng (Ctrl-C, lỗi): tắt vòng ghi và port-forward, gỡ NetworkPolicy, gỡ
-# annotation tạm dừng. `|| true`: thứ đã gỡ rồi thì bỏ qua.
-trap 'kill $WATCH $PF 2>/dev/null || true
+# Dọn dẹp cả khi dừng giữa chừng (Ctrl-C, lỗi): dừng các tiến trình nền (vòng ghi, load-sim.sh tự tắt hey và
+# port-forward của nó), gỡ NetworkPolicy, gỡ annotation tạm dừng. `|| true`: thứ đã gỡ rồi thì bỏ qua.
+trap 'jobs -p | xargs -r kill 2>/dev/null || true
       "${K[@]}" delete -f autoscaling/tests/t4-block-keda-to-prometheus.yaml --ignore-not-found >/dev/null 2>&1 || true
-      "${K[@]}" "${N[@]}" annotate scaledobject vllm-a2 autoscaling.keda.sh/paused-replicas- >/dev/null 2>&1 || true' EXIT
-sleep 3                                # chờ port-forward mở cổng
+      "${K[@]}" "${N[@]}" annotate scaledobject "$SO" autoscaling.keda.sh/paused-replicas- >/dev/null 2>&1 || true' EXIT
 
 case $TEST in
   t1) t1 ;;

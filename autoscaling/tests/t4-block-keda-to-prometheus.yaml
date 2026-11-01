@@ -5,9 +5,9 @@
 # Mục đích:  Bài T4: cắt đường KEDA → Prometheus để kiểm chứng fallback (KEDA lỗi 3 lần → lên max).
 #            CHỈ dùng tạm trên simulator; xoá ngay sau khi thử (`kubectl delete -f <file này>`).
 #            Đây cũng là cách gây sự cố cho VH4 (ADR-005 T6): Operator và Argo CD không hoàn tác nó.
-# Lưu ý:     NetworkPolicy chỉ chặn kết nối MỚI. KEDA giữ kết nối keep-alive tới Prometheus, nên sau khi
-#            áp file này phải xoá pod keda-operator (`kubectl -n keda delete pod -l app=keda-operator`)
-#            để nó mở kết nối mới; không xoá thì KEDA không lỗi lần nào (gặp ngày 01/11, cả VH4 cũng vậy).
+# Lưu ý:     NetworkPolicy chỉ chặn kết nối MỚI. File này chỉ có tác dụng khi KEDA mở kết nối mới cho
+#            mỗi lần hỏi: KEDA_HTTP_DISABLE_KEEP_ALIVE=true trong platform/keda/values.yaml. Thiếu biến đó
+#            thì kết nối keep-alive cũ vẫn đi qua và KEDA không lỗi lần nào (gặp ngày 01/11).
 # Tham khảo: docs/huong-dan/w2.md §9.3, Kiến trúc §15. Dựa trên bản nháp của Quang (temp/w2-scaffold,
 #            12c4e27).
 # ──────────────────────────────────────────────────────────────────────────────
