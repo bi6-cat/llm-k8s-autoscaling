@@ -6,7 +6,8 @@
 # Mục đích:  Bắt lỗi trước khi merge vào main (nhánh Argo CD đọc): YAML sai, manifest sai schema, rule
 #            Prometheus sai hoặc cảnh báo thiếu test/runbook, code Python lỗi, link tài liệu hỏng.
 #            Chỉ kiểm những gì đã có trên main. Job helm và ansible (Kế hoạch §10.4, w2 §10) thêm khi
-#            platform/ và infra/ lên main; job manifests và docs tự nhận thư mục mới, không phải sửa.
+#            platform/ và infra/ lên main; gói Python mới (experiments/, analysis/) thì thêm vào job python.
+#            Job manifests và docs tự nhận thư mục mới, không phải sửa.
 # Ghim:      File chạy (kubectl, promtool, shellcheck…) tải đúng phiên bản và kiểm sha256 trước khi chạy.
 #            Công cụ Python cài bằng uv: loadgen ghim qua uv.lock; yamllint ghim phiên bản và ngày giải
 #            phụ thuộc. Action ghim theo commit SHA: tag như v7 có thể bị dời sang commit khác, SHA thì
@@ -51,6 +52,8 @@ env:
   CRDS_CATALOG_REF: "5a706a682055810fb66ffa9006b5dc68399cf533"   # commit của datreeio/CRDs-catalog ngày 01/11/2026
   PROMETHEUS_VERSION: "3.15.0"    # = Prometheus trong chart kube-prometheus-stack 92.1.1; promtool nằm trong gói này
   PROMETHEUS_SHA256: "2a542df32eac02ee17b9d844fb2aa1de00dafa5476579ba8a3ba862e9d572ea0"
+  YQ_VERSION: "4.54.1"            # bản của mikefarah; make alerts-coverage dùng để đọc YAML
+  YQ_SHA256: "8e34fc298390875de416e6a4afcb8cabeceb25d9aa8506c1a2f9353cf702ea5f"
   LYCHEE_VERSION: "0.24.2"
   LYCHEE_SHA256: "1f4e0ef7f6554a6ed33dd7ac144fb2e1bbed98598e7af973042fc5cd43951c9a"
   ACTIONLINT_VERSION: "1.7.12"
@@ -186,8 +189,9 @@ jobs:
           persist-credentials: false
 
       # promtool nằm trong gói phát hành của Prometheus. Dùng đúng bản Prometheus chạy trong cluster, để
-      # PromQL được kiểm bằng cùng bộ phân tích cú pháp sẽ tính nó thật.
-      - name: Cài promtool
+      # PromQL được kiểm bằng cùng bộ phân tích cú pháp sẽ tính nó thật. yq (bộ xử lý YAML dòng lệnh) cho
+      # alerts-coverage; bản phát hành là một file chạy, không nén.
+      - name: Cài promtool và yq
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/bin" && cd "$RUNNER_TEMP"
@@ -196,12 +200,15 @@ jobs:
           echo "${PROMETHEUS_SHA256}  ${f}" | sha256sum -c -
           # Chỉ lấy file promtool; --strip-components=1 bỏ thư mục prometheus-x.y.z.linux-amd64/ ở đầu đường dẫn
           tar -xzf "$f" -C bin --strip-components=1 "prometheus-${PROMETHEUS_VERSION}.linux-amd64/promtool"
+          curl -fsSLo bin/yq "https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_linux_amd64"
+          echo "${YQ_SHA256}  bin/yq" | sha256sum -c -
+          chmod +x bin/yq
           echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
 
       # Gọi chính target của Makefile, để CI và máy cá nhân chạy cùng một công thức. alerts-test chạy
-      # alerts-coverage trước: mỗi cảnh báo có unit test và runbook (CONTRIBUTING §4), điều promtool không
-      # bắt được. Sau đó tách phần `spec:` của PrometheusRule thành file rule thuần, rồi chạy promtool check
-      # rules và promtool test rules. Chi tiết ở comment trong Makefile.
+      # alerts-coverage trước: mỗi cảnh báo có severity page|ticket, runbook đúng tên và unit test mong đợi
+      # nó bắn (CONTRIBUTING §4), điều promtool không bắt được. Sau đó tách phần `spec:` của PrometheusRule
+      # thành file rule thuần, rồi chạy promtool check rules và promtool test rules. Chi tiết trong Makefile.
       - name: make alerts-test
         run: make alerts-test
 
@@ -272,9 +279,10 @@ jobs:
           # Tài liệu (w2.md, Kiến trúc) đã link tới file trong serving/, autoscaling/, platform/, infra/, nhưng
           # các thư mục này còn ở nhánh scaffold chưa merge. Chỉ bỏ qua link tới thư mục CHƯA có trên nhánh
           # đang kiểm: thư mục nào lên main thì link tới nó tự được kiểm lại, không phải sửa file này.
+          # Regex khớp cả link tới chính thư mục, có hoặc không có "/" cuối (../infra, ../infra/, ../infra#x).
           skip=()
           for d in serving autoscaling platform infra; do
-            if [ ! -e "$d" ]; then skip+=(--exclude "^file://.*/${d}/"); fi
+            if [ ! -e "$d" ]; then skip+=(--exclude "^file://.*/${d}([/#?]|$)"); fi
           done
           echo "Bỏ qua link tới thư mục chưa có: ${skip[*]:-(không có)}"
           # --offline: chỉ kiểm link tới file trong repo, không gọi Internet (nhanh, không đỏ vì mạng chập chờn).

@@ -26,6 +26,8 @@ MODE ?= v0
 # Đường dẫn promtool (đi kèm bản tải Prometheus). Không có trong PATH thì truyền vào:
 # make alerts-test PROMTOOL=/đường/dẫn/promtool
 PROMTOOL ?= promtool
+# yq (bản của mikefarah) = bộ xử lý YAML dòng lệnh, dùng ở alerts-coverage. Phiên bản ghim ở docs/phien-ban.md.
+YQ ?= yq
 
 # .PHONY: các target này không phải tên file, make luôn chạy chúng (kể cả khi có file trùng tên)
 .PHONY: help home-up sim-up sim-down sim-test-load find rent bootstrap release lint alerts-test alerts-coverage
@@ -101,7 +103,9 @@ release: ## Huỷ instance Vast đang thuê
 	infra/provision/vast.sh release
 
 # ── Kiểm tra trước khi mở PR ────────────────────────────────────────────────────
-# Giống CI (.github/workflows/ci.yaml) nhưng chạy trên máy mình, nhanh hơn chờ GitHub.
+# Bản rút gọn của CI để chạy trên máy: danh sách thư mục kustomize ở đây viết sẵn và không chạy kubeconform,
+# còn job manifests của CI (.github/workflows/ci.yaml) tự tìm thư mục và kiểm schema. Các thư mục trong vòng
+# lặp và infra/ansible chưa có trên main, nên trên main target này còn báo lỗi.
 lint: ## yamllint, kubectl kustomize, ansible syntax-check
 	yamllint -s .
 	for d in serving/overlays/* autoscaling/official/overlays/* platform/gpu/exporter platform/kube-prometheus-stack/extras observability; do \
@@ -112,49 +116,50 @@ lint: ## yamllint, kubectl kustomize, ansible syntax-check
 # apiVersion/kind/metadata, `groups:` nằm dưới `spec:`). Để chỉ giữ MỘT bản rule, target này:
 #   1) với mỗi file rule: lấy từ dòng `spec:` tới hết file (sed -n '/^spec:/,$$p'), bỏ chính dòng
 #      `spec:` (tail -n +2), bỏ 2 dấu cách thụt đầu dòng (sed 's/^  //'), ghi vào thư mục tạm cùng
-#      đường dẫn tương đối;
+#      đường dẫn tương đối. File tách ra mà không có dòng `groups:` (thiếu `spec:` ở cột đầu) thì dừng
+#      ngay: promtool coi file rỗng là hợp lệ (`SUCCESS: 0 rules found`), CI sẽ xanh mà không kiểm gì;
 #   2) chép file test sang cạnh đó, nên rule_files trong test (../llm.yaml…) vẫn đúng;
 #   3) promtool check rules (cú pháp, PromQL hợp lệ) rồi promtool test rules (unit test).
 # Vì vậy `spec:` phải là key cuối cùng trong mỗi file rule. `trap … EXIT` xoá thư mục tạm kể cả khi lỗi.
-# `alerts-test: alerts-coverage` = chạy alerts-coverage trước (kiểm nhanh, không cần promtool).
-alerts-test: alerts-coverage ## Đủ test/runbook, rồi promtool check + test rule trong observability/ (PROMTOOL=…)
+# `alerts-test: alerts-coverage` = chạy alerts-coverage trước (kiểm nhanh bằng yq, không cần promtool).
+alerts-test: alerts-coverage ## Đủ severity/runbook/test, rồi promtool check + test rule trong observability/ (PROMTOOL=…)
 	@set -euo pipefail; tmp=$$(mktemp -d); trap 'rm -rf "$$tmp"' EXIT; \
 	for f in observability/rules/*.yaml observability/alerts/*.yaml; do \
 	  mkdir -p "$$tmp/$$(dirname "$$f")"; \
 	  sed -n '/^spec:/,$$p' "$$f" | tail -n +2 | sed 's/^  //' > "$$tmp/$$f"; \
+	  grep -q '^groups:' "$$tmp/$$f" \
+	    || { echo "::error::$$f: không tách được rule (cần dòng 'spec:' ở cột đầu, ngay dưới là 'groups:')"; exit 1; }; \
 	done; \
 	cp -r observability/alerts/tests "$$tmp/observability/alerts/"; \
 	$(PROMTOOL) check rules "$$tmp"/observability/rules/*.yaml "$$tmp"/observability/alerts/*.yaml; \
 	$(PROMTOOL) test rules "$$tmp"/observability/alerts/tests/*.yaml
 
-# CONTRIBUTING §4: mỗi cảnh báo phải có đủ quy tắc, unit test và runbook. promtool không bắt được việc thiếu
-# test (không có test thì không có gì để trượt), nên target này kiểm riêng:
-#   1) tên cảnh báo theo thứ tự trong file, lấy từ dòng `- alert: <Tên>` ở cả rules/ lẫn alerts/ (để cảnh
-#      báo đặt nhầm chỗ cũng bị kiểm). `sed -nE 's/…/\2/p'`: chỉ in dòng khớp, sau khi thay cả dòng bằng
-#      nhóm bắt được thứ hai (tên cảnh báo);
-#   2) mỗi tên phải có `alertname: <Tên>` trong alerts/tests/ (cách file test của promtool gọi cảnh báo cần
-#      kiểm) và có file docs/runbooks/<Tên>.md;
-#   3) tên runbook trong các runbook_url (phần giữa docs/runbooks/ và .md) phải trùng danh sách tên cảnh báo,
-#      đúng thứ tự: mỗi cảnh báo trỏ tới runbook của chính nó. Bắt lỗi thiếu runbook_url, và lỗi chép từ cảnh
-#      báo khác mà quên sửa tên.
+# CONTRIBUTING §4: mỗi cảnh báo phải có nhãn `severity: page|ticket`, annotation runbook_url trỏ tới runbook
+# của chính nó, file runbook và unit test. promtool không bắt được việc thiếu test (không có test thì không có
+# gì để trượt), nên target này kiểm riêng. yq đọc YAML thật, nên mọi kiểu viết (nháy, map một dòng) đều được
+# hiểu, và file YAML hỏng thì yq báo lỗi chứ không lặng lẽ bỏ qua.
+#   1) `yq ea` (eval-all: gộp mọi file thành một luồng): với mỗi rule có key `alert` trong rules/ lẫn alerts/
+#      (cảnh báo lỡ đặt vào rules/ cũng bị kiểm), in một dòng "tên|severity|runbook_url". `// ""` = thiếu
+#      thì để rỗng.
+#   2) Tên các cảnh báo có ít nhất một unit test mong đợi nó BẮN (exp_alerts không rỗng). Test chỉ kiểm
+#      "không bắn" chưa chứng minh được biểu thức đúng.
+#   3) Với từng cảnh báo: severity là page hoặc ticket; runbook_url kết thúc bằng docs/runbooks/<tên>.md;
+#      file đó có thật; tên có trong danh sách ở bước 2.
 # Dòng bắt đầu bằng `::error::` được GitHub Actions tô đỏ trên trang PR; chạy trên máy thì chỉ là chữ thường.
-alerts-coverage: ## Mỗi cảnh báo có unit test và runbook (CONTRIBUTING §4)
-	@set -euo pipefail; files="observability/rules/*.yaml observability/alerts/*.yaml"; \
-	names=$$(sed -nE 's/^[[:space:]]*(- )?alert:[[:space:]]*"?([A-Za-z0-9_]+)"?([[:space:]]+#.*)?$$/\2/p' $$files); \
-	runbooks=$$(sed -nE 's#^[[:space:]]*runbook_url:.*/docs/runbooks/([A-Za-z0-9_]+)\.md.*$$#\1#p' $$files); \
-	if [ -z "$$names" ]; then echo "::error::Không đọc được tên cảnh báo nào trong observability/"; exit 1; fi; \
-	fail=0; \
-	while read -r n; do \
-	  grep -qE "alertname:[[:space:]]*\"?$$n\"?([[:space:]]|$$)" observability/alerts/tests/*.yaml \
-	    || { echo "::error::Cảnh báo $$n chưa có unit test trong observability/alerts/tests/"; fail=1; }; \
-	  [ -f "docs/runbooks/$$n.md" ] \
-	    || { echo "::error::Cảnh báo $$n chưa có runbook docs/runbooks/$$n.md"; fail=1; }; \
-	done <<< "$$names"; \
-	if [ "$$names" != "$$runbooks" ]; then \
-	  echo "::error::runbook_url không khớp tên cảnh báo (cột trái: cảnh báo, cột phải: runbook_url)"; \
-	  paste <(echo "$$names") <(echo "$$runbooks"); fail=1; \
-	fi; \
-	echo "alerts-coverage: đã kiểm $$(wc -l <<< "$$names") cảnh báo"; \
+alerts-coverage: ## Mỗi cảnh báo có severity, runbook và unit test (CONTRIBUTING §4; cần yq, YQ=…)
+	@set -euo pipefail; \
+	command -v $(YQ) >/dev/null || { echo "::error::Cần yq (bản mikefarah, phiên bản ở docs/phien-ban.md); hoặc truyền YQ=/đường/dẫn/yq"; exit 1; }; \
+	alerts=$$($(YQ) ea -N '.spec.groups[].rules[] | select(has("alert")) | [.alert, .labels.severity // "", .annotations.runbook_url // ""] | join("|")' observability/rules/*.yaml observability/alerts/*.yaml); \
+	tested=$$($(YQ) ea -N '.tests[].alert_rule_test[] | select((.exp_alerts // []) | length > 0) | .alertname' observability/alerts/tests/*.yaml); \
+	if [ -z "$$alerts" ]; then echo "::error::Không thấy cảnh báo nào trong observability/"; exit 1; fi; \
+	fail=0; err() { echo "::error::Cảnh báo $$name: $$1"; fail=1; }; \
+	while IFS='|' read -r name sev url; do \
+	  case "$$sev" in page|ticket) ;; *) err "nhãn severity phải là page hoặc ticket (đang là '$$sev')";; esac; \
+	  [[ "$$url" == */docs/runbooks/"$$name".md ]] || err "runbook_url phải trỏ tới docs/runbooks/$$name.md (đang là '$$url')"; \
+	  [ -f "docs/runbooks/$$name.md" ] || err "thiếu file docs/runbooks/$$name.md"; \
+	  grep -qxF "$$name" <<< "$$tested" || err "chưa có unit test nào mong đợi cảnh báo bắn (exp_alerts) trong observability/alerts/tests/"; \
+	done <<< "$$alerts"; \
+	echo "alerts-coverage: đã kiểm $$(wc -l <<< "$$alerts") cảnh báo"; \
 	exit $$fail
 
 # ── Lệnh đã đặt tên nhưng chưa làm ──────────────────────────────────────────────
