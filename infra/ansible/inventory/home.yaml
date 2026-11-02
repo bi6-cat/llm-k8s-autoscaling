@@ -14,7 +14,10 @@ all:
         k3s_server:
           hosts:
             pc:                               # tên gọi trong Ansible, không cần trùng hostname thật
-              ansible_host: 192.168.0.100     # IP LAN của PC (zett-ubuntu-pc); cần DHCP reservation để không đổi
+              # IP LAN của PC (zett-ubuntu-pc), router cấp qua DHCP. 02/11/2026 router đổi dải mạng
+              # (192.168.0.100 → 192.168.10.42) làm k3s crash liên tục vì node-ip không còn trên máy.
+              # Còn phải đặt DHCP reservation trên router (cần có mặt ở nhà) để IP không đổi nữa.
+              ansible_host: 192.168.10.42
               ansible_connection: local       # Ansible đang chạy trên chính PC: chạy lệnh tại chỗ, không SSH
         k3s_agent:
           # Tạm để trống: cluster chạy một node (PC) tới khi cần 2 GPU (W3: KB2-mini, VH2, VH3).
