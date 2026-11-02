@@ -18,6 +18,32 @@
     mode: "0600"
   register: k3s_config
 
+- name: Thư mục drop-in systemd cho k3s-agent
+  ansible.builtin.file: {path: /etc/systemd/system/k3s-agent.service.d, state: directory, mode: "0755"}
+  when: flannel_iface | length > 0
+
+# Khi k3s dùng card Tailscale (flannel_iface, chỉ ở nhà): k3s phải khởi động SAU khi tailscale0 có IP.
+# Nếu k3s lên trước (lúc PC vừa bật), node-ip chưa tồn tại → k3s tự tắt, đúng lỗi ngày 02/11/2026.
+# Drop-in = file trong /etc/systemd/system/<service>.service.d/, systemd ghép vào unit gốc do script
+# cài k3s sinh ra, nên không phải sửa unit gốc (script cài lại sẽ ghi đè unit gốc nhưng giữ drop-in).
+#  - After/Wants: khởi động tailscaled trước k3s.
+#  - ExecStartPre: chờ tối đa 60 s tới khi card có IPv4 (tailscaled lên rồi vẫn cần vài giây để có IP).
+#    Trong file unit, "$" phải viết "$$" để systemd không hiểu là biến của nó.
+- name: Drop-in systemd để k3s-agent chờ Tailscale
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/k3s-agent.service.d/10-cho-tailscale.conf
+    mode: "0644"
+    content: |
+      # Quản lý bởi Ansible. k3s-agent chờ card {{ flannel_iface }} có IP rồi mới chạy.
+      [Unit]
+      After=tailscaled.service
+      Wants=tailscaled.service
+
+      [Service]
+      ExecStartPre=/bin/sh -c 'for i in $$(seq 1 60); do ip -4 -o addr show dev {{ flannel_iface }} | grep -q inet && exit 0; sleep 1; done; echo "{{ flannel_iface }} chưa có IP sau 60 s" >&2; exit 1'
+  when: flannel_iface | length > 0
+  register: k3s_dropin
+
 - name: Phiên bản k3s đang cài (nếu có)
   ansible.builtin.command: k3s --version
   register: k3s_installed
@@ -40,8 +66,8 @@
   changed_when: true
 
 - name: Áp cấu hình mới nếu file cấu hình đổi
-  ansible.builtin.systemd_service: {name: k3s-agent, state: restarted}
-  when: k3s_config.changed and k3s_installed.rc == 0 and k3s_version in k3s_installed.stdout
+  ansible.builtin.systemd_service: {name: k3s-agent, state: restarted, daemon_reload: true}
+  when: (k3s_config.changed or k3s_dropin.changed) and k3s_installed.rc == 0 and k3s_version in k3s_installed.stdout
 
 # Agent không có kubectl quản trị, nên hỏi từ server: delegate_to chạy lệnh trên PC, nhưng biến
 # ansible_hostname vẫn là của máy agent (tên node trong Kubernetes = hostname của máy).

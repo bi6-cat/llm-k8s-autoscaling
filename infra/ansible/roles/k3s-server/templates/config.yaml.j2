@@ -12,8 +12,14 @@
 write-kubeconfig-mode: "0644"
 
 # IP mà node "khai báo" với cluster; pod trên node khác dùng IP này để nói chuyện với node.
-# Ghi rõ để k3s không chọn nhầm card mạng (ví dụ card Tailscale hay docker0).
+# Ghi rõ để k3s không chọn nhầm card mạng (ví dụ docker0). Ở nhà là IP Tailscale, trên VM là IP nội bộ.
 node-ip: {{ node_ip }}
+{% if flannel_iface %}
+
+# Card mạng mà flannel (mạng pod giữa các node, đóng gói VXLAN) dùng để gửi gói tin sang node khác.
+# Phải trùng card chứa node-ip; ở nhà là tailscale0 vì IP LAN do router chung cư cấp và hay đổi.
+flannel-iface: {{ flannel_iface }}
+{% endif %}
 
 # tls-san = các tên/IP thêm vào chứng chỉ TLS của API server (SAN = Subject Alternative Name).
 # kubectl kiểm tra địa chỉ mình gọi có nằm trong chứng chỉ không; thiếu thì báo lỗi
