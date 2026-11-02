@@ -12,6 +12,16 @@ Mỗi kịch bản VH, mỗi sự cố thật và mỗi phiên thuê có một m
 - **Runbook đã dùng:** chưa có runbook cho tình huống này.
 - **Bài học:** ổ hệ thống của PC là điểm yếu: mọi đợt ghi lớn (kéo image, ghi cache model) có thể làm control-plane chết. Khi kéo image lớn lên node server, giới hạn ghi trước. Hướng lâu dài (chưa quyết): đưa `/var/lib/rancher` hoặc cache model sang NVMe (hiện chứa Windows và phân vùng dữ liệu NTFS), hoặc dùng datastore khác cho k3s. Liên quan rủi ro ở VH5 (dựng lại) và cold start L0 (kéo image trên máy mới).
 
+## 2026-11-02 – Sự cố: k3s crash liên tục sau khi IP LAN của PC đổi
+
+- **Môi trường:** nhà, PC `zett-ubuntu-pc` (k3s server một node, `v1.36.5+k3s1`). Xử lý từ xa qua Tailscale + SSH. Người xử lý: Quang.
+- **Triệu chứng:** máy dev gọi cổng 6443 qua Tailscale bị `connection refused`; trên PC, `systemctl show k3s` báo `NRestarts=1087` sau 4 giờ máy chạy; kubectl không kết nối được.
+- **Nguyên nhân:** router đổi dải mạng nhà, PC nhận IP DHCP mới `192.168.10.42` thay cho `192.168.0.100`. `/etc/rancher/k3s/config.yaml` (Ansible sinh) vẫn ghim `node-ip: 192.168.0.100`; k3s báo `failed to start networking: unable to initialize network policy controller: error getting node subnet: failed to find interface with specified node ip` rồi tự tắt. Sau khi sửa `node-ip`, lỗi vẫn còn vì đối tượng Node trong datastore giữ IP cũ và bộ điều khiển NetworkPolicy đọc IP từ đó.
+- **Xử lý:** sửa `ansible_host` trong inventory, chạy lại playbook (`-e argocd_enabled=false`). Tạm thêm `disable-network-policy: true` qua `/etc/rancher/k3s/config.yaml.d/`, restart để Node nhận IP mới, xoá file tạm, restart lại. Xoá các pod kẹt (CoreDNS, Traefik, metrics-server, local-path-provisioner, vLLM) để Deployment tạo lại.
+- **Số đo:** sau khi sửa, `NRestarts=0` sau 60 s; node `Ready` với `INTERNAL-IP 192.168.10.42`; vLLM `/v1/models` và một lần chat HTTP 200. Không đo tổng thời gian gián đoạn (không biết IP đổi lúc nào).
+- **Runbook đã dùng:** chưa có runbook cho tình huống này.
+- **Bài học:** cluster nhà phụ thuộc IP LAN do DHCP cấp; phải đặt DHCP reservation trên router (việc cần có mặt ở nhà). Đổi `node-ip` trên node đã đăng ký thì ngoài sửa cấu hình còn phải gỡ kẹt NetworkPolicy một lần. Nên viết runbook "node đổi IP" cho cả cluster nhà và VM thuê.
+
 ## Kiểm chứng lý thuyết LT1–LT4 (Quang, Q8)
 
 Theo mẫu ở [Môi trường §19](../chi-tiet/05-moi-truong-danh-gia.md#19-kiểm-chứng-lý-thuyết-lt1lt8): lý thuyết → dự đoán (tính trước khi đo) → số đo → lệch → giải thích. Thông số model lấy từ `config.json` của `Qwen/Qwen2.5-1.5B-Instruct@989aa798…` (đúng revision đã ghim): 28 lớp, hidden 1536, 12 attention head, **2 KV head**, head_dim 1536 ÷ 12 = 128, BF16 (2 byte), `tie_word_embeddings: true`.
