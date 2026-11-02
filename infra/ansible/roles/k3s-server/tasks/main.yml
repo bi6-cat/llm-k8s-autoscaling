@@ -19,6 +19,32 @@
     mode: "0600"                   # chỉ root đọc được
   register: k3s_config
 
+- name: Thư mục drop-in systemd cho k3s
+  ansible.builtin.file: {path: /etc/systemd/system/k3s.service.d, state: directory, mode: "0755"}
+  when: flannel_iface | length > 0
+
+# Khi k3s dùng card Tailscale (flannel_iface, chỉ ở nhà): k3s phải khởi động SAU khi tailscale0 có IP.
+# Nếu k3s lên trước (lúc PC vừa bật), node-ip chưa tồn tại → k3s tự tắt, đúng lỗi ngày 02/11/2026.
+# Drop-in = file trong /etc/systemd/system/<service>.service.d/, systemd ghép vào unit gốc do script
+# cài k3s sinh ra, nên không phải sửa unit gốc (script cài lại sẽ ghi đè unit gốc nhưng giữ drop-in).
+#  - After/Wants: khởi động tailscaled trước k3s.
+#  - ExecStartPre: chờ tối đa 60 s tới khi card có IPv4 (tailscaled lên rồi vẫn cần vài giây để có IP).
+#    Trong file unit, "$" phải viết "$$" để systemd không hiểu là biến của nó.
+- name: Drop-in systemd để k3s chờ Tailscale
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/k3s.service.d/10-cho-tailscale.conf
+    mode: "0644"
+    content: |
+      # Quản lý bởi Ansible. k3s chờ card {{ flannel_iface }} có IP rồi mới chạy.
+      [Unit]
+      After=tailscaled.service
+      Wants=tailscaled.service
+
+      [Service]
+      ExecStartPre=/bin/sh -c 'for i in $$(seq 1 60); do ip -4 -o addr show dev {{ flannel_iface }} | grep -q inet && exit 0; sleep 1; done; echo "{{ flannel_iface }} chưa có IP sau 60 s" >&2; exit 1'
+  when: flannel_iface | length > 0
+  register: k3s_dropin
+
 # rc != 0 = chưa cài k3s; stdout chứa phiên bản đang chạy (ví dụ "k3s version v1.36.5+k3s1 …").
 - name: Phiên bản k3s đang cài (nếu có)
   ansible.builtin.command: k3s --version
@@ -42,11 +68,13 @@
   when: k3s_installed.rc != 0 or k3s_version not in k3s_installed.stdout
   changed_when: true
 
-# Trường hợp còn lại: k3s đã đúng phiên bản nhưng config.yaml vừa đổi → restart để đọc lại cấu hình.
+# Trường hợp còn lại: k3s đã đúng phiên bản nhưng config.yaml hoặc drop-in vừa đổi → restart để đọc lại.
+# daemon_reload: systemd đọc lại các file unit (cần khi drop-in đổi). Task bị bỏ qua (when sai) vẫn
+# có biến register với changed = false, nên k3s_dropin.changed luôn dùng được.
 # (Nếu vừa cài/nâng cấp ở task trên thì script đã khởi động k3s với cấu hình mới rồi.)
 - name: Áp cấu hình mới nếu file cấu hình đổi
-  ansible.builtin.systemd_service: {name: k3s, state: restarted}
-  when: k3s_config.changed and k3s_installed.rc == 0 and k3s_version in k3s_installed.stdout
+  ansible.builtin.systemd_service: {name: k3s, state: restarted, daemon_reload: true}
+  when: (k3s_config.changed or k3s_dropin.changed) and k3s_installed.rc == 0 and k3s_version in k3s_installed.stdout
 
 # `k3s kubectl` = kubectl đi kèm k3s, tự dùng kubeconfig của server: chạy được ngay trên PC.
 # Ngay sau khi cài, kubelet chưa kịp đăng ký node nên `wait --all` thấy danh sách rỗng và lỗi ngay

@@ -14,6 +14,9 @@ argocd_version: v3.5.4
 # IP mà k3s dùng cho node: IP của card mạng có default route (LAN ở nhà, IP nội bộ trên VM).
 # ansible_default_ipv4 là "fact" Ansible tự thu thập từ máy đích lúc bắt đầu play.
 node_ip: "{{ ansible_default_ipv4.address }}"
+# Card mạng flannel (mạng pod giữa các node) dùng để đóng gói gói tin. Rỗng = k3s tự chọn theo node-ip.
+# Nhà đặt tailscale0 (group_vars/home.yaml), kèm một drop-in systemd để k3s chờ Tailscale lên trước.
+flannel_iface: ""
 # Mọi node đều có GPU (PC 5060, laptop 4050, VM thuê) → gắn nhãn nvidia.com/gpu.present (k3s config)
 gpu_node: true
 # Chỉ laptop đặt true (trong inventory/home.yaml)
