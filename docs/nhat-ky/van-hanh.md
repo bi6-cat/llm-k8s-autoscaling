@@ -21,6 +21,7 @@ Mỗi kịch bản VH, mỗi sự cố thật và mỗi phiên thuê có một m
 - **Số đo:** sau khi sửa, `NRestarts=0` sau 60 s; node `Ready` với `INTERNAL-IP 192.168.10.42`; vLLM `/v1/models` và một lần chat HTTP 200. Không đo tổng thời gian gián đoạn (không biết IP đổi lúc nào).
 - **Runbook đã dùng:** chưa có runbook cho tình huống này.
 - **Bài học:** cluster nhà phụ thuộc IP LAN do DHCP cấp; phải đặt DHCP reservation trên router (việc cần có mặt ở nhà). Đổi `node-ip` trên node đã đăng ký thì ngoài sửa cấu hình còn phải gỡ kẹt NetworkPolicy một lần. Nên viết runbook "node đổi IP" cho cả cluster nhà và VM thuê.
+- **Theo dõi (cùng ngày):** PC ở chung cư, không đặt reservation được, nên chuyển k3s nhà sang IP Tailscale (`node-ip`, `flannel-iface: tailscale0`, k3s chờ `tailscaled`); node `INTERNAL-IP 100.73.95.48`, MTU pod 1230. Chi tiết ở nhật ký tuần 05 của Quang. Chưa thử khởi động lại PC.
 
 ## Kiểm chứng lý thuyết LT1–LT4 (Quang, Q8)
 
