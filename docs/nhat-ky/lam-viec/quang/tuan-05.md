@@ -87,3 +87,31 @@
   - Pod máy tạo tải lần này cài `httpx` bằng `pip` lúc chạy, chưa có image riêng ghim digest (còn thiếu của TR5).
 - **Liên kết:** `serving/overlays/sim/`, `docs/phien-ban.md` (nhánh `feat/serving-sim`).
 - **Dùng cho luận văn:** §4.4 (autoscaling trên simulator), §5 (kiểm chứng định luật Little: L dự đoán 26, đo ≈ 3 × 8,7); bài học "port-forward không cân bằng tải" cho phần phương pháp đo. Hình nên có: chuỗi thời gian replica và giá trị metric của lượt 2 (đã lưu tạm, cần vẽ lại từ Prometheus khi có runner).
+
+## 2026-11-05 – LT1 trên RTX 5060, ĐG1-mini ở nhà, `capacity-home.json` tạm
+
+- **Mã việc:** Q8 (LT1, LT2, LT3), Q6 (ĐG1-mini) · **Môi trường:** nhà (từ xa qua Tailscale, `kubectl`)
+- **Đã làm:**
+  1. Thấy pod vLLM bị thay khoảng 01:25 do k3s tự khởi động lại; ghi sự cố vào `docs/nhat-ky/van-hanh.md`, chưa rõ nguyên nhân.
+  2. LT1: `vllm bench serve` chạy trong pod vLLM (API key lấy từ biến môi trường của pod, không in ra), `--max-concurrency 1 --num-prompts 20`, random 512/256, `--ignore-eos`, `--seed 1`; kiểm thông số bộ nhớ bằng `nvidia-smi`.
+  3. ĐG1-mini: tạo pod `loadgen` (`python:3.12-slim` ghim digest, CPU 1 / RAM 512 Mi request = limit, `LOADGEN_API_KEY` lấy từ Secret `vllm-api-key`), chép `loadgen/` và script tạm `dg1_mini.py` vào pod. Script quét λ = 1, 2, … req/s ở chế độ CONST, mỗi mức 60 s làm ấm + 120 s đo, lấy mẫu `vllm:num_requests_running|waiting`, `vllm:kv_cache_usage_perc` và GPU exporter mỗi 2 s; dừng khi TTFT p95 > 7,5 s hoặc hàng đợi trung bình > 32.
+  4. Ghi `experiments/capacity-home.json`; ghi LT1, LT2 (KV lúc tải cao), LT3 vào `van-hanh.md`; cập nhật ghi chú checklist Kế hoạch §3. Dữ liệu thô ở `runs/dg1-mini-home-20261105/` (gitignore, chỉ trên máy dev).
+- **Quyết định và lý do:**
+  - Gọi vLLM qua Service từ pod trong cluster, vì đã thấy `port-forward` chỉ nối một pod (mục 04/11). Với 1 replica thì không lệch, nhưng giữ cùng cách đo cho mọi phép.
+  - Mỗi mức đo 120 s thay vì 4 phút, bước λ = 1 thay vì 0,25 quanh điểm gãy, để ĐG1-mini nằm trong ~30 phút như Thông số §8.3. Số liệu chỉ là target tạm.
+  - C chọn = 6 req/s: mức lớn nhất có SLO attainment ≥ 95 % (100 %, TTFT p95 1,35 s). λ = 7 chỉ đạt 28 %.
+  - Threshold A2 tạm = 0,8 × B\* = 0,8 × 26,8 ≈ 21 (Kiến trúc §11).
+- **Kết quả và số đo:**
+  - LT1: TPOT p50 8,68 ms, p99 8,69 ms (dự đoán 8,3–9,6 ms; cận dưới 6,9 ms); băng thông hiệu dụng ≈ 356 GB/s ≈ 79 % của 448 GB/s (`clocks.max.memory` 14.001 MHz, GDDR7, bus 128 bit theo thông số hãng).
+  - ĐG1-mini (đã dừng sau λ = 8 vì hàng đợi > 32): C = 6 req/s; B\* = 26,8; GPU util tại C 100 %; KV-cache tại C 19 %. TPOT p50 tăng từ 8,9 ms (λ = 1) lên 18,1 ms rồi đứng yên khi số request chạy chạm `max-num-seqs` = 32. 0 lỗi HTTP ở mọi mức. Little (với λ thực trong cửa sổ): lệch ≤ 2 % ở λ = 1–7.
+  - Máy tạo tải tự kiểm tra: lệch lịch p99 ≤ 2,3 ms, CPU ≤ 17,4 % một lõi ở mọi mức.
+- **Sự cố:**
+  - Script lần đầu tính `n_meas = 0`: `requests.csv` ghi thời gian **tương đối** (giây từ đầu lượt), còn mẫu metric ghi giờ Unix; trừ nhầm hai loại. Sửa hàm thống kê và tính lại từ dữ liệu thô (không phải chạy lại). Hệ quả phụ: điều kiện dừng theo TTFT không chạy (NaN), lượt quét dừng nhờ điều kiện hàng đợi.
+  - Máy tạo tải đánh dấu lượt λ = 6 và λ = 8 **không hợp lệ** vì cgroup throttle đúng 1 chu kỳ (4,4 ms và 1,4 ms trên ~1.800–2.000 chu kỳ). Nghi do luồng lấy mẫu của script chạy chung pod, chung giới hạn 1 lõi. Ảnh hưởng tới số đo không đáng kể (lệch lịch p99 2,1 ms) nhưng vẫn ghi là không hợp lệ.
+  - Không SSH được vào PC: máy dev chưa có host key cho IP Tailscale; không tự chấp nhận.
+- **Khác thiết kế:**
+  - ĐG1-mini rút gọn (bước 1 req/s, 120 s đo) như trên. Cần đo lại λ = 5,75–7 bước 0,25, với luồng lấy mẫu ở ngoài pod máy tạo tải hoặc pod 2 lõi.
+  - Tiêu chí `throttle_ok` (`nr_throttled == 0`) rất chặt: 1 chu kỳ 4 ms cũng loại cả lượt. Đề xuất Trình xem có nên đặt ngưỡng theo `throttled_usec` (ví dụ < 0,1 % thời gian lượt), cần chốt ở Môi trường §17.
+  - Script `dg1_mini.py` là script tạm (chưa có test), giữ ở `runs/` trên máy dev; runner Q6 sẽ thay.
+- **Liên kết:** `experiments/capacity-home.json`, `docs/nhat-ky/van-hanh.md` (LT1, LT2, LT3, sự cố 05/11), `docs/chi-tiet/06-ke-hoach-quan-ly.md` §3 (nhánh `feat/serving-sim`).
+- **Dùng cho luận văn:** chương 5 mục kiểm chứng lý thuyết (LT1 trọn mẫu, LT3 bảng và đường cong, LT2 phần KV lúc tải cao); dữ liệu cho LT5, LT6 của Trình; §4.11 năng lực (minh hoạ quy trình ĐG1 trên GPU nhà). Hình nên có: TTFT p95 và TPOT p50 theo λ, B theo λ (có thể vẽ từ `curves` trong `capacity-home.json`).

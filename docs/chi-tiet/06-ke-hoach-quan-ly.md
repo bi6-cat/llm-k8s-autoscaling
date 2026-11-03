@@ -77,7 +77,7 @@ Việc gắn với máy: các bước cài đặt trên PC (driver, k3s server) 
 - [x] vLLM chạy trên GPU nhà (5060 hoặc 4050); đã ghim digest và revision model. *(04/11: RTX 5060, `v0.31.0@sha256:…`, Qwen2.5-1.5B ghim revision; xem [phiên bản](../phien-ban.md).)*
 - [ ] vLLM được triển khai **bằng Argo CD** từ overlay `home`; gọi được API có streaming; có `--shutdown-timeout`. *(04/11: manifest trên `feat/serving` đã có streaming, preStop, `--shutdown-timeout=150`, nhưng đang áp tay bằng `kubectl`; chưa có Argo CD.)*
 - [ ] Prometheus có metric vLLM, GPU, Traefik (5 s). *(04/11: chưa cài kube-prometheus-stack; mới có GPU exporter.)*
-- [ ] Simulator chạy trên kind; A2 scale 1 → 3 trên simulator. *(04/11: Trình đang làm trên `feat/tr2-sim`, chưa push.)*
+- [ ] Simulator chạy trên kind; A2 scale 1 → 3 trên simulator. *(04/11: Trình đang làm trên `feat/tr2-sim`, chưa push. Quang đã chạy thử trên kind bằng file nháp của scaffold: A2 scale 1 → 3 sau 32 s dưới tải 2 req/s, scale-down đúng `behavior`; xem nhật ký Quang tuần 05. Tích khi phần của TR2 lên `main`.)*
 - [x] Repo có CI chạy xanh. *(04/11: PR #5; 6 job xanh trên `main` ngày 02/11.)*
 - [ ] V0 đạt: k3s có GPU trong VM Vast, vLLM 7B trả lời, đã đo `fio` và TPOT.
 - [ ] Đã chốt cloud (ADR-004 K6). *(04/11: chưa chốt, trễ từ 18/10.)*
@@ -88,8 +88,8 @@ Việc gắn với máy: các bước cài đặt trên PC (driver, k3s server) 
 - [ ] Đủ 3 dashboard; 6 cảnh báo có unit test, tới được Telegram; **mỗi cảnh báo có runbook**. *(04/11: đã có 7 quy tắc cho 6 cảnh báo, 8 unit test `promtool` và 7 runbook (PR #3); chưa có dashboard, Telegram, chưa áp lên cluster.)*
 - [ ] Bảo mật tối thiểu đạt checklist ([Vận hành §8](04-van-hanh.md#8-bảo-mật-tối-thiểu)).
 - [ ] VH1, VH2 (gồm ca 1 replica), VH6 đạt ở nhà.
-- [ ] ĐG1-mini xong; có `capacity-home.json`.
-- [ ] LT1–LT8 có kết quả (dự đoán, số đo, giải thích) trong `docs/nhat-ky/van-hanh.md` ([Môi trường §19](05-moi-truong-danh-gia.md#19-kiểm-chứng-lý-thuyết-lt1lt8)). *(04/11: LT2 có kết quả, LT1 mới có dự đoán, cả hai trên nhánh `docs/quang-w4`; LT3–LT8 chưa làm.)*
+- [ ] ĐG1-mini xong; có `capacity-home.json`. *(05/11: có bản tạm `experiments/capacity-home.json`: C = 6 req/s, B\* ≈ 27, threshold A2 tạm 21. Còn thiếu: quét bước 0,25 quanh λ = 6; lượt λ = 6 bị máy tạo tải đánh dấu không hợp lệ vì 1 chu kỳ CPU throttle.)*
+- [ ] LT1–LT8 có kết quả (dự đoán, số đo, giải thích) trong `docs/nhat-ky/van-hanh.md` ([Môi trường §19](05-moi-truong-danh-gia.md#19-kiểm-chứng-lý-thuyết-lt1lt8)). *(05/11: LT1 (5060), LT2, LT3 có kết quả trong `van-hanh.md`; dữ liệu ĐG1-mini đã có cho LT5, LT6 của Trình; LT1 trên 4050, LT4, LT7, LT8 chưa làm.)*
 - [ ] Máy tạo tải đạt tiêu chí tự kiểm tra; runner chạy 2 lượt **không cần can thiệp** trên V1; `make bootstrap` dựng xong VM dưới 30 phút. *(04/11: máy tạo tải v1 có tự kiểm tra (PR #4) nhưng mới thử với server giả; chưa có runner, chưa có V1.)*
 
 ### M3 (15/11, muộn nhất 22/11): xong đánh giá
