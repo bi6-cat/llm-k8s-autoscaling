@@ -17,7 +17,7 @@ Tra ngày 09/10/2026. Đổi phiên bản: sửa ở đây và ở file dùng n�
 | vLLM | `vllm/vllm-openai:v0.31.0@sha256:c1c9f6fd…c3` (CUDA 13.0, cần driver ≥ 580). Không dùng `-cu129`: hỏng lúc khởi động, xem [ADR-004 §7](adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md#7-cập-nhật-sau-ngày-08102026) | `serving/base/kustomization.yaml` |
 | Model nhà | `Qwen/Qwen2.5-1.5B-Instruct@989aa7980e4cf806f80c7fef2b1adb7bc71aa306` | `serving/overlays/home` |
 | Model cloud | `Qwen/Qwen2.5-7B-Instruct@a09a35458c702b33eeacc393d103063234e8bc28` | `serving/overlays/cloud` |
-| llm-d-inference-sim | `v0.12.0` | `serving/overlays/sim` |
+| llm-d-inference-sim | `ghcr.io/llm-d/llm-d-inference-sim:v0.12.0@sha256:c6838d86…60` (linux/amd64, tra 04/11) | `serving/overlays/sim/kustomization.yaml` |
 | kind / node image | `v0.33.0` / `kindest/node:v1.37.0` | laptop; image ở `infra/kind/kind-config.yaml` |
 | kubeconform (CI) | `v0.8.0` | `.github/workflows/ci.yaml` |
 | GitHub Actions | `actions/checkout@v7`, `lycheeverse/lychee-action@v2` | `.github/workflows/ci.yaml` |

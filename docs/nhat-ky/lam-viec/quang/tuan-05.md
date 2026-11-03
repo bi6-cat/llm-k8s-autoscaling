@@ -61,3 +61,29 @@
 - **Khác thiết kế:** mất phiên dự phòng V3; đóng băng dữ liệu 22/11 thay vì 15/11.
 - **Liên kết:** `docs/chi-tiet/06-ke-hoach-quan-ly.md`, `docs/chi-tiet/05-moi-truong-danh-gia.md`, `docs/nhat-ky/tuan-05.md`.
 - **Dùng cho luận văn:** §1 hoặc phụ lục quản lý dự án: ví dụ áp dụng kế hoạch dự phòng (§8) khi trễ mốc.
+
+## 2026-11-04 – Vòng autoscaling chạy local trên kind: simulator, Prometheus, KEDA, A2, máy tạo tải
+
+- **Mã việc:** Q3 (overlay `sim`), thử chéo TR2, TR3, TR5 · **Môi trường:** simulator (kind trên máy dev Linux, 12 lõi, 15 GB RAM)
+- **Đã làm:**
+  1. Kéo image `llm-d-inference-sim:v0.12.0`, đọc `--help` để đối chiếu cờ với bản nháp `serving/overlays/sim`. Lấy digest bằng `docker image inspect`.
+  2. Sửa `serving/overlays/sim`: ghim image theo digest qua `images:` của kustomization (bản cũ ghi tag thẳng trong patch, trái CONTRIBUTING §2); bỏ cờ `--force-dummy-tokenizer` (deprecated ở v0.12.0); viết lại comment. Ghi digest vào `docs/phien-ban.md`.
+  3. Dựng môi trường thử bằng file nháp của `temp/w2-scaffold` chép ra thư mục tạm (không commit, vì `infra/kind`, `platform/*`, `autoscaling/` là phần TR2, TR3 của Trình đang làm ở `feat/tr2-sim`): kind 3 node (`kind-config.yaml`, HPA sync 5 s), kube-prometheus-stack 92.1.1, KEDA 2.21.0, ScaledObject A2 overlay `sim` (max 3, threshold 10), theo đúng các bước của `make sim-up` trong scaffold.
+  4. Cài `uv` 0.13.7 bằng `pipx`; `pytest` của `loadgen`: 41 passed trên Python 3.14 (Linux).
+  5. Lượt 1: máy tạo tải chạy trên máy dev, gọi qua `kubectl port-forward svc/vllm`. Lượt 2: máy tạo tải chạy trong pod `python:3.12-slim` (CPU 1, RAM 512 Mi, request = limit) trong namespace `llm-serving`, gọi `http://vllm.llm-serving.svc:8000`.
+- **Quyết định và lý do:**
+  - Không commit môi trường thử, chỉ commit phần thuộc Q3, để không làm trùng và xung đột với nhánh chưa push của Trình. Kết quả dưới đây vẫn dùng được làm bằng chứng cho mục M1 "A2 scale 1 → 3 trên simulator".
+  - Chọn tải CONST 2 req/s, `max_tokens` 256 để dự đoán trước được: mỗi request ≈ 0,2 + 256 × 0,05 = 13 s, theo định luật Little số request đồng thời L = λW ≈ 26, A2 tính desired = ⌈26 / 10⌉ = 3.
+- **Kết quả và số đo:**
+  - Simulator: `/v1/models` trả `qwen2.5-1.5b`, `max_model_len` 4096; streaming có chunk `usage` cuối cùng khi gửi `stream_options.include_usage`; `ignore_eos` cho đúng 256 token. Prometheus scrape target `llm-serving/vllm` mỗi 5 s, metric có nhãn `namespace`, `pod`, `model_name`.
+  - **Lượt 2 (trong cluster, CONST 2 req/s × 180 s):** 357/357 request, 0 lỗi; tự kiểm tra hợp lệ (lệch lịch p99 1,4 ms; CPU tối đa 9 % một lõi; không bị throttle). HPA quyết định 3 replica ở giây 16, 3 pod Ready ở giây 32. Giá trị trung bình mỗi pod ở trạng thái ổn định 7–11 (dự đoán 26 / 3 ≈ 8,7). TTFT p99 của request gửi trong 30 s đầu: 19,3 s (xếp hàng trên 1 pod trước khi scale xong); request gửi từ giây 60: TTFT p99 0,205 s (= độ trễ giả 200 ms). E2E p50 13,2 s.
+  - **Scale-down:** metric về 0, khoảng 5 phút sau HPA giảm 3 → 2, 60 s sau giảm 2 → 1, đúng `stabilizationWindowSeconds: 300` và chính sách 1 pod/60 s của A2.
+- **Sự cố:**
+  - Lượt 1 (qua `port-forward`): cả 357 request vào **một** pod (Prometheus: `increase(vllm:request_success_total[15m])` chỉ có pod đầu tiên), dù HPA đã lên 3 replica; TTFT p50 47 s, 5 request timeout ở 120 s. Nguyên nhân: `kubectl port-forward svc/…` chọn một pod của Service lúc bắt đầu rồi chỉ chuyển tới pod đó, không cân bằng tải. Cách sửa: chạy máy tạo tải trong cluster, gọi Service. Đúng với thiết kế Môi trường §3.6 (máy tạo tải là pod trong cluster); không đo bằng `port-forward`.
+  - Request timeout giữa luồng vẫn ghi `status=200` trong `requests.csv` (header 200 đã về trước khi bị cắt), lỗi nằm ở cột `error`. Khi phân tích phải lọc theo `error`, không theo `status`. Báo Trình (TR5, TR7).
+  - `kind load docker-image python:3.12-slim` lỗi `content digest … not found` (image nhiều kiến trúc); pod vẫn tự kéo image từ Docker Hub nên không ảnh hưởng.
+- **Khác thiết kế:**
+  - KEDA cảnh báo khi áp A2: `pollingInterval` không ảnh hưởng tới scale khi `minReplicaCount ≥ 1`. Khi đó HPA hỏi metric server của KEDA mỗi chu kỳ sync (5 s trên kind và k3s), KEDA truy vấn Prometheus ngay lúc đó. Comment "KEDA hỏi Prometheus mỗi 5 s" trong A2 của scaffold chưa đúng; báo Trình sửa ở `feat/tr2-sim`.
+  - Pod máy tạo tải lần này cài `httpx` bằng `pip` lúc chạy, chưa có image riêng ghim digest (còn thiếu của TR5).
+- **Liên kết:** `serving/overlays/sim/`, `docs/phien-ban.md` (nhánh `feat/serving-sim`).
+- **Dùng cho luận văn:** §4.4 (autoscaling trên simulator), §5 (kiểm chứng định luật Little: L dự đoán 26, đo ≈ 3 × 8,7); bài học "port-forward không cân bằng tải" cho phần phương pháp đo. Hình nên có: chuỗi thời gian replica và giá trị metric của lượt 2 (đã lưu tạm, cần vẽ lại từ Prometheus khi có runner).
