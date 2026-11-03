@@ -45,3 +45,19 @@
 - **Còn phải làm:** tắt key expiry của PC trên trang admin Tailscale; đổi mật khẩu SSH, chuyển sang khoá.
 - **Liên kết:** commit `c0beb4c` (nhánh `feat/home-k3s`); `infra/ansible/inventory/group_vars/home.yaml`, `roles/k3s-server`, `roles/k3s-agent`.
 - **Dùng cho luận văn:** §4.1 (mạng của cluster nhà: vì sao dùng Tailscale), §3.6 Môi trường (ràng buộc mạng chung cư). Có thể làm hình: sơ đồ PC – Tailscale – máy dev/Trình.
+
+## 2026-11-04 – Rà tiến độ, tích checklist mốc, dời V2 sang 14–15/11
+
+- **Mã việc:** chung · **Môi trường:** không (máy dev, chỉ đọc cluster nhà bằng `kubectl`)
+- **Đã làm:**
+  1. `git fetch --all`: `origin/main` đã có PR #3 (TR4), #4 (TR5), #5 (TR1 CI). Liệt kê PR qua API công khai của GitHub vì `gh` chưa đăng nhập: 5 PR, đều đã merge, không có PR nào của phần Quang.
+  2. Đọc trạng thái cluster nhà: 1 node `Ready`; namespace chỉ có `gpu`, `kube-system`, `llm-serving`; pod vLLM `Running` 32 giờ. Chưa có `monitoring`, `keda`, `argocd`.
+  3. Kiểm CI: lượt chạy trên `main` ngày 02/11 đạt cả 6 job (`yaml`, `manifests`, `alerts`, `python` 3.11 và 3.15, `docs`).
+  4. Tích [Kế hoạch §3](../../../chi-tiet/06-ke-hoach-quan-ly.md#3-checklist-các-mốc): M1 đạt 2/7 (vLLM trên GPU nhà, CI xanh), M2 đạt 0/8; mục làm một phần có ghi chú *(04/11: …)*.
+  5. Ghi quyết định dời V2 vào Kế hoạch §1, §1.1 (mới), §2, §4 và Môi trường §6; nhật ký chung [tuần 05](../../tuan-05.md).
+  6. Làm trang web tóm tắt tiến độ (artifact riêng tư trên claude.ai).
+- **Quyết định và lý do:** dời V2 sang 14–15/11 vì runner, Prometheus, KEDA chưa có thì V2 không ra số liệu. Làm local trước (kind + simulator, rồi cluster nhà), vì miễn phí và sửa lỗi nhanh. Chọn cloud để sau nhưng phải xong trước phiên V0+V1. Chỉ tích ô khi mục đạt trọn, để checklist không đẹp hơn thực tế.
+- **Sự cố:** merge `origin/main` vào `docs/quang-w4` xung đột ở `Makefile` (nhánh này mang `Makefile` của `feat/home-k3s`). Không cần merge cho việc sửa tài liệu nên huỷ merge; xung đột sẽ giải khi PR A vào `main`.
+- **Khác thiết kế:** mất phiên dự phòng V3; đóng băng dữ liệu 22/11 thay vì 15/11.
+- **Liên kết:** `docs/chi-tiet/06-ke-hoach-quan-ly.md`, `docs/chi-tiet/05-moi-truong-danh-gia.md`, `docs/nhat-ky/tuan-05.md`.
+- **Dùng cho luận văn:** §1 hoặc phụ lục quản lý dự án: ví dụ áp dụng kế hoạch dự phòng (§8) khi trễ mốc.
