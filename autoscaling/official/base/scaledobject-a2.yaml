@@ -1,0 +1,49 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# autoscaling/official/base/scaledobject-a2.yaml
+# Khái niệm: ScaledObject (CRD của KEDA) = "scale Deployment X theo metric Y". KEDA chạy câu PromQL
+#            mỗi pollingInterval giây, rồi giao kết quả cho một HPA do KEDA tự tạo (keda-hpa-vllm-a2).
+#            HPA tính số pod mong muốn: với AverageValue, desired = ⌈tổng metric ÷ threshold⌉.
+# Mục đích:  Cấu hình A2: scale theo số request đang chạy + đang chờ của vLLM (Kiến trúc §10.2).
+#            Khác A1 (theo GPU util): tín hiệu này tăng tỷ lệ thuận với tải (định luật Little), còn GPU
+#            util bão hoà ~100% ngay từ tải vừa.
+# Tham khảo: docs/huong-dan/w2.md §9.1, Kiến trúc §10.2, §13, Thông số §9.3
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: vllm-a2                        # quy ước: vllm-<id cấu hình> (CONTRIBUTING §3)
+  namespace: llm-serving               # phải cùng namespace với Deployment được scale
+  labels: {experiment/config: A2}      # runner dùng nhãn này để biết cấu hình nào đang áp
+spec:
+  scaleTargetRef: {name: vllm}         # Deployment vllm (serving/base/deployment.yaml)
+  minReplicaCount: 1                   # luôn giữ ít nhất 1 pod: cold start vài phút, không scale về 0
+  maxReplicaCount: 4                   # = số GPU trên VM thuê; overlay nhà/simulator ghi đè
+  pollingInterval: 5                   # KEDA hỏi Prometheus mỗi 5 s (cùng chu kỳ scrape 5 s)
+  # Prometheus lỗi 3 lần liên tiếp (~15 s) → giữ số replica = 4 (tối đa). Mất tín hiệu thì thà thừa
+  # GPU còn hơn thiếu: thiếu thì người dùng chịu trễ, thừa chỉ tốn tiền (bài T4, VH4).
+  fallback: {failureThreshold: 3, replicas: 4}
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        # Scale down chậm để chống "flapping" (lên xuống liên tục khi tải dao động, Hình 14):
+        # chỉ giảm khi số pod mong muốn đã thấp suốt 300 s, và mỗi 60 s bớt tối đa 1 pod.
+        # Scale up giữ mặc định của HPA (nhanh, không có cửa sổ chờ).
+        scaleDown:
+          stabilizationWindowSeconds: 300
+          policies: [{type: Pods, value: 1, periodSeconds: 60}]
+  triggers:
+    - type: prometheus
+      # AverageValue: HPA so (tổng ÷ số pod) với threshold, nên desired = ⌈tổng ÷ threshold⌉
+      metricType: AverageValue
+      metadata:
+        # Service do Prometheus Operator tạo, cùng tên ở mọi môi trường (nhà, kind, VM)
+        serverAddress: http://prometheus-operated.monitoring.svc:9090
+        # Tổng request đang chạy + đang chờ của mọi pod vLLM trong namespace.
+        # `or vector(0)`: khi chưa có pod nào (chuỗi rỗng) thì trả 0 thay vì "không có dữ liệu", vì
+        # rỗng làm KEDA báo lỗi và kích hoạt fallback. Dùng biểu thức gốc, không dùng recording rule,
+        # để không thêm một chu kỳ trễ (CONTRIBUTING §4).
+        query: |
+          (sum(vllm:num_requests_running{namespace="llm-serving"}) or vector(0))
+          + (sum(vllm:num_requests_waiting{namespace="llm-serving"}) or vector(0))
+        # Số request đồng thời mục tiêu mỗi pod. Giá trị tạm; chốt từ đo năng lực (B*) ở ADR-003.
+        threshold: "24"
