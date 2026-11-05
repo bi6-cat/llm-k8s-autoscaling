@@ -5,7 +5,7 @@
 #            vLLM = server phục vụ LLM, API tương thích OpenAI (/v1/chat/completions), có streaming.
 # Mục đích:  Trái tim của tầng serving. Điểm then chốt:
 #   - KHÔNG đặt replicas → HPA (do KEDA tạo) toàn quyền số pod, không tranh với Argo CD.
-#   - startupProbe dài (cold start nạp model), preStop + --shutdown-timeout để tắt êm (Hình 13).
+#   - startupProbe dài (cold start nạp model), preStop + --shutdown-timeout để graceful shutdown (Hình 13).
 #   - maxSurge 0: rolling update không đòi thêm GPU khi mọi GPU đã bận.
 # Overlay thêm model, tham số theo GPU, RAM và chỗ lưu cache (serving/overlays/<env>/).
 # Tham khảo: docs/huong-dan/w2.md §8.1, Thông số §9.2
@@ -71,7 +71,8 @@ spec:
           ports:
             - {name: http, containerPort: 8000}   # Service, PodMonitor, probe gọi cổng theo tên `http`
           resources:
-            # Xin đúng 1 GPU; device plugin giao cho pod một GPU riêng. Overlay thêm CPU/RAM.
+            # Xin đúng 1 GPU; device plugin giao cho pod một GPU riêng (ở nhà: một GPU replica, nhiều pod chung
+            # một card nhờ time-slicing, xem platform/gpu/device-plugin-values-home.yaml). Overlay thêm CPU/RAM.
             limits: {nvidia.com/gpu: 1}
           volumeMounts:
             - {name: cache, mountPath: /cache}
