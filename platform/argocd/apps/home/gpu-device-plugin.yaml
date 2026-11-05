@@ -23,7 +23,10 @@ spec:
       targetRevision: 0.20.1           # phiên bản chart, ghim (docs/phien-ban.md)
       helm:
         releaseName: nvdp              # tên release Helm → tên tài nguyên bắt đầu bằng nvdp-
-        valueFiles: [$values/platform/gpu/device-plugin-values.yaml]
+        # File chung rồi file riêng của nhà (time-slicing 3 GPU replica); file sau ghi đè file trước
+        valueFiles:
+          - $values/platform/gpu/device-plugin-values.yaml
+          - $values/platform/gpu/device-plugin-values-home.yaml
     - repoURL: https://github.com/bi6-cat/llm-k8s-autoscaling.git
       targetRevision: main
       ref: values
