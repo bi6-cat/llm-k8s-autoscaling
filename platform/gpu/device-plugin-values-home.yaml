@@ -1,0 +1,37 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# platform/gpu/device-plugin-values-home.yaml
+# Khái niệm: Time-slicing = device plugin khai báo MỘT GPU thật thành nhiều GPU replica. Node báo
+#            `nvidia.com/gpu: 3` dù chỉ có 1 card; mỗi pod xin `nvidia.com/gpu: 1` nhận một phần, các
+#            pod dùng chung các nhân GPU theo kiểu time-slicing. KHÔNG chia VRAM: mọi pod thấy toàn bộ
+#            8 GB, nên mỗi pod vLLM phải tự giới hạn bằng --gpu-memory-utilization (overlay home).
+# Mục đích:  Có 2–3 replica vLLM trên một RTX 5060 để kiểm CHỨC NĂNG nhiều replica ở nhà (KB2-mini
+#            1 → 2, VH1, VH2, VH3) mà không cần laptop 4050. Các pod dùng chung GPU nên số đo hiệu năng ở
+#            nhà không dùng được; đo hiệu năng trên máy thuê (ADR-004 §7, 06/11/2026).
+#            CHỈ dùng cho nhà. Cài chồng lên file chung:
+#              helm upgrade -i nvdp nvdp/nvidia-device-plugin --version 0.20.1 -n gpu \
+#                -f platform/gpu/device-plugin-values.yaml -f platform/gpu/device-plugin-values-home.yaml
+#            (Helm gộp các file -f theo thứ tự, file sau ghi đè file trước.)
+# Tham khảo: https://github.com/NVIDIA/k8s-device-plugin#shared-access-to-gpus, Môi trường §2.4
+# ──────────────────────────────────────────────────────────────────────────────
+
+config:
+  # Chart tạo ConfigMap từ `map` (tên cấu hình → nội dung) và chạy thêm sidecar config-manager đọc nó.
+  # `default` = tên cấu hình áp cho mọi node không có nhãn nvidia.com/device-plugin.config riêng.
+  default: time-slicing
+  map:
+    time-slicing: |-
+      version: v1
+      sharing:
+        timeSlicing:
+          # false: giữ nguyên tên tài nguyên `nvidia.com/gpu` (không đổi thành nvidia.com/gpu.shared),
+          # nên manifest vLLM ở base không phải sửa gì.
+          renameByDefault: false
+          # Pod xin > 1 GPU replica thì bị từ chối ngay, thay vì nhận 2 phần của CÙNG một card mà tưởng là
+          # 2 GPU.
+          failRequestsGreaterThanOne: true
+          resources:
+            - name: nvidia.com/gpu
+              # 3 GPU replica trên RTX 5060 8 GB: 3 pod × 0,25 × 8 GB ≈ 6 GB, còn ~1,2 GB cho màn hình và
+              # CUDA context. Mặc định chạy 2 replica; replica thứ 3 chỉ bật khi RAM của PC còn đủ
+              # (mỗi pod limit 4 GiB, PC có ~14 GiB).
+              replicas: 3
