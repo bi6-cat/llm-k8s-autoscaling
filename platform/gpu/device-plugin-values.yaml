@@ -1,0 +1,20 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# platform/gpu/device-plugin-values.yaml
+# Khái niệm: Helm values = tham số tuỳ biến cho một chart (ghi đè giá trị mặc định của chart).
+#            Device plugin = DaemonSet chạy trên mỗi node GPU, báo cho kubelet "node này có N GPU",
+#            để node có tài nguyên `nvidia.com/gpu` và pod xin được `limits: {nvidia.com/gpu: 1}`.
+# Mục đích:  Cấu hình chart nvidia-device-plugin 0.20.1 (app gpu-device-plugin; trên VM V0 cài bằng helm).
+# Tham khảo: docs/huong-dan/w2.md §5
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Pod device plugin phải chạy bằng runtime NVIDIA thì mới gọi được thư viện NVML để đếm GPU.
+# Thiếu dòng này → log báo "could not load NVML library" và node không có nvidia.com/gpu.
+runtimeClassName: nvidia
+
+# GFD (GPU Feature Discovery) và NFD (Node Feature Discovery) tự dò phần cứng rồi gắn nhãn cho node.
+# Không cần: node đã có nhãn nvidia.com/gpu.present=true từ lúc join k3s (config.yaml.j2), và affinity
+# mặc định của chart chọn node theo đúng nhãn này. Tắt đi để tiết kiệm RAM (PC chỉ có 16 GB).
+gfd:
+  enabled: false
+nfd:
+  enabled: false

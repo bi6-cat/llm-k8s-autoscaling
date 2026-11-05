@@ -1,0 +1,42 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# infra/ansible/site.yml
+# Khái niệm: Playbook = kịch bản gồm nhiều "play". Mỗi play chọn một nhóm máy (`hosts`, tên nhóm lấy từ
+#            inventory) và áp lên đó một số role (gói task dùng lại được, nằm trong roles/<tên>/).
+#            Các play chạy lần lượt từ trên xuống.
+# Mục đích:  Dựng cả cluster theo đúng thứ tự: chuẩn bị node → k3s server → k3s agent → Argo CD.
+#            Chạy lại nhiều lần không đổi gì (idempotent). Dùng chung cho nhà (inventory/home.yaml) và
+#            máy thuê (inventory/cloud.yaml): đây là điều kiện để VH5 "dựng lại từ máy trắng" có ý nghĩa.
+# Chạy:      make home-up   (hoặc: cd infra/ansible && ansible-playbook -i inventory/home.yaml site.yml)
+# Tham khảo: docs/huong-dan/w2.md §3.3
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Play 1: mọi máy (PC, laptop, VM thuê). `become: true` = chạy task bằng sudo.
+# Thứ tự `nvidia` TRƯỚC k3s là bắt buộc: k3s chỉ phát hiện nvidia-container-runtime lúc khởi động
+# để tự tạo RuntimeClass `nvidia` (w2.md §3.4).
+- name: Chuẩn bị mọi node
+  hosts: all
+  become: true
+  roles: [common, nvidia]
+
+# Play 2: máy chạy control-plane (PC ở nhà, VM duy nhất trên cloud). Sinh token cho agent.
+- name: k3s server
+  hosts: k3s_server
+  become: true
+  roles: [k3s-server]
+
+# Play 3: máy chỉ chạy workload (laptop 4050). Phải sau play 2 vì cần token của server để join.
+# Trên cloud không có nhóm k3s_agent nên play này tự bỏ qua.
+- name: k3s agent
+  hosts: k3s_agent
+  become: true
+  roles: [k3s-agent]
+
+# Play 4: cài Argo CD và Application gốc. Chỉ chạy khi argocd_enabled = true
+# (bật ở group_vars/home.yaml; tắt trên cloud tới W4). `| bool` đổi chuỗi "true"/"false" truyền từ
+# dòng lệnh (-e argocd_enabled=false) thành boolean thật.
+- name: Argo CD và App-of-Apps
+  hosts: k3s_server
+  become: true
+  roles:
+    - role: argocd-bootstrap
+      when: argocd_enabled | bool

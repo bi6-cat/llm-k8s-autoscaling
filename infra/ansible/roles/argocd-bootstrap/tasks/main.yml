@@ -1,0 +1,47 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# infra/ansible/roles/argocd-bootstrap/tasks/main.yml
+# Khái niệm: GitOps = cluster tự kéo cấu hình từ Git và sửa cho khớp. Argo CD là công cụ làm việc đó.
+#            "Bootstrap" = bước duy nhất làm bằng tay (qua Ansible): cài Argo CD rồi áp đúng MỘT
+#            Application gốc. Mọi thứ khác do Argo CD tự kéo về (mô hình App-of-Apps).
+# Mục đích:  Sau role này, không ai `kubectl apply` tay lên cluster nhà nữa: đổi cấu hình = PR vào main.
+# Tham khảo: docs/huong-dan/w2.md §4
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Tạo namespace nếu chưa có, không lỗi nếu đã có ("create --dry-run | apply" là mẹo idempotent quen thuộc)
+- name: Namespace argocd
+  ansible.builtin.shell: |
+    set -o pipefail
+    k3s kubectl create namespace argocd --dry-run=client -o yaml | k3s kubectl apply -f -
+  args: {executable: /bin/bash}
+  changed_when: false
+
+# Bản "core": không có API server, UI và dex (đăng nhập) → nhẹ hơn ~300–400 MB RAM, hợp PC 16 GB.
+# Xem giao diện bằng `argocd admin dashboard` trên laptop khi cần (w2.md §4.4).
+# --server-side: CRD của Argo CD quá lớn cho apply thường (giới hạn 256 KB của annotation
+# last-applied-configuration). --force-conflicts: chạy lại playbook vẫn apply được, không báo xung đột.
+- name: Cài Argo CD bản core (ghim phiên bản)
+  ansible.builtin.command: >
+    k3s kubectl apply -n argocd --server-side --force-conflicts
+    -f https://raw.githubusercontent.com/argoproj/argo-cd/{{ argocd_version }}/manifests/core-install.yaml
+  changed_when: true
+
+# Deployment và StatefulSet phải chạy xong trước khi áp Application, nếu không CRD chưa sẵn sàng
+- name: Chờ các thành phần Argo CD sẵn sàng
+  ansible.builtin.command: "{{ item }}"
+  loop:
+    - k3s kubectl -n argocd wait --for=condition=Available deploy --all --timeout=300s
+    - k3s kubectl -n argocd rollout status statefulset/argocd-application-controller --timeout=300s
+  changed_when: false
+
+# File Application gốc nằm trong repo trên laptop; chép sang server để `k3s kubectl` áp được.
+# playbook_dir = infra/ansible, nên ../../ là gốc repo. env_name chọn root-app-home.yaml hoặc -cloud.
+- name: Chép Application gốc lên server
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../platform/argocd/root-app-{{ env_name }}.yaml"
+    dest: /tmp/root-app.yaml
+    mode: "0644"
+
+# Từ đây Argo CD đọc platform/argocd/apps/<env>/ trên nhánh main và tự tạo các Application con.
+- name: Áp Application gốc
+  ansible.builtin.command: k3s kubectl apply -f /tmp/root-app.yaml
+  changed_when: true

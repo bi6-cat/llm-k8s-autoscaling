@@ -1,0 +1,12 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# infra/ansible/roles/common/handlers/main.yml
+# Khái niệm: Handler = task chỉ chạy khi được `notify` bởi một task KHÁC có thay đổi ("changed"), và
+#            chạy một lần ở cuối play dù được notify nhiều lần. Tên handler phải trùng chuỗi trong notify.
+# Mục đích:  Khởi động lại systemd-logind sau khi đổi cấu hình gập máy của laptop, để cấu hình mới
+#            có hiệu lực mà không cần reboot.
+# Tham khảo: docs/huong-dan/w2.md §3.3
+# ──────────────────────────────────────────────────────────────────────────────
+- name: Restart logind
+  ansible.builtin.systemd_service:
+    name: systemd-logind
+    state: restarted
