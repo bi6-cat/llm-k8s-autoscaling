@@ -1,0 +1,25 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# platform/argocd/apps/home/serving.yaml
+# Khái niệm: Application triển khai tầng serving (vLLM) từ overlay kustomize `home`.
+# Mục đích:  vLLM lên cluster nhà hoàn toàn qua Git (yêu cầu F3). selfHeal: ai sửa tay Deployment trên
+#            cluster sẽ bị Argo CD đưa về đúng như trong Git. Deployment KHÔNG có trường `replicas`,
+#            nên Argo CD không tranh số pod với HPA (Kiến trúc §18.3).
+# Tham khảo: docs/huong-dan/w2.md §4.3, §8
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: serving
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/bi6-cat/llm-k8s-autoscaling.git
+    targetRevision: main
+    path: serving/overlays/home
+  destination: {server: https://kubernetes.default.svc, namespace: llm-serving}
+  syncPolicy:
+    automated: {prune: true, selfHeal: true}
+    # Chờ CRD PodMonitor (serving/base/podmonitor.yaml) do app `monitoring` cài
+    syncOptions: [CreateNamespace=true, SkipDryRunOnMissingResource=true]
+    retry: {limit: 10, backoff: {duration: 15s, factor: 2, maxDuration: 5m}}

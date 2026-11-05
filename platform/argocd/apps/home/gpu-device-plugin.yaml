@@ -1,0 +1,36 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# platform/argocd/apps/home/gpu-device-plugin.yaml
+# Khái niệm: Application cài một Helm chart từ kho bên ngoài, với file values lấy từ repo của mình.
+#            Device plugin của NVIDIA khai báo tài nguyên `nvidia.com/gpu` cho scheduler: không có nó,
+#            pod không xin được GPU.
+# Mục đích:  Cài chart nvidia-device-plugin (phiên bản ghim) với values ở platform/gpu/.
+#            File này là mẫu cho mọi Application dùng chart: keda.yaml, monitoring.yaml cùng cấu trúc.
+# Tham khảo: docs/huong-dan/w2.md §4.3, §5
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: gpu-device-plugin
+  namespace: argocd
+spec:
+  project: default
+  # Hai nguồn: (1) chart từ kho Helm chính thức; (2) repo của mình, đặt tên tham chiếu `values`.
+  # Trong nguồn (1), `$values/…` nghĩa là "file … trong nguồn có ref: values". Nhờ vậy không phải chép
+  # chart vào repo, mà values vẫn nằm trong Git.
+  sources:
+    - repoURL: https://nvidia.github.io/k8s-device-plugin
+      chart: nvidia-device-plugin
+      targetRevision: 0.20.1           # phiên bản chart, ghim (docs/phien-ban.md)
+      helm:
+        releaseName: nvdp              # tên release Helm → tên tài nguyên bắt đầu bằng nvdp-
+        valueFiles: [$values/platform/gpu/device-plugin-values.yaml]
+    - repoURL: https://github.com/bi6-cat/llm-k8s-autoscaling.git
+      targetRevision: main
+      ref: values
+  destination: {server: https://kubernetes.default.svc, namespace: gpu}
+  syncPolicy:
+    automated: {prune: true, selfHeal: true}     # giải thích ở root-app-home.yaml
+    syncOptions: [CreateNamespace=true]          # tự tạo namespace gpu nếu chưa có
+    # Sync lỗi (ví dụ thành phần phụ thuộc chưa lên) thì thử lại tối đa 10 lần,
+    # chờ 15 s, 30 s, 60 s… (nhân 2 mỗi lần), tối đa 5 phút giữa hai lần.
+    retry: {limit: 10, backoff: {duration: 15s, factor: 2, maxDuration: 5m}}
