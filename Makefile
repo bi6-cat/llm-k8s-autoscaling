@@ -26,9 +26,11 @@ MODE ?= v0
 # Đường dẫn promtool (đi kèm bản tải Prometheus). Không có trong PATH thì truyền vào:
 # make alerts-test PROMTOOL=/đường/dẫn/promtool
 PROMTOOL ?= promtool
+# yq (bản của mikefarah) = bộ xử lý YAML dòng lệnh, dùng ở alerts-coverage. Phiên bản ghim ở docs/phien-ban.md.
+YQ ?= yq
 
 # .PHONY: các target này không phải tên file, make luôn chạy chúng (kể cả khi có file trùng tên)
-.PHONY: help home-up sim-up sim-down sim-test-load find rent bootstrap release lint alerts-test
+.PHONY: help home-up sim-up sim-down sim-test-load find rent bootstrap release lint alerts-test alerts-coverage
 
 # In mọi target có comment `## mô tả` cùng dòng. Thêm target mới thì nhớ viết `## …` để nó hiện ở đây.
 help: ## In danh sách lệnh
@@ -101,10 +103,11 @@ release: ## Huỷ instance Vast đang thuê
 	infra/provision/vast.sh release
 
 # ── Kiểm tra trước khi mở PR ────────────────────────────────────────────────────
-# Giống CI (.github/workflows/ci.yaml) nhưng chạy trên máy mình, nhanh hơn chờ GitHub.
-# Danh sách thư mục kustomize là đích cuối của repo; thư mục nào chưa có (phần chưa làm, hoặc glob `*`
-# không khớp nên shell giữ nguyên chữ `*`) thì in "bỏ qua" thay vì báo lỗi, để lint không đỏ oan
-# trong lúc các phần còn đang làm dở, mà vẫn thấy rõ thư mục nào chưa được kiểm.
+# Bản rút gọn của CI để chạy trên máy: danh sách thư mục kustomize ở đây viết sẵn và không chạy kubeconform,
+# còn job manifests của CI (.github/workflows/ci.yaml) tự tìm thư mục và kiểm schema.
+# Danh sách thư mục là đích cuối của repo; thư mục nào chưa có (phần chưa làm, hoặc glob `*` không khớp nên
+# shell giữ nguyên chữ `*`) thì in "bỏ qua" thay vì báo lỗi, để lint không đỏ oan trong lúc các phần còn
+# đang làm dở, mà vẫn thấy rõ thư mục nào chưa được kiểm.
 lint: ## yamllint, kubectl kustomize, ansible syntax-check
 	yamllint -s .
 	for d in serving/overlays/* autoscaling/official/overlays/* platform/gpu/exporter platform/kube-prometheus-stack/extras observability; do \
@@ -116,19 +119,51 @@ lint: ## yamllint, kubectl kustomize, ansible syntax-check
 # apiVersion/kind/metadata, `groups:` nằm dưới `spec:`). Để chỉ giữ MỘT bản rule, target này:
 #   1) với mỗi file rule: lấy từ dòng `spec:` tới hết file (sed -n '/^spec:/,$$p'), bỏ chính dòng
 #      `spec:` (tail -n +2), bỏ 2 dấu cách thụt đầu dòng (sed 's/^  //'), ghi vào thư mục tạm cùng
-#      đường dẫn tương đối;
+#      đường dẫn tương đối. File tách ra mà không có dòng `groups:` (thiếu `spec:` ở cột đầu) thì dừng
+#      ngay: promtool coi file rỗng là hợp lệ (`SUCCESS: 0 rules found`), CI sẽ xanh mà không kiểm gì;
 #   2) chép file test sang cạnh đó, nên rule_files trong test (../llm.yaml…) vẫn đúng;
 #   3) promtool check rules (cú pháp, PromQL hợp lệ) rồi promtool test rules (unit test).
 # Vì vậy `spec:` phải là key cuối cùng trong mỗi file rule. `trap … EXIT` xoá thư mục tạm kể cả khi lỗi.
-alerts-test: ## promtool check + test rule trong observability/ (PROMTOOL=…)
+# `alerts-test: alerts-coverage` = chạy alerts-coverage trước (kiểm nhanh bằng yq, không cần promtool).
+alerts-test: alerts-coverage ## Đủ severity/runbook/test, rồi promtool check + test rule trong observability/ (PROMTOOL=…)
 	@set -euo pipefail; tmp=$$(mktemp -d); trap 'rm -rf "$$tmp"' EXIT; \
 	for f in observability/rules/*.yaml observability/alerts/*.yaml; do \
 	  mkdir -p "$$tmp/$$(dirname "$$f")"; \
 	  sed -n '/^spec:/,$$p' "$$f" | tail -n +2 | sed 's/^  //' > "$$tmp/$$f"; \
+	  grep -q '^groups:' "$$tmp/$$f" \
+	    || { echo "::error::$$f: không tách được rule (cần dòng 'spec:' ở cột đầu, ngay dưới là 'groups:')"; exit 1; }; \
 	done; \
 	cp -r observability/alerts/tests "$$tmp/observability/alerts/"; \
 	$(PROMTOOL) check rules "$$tmp"/observability/rules/*.yaml "$$tmp"/observability/alerts/*.yaml; \
 	$(PROMTOOL) test rules "$$tmp"/observability/alerts/tests/*.yaml
+
+# CONTRIBUTING §4: mỗi cảnh báo phải có nhãn `severity: page|ticket`, annotation runbook_url trỏ tới runbook
+# của chính nó, file runbook và unit test. promtool không bắt được việc thiếu test (không có test thì không có
+# gì để trượt), nên target này kiểm riêng. yq đọc YAML thật, nên mọi kiểu viết (nháy, map một dòng) đều được
+# hiểu, và file YAML hỏng thì yq báo lỗi chứ không lặng lẽ bỏ qua.
+#   1) `yq ea` (eval-all: gộp mọi file thành một luồng): với mỗi rule có key `alert` trong rules/ lẫn alerts/
+#      (cảnh báo lỡ đặt vào rules/ cũng bị kiểm), in một dòng "tên|severity|runbook_url". `// ""` = thiếu
+#      thì để rỗng.
+#   2) Tên các cảnh báo có ít nhất một unit test mong đợi nó BẮN (exp_alerts không rỗng). Test chỉ kiểm
+#      "không bắn" chưa chứng minh được biểu thức đúng.
+#   3) Với từng cảnh báo: severity là page hoặc ticket; runbook_url kết thúc bằng docs/runbooks/<tên>.md;
+#      file đó có thật; tên có trong danh sách ở bước 2.
+# Dòng bắt đầu bằng `::error::` được GitHub Actions tô đỏ trên trang PR; chạy trên máy thì chỉ là chữ thường.
+alerts-coverage: ## Mỗi cảnh báo có severity, runbook và unit test (CONTRIBUTING §4; cần yq, YQ=…)
+	@set -euo pipefail; \
+	command -v $(YQ) >/dev/null || { echo "::error::Cần yq (bản mikefarah, phiên bản ở docs/phien-ban.md); hoặc truyền YQ=/đường/dẫn/yq"; exit 1; }; \
+	alerts=$$($(YQ) ea -N '.spec.groups[].rules[] | select(has("alert")) | [.alert, .labels.severity // "", .annotations.runbook_url // ""] | join("|")' observability/rules/*.yaml observability/alerts/*.yaml); \
+	tested=$$($(YQ) ea -N '.tests[].alert_rule_test[] | select((.exp_alerts // []) | length > 0) | .alertname' observability/alerts/tests/*.yaml); \
+	if [ -z "$$alerts" ]; then echo "::error::Không thấy cảnh báo nào trong observability/"; exit 1; fi; \
+	fail=0; err() { echo "::error::Cảnh báo $$name: $$1"; fail=1; }; \
+	while IFS='|' read -r name sev url; do \
+	  case "$$sev" in page|ticket) ;; *) err "nhãn severity phải là page hoặc ticket (đang là '$$sev')";; esac; \
+	  [[ "$$url" == */docs/runbooks/"$$name".md ]] || err "runbook_url phải trỏ tới docs/runbooks/$$name.md (đang là '$$url')"; \
+	  [ -f "docs/runbooks/$$name.md" ] || err "thiếu file docs/runbooks/$$name.md"; \
+	  grep -qxF "$$name" <<< "$$tested" || err "chưa có unit test nào mong đợi cảnh báo bắn (exp_alerts) trong observability/alerts/tests/"; \
+	done <<< "$$alerts"; \
+	echo "alerts-coverage: đã kiểm $$(wc -l <<< "$$alerts") cảnh báo"; \
+	exit $$fail
 
 # ── Lệnh đã đặt tên nhưng chưa làm ──────────────────────────────────────────────
 # Tên lấy từ Môi trường §3.7. Gọi bây giờ thì báo "chưa làm" và trả mã lỗi 1, để script gọi nó dừng lại.
