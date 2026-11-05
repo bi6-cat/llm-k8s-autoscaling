@@ -1,0 +1,13 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# platform/kube-prometheus-stack/values-sim.yaml
+# Khái niệm: Values ghi đè cho cluster kind (simulator trên laptop), dùng bởi `make sim-up`.
+# Mục đích:  Prometheus nhẹ, giữ dữ liệu 1 ngày. Không khai báo storageSpec → dữ liệu nằm trong
+#            emptyDir, mất khi pod khởi động lại: chấp nhận được vì cluster này dựng đi dựng lại liên tục.
+# Tham khảo: docs/huong-dan/w2.md §6.1
+# ──────────────────────────────────────────────────────────────────────────────
+prometheus:
+  prometheusSpec:
+    retention: 1d
+    resources:
+      requests: {cpu: 100m, memory: 512Mi}
+      limits: {memory: 1536Mi}
