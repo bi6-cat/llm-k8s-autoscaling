@@ -25,4 +25,4 @@ kubeconfig_server: "https://{{ hostvars[groups['k3s_server'][0]].node_ip }}:6443
 # Tên thêm vào chứng chỉ API server để kubectl gọi bằng tên không lỗi "x509: certificate is valid for…".
 # IP Tailscale không cần ghi ở đây: nó đã là node_ip, template luôn thêm node_ip vào tls-san.
 k3s_tls_sans:
-  - zett-ubuntu-pc          # tên MagicDNS của PC
+  - zorsche-upc             # tên MagicDNS của PC (từ 06/11/2026; trước đó zett-ubuntu-pc)
