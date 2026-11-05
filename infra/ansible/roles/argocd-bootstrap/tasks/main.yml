@@ -41,6 +41,18 @@
     dest: /tmp/root-app.yaml
     mode: "0644"
 
+# Bản core không có argocd-server nên không tự tạo AppProject `default`; thiếu nó thì Application gốc
+# báo "project default which does not exist" (gặp 06/11/2026). Áp trước Application gốc.
+- name: Chép AppProject default lên server
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../platform/argocd/project-default.yaml"
+    dest: /tmp/argocd-project-default.yaml
+    mode: "0644"
+
+- name: Áp AppProject default
+  ansible.builtin.command: k3s kubectl apply -f /tmp/argocd-project-default.yaml
+  changed_when: true
+
 # Từ đây Argo CD đọc platform/argocd/apps/<env>/ trên nhánh main và tự tạo các Application con.
 - name: Áp Application gốc
   ansible.builtin.command: k3s kubectl apply -f /tmp/root-app.yaml
