@@ -30,6 +30,16 @@ Mỗi kịch bản VH, mỗi sự cố thật và mỗi phiên thuê có một m
 - **Node:** không chuyển `NotReady` (`lastTransitionTime` vẫn 23/10), tức là k3s khởi động lại nhanh, không phải mất điện lâu.
 - **Chưa làm:** chưa đọc `journalctl -u k3s` vì máy dev chưa có host key SSH của IP Tailscale của PC (không tự chấp nhận host key lạ). Cần Quang kiểm khi có mặt: `journalctl -u k3s --since "2026-11-05 01:00"`, `systemctl show k3s -p NRestarts`.
 - **Ảnh hưởng:** không mất dữ liệu đo (lúc đó chưa đo). Cho thấy nếu k3s khởi động lại giữa phiên đánh giá thì pod vLLM bị thay và phải cold start lại; runner cần phát hiện (pod đổi tên giữa lượt) và đánh dấu lượt không hợp lệ.
+- **Cập nhật 05/11 trưa (đọc `journalctl --list-boots` trên PC):** không phải k3s tự khởi động lại mà là **cả PC khởi động lại**. Lượt boot trước kết thúc bằng tắt máy bình thường (`systemd: Shutting down.`) lúc 19:32 ngày 04/11; lượt boot mới bắt đầu khoảng 02:01 ngày 05/11. Lúc boot, kernel đặt đồng hồ theo RTC là `02:01:25 UTC` (tức 09:01 giờ VN), lệch 7 giờ so với thực tế, rồi NTP chỉnh lại. Vì vậy giờ "01:25" ở trên (tính từ tuổi pod) không đáng tin; `creationTimestamp` của pod mới là 19:17 UTC ngày 04/11 (02:17 giờ VN), khoảng 16 phút sau khi boot. Chưa rõ ai tắt máy lúc 19:32. Giả thuyết cho chuyện RTC lệch đúng 7 giờ (chưa kiểm): PC dual-boot với Windows, Windows ghi RTC theo giờ địa phương.
+
+## 2026-11-05 – Sự cố: PC nhà treo khi suspend, khởi động lại từ đầu
+
+- **Môi trường:** nhà, PC `zett-ubuntu-pc` (node k3s duy nhất, vLLM đang giữ ~6,8 GB VRAM). Người xử lý: Quang (AI agent ra lệnh suspend theo yêu cầu).
+- **Triệu chứng:** sau lệnh `systemctl suspend` lúc 03:16 ngày 05/11, máy không vào trạng thái ngủ. Sáng 11:17 máy chạy một **lượt boot mới** (`uptime` 39 phút lúc 11:57), không phải resume.
+- **Bằng chứng (`journalctl -b -1`):** 03:16:42 `Reached target sleep.target`, `Starting nvidia-suspend.service`; sau đó không có dòng `PM: suspend entry`; log vẫn chạy (gsd-power 03:17:16, tailscaled báo mất mạng) và dừng ở 03:18:38. Lượt boot tiếp theo bắt đầu 11:17:54. So sánh: lần suspend 04/11 lúc 02:59 có vào được (`PM: suspend entry (deep)`, `nvidia-suspend` mất 3 phút 47 giây, đỉnh 2,4 GB RAM), resume 12:26 nhưng gnome-shell lỗi `gbm_surface_lock_front_buffer failed`, 1 phút sau máy boot lại.
+- **Nguyên nhân (giả thuyết, chưa kiểm):** bước `nvidia-suspend` phải chép VRAM ra RAM; khi vLLM giữ gần hết VRAM thì bước này chậm hoặc treo.
+- **Sau khi khởi động lại:** k3s tự lên (node IP Tailscale), mọi pod hệ thống `Running`, vLLM mới 1/1. Còn 5 pod vLLM cũ `Unknown`/`Completed` và pod `loadgen` `Unknown` từ các lượt boot trước, chưa dọn.
+- **Bài học:** không suspend PC khi nó đang là node k3s chạy vLLM; muốn nghỉ thì tắt hẳn (`shutdown`), hoặc scale vLLM về 0 trước khi suspend. Việc PC khởi động lại nhiều lần (04/11 12:28, 19:26, 05/11 ~02:01, 11:17) và k3s lần nào cũng tự lên cho thấy drop-in "chờ Tailscale" (02/11) hoạt động, mục "Chưa kiểm" trong nhật ký Quang 02/11 coi như đã kiểm.
 
 ## Kiểm chứng lý thuyết LT1–LT4 (Quang, Q8)
 

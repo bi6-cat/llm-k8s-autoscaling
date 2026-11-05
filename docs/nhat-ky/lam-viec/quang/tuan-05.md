@@ -115,3 +115,26 @@
   - Script `dg1_mini.py` là script tạm (chưa có test), giữ ở `runs/` trên máy dev; runner Q6 sẽ thay.
 - **Liên kết:** `experiments/capacity-home.json`, `docs/nhat-ky/van-hanh.md` (LT1, LT2, LT3, sự cố 05/11), `docs/chi-tiet/06-ke-hoach-quan-ly.md` §3 (nhánh `feat/serving-sim`).
 - **Dùng cho luận văn:** chương 5 mục kiểm chứng lý thuyết (LT1 trọn mẫu, LT3 bảng và đường cong, LT2 phần KV lúc tải cao); dữ liệu cho LT5, LT6 của Trình; §4.11 năng lực (minh hoạ quy trình ĐG1 trên GPU nhà). Hình nên có: TTFT p95 và TPOT p50 theo λ, B theo λ (có thể vẽ từ `curves` trong `capacity-home.json`).
+
+## 2026-11-05 – Cập nhật trang tiến độ, tìm ra PC treo khi suspend
+
+- **Mã việc:** chung, Q1 · **Môi trường:** nhà (đọc log trên PC, `kubectl`)
+- **Đã làm:**
+  1. Cập nhật trang web tiến độ (artifact riêng tư trên claude.ai) từ bản 04/11: thêm bảng "thay đổi so với 04/11", trạng thái vòng autoscaling trên kind, C = 6 req/s, LT1–LT3, việc tiếp theo.
+  2. Kiểm cluster nhà: vLLM 1/1 sau lượt boot 11:17; còn 5 pod vLLM cũ và pod `loadgen` ở `Unknown`/`Completed`.
+  3. Đọc `journalctl --list-boots`, `journalctl -b -1`, `-b -2`, `-b -4` để xem các lượt boot kết thúc thế nào.
+- **Kết quả và số đo:**
+  - Lệnh suspend 03:16 treo ở `nvidia-suspend`, máy boot lại 11:17. Ghi ở `van-hanh.md`.
+  - Vụ "k3s tự khởi động lại 05/11" thực ra là PC tắt bình thường lúc 19:32 ngày 04/11 rồi bật lại khoảng 02:01; RTC lúc boot lệch 7 giờ. Đã bổ sung vào mục sự cố đó trong `van-hanh.md`.
+  - k3s tự lên sau mỗi lượt boot, tức drop-in chờ Tailscale (mục 02/11) đã chạy thật.
+- **Quyết định và lý do:** không suspend PC khi đang chạy vLLM; chưa dọn pod `Unknown` (chờ Quang đồng ý thao tác trên cluster).
+- **Liên kết:** `docs/nhat-ky/van-hanh.md`.
+- **Dùng cho luận văn:** §3.6 hoặc chương 5 phần hạn chế của môi trường nhà (máy cá nhân, dual-boot, nguồn điện, suspend).
+
+## 2026-11-05 – Thử xin quota GPU trên GCP: không đủ điều kiện
+
+- **Mã việc:** Q2 · **Môi trường:** GCP (console)
+- **Đã làm:** xin quota Compute Engine `GPUs (all regions)` = 2 và `NVIDIA L4 GPUs` ở `asia-southeast1` = 2.
+- **Kết quả:** cả hai bị chặn ngay trong form: "Enter a new quota value between 0 and 0. Based on your service usage history, you are not eligible for a quota increase at this time", gợi ý liên hệ Sales. Không gửi được yêu cầu.
+- **Quyết định và lý do:** chưa quyết. Đề xuất coi Vast là phương án cloud duy nhất cho V0+V1 và V2, vì GCP cần lịch sử dùng mới được xin GPU mà không còn thời gian trước 11/11. Cần chốt K6 trong ADR-004.
+- **Dùng cho luận văn:** phần hạn chế, lý do chọn nền tảng thuê GPU (§3.2 Môi trường).
