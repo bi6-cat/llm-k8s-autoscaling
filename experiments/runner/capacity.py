@@ -163,11 +163,13 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--out", type=Path, required=True)
     p.add_argument("--skip-s", type=float, default=60, help="bỏ N giây đầu của phase chính (mặc định 60)")
     p.add_argument("--status", default="provisional-home")
+    p.add_argument("--note", default="", help="ghi chú ngắn đưa vào file kết quả")
     a = p.parse_args(argv)
 
     curves, meta = load_session(a.session_dir, a.skip_s)
     result = {
         "status": a.status,
+        "note": a.note,
         "measured_at": time.strftime("%Y-%m-%d"),
         "session": a.session_dir.name,
         "env": meta.get("env"),
