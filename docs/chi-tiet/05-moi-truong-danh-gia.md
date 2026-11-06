@@ -3,7 +3,7 @@
 > Thuộc [bộ tài liệu đồ án](../mo-ta-chi-tiet-do-an.md#bộ-tài-liệu) · Dùng cho mục 3.6, 4.1, 4.11 và chương 5 của luận văn · Cấu hình máy, kịch bản, ma trận và ngân sách: [Thông số](00-thong-so.md) · Quyết định: [ADR-004](../adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md)
 
 **Tóm tắt nhanh**
-- **Tầng 1 (máy nhà và simulator):** PC RTX 5060 chia thành 3 GPU replica (time-slicing) để chạy 2–3 pod vLLM model 0,5B, dựng k3s có GPU; máy không GPU dùng `llm-d-inference-sim`. Đây là **môi trường chức năng**: phát triển, kiểm thử, kịch bản vận hành; không dùng số liệu hiệu năng.
+- **Tầng 1 (máy nhà và simulator):** PC RTX 5060 chia thành 2 GPU replica (time-slicing) để chạy 2 pod vLLM model 0,5B, dựng k3s có GPU; máy không GPU dùng `llm-d-inference-sim`. Đây là **môi trường chức năng**: phát triển, kiểm thử, kịch bản vận hành; không dùng số liệu hiệu năng.
 - **Tầng 2 (GPU thuê):** **Vast.ai chế độ VM, 4 × RTX 4090, thuê trọn máy**. Toàn bộ ĐG1–ĐG3 đo trong **một lần thuê liền** cuối tuần 14–15/11 (dời từ 07–08/11; khoảng 20–22 giờ), runner chạy qua đêm. Dự phòng: máy Vast khác, rồi GCP g2/L4.
 - **Chi phí:** ước tính 30–75 USD tiền thật cho 4 phiên thuê (V0–V3), dưới trần 150 USD.
 - **Đánh giá để nghiệm thu**, không phải nghiên cứu thống kê. Ba lớp: kiểm thử chức năng, **kịch bản vận hành VH1–VH6**, và **ĐG1–ĐG3** trên GPU thuê. ĐG2 so sánh S1, S4, A1, A2 dưới **3 kịch bản tải của đề cương**, tổng **17 lượt**.
@@ -23,7 +23,7 @@
 | | Tầng 1: máy nhà và simulator | Tầng 2: GPU thuê |
 |---|---|---|
 | Mục đích | Phát triển; kiểm thử chức năng; kịch bản vận hành (rolling update, cảnh báo, sự cố); ĐG1-mini để lấy target tạm | Đo năng lực, đánh giá autoscaling, cold start, kịch bản vận hành trên GPU thật |
-| GPU | PC RTX 5060 8 GB, time-slicing 3 GPU replica (laptop RTX 4050 6 GB tuỳ chọn); simulator không cần GPU | 4 × RTX 4090 24 GB (Vast.ai, chế độ VM) |
+| GPU | PC RTX 5060 8 GB, time-slicing 2 GPU replica (laptop RTX 4050 6 GB tuỳ chọn); simulator không cần GPU | 4 × RTX 4090 24 GB (Vast.ai, chế độ VM) |
 | Model | Qwen2.5-0.5B-Instruct (trước 06/11: 1,5B) | Qwen2.5-7B-Instruct |
 | Chi phí | ≈ 0 (tiền điện) | Theo giờ |
 | Số liệu dùng trong chương đánh giá? | Chỉ kết quả đạt/không đạt của kiểm thử và kịch bản vận hành | **Có** |
@@ -289,7 +289,7 @@ Trên Vast.ai, giá hiển thị cho mỗi máy thường đã gồm CPU và RAM
 | Kiểm soát chi phí | Budget alert 50/100/150/190 USD (alert **không** tự chặn chi tiêu); runner `shutdown -h` khi xong |
 | Quy tắc | Đo lại **toàn bộ** ĐG1–ĐG3 trên L4; không trộn với số liệu RTX 4090 |
 
-**Kế hoạch Z** (hoàn toàn không thuê được GPU): chạy ma trận ở nhà với model 0,5B, N = 2–3 GPU replica trên PC, hoặc trên simulator. Phần vận hành gần như không bị ảnh hưởng; số liệu hiệu năng chỉ mang tính minh hoạ và được ghi trong phần hạn chế.
+**Kế hoạch Z** (hoàn toàn không thuê được GPU): chạy ma trận ở nhà với model 0,5B, N = 2–2 GPU replica trên PC, hoặc trên simulator. Phần vận hành gần như không bị ảnh hưởng; số liệu hiệu năng chỉ mang tính minh hoạ và được ghi trong phần hạn chế.
 
 ---
 
@@ -598,7 +598,7 @@ Lượt không đạt được đánh dấu `invalid` kèm lý do và **chạy l
 ## 18. Câu hỏi hội đồng có thể đặt ra
 
 **Sao không làm luôn trên máy nhà cho rẻ?**
-GPU nhà chỉ có 8 GB VRAM. Muốn có nhiều replica, nhóm chia một card thành 3 GPU replica (time-slicing) chạy model 0,5B; các pod dùng chung nhân GPU nên số đo hiệu năng của từng pod không độc lập. Máy nhà phù hợp để phát triển, kiểm thử chức năng và kịch bản vận hành. Số liệu hiệu năng phải đo trên GPU 24 GB cùng loại.
+GPU nhà chỉ có 8 GB VRAM. Muốn có nhiều replica, nhóm chia một card thành 2 GPU replica (time-slicing) chạy model 0,5B; các pod dùng chung nhân GPU nên số đo hiệu năng của từng pod không độc lập. Máy nhà phù hợp để phát triển, kiểm thử chức năng và kịch bản vận hành. Số liệu hiệu năng phải đo trên GPU 24 GB cùng loại.
 
 **Marketplace như Vast.ai có đủ tin cậy cho việc đánh giá không?**
 Có, với năm biện pháp:

@@ -152,7 +152,7 @@ Viết chương 2–4 (W5–W7) ─► bản thảo (29/11) ─► bản cuối 
 **Nguyên tắc**
 - Hai người **cùng vai trò** (DevOps/SRE), chia theo **tính năng dọc**. Ai sở hữu tính năng nào thì làm trọn tính năng đó: thiết kế chi tiết, code và manifest, kiểm thử, phần giám sát liên quan, runbook, rồi viết mục luận văn tương ứng. Người còn lại review PR (bắt buộc từ W3).
 - Mọi việc trên cluster đều làm được từ xa qua Tailscale (Trình có quyền kubectl và SSH đầy đủ). Chỉ các việc **phải có mặt cạnh máy** do Quang làm: cài OS và driver, khởi động lại khi máy treo, cắm dây. Phần này tốn khoảng 3–5 giờ cho cả dự án, đã tính khi cân giờ.
-- Cluster nhà chạy **một node là PC**. Từ 06/11, RTX 5060 được chia thành 3 GPU replica (time-slicing) và chạy model 0,5B, nên các bài cần nhiều replica (KB2-mini 1 → 2, VH1, VH2) làm được trên PC; drain node (VH3) làm trên kind nhiều node. Laptop 4050 không còn bắt buộc ([ADR-004 §7](../adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md#7-cập-nhật-sau-ngày-08102026)).
+- Cluster nhà chạy **một node là PC**. Từ 06/11, RTX 5060 được chia thành 2 GPU replica (time-slicing) và chạy model 0,5B, nên các bài cần nhiều replica (KB2-mini 1 → 2, VH1, VH2) làm được trên PC; drain node (VH3) làm trên kind nhiều node. Laptop 4050 không còn bắt buộc ([ADR-004 §7](../adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md#7-cập-nhật-sau-ngày-08102026)).
 - **Học chéo:** mỗi người chạy ít nhất một kịch bản VH thuộc phần của người kia. VH5 ở nhà do **Trình** dựng lại cluster theo README, đúng yêu cầu N8 "người thứ hai dựng lại".
 
 **Quang: "chạy được trên GPU"** (hạ tầng → serving → vòng đời pod → đo năng lực)

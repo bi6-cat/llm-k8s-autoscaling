@@ -12,7 +12,7 @@ Tra ngày 09/10/2026; các dòng của CI tra ngày 01/11/2026. Đổi phiên b�
 | Argo CD | `v3.5.4` (`core-install.yaml`) | `group_vars/all.yaml` |
 | kube-prometheus-stack (chart) | `92.1.1` | `platform/argocd/apps/home/monitoring.yaml`, `Makefile` |
 | KEDA (chart) | `2.21.0` | `platform/argocd/apps/home/keda.yaml`, `Makefile` |
-| NVIDIA device plugin (chart) | `0.20.1`; ở nhà thêm time-slicing 3 GPU replica (`device-plugin-values-home.yaml`, từ 06/11) | `platform/argocd/apps/home/gpu-device-plugin.yaml`, `platform/gpu/` |
+| NVIDIA device plugin (chart) | `0.20.1`; ở nhà thêm time-slicing 2 GPU replica (`device-plugin-values-home.yaml`, từ 06/11) | `platform/argocd/apps/home/gpu-device-plugin.yaml`, `platform/gpu/` |
 | nvidia_gpu_exporter | `1.15.1` | `platform/gpu/exporter/daemonset.yaml` |
 | vLLM | `vllm/vllm-openai:v0.31.0@sha256:c1c9f6fd…c3` (CUDA 13.0, cần driver ≥ 580). Không dùng `-cu129`: hỏng lúc khởi động, xem [ADR-004 §7](adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md#7-cập-nhật-sau-ngày-08102026) | `serving/base/kustomization.yaml` |
 | Model nhà | `Qwen/Qwen2.5-0.5B-Instruct@7ae557604adf67be50417f59c2c2f167def9a775` (tra 06/11). Trước 06/11: `Qwen2.5-1.5B-Instruct@989aa798…06`, dùng cho LT1–LT3 và `capacity-home.json` | `serving/overlays/home` |
