@@ -1,6 +1,6 @@
 # ──────────────────────────────────────────────────────────────────────────────
 # serving/overlays/home/kustomization.yaml
-# Khái niệm: Overlay `home` = base + Ingress + patch tham số cho 2–3 pod chung một RTX 5060 8 GB
+# Khái niệm: Overlay `home` = base + Ingress + patch tham số cho 2 pod chung một RTX 5060 8 GB
 #            (time-slicing, model 0,5B).
 # Mục đích:  Argo CD (Application `serving`) sync thư mục này lên cluster nhà.
 # Xem kết quả: kubectl kustomize serving/overlays/home

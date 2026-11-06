@@ -1,0 +1,22 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# platform/argocd/project-default.yaml
+# Khái niệm: AppProject = nhóm Application, giới hạn repo nào được đọc và cluster/namespace nào được ghi.
+#            Mọi Application phải thuộc một AppProject (trường `spec.project`).
+# Mục đích:  Tạo project `default` mà mọi Application của repo dùng. Bản Argo CD đầy đủ có argocd-server
+#            tự tạo project này lúc khởi động; bản core (dùng ở đây) KHÔNG có argocd-server nên không ai
+#            tạo, và Application báo "referencing project default which does not exist" (gặp 06/11/2026).
+#            Role argocd-bootstrap áp file này trước Application gốc.
+#            Không giới hạn gì (`*`), giống project default của bản đầy đủ: đủ cho đồ án một nhóm.
+# Tham khảo: https://argo-cd.readthedocs.io/en/stable/user-guide/projects/, docs/huong-dan/w2.md §4
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: default
+  namespace: argocd
+spec:
+  sourceRepos: ["*"]                   # đọc được mọi repo (repo của nhóm và các kho Helm chart)
+  destinations:
+    - {server: "*", namespace: "*"}    # ghi được vào mọi namespace của mọi cluster đã đăng ký
+  clusterResourceWhitelist:
+    - {group: "*", kind: "*"}          # được tạo cả tài nguyên cấp cluster (CRD, ClusterRole, Namespace…)

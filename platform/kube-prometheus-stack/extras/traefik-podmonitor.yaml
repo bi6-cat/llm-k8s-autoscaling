@@ -1,0 +1,22 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# platform/kube-prometheus-stack/extras/traefik-podmonitor.yaml
+# Khái niệm: PodMonitor (xem platform/gpu/exporter/podmonitor.yaml) cho Traefik, ingress có sẵn của k3s.
+#            Traefik là "cửa vào": mọi request của người dùng đi qua nó trước khi tới vLLM.
+# Mục đích:  Metric HTTP ở cửa vào (số request, mã 5xx, độ trễ) dùng cho SLI tỷ lệ lỗi và cảnh báo
+#            LLMErrorRateHigh. Đo ở cửa vào thấy được cả lỗi mà vLLM không thấy (pod chết, 502).
+# Trước khi merge: kiểm tra tên cổng metric thật của pod Traefik (w2.md §6.2).
+# Tham khảo: docs/huong-dan/w2.md §6.2
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: traefik
+  namespace: monitoring                # PodMonitor nằm ở monitoring, nhưng chọn pod ở namespace khác:
+spec:
+  namespaceSelector:
+    matchNames: [kube-system]          # k3s chạy Traefik trong kube-system
+  selector:
+    matchLabels: {app.kubernetes.io/name: traefik}
+  podMetricsEndpoints:
+    - port: metrics                    # tên cổng metric trong pod Traefik (9100 hoặc 8082 tuỳ chart)
+      interval: 5s

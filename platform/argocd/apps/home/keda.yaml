@@ -1,0 +1,32 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# platform/argocd/apps/home/keda.yaml
+# Khái niệm: KEDA (Kubernetes Event-Driven Autoscaling) đọc metric bên ngoài (ở đây: PromQL từ
+#            Prometheus) và cấp cho HPA qua External Metrics API. Mỗi ScaledObject → KEDA tạo một HPA.
+# Mục đích:  Cài chart KEDA (phiên bản ghim) với values ở platform/keda/. Cấu trúc giống
+#            gpu-device-plugin.yaml (xem comment ở đó).
+# Tham khảo: docs/huong-dan/w2.md §4.3, §7
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: keda
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://kedacore.github.io/charts
+      chart: keda
+      targetRevision: 2.21.0           # phải trùng KEDA_VERSION trong Makefile
+      helm:
+        releaseName: keda
+        valueFiles: [$values/platform/keda/values.yaml]
+    - repoURL: https://github.com/bi6-cat/llm-k8s-autoscaling.git
+      targetRevision: main
+      ref: values
+  destination: {server: https://kubernetes.default.svc, namespace: keda}
+  syncPolicy:
+    automated: {prune: true, selfHeal: true}
+    # ServerSideApply: CRD của KEDA quá lớn cho kiểu apply thường (giới hạn 256 KB của annotation
+    # last-applied-configuration); server-side apply không cần annotation đó.
+    syncOptions: [CreateNamespace=true, ServerSideApply=true]
+    retry: {limit: 10, backoff: {duration: 15s, factor: 2, maxDuration: 5m}}

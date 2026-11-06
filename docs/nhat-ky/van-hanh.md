@@ -41,6 +41,25 @@ Mỗi kịch bản VH, mỗi sự cố thật và mỗi phiên thuê có một m
 - **Sau khi khởi động lại:** k3s tự lên (node IP Tailscale), mọi pod hệ thống `Running`, vLLM mới 1/1. Còn 5 pod vLLM cũ `Unknown`/`Completed` và pod `loadgen` `Unknown` từ các lượt boot trước, chưa dọn.
 - **Bài học:** không suspend PC khi nó đang là node k3s chạy vLLM; muốn nghỉ thì tắt hẳn (`shutdown`), hoặc scale vLLM về 0 trước khi suspend. Việc PC khởi động lại nhiều lần (04/11 12:28, 19:26, 05/11 ~02:01, 11:17) và k3s lần nào cũng tự lên cho thấy drop-in "chờ Tailscale" (02/11) hoạt động, mục "Chưa kiểm" trong nhật ký Quang 02/11 coi như đã kiểm.
 
+## 2026-11-06 – Dựng lại cluster nhà từ máy trắng sau khi cài lại hệ điều hành
+
+- **Môi trường:** nhà, PC cài lại Ubuntu 26.04.1 lên NVMe (23:08 ngày 05/11), tên mới `zorsche-upc`, IP Tailscale mới `100.120.67.28`. Người làm: Quang và Claude Code (từ xa, Quang ngủ).
+- **Các bước:** cài Ansible (ansible-core 2.21.6, `uv tool`), Tailscale 1.104.5 (apt); `ansible-playbook -i inventory/home.yaml site.yml`; helm/kubectl cho kube-prometheus-stack, device plugin, GPU exporter, KEDA, vLLM; chạy lại playbook với Argo CD.
+- **Số đo:** k3s từ lúc chạy playbook tới node Ready: **29 s** (lần chạy thành công); kube-prometheus-stack 59 s; kéo image vLLM 9,0 GB: 4 phút 14 giây; pod vLLM đầu tiên Ready sau 400 s. Driver NVIDIA 595.99.02 và Container Toolkit 1.20.1 đã có sẵn sau khi cài lại hệ điều hành (Quang cài tay).
+- **Lỗi gặp khi dựng lại:** umask 077 của shell lan sang Ansible làm khoá GPG kho NVIDIA không đọc được (`apt update` lỗi); Argo CD core thiếu AppProject `default`. Cả hai đã sửa trong repo (xem nhật ký tuần 05 của Quang).
+- **Runbook đã dùng:** không có; theo README và `docs/huong-dan/w2.md`.
+- **Bài học:** đường Ansible dựng lại được cluster nhanh, nhưng phần sau k3s (helm, Argo CD) vẫn còn bước tay cho tới khi App-of-Apps lên `main`. Đây chưa phải VH5 chính thức (người dựng là chính Quang, không bấm giờ trọn từ máy trắng).
+
+## 2026-11-06 – Sự cố: PC hết RAM khi chạy 2 pod vLLM, treo nhiều giờ
+
+- **Môi trường:** nhà, PC (RAM 15 GB, không swap), k3s một node, vLLM Qwen2.5-0.5B, time-slicing 2 GPU replica. Desktop GNOME, VS Code và Claude Code đang chạy.
+- **Triệu chứng:** khoảng 05:08 scale vLLM lên 2 replica. Từ 05:15, `kubectl` báo `TLS handshake timeout`; load average 70–100; RAM khả dụng 0,36–0,64 GB; đọc đĩa 0,4–1,2 GB/s; IO pressure ~80 %. Lệnh `kubectl scale` về 1 không tới được API server suốt từ 05:19 tới khoảng 09:00. `sudo pkill -9` các tiến trình vLLM báo `Permission denied`, chưa rõ vì sao.
+- **Nguyên nhân:** mỗi pod vLLM dùng ~3,4 GiB RAM; cộng desktop (~4–5 GB), k3s (~1,5 GB), giám sát (~1,2 GB), Argo CD (~0,5 GB) thì vượt RAM. Không có swap nên kernel bỏ page cache của code đang chạy rồi đọc lại liên tục (thrashing) thay vì OOM-kill. Không phải thiếu VRAM: 2 pod dùng ~6,5/8 GB.
+- **Xử lý:** máy khởi động lại khoảng 10:19 (không rõ do người bấm hay tự treo rồi reset). Ngay sau khi lên, k3s lại tạo 2 pod vì Deployment vẫn lưu `replicas=2`; scale về 1 trong phút đầu, trước khi RAM cạn.
+- **Số đo:** gián đoạn API server khoảng 5 giờ (05:15 → 10:19).
+- **Runbook đã dùng:** không có.
+- **Bài học:** ở nhà, RAM chứ không phải VRAM là giới hạn số replica. Trước khi chạy 2 pod: tắt desktop (chạy `multi-user.target`), hoặc thêm zram/swap để máy chậm thay vì treo, hoặc giảm thành phần giám sát; cân nhắc đặt `maxReplicaCount` của A2 ở nhà = 1 cho tới khi xong. Tạo pod mới trên node đang thiếu RAM có thể làm chính control-plane mất phản hồi: nên viết runbook "node hết RAM".
+
 ## Kiểm chứng lý thuyết LT1–LT4 (Quang, Q8)
 
 Theo mẫu ở [Môi trường §19](../chi-tiet/05-moi-truong-danh-gia.md#19-kiểm-chứng-lý-thuyết-lt1lt8): lý thuyết → dự đoán (tính trước khi đo) → số đo → lệch → giải thích. Thông số model lấy từ `config.json` của `Qwen/Qwen2.5-1.5B-Instruct@989aa798…` (đúng revision đã ghim): 28 lớp, hidden 1536, 12 attention head, **2 KV head**, head_dim 1536 ÷ 12 = 128, BF16 (2 byte), `tie_word_embeddings: true`.

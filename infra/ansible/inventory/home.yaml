@@ -14,10 +14,11 @@ all:
         k3s_server:
           hosts:
             pc:                               # tên gọi trong Ansible, không cần trùng hostname thật
-              # IP Tailscale của PC (zett-ubuntu-pc). Không dùng IP LAN: router chung cư cấp qua DHCP và
+              # IP Tailscale của PC (zorsche-upc; cấp mới sau khi cài lại hệ điều hành 05/11/2026).
+              # Không dùng IP LAN: router chung cư cấp qua DHCP và
               # đã đổi dải ngày 02/11/2026. Với ansible_connection: local thì Ansible không dùng địa chỉ này
               # để kết nối; ghi để biết máy ở đâu. IP k3s dùng là node_ip (group_vars/home.yaml).
-              ansible_host: 100.73.95.48
+              ansible_host: 100.120.67.28
               ansible_connection: local       # Ansible đang chạy trên chính PC: chạy lệnh tại chỗ, không SSH
         k3s_agent:
           # Tạm để trống: cluster chạy một node (PC) tới khi cần 2 GPU (W3: KB2-mini, VH2, VH3).

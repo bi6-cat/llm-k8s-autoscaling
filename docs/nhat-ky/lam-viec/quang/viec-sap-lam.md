@@ -33,7 +33,8 @@ Phần trăm là ước lượng theo đầu việc, không phải giờ đã d�
 | `feat/serving` | chưa mở | `feat/home-k3s` | `serving/` |
 | `docs/quang-w4` | chưa mở | `feat/serving` | Checklist mốc, dời V2, nhật ký tuần 04–05 |
 | `feat/serving-sim` | chưa mở | `docs/quang-w4` | Overlay `sim` ghim digest, `capacity-home.json`, LT1–LT3, file này |
-| `feat/home-timeslicing` | chưa mở | `feat/serving-sim` | Time-slicing 3 GPU replica, overlay `home` đổi sang 0,5B, sửa tài liệu (06/11) |
+| `feat/home-timeslicing` | chưa mở, chưa push | `feat/serving-sim` | Time-slicing, overlay `home` đổi sang 0,5B, sửa tài liệu (06/11) |
+| `feat/m1-home-rebuild` | chưa mở, chưa push | `feat/home-timeslicing` | App-of-Apps, values giám sát/KEDA, A2, kind config (nháp cho Trình review); sửa AppProject; inventory IP mới; kích thước pod theo số đo (06/11) |
 
 Lệnh mở 3 PR còn lại (mô tả PR viết theo nhật ký tuần 05):
 `gh pr create --base feat/home-k3s --head feat/serving …`, `--base feat/serving --head docs/quang-w4 …`, `--base docs/quang-w4 --head feat/serving-sim …`.
@@ -49,12 +50,12 @@ Lệnh mở 3 PR còn lại (mô tả PR viết theo nhật ký tuần 05):
 - [ ] **Q6 runner v1 trên simulator** (đường găng, hạn 10/11): áp cấu hình A1/A2, reset, chạy `loadgen` trong pod (gọi Service, **không** dùng `port-forward`), thu metric Prometheus, checkpoint, phát hiện pod vLLM đổi tên giữa lượt thì đánh dấu lượt không hợp lệ. Thay script tạm `runs/dg1-mini-home-20261105/dg1_mini.py` (chỉ có trên máy dev, gitignore).
 - [ ] **Q2 tìm máy Vast** 4 × 4090 chế độ VM cho 11–12/11 và 14–15/11 (dự phòng 3090/A5000); làm rõ 800.000 VND đã nạp vào đâu, nạp thêm nếu cần; sửa ADR-004 K6 (chọn Vast, GCP bị chặn quota).
 - [ ] **Họp ngắn với Trình:** ngưỡng `throttle_ok` (đề xuất theo `throttled_usec`); lọc lỗi theo cột `error` chứ không theo `status` trong `requests.csv`; sửa comment `pollingInterval` của A2; `for: 1m` của `LLMErrorRateHigh`; cột `id`, `n_in_target`. Nhắc Trình push `feat/tr2-sim`.
-- [ ] **Q6 đo lại ĐG1-mini với cấu hình nhà mới** (0,5B, 1 pod, `gpu-memory-utilization` 0,25): `capacity-home.json` hiện là của 1,5B nên ngưỡng A2 ở nhà phải tính lại. Luồng lấy mẫu ra ngoài pod máy tạo tải (hoặc pod 2 lõi) để hết throttle.
+- [ ] **Q6 đo lại ĐG1-mini với cấu hình nhà mới** (0,5B, 1 pod, `gpu-memory-utilization` 0,40): `capacity-home.json` hiện là của 1,5B nên ngưỡng A2 ở nhà phải tính lại. Luồng lấy mẫu ra ngoài pod máy tạo tải (hoặc pod 2 lõi) để hết throttle.
 - [ ] **Q2:** tách `vast.sh`, overlay `cloud`, Ansible cho VM sang `feat/cloud`; kiểm cú pháp.
 
 ## 3. Cần PC bật
 
-- [ ] **Q1/Q3 áp time-slicing lên PC:** `helm upgrade` device plugin với `-f device-plugin-values.yaml -f device-plugin-values-home.yaml`, kiểm node báo `nvidia.com/gpu: 3`; áp overlay `home` (0,5B), scale lên 2 rồi 3 pod: cả ba Ready? khởi động cùng lúc có lỗi VRAM không? Đo VRAM (`nvidia-smi`) và RAM (`kubectl top pod`) thực rồi chỉnh `gpu-memory-utilization`, `resources`.
+- [x] ~~**Q1/Q3 áp time-slicing lên PC**~~ (06/11): chạy được 1 pod; 2 pod vừa VRAM nhưng hết RAM, xem `van-hanh.md`. Còn: giải quyết RAM (tắt desktop/zram) rồi thử lại 2 pod. Ghi chú cũ: `helm upgrade` device plugin với `-f device-plugin-values.yaml -f device-plugin-values-home.yaml`, kiểm node báo `nvidia.com/gpu: 3`; áp overlay `home` (0,5B), scale lên 2 rồi 3 pod: cả ba Ready? khởi động cùng lúc có lỗi VRAM không? Đo VRAM (`nvidia-smi`) và RAM (`kubectl top pod`) thực rồi chỉnh `gpu-memory-utilization`, `resources`.
 - [ ] **Q5:** test graceful shutdown với vLLM thật (3 lần + ca đối chứng).
 - [ ] **Q5 tìm nguyên nhân:** pod vLLM đang khởi tạo không thoát khi nhận SIGTERM.
 - [ ] **Q4:** manifest pre-pull (giới hạn ghi vì ổ SATA); L2 và đo 8 pha (cần `parse_vllm_log` của TR5); LT4.

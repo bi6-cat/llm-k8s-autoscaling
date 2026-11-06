@@ -1,0 +1,62 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# platform/kube-prometheus-stack/values.yaml
+# Khái niệm: Values chung cho chart kube-prometheus-stack ở mọi môi trường (home, cloud, sim). File
+#            values-<env>.yaml đi sau và ghi đè các giá trị riêng (RAM, retention…).
+# Mục đích:  Tắt các target mà k3s/kind không có; cho Prometheus nhận MỌI PodMonitor/Rule mà không
+#            đòi label release; Grafana đọc mật khẩu từ Secret và tự nạp dashboard.
+# Tham khảo: docs/huong-dan/w2.md §6.1, Thông số §9.4
+# ──────────────────────────────────────────────────────────────────────────────
+# Tên ngắn, cố định cho mọi tài nguyên: Service là kps-prometheus, kps-grafana… (dễ port-forward)
+fullnameOverride: kps
+# Chart tự cài các CRD của Prometheus Operator (PodMonitor, PrometheusRule…)
+crds:
+  enabled: true
+
+# k3s và kind không mở metric của etcd, scheduler, controller-manager, kube-proxy ra ngoài.
+# Không tắt thì các target này luôn "down" và sinh cảnh báo giả.
+kubeEtcd: {enabled: false}
+kubeControllerManager: {enabled: false}
+kubeScheduler: {enabled: false}
+kubeProxy: {enabled: false}
+# Tắt luôn các luật cảnh báo/recording mặc định dành cho các thành phần trên
+defaultRules:
+  rules:
+    etcd: false
+    kubeControllerManager: false
+    kubeSchedulerAlerting: false
+    kubeSchedulerRecording: false
+    kubeProxy: false
+
+prometheus:
+  prometheusSpec:
+    # Chu kỳ scrape mặc định cho target hệ thống. vLLM, GPU, Traefik đặt riêng 5 s trong PodMonitor.
+    scrapeInterval: 15s
+    # Chu kỳ tính recording rule và cảnh báo
+    evaluationInterval: 15s
+    # Mặc định Prometheus chỉ nhận PodMonitor/… có label `release: kps` (cạm bẫy ở Kiến trúc §17.1).
+    # Đặt false = nhận MỌI PodMonitor/ServiceMonitor/PrometheusRule/Probe trong cluster, khỏi nhớ gắn label.
+    podMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    probeSelectorNilUsesHelmValues: false
+    # Bật API quản trị để chụp snapshot dữ liệu (TSDB) khi kết thúc phiên đánh giá, rồi sao lưu
+    enableAdminAPI: true
+
+alertmanager:
+  alertmanagerSpec:
+    retention: 72h                     # giữ lịch sử cảnh báo 3 ngày
+
+grafana:
+  # Tài khoản admin lấy từ Secret grafana-admin (tạo tay, w2.md §4.4), không để mật khẩu trong Git
+  admin:
+    existingSecret: grafana-admin
+    userKey: admin-user
+    passwordKey: admin-password
+  # Sidecar = container chạy kèm Grafana, tự nạp mọi ConfigMap có label grafana_dashboard ở mọi
+  # namespace thành dashboard. Thêm dashboard = thêm một ConfigMap, không phải bấm import trên giao diện.
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      searchNamespace: ALL
+  defaultDashboardsTimezone: browser   # hiển thị giờ theo trình duyệt (giờ Việt Nam) thay vì UTC

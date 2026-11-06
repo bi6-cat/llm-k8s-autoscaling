@@ -5,7 +5,7 @@
 #            với `-` nghĩa là "nối vào cuối danh sách"; /volumes/0 là phần tử đầu tiên).
 #            Dùng JSON patch thay vì merge patch: merge sẽ thay CẢ danh sách args (mất tham số của base),
 #            và gộp hai nguồn vào một volume (Kubernetes từ chối) – xem w2.md §8.2.
-# Mục đích:  Model 0,5B nhỏ để 2–3 pod chạy chung một RTX 5060 nhờ time-slicing
+# Mục đích:  Model 0,5B nhỏ để 2 pod chạy chung một RTX 5060 nhờ time-slicing
 #            (platform/gpu/device-plugin-values-home.yaml), giới hạn RAM, cache model trên ổ (hostPath).
 #            Nhà chỉ kiểm CHỨC NĂNG nhiều replica; số đo hiệu năng lấy ở máy thuê (ADR-004 §7).
 #            Giá trị theo cột "Nhà" ở Thông số §9.1–§9.2.
@@ -13,7 +13,7 @@
 # ──────────────────────────────────────────────────────────────────────────────
 
 # Model 0,5B (~1 GB ở BF16, KV-cache ~12 KB/token). Đổi từ 1,5B ngày 06/11: 1,5B (~3,1 GB) chỉ vừa
-# 1 pod trên 8 GB, còn 0,5B để được 3 pod. Số đo LT1–LT3 và capacity-home.json cũ là của 1,5B.
+# 1 pod trên 8 GB, còn 0,5B để được 2 pod. Số đo LT1–LT3 và capacity-home.json cũ là của 1,5B.
 - op: add
   path: /spec/template/spec/containers/0/args/-
   value: --model=Qwen/Qwen2.5-0.5B-Instruct
@@ -36,21 +36,26 @@
   path: /spec/template/spec/containers/0/args/-
   value: --max-num-seqs=16           # 16 × 2048 token × 12 KB ≈ 0,4 GB KV-cache, vừa phần VRAM bên dưới
 # Phần VRAM MỖI pod vLLM được dùng (weights + activation + KV-cache), tính theo tổng VRAM của card.
-# Time-slicing không chia VRAM nên phải tự chia: 0,25 × 8 GB ≈ 2 GB/pod (1 GB weights, phần còn lại
-# cho KV-cache); 3 pod ≈ 6 GB, chừa ~1,2 GB cho màn hình (Ubuntu desktop đang dùng ~1,2 GB, đo 06/11).
-# Lưu ý: vLLM kiểm VRAM còn trống lúc khởi động; cần thử xem 2–3 pod cùng khởi động có lỗi không.
+# Time-slicing không chia VRAM nên phải tự chia: 0,40 × 8 GB ≈ 3,3 GB/pod; 2 pod ≈ 6,5 GB, chừa
+# ~1,2 GB cho màn hình (Ubuntu desktop dùng ~1,2 GB, đo 06/11).
+# Lưu ý (06/11): 0,25 (~2 GB) KHÔNG đủ: weights 0,93 GiB + CUDA context + CUDA graph lấp hết, vLLM thoát với
+# "No available memory for the cache blocks". Vì vậy ở nhà chỉ chạy được 2 pod, không phải 3.
 - op: add
   path: /spec/template/spec/containers/0/args/-
-  value: --gpu-memory-utilization=0.25
-# CPU/RAM cho 2–3 pod trên PC (~14 GiB dùng được, 12 luồng). requests: phần giữ chỗ để scheduler xếp
-# pod; limits.memory: vượt thì bị kill (OOM). RAM thực của vLLM 0,5B chưa đo: số dưới là ước lượng,
-# đo bằng `kubectl top pod` lần chạy đầu rồi chỉnh. Giữ nvidia.com/gpu (= 1 GPU replica) trong limits vì
-# `replace` thay cả khối resources của base.
+  value: --gpu-memory-utilization=0.40
+# CPU/RAM cho 2 pod trên PC (~14 GiB dùng được, 12 luồng). requests: phần giữ chỗ để scheduler xếp
+# pod; limits.memory: vượt thì bị kill (OOM). Đo 06/11 (`kubectl top pod`): một pod vLLM 0,5B dùng
+# ~3,3–3,4 GiB RAM lúc khởi động, nên request 3,5Gi và limit 5Gi để còn khoảng dư. Giữ nvidia.com/gpu
+# (= 1 GPU replica) trong limits vì `replace` thay cả khối resources của base.
+# Lưu ý (06/11): 2 pod sát giới hạn RAM của PC khi còn chạy desktop (GNOME, VS Code…, ~4–5 GB).
+# Chạy được khi trước lúc scale còn ≥ ~5 GB RAM khả dụng (sau đó còn ~1,7 GB). Lần thử khi chỉ còn
+# ~3 GB thì máy không có swap nên thrash, API server timeout và PC treo tới khi khởi động lại
+# (docs/nhat-ky/van-hanh.md). Trước khi lên 2 pod: kiểm `free -m`, và nên chạy watchdog RAM.
 - op: replace
   path: /spec/template/spec/containers/0/resources
   value:
-    requests: {cpu: "1", memory: 2Gi}
-    limits: {nvidia.com/gpu: 1, memory: 4Gi}
+    requests: {cpu: "1", memory: 3584Mi}
+    limits: {nvidia.com/gpu: 1, memory: 5Gi}
 # Cache trên ổ của node, dùng chung cho mọi pod trên PC (và laptop nếu sau này thêm), nạp lại nhanh.
 # Không dùng PVC local-path vì PVC đó chỉ gắn được vào một node: pod trên node khác sẽ Pending.
 # DirectoryOrCreate: thư mục chưa có thì kubelet tự tạo.

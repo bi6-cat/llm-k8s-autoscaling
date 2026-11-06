@@ -1,0 +1,21 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# platform/keda/values.yaml
+# Khái niệm: Values cho chart KEDA 2.21.0. KEDA gồm 3 thành phần: operator (theo dõi ScaledObject, tạo
+#            HPA), metrics server (trả giá trị metric cho HPA qua External Metrics API) và admission
+#            webhook (kiểm tra ScaledObject hợp lệ trước khi tạo).
+# Mục đích:  Đặt requests/limits nhỏ: cluster chỉ có vài ScaledObject, mặc định của chart dư thừa với
+#            PC 16 GB RAM. Dùng chung cho nhà (Argo CD) và simulator (Makefile).
+# Tham khảo: docs/huong-dan/w2.md §7
+# ──────────────────────────────────────────────────────────────────────────────
+# requests: phần scheduler giữ chỗ trên node. limits.memory: vượt thì container bị kill (OOMKilled).
+# Không đặt limit CPU: thành phần điều khiển không nên bị bóp CPU, vì sẽ làm chậm quyết định scale.
+resources:
+  operator:
+    requests: {cpu: 50m, memory: 100Mi}       # 50m = 0,05 lõi
+    limits: {memory: 512Mi}
+  metricServer:
+    requests: {cpu: 50m, memory: 100Mi}
+    limits: {memory: 512Mi}
+  webhooks:
+    requests: {cpu: 10m, memory: 50Mi}
+    limits: {memory: 256Mi}
