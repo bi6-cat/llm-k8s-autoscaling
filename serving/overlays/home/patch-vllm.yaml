@@ -5,55 +5,64 @@
 #            với `-` nghĩa là "nối vào cuối danh sách"; /volumes/0 là phần tử đầu tiên).
 #            Dùng JSON patch thay vì merge patch: merge sẽ thay CẢ danh sách args (mất tham số của base),
 #            và gộp hai nguồn vào một volume (Kubernetes từ chối) – xem w2.md §8.2.
-# Mục đích:  Model 1,5B, giới hạn RAM, cache model trên ổ từng node (hostPath).
+# Mục đích:  Model 0,5B nhỏ để 2–3 pod chạy chung một RTX 5060 nhờ time-slicing
+#            (platform/gpu/device-plugin-values-home.yaml), giới hạn RAM, cache model trên ổ (hostPath).
+#            Nhà chỉ kiểm CHỨC NĂNG nhiều replica; số đo hiệu năng lấy ở máy thuê (ADR-004 §7).
 #            Giá trị theo cột "Nhà" ở Thông số §9.1–§9.2.
 # Tham khảo: docs/huong-dan/w2.md §8.2
 # ──────────────────────────────────────────────────────────────────────────────
 
-# Model 1,5B (~3,1 GB ở BF16) vừa cả RTX 5060 8 GB lẫn RTX 4050 6 GB, còn chỗ cho KV-cache.
+# Model 0,5B (~1 GB ở BF16, KV-cache ~12 KB/token). Đổi từ 1,5B ngày 06/11: 1,5B (~3,1 GB) chỉ vừa
+# 1 pod trên 8 GB, còn 0,5B để được 3 pod. Số đo LT1–LT3 và capacity-home.json cũ là của 1,5B.
 - op: add
   path: /spec/template/spec/containers/0/args/-
-  value: --model=Qwen/Qwen2.5-1.5B-Instruct
+  value: --model=Qwen/Qwen2.5-0.5B-Instruct
 # Ghim đúng một phiên bản (commit) của model trên Hugging Face (yêu cầu N8)
 - op: add
   path: /spec/template/spec/containers/0/args/-
-  value: --revision=989aa7980e4cf806f80c7fef2b1adb7bc71aa306
+  value: --revision=7ae557604adf67be50417f59c2c2f167def9a775
 # Tên model mà client gửi trong trường "model" của request (ngắn, không đổi khi đổi revision)
 - op: add
   path: /spec/template/spec/containers/0/args/-
-  value: --served-model-name=qwen2.5-1.5b
+  value: --served-model-name=qwen2.5-0.5b
 # Độ dài tối đa (prompt + output, tính bằng token) của một request. Càng nhỏ thì càng ít VRAM phải
-# dành cho KV-cache mỗi request, nên càng nhiều request chạy song song được.
+# dành cho KV-cache mỗi request, nên càng nhiều request chạy song song được. 2048 đủ cho prompt của
+# loadgen ở nhà (kiểm chức năng, không cần ngữ cảnh dài).
 - op: add
   path: /spec/template/spec/containers/0/args/-
-  value: --max-model-len=4096
+  value: --max-model-len=2048
 # Số request tối đa vLLM xử lý cùng lúc trong một batch; vượt thì request phải xếp hàng (waiting).
 - op: add
   path: /spec/template/spec/containers/0/args/-
-  value: --max-num-seqs=32
-# Phần VRAM vLLM được dùng (weights + KV-cache). 0,85 chừa ~15% cho màn hình và CUDA context;
-# RTX 5060 ở nhà còn chạy màn hình nếu Ubuntu có giao diện.
+  value: --max-num-seqs=16           # 16 × 2048 token × 12 KB ≈ 0,4 GB KV-cache, vừa phần VRAM bên dưới
+# Phần VRAM MỖI pod vLLM được dùng (weights + activation + KV-cache), tính theo tổng VRAM của card.
+# Time-slicing không chia VRAM nên phải tự chia: 0,25 × 8 GB ≈ 2 GB/pod (1 GB weights, phần còn lại
+# cho KV-cache); 3 pod ≈ 6 GB, chừa ~1,2 GB cho màn hình (Ubuntu desktop đang dùng ~1,2 GB, đo 06/11).
+# Lưu ý: vLLM kiểm VRAM còn trống lúc khởi động; cần thử xem 2–3 pod cùng khởi động có lỗi không.
 - op: add
   path: /spec/template/spec/containers/0/args/-
-  value: --gpu-memory-utilization=0.85
-# CPU/RAM vừa với PC 16 GB và laptop. requests: phần giữ chỗ; limits.memory: vượt thì bị kill (OOM).
-# Giữ nvidia.com/gpu trong limits vì `replace` thay cả khối resources của base.
+  value: --gpu-memory-utilization=0.25
+# CPU/RAM cho 2–3 pod trên PC (~14 GiB dùng được, 12 luồng). requests: phần giữ chỗ để scheduler xếp
+# pod; limits.memory: vượt thì bị kill (OOM). RAM thực của vLLM 0,5B chưa đo: số dưới là ước lượng,
+# đo bằng `kubectl top pod` lần chạy đầu rồi chỉnh. Giữ nvidia.com/gpu (= 1 GPU replica) trong limits vì
+# `replace` thay cả khối resources của base.
 - op: replace
   path: /spec/template/spec/containers/0/resources
   value:
-    requests: {cpu: "2", memory: 5Gi}
-    limits: {nvidia.com/gpu: 1, memory: 8Gi}
-# Cache trên ổ của TỪNG node: pod chạy trên PC hay laptop đều có cache riêng, nạp lại nhanh.
-# Không dùng PVC local-path vì PVC đó chỉ gắn được vào một node: pod thứ hai trên laptop sẽ Pending.
+    requests: {cpu: "1", memory: 2Gi}
+    limits: {nvidia.com/gpu: 1, memory: 4Gi}
+# Cache trên ổ của node, dùng chung cho mọi pod trên PC (và laptop nếu sau này thêm), nạp lại nhanh.
+# Không dùng PVC local-path vì PVC đó chỉ gắn được vào một node: pod trên node khác sẽ Pending.
 # DirectoryOrCreate: thư mục chưa có thì kubelet tự tạo.
 - op: replace
   path: /spec/template/spec/volumes/0
   value:
     name: cache
     hostPath: {path: /var/lib/llm-cache, type: DirectoryOrCreate}
-# /dev/shm dạng Memory tính vào giới hạn RAM 8Gi của pod; 1 GiB là đủ cho 1 GPU (base để 8Gi cho cloud)
+# /dev/shm dạng Memory tính vào giới hạn RAM 4Gi của pod; 512 MiB đủ cho 1 GPU, model nhỏ
+# (base để 8Gi cho cloud)
 - op: replace
   path: /spec/template/spec/volumes/1
   value:
     name: dshm
-    emptyDir: {medium: Memory, sizeLimit: 1Gi}
+    emptyDir: {medium: Memory, sizeLimit: 512Mi}

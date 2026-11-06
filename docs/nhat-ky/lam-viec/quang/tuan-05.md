@@ -138,3 +138,17 @@
 - **Kết quả:** cả hai bị chặn ngay trong form: "Enter a new quota value between 0 and 0. Based on your service usage history, you are not eligible for a quota increase at this time", gợi ý liên hệ Sales. Không gửi được yêu cầu.
 - **Quyết định và lý do:** chưa quyết. Đề xuất coi Vast là phương án cloud duy nhất cho V0+V1 và V2, vì GCP cần lịch sử dùng mới được xin GPU mà không còn thời gian trước 11/11. Cần chốt K6 trong ADR-004.
 - **Dùng cho luận văn:** phần hạn chế, lý do chọn nền tảng thuê GPU (§3.2 Môi trường).
+
+## 2026-11-06 – Bỏ laptop 4050, chia RTX 5060 thành 3 GPU replica bằng time-slicing
+
+- **Mã việc:** Q1, Q3 · **Môi trường:** không (chỉ sửa code và tài liệu; chưa áp lên cluster nhà)
+- **Đã làm:**
+  1. Rà các việc cần laptop 4050: KB2-mini 1 → 2, VH1, VH2 (ca 1 replica cần tạm 2 pod), VH3 drain node, LT1 điểm thứ hai.
+  2. Thêm `platform/gpu/device-plugin-values-home.yaml`: time-slicing, `nvidia.com/gpu` × 3 replica, `renameByDefault: false`, `failRequestsGreaterThanOne: true`. Để file riêng, cài chồng sau file chung, vì máy thuê dùng chung `device-plugin-values.yaml` mà không được chia GPU.
+  3. Overlay `home`: đổi model sang `Qwen/Qwen2.5-0.5B-Instruct@7ae55760…75` (`qwen2.5-0.5b`), `--max-model-len` 2048, `--max-num-seqs` 16, `--gpu-memory-utilization` 0,25; RAM request 2Gi, limit 4Gi; `/dev/shm` 512Mi.
+  4. Sửa tài liệu cho khớp: Thông số §9.1, §9.2, §10.1; Môi trường (tóm tắt, bảng tầng, Kế hoạch Z, §18); Kế hoạch §5.1; ADR-004 §7 (dòng 06/11); `phien-ban.md`; w2.md §5; `viec-sap-lam.md`.
+- **Quyết định và lý do:** chia một card thay vì gắn laptop. Laptop còn là máy làm việc, driver và SSH chưa sẵn, và hai GPU khác loại cũng không cho số đo so sánh được. Ở nhà chỉ kiểm chức năng; mọi số đo hiệu năng lấy trên máy thuê. Chọn 0,5B vì 1,5B (~3,1 GB) chỉ vừa 1 pod trên 8 GB. VRAM chia tay qua `--gpu-memory-utilization`, vì time-slicing không cô lập VRAM: 0,25 × 8 GB ≈ 2 GB/pod, 3 pod ≈ 6 GB, chừa ~1,2 GB mà màn hình đang dùng (đo `nvidia-smi` 06/11: 1166 MiB). Drain node (VH3) chuyển sang kind nhiều node, vì time-slicing vẫn chỉ có 1 node.
+- **Kết quả và số đo:** `helm template` chart `nvidia-device-plugin` 0.20.1 với hai file values: ra ConfigMap `time-slicing` và sidecar `config-manager` có `DEFAULT_CONFIG=time-slicing`. `uvx yamllint==1.38.0 -s .` sạch; `kubectl kustomize` cả 3 overlay `home`, `cloud`, `sim` build được. **Chưa chạy trên cluster:** máy dùng hôm nay không có k3s và Tailscale. Chưa đo RAM thực của pod 0,5B; chưa biết vLLM có lỗi thiếu VRAM khi 2–3 pod cùng khởi động không.
+- **Khác thiết kế:** model nhà 1,5B → 0,5B; nhà có 3 GPU replica thay vì 1–2 GPU thật; VH3 drain node chỉ làm trên simulator. LT1–LT3 và `experiments/capacity-home.json` là số đo của 1,5B trước ngày đổi, nên ngưỡng A2 ở nhà phải đo lại. A1 (theo GPU util của cả card) không có nghĩa ở nhà khi có > 1 pod.
+- **Liên kết:** nhánh `feat/home-timeslicing`; `platform/gpu/device-plugin-values-home.yaml`, `serving/overlays/home/patch-vllm.yaml`, ADR-004 §7.
+- **Dùng cho luận văn:** §4.1 (môi trường nhà, GPU sharing bằng time-slicing), phần hạn chế (nhà không cô lập GPU nên không đo hiệu năng).
