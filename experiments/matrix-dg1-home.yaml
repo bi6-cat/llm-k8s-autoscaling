@@ -48,3 +48,8 @@ runs:
   - {rate: 10}
   - {rate: 12}
   - {rate: 14}
+  # Quét dày (06/11, sau lượt thô): λ = 12 đạt SLO 100 % (hàng đợi dao động nhưng về 0), λ = 14 hàng đợi
+  # tăng liên tục, SLO 0 %. Bước 0,5 quanh điểm gãy (ĐG1-mini 05/11 với 1,5B dùng bước 0,25 quanh C = 6).
+  - {rate: 12.5}
+  - {rate: 13}
+  - {rate: 13.5}
