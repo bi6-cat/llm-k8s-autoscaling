@@ -4,7 +4,7 @@
 
 **Tóm tắt nhanh**
 - Kế hoạch **9 tuần** từ 08/10 đến hạn nộp khoảng **08/12/2026**. Mỗi tuần có việc chính, sản phẩm kiểm chứng được và **điểm dừng** khi chậm.
-- W1–W4 dành cho xây dựng và vận hành thử ở nhà và trên simulator, xen hai phiên thuê nhỏ (V0, V1). **Toàn bộ đánh giá trên GPU thuê dồn vào một lần thuê liền 07–08/11** (V2). **Đóng băng dữ liệu 15/11**, muộn nhất 22/11; sau đó chỉ viết.
+- W1–W4 dành cho xây dựng và vận hành thử ở nhà và trên simulator, xen hai phiên thuê nhỏ (V0, V1). **Toàn bộ đánh giá trên GPU thuê dồn vào một lần thuê liền 14–15/11** (V2, dời từ 07–08/11 ngày 04/11, xem [§1.1](#11-điều-chỉnh-ngày-04112026)). **Đóng băng dữ liệu muộn nhất 22/11**; sau đó chỉ viết.
 - Khối lượng phạm vi rút gọn khoảng **169–251 người-giờ**, vừa quỹ giờ khi mỗi người làm khoảng 12–15 giờ/tuần. Phân công theo tính năng dọc: Quang "chạy được trên GPU", Trình "tự scale và đo được" ([§5.1](#51-phân-công)).
 - Sổ rủi ro gồm **28 rủi ro**; rủi ro lớn nhất là **thiếu thời gian viết**, **không có máy 4 × 4090 vào cuối tuần**, và **đồ án bị xem là thiên về cài đặt** (R21).
 - 7 sản phẩm bàn giao kèm tiêu chí nghiệm thu; luận văn 55–65 trang, chương 4 "Triển khai và vận hành" dài nhất; 13 hướng mở rộng.
@@ -19,19 +19,34 @@
 
 | Tuần | Ngày | Tuần | Ngày |
 |---|---|---|---|
-| W1 | 08/10 – 11/10 | W6 | 09/11 – 15/11 (V3 nếu cần; **đóng băng dữ liệu 15/11**) |
-| W2 (M1) | 12/10 – 18/10 (V0) | W7 | 16/11 – 22/11 (đóng băng muộn nhất 22/11) |
+| W1 | 08/10 – 11/10 | W6 | 09/11 – 15/11 (V0+V1 gộp; **V2 14–15/11**) |
+| W2 (M1) | 12/10 – 18/10 (~~V0~~) | W7 | 16/11 – 22/11 (**đóng băng dữ liệu 22/11**) |
 | W3 | 19/10 – 25/10 | W8 (M4) | 23/11 – 29/11 |
-| W4 (M2) | 26/10 – 01/11 (V1) | W9 | 30/11 – 06/12 |
-| W5 | 02/11 – 08/11 (**V2**) | M5 | 07/12 – 08/12 (nộp) |
+| W4 (M2) | 26/10 – 01/11 (~~V1~~) | W9 | 30/11 – 06/12 |
+| W5 | 02/11 – 08/11 (~~V2~~, dời sang W6) | M5 | 07/12 – 08/12 (nộp) |
 
 | Mốc | Ngày | Tiêu chí hoàn thành (chi tiết ở §3) |
 |---|---|---|
 | **M1** | 18/10 | Nền tảng tối thiểu chạy ở nhà qua Argo CD; V0 đạt; đã chốt cloud |
 | **M2** | 01/11 | Vận hành thử đạt ở nhà và trên simulator; runner chạy 2 lượt không cần can thiệp trên V1 |
-| **M3** | 15/11 (muộn nhất 22/11) | Dữ liệu đánh giá đầy đủ, đã sao lưu và đóng băng; có ADR-003 |
+| **M3** | ~~15/11~~ **22/11** (không lùi thêm) | Dữ liệu đánh giá đầy đủ, đã sao lưu và đóng băng; có ADR-003 |
 | **M4** | 29/11 | Bản thảo đủ 6 chương gửi GVHD |
 | **M5** | 07–08/12 | Nộp luận văn; tag `v1.0`. Ngày bảo vệ: chưa có |
+
+### 1.1. Điều chỉnh ngày 04/11/2026
+
+Cả nhóm đã đồng ý dời V2. Lý do: tới 04/11, M1 mới đạt 2/7 mục và M2 đạt 0/8 (xem [§3](#3-checklist-các-mốc)). Prometheus, KEDA và runner chưa chạy trên cluster, V0 và V1 chưa diễn ra, nên nếu giữ 07–08/11 thì V2 không thu được số liệu. Cách xử lý theo dòng "Trễ 1 tuần ở M2" của [§8](#8-dự-phòng-và-cắt-giảm-phạm-vi).
+
+| Việc | Lịch cũ | Lịch mới |
+|---|---|---|
+| Xây dựng và vận hành thử | xong 01/11 | **làm local trước** (kind + simulator, rồi cluster nhà), xong trước 13/11 |
+| V0, V1 | 17–18/10, 31/10–01/11 (không diễn ra) | gộp thành một phiên ngắn trước V2, dự kiến 11–12/11 |
+| V2 | 07–08/11 | **14–15/11** |
+| V3 dự phòng | 14–15/11 | **mất**: V2 hỏng thì áp dụng các dòng còn lại của §8 |
+| Đóng băng dữ liệu (M3) | 15/11, muộn nhất 22/11 | **22/11**, không lùi thêm |
+| Chọn cloud (ADR-004 K6) | 18/10 | chưa chốt, để sau phần local, nhưng phải xong trước phiên V0+V1 |
+
+Hệ quả: không còn phiên dự phòng, nên V0+V1 bắt buộc phải kiểm được runner trên VM trước V2. Điểm dừng mới: 07/11 vòng autoscaling chạy trên kind; 10/11 runner chạy 2 lượt liền không cần can thiệp.
 
 ---
 
@@ -43,9 +58,9 @@
 | **W2** (12–18/10) | k3s trên PC (+ agent laptop 4050); Argo CD core, App-of-Apps; kube-prometheus-stack + PodMonitor; khung repo và CI; ghim phiên bản; manifest vLLM cho nhà (probe, preStop, `--shutdown-timeout`); device plugin + exporter; T1–T5 trên simulator; script `vastai` + Ansible cho VM; tìm offer Vast 17–18/10 | vLLM triển khai **bằng Argo CD**; metric vào Prometheus; A2 scale pod simulator 1 → 3 | **V0** (17–18/10) | 16/10: GVHD trả lời. **18/10: chốt Vast hay GCP** |
 | **W3** (19–25/10) | A1 + A2 trên GPU thật ở nhà; **test graceful shutdown** (30 stream + xoá pod, có ca đối chứng); bộ đọc log 8 pha; overlay `cloud`; máy tạo tải v1; recording rule + 6 cảnh báo + `promtool`; bot Telegram; 3 dashboard | KB2-mini ở nhà: 1 → 2 replica, cảnh báo tới Telegram, scale-down 0 lỗi; ĐG1-mini → target tạm | Không | Graceful shutdown còn lỗi → mở issue, N4 tạm ghi "báo cáo" |
 | **W4** (26/10–01/11) | Rolling update theo ADR-005 + VH2 ở nhà (gồm ca 1 replica); L2 (pre-pull, compile cache); 6 runbook; runner (áp cấu hình, reset, thu thập, đẩy R2, checkpoint, tự dừng); Sealed Secrets; file ma trận | Runner chạy 2 lượt không cần can thiệp trên V1; ĐG1 thử | **V1** (31/10–01/11) | Runner chưa chạy trọn → V2 bỏ A1 × KB3 và bỏ L0 |
-| **W5** (02–08/11) | VH3, VH4 ở nhà; script VH5; `build_tables.py`; bắt đầu viết chương 2–3; **nạp tiền Vast trước 06/11** | Dữ liệu V2 đã đẩy lên R2; ADR-003 | **V2** (07–08/11) | Sau 3 giờ chạy ma trận mà < 70% lượt hợp lệ → dừng, sửa, dồn sang V3 |
-| **W6** (09–15/11) | Phân tích V2 (C1–C6 sơ bộ); viết chương 4 | **Đóng băng dữ liệu 15/11** nếu đủ | V3 chỉ khi V2 hỏng (14–15/11) | Thiếu ô nào → V3; vẫn thiếu thì ô đó chỉ có 1 lượt |
-| **W7** (16–22/11) | Chương 5; bảng nghiệm thu; C1–C6 bản cuối; dựng video (nếu chốt demo bằng video) | Đóng băng muộn nhất 22/11 | Không | Sau 22/11 không đo thêm, bất kể kết quả |
+| **W5** (02–08/11) | *Sửa 04/11:* làm local trước. kind + simulator + KEDA + A2; máy tạo tải vào simulator và vLLM nhà; Prometheus, cảnh báo trên cluster nhà; bắt đầu runner; bắt đầu viết chương 2–3 | A2 scale simulator 1 → 3 dưới tải (07/11) | ~~V2~~ (dời) | 07/11 vòng trên kind chưa chạy → cả hai dồn vào việc này, dời Argo CD |
+| **W6** (09–15/11) | *Sửa 04/11:* runner 2 lượt liền trên kind và 1 lượt ở nhà; ĐG1-mini, graceful shutdown, Argo CD ở nhà; chọn cloud, script VM; **nạp tiền trước 13/11** | Runner chạy 2 lượt không cần can thiệp (10/11); dữ liệu V2 đã đẩy lên R2 | V0+V1 gộp (~11–12/11); **V2** (14–15/11) | 10/11 runner chưa chạy trọn → V2 giảm số lượt lặp, bỏ KB3 của S1 (§8). Sau 3 giờ chạy ma trận mà < 70% lượt hợp lệ → dừng, sửa, chạy lại phần hỏng trong 15/11 |
+| **W7** (16–22/11) | Phân tích V2 (C1–C6); chương 4–5; bảng nghiệm thu; ADR-003; dựng video (nếu chốt demo bằng video) | **Đóng băng dữ liệu 22/11** | Không | Sau 22/11 không đo thêm, bất kể kết quả; thiếu ô nào thì ô đó chỉ có 1 lượt |
 | **W8** (23–29/11) | Chương 1, 6; rà chương 2–5; slide | **Bản thảo đủ 6 chương gửi GVHD (29/11)** | Không | – |
 | **W9** (30/11–06/12) | Sửa theo GVHD; chèn hình; định dạng; tag `v1.0` | Bản cuối, slide | Không | – |
 | 07–08/12 | Nộp | – | – | – |
@@ -56,24 +71,26 @@ Việc gắn với máy: các bước cài đặt trên PC (driver, k3s server) 
 
 ## 3. Checklist các mốc
 
+> Tình trạng cập nhật ngày **04/11/2026**. Chỉ tích khi mục đạt trọn vẹn; mục mới làm một phần có ghi chú *(04/11: …)*.
+
 ### M1 (18/10): nền tảng tối thiểu
-- [ ] vLLM chạy trên GPU nhà (5060 hoặc 4050); đã ghim digest và revision model.
-- [ ] vLLM được triển khai **bằng Argo CD** từ overlay `home`; gọi được API có streaming; có `--shutdown-timeout`.
-- [ ] Prometheus có metric vLLM, GPU, Traefik (5 s).
-- [ ] Simulator chạy trên kind; A2 scale 1 → 3 trên simulator.
-- [ ] Repo có CI chạy xanh.
+- [x] vLLM chạy trên GPU nhà (5060 hoặc 4050); đã ghim digest và revision model. *(04/11: RTX 5060, `v0.31.0@sha256:…`, Qwen2.5-1.5B ghim revision; xem [phiên bản](../phien-ban.md).)*
+- [ ] vLLM được triển khai **bằng Argo CD** từ overlay `home`; gọi được API có streaming; có `--shutdown-timeout`. *(04/11: manifest trên `feat/serving` đã có streaming, preStop, `--shutdown-timeout=150`, nhưng đang áp tay bằng `kubectl`; chưa có Argo CD.)*
+- [ ] Prometheus có metric vLLM, GPU, Traefik (5 s). *(04/11: chưa cài kube-prometheus-stack; mới có GPU exporter.)*
+- [ ] Simulator chạy trên kind; A2 scale 1 → 3 trên simulator. *(04/11: Trình đang làm trên `feat/tr2-sim`, chưa push.)*
+- [x] Repo có CI chạy xanh. *(04/11: PR #5; 6 job xanh trên `main` ngày 02/11.)*
 - [ ] V0 đạt: k3s có GPU trong VM Vast, vLLM 7B trả lời, đã đo `fio` và TPOT.
-- [ ] Đã chốt cloud (ADR-004 K6).
+- [ ] Đã chốt cloud (ADR-004 K6). *(04/11: chưa chốt, trễ từ 18/10.)*
 
 ### M2 (01/11): vận hành thử đạt
 - [ ] A1, A2 qua bài kiểm thử T1–T7 (trên simulator và GPU nhà).
 - [ ] Graceful shutdown: 0 lỗi trong 3 lần thử, ca đối chứng có lỗi.
-- [ ] Đủ 3 dashboard; 6 cảnh báo có unit test, tới được Telegram; **mỗi cảnh báo có runbook**.
+- [ ] Đủ 3 dashboard; 6 cảnh báo có unit test, tới được Telegram; **mỗi cảnh báo có runbook**. *(04/11: đã có 7 quy tắc cho 6 cảnh báo, 8 unit test `promtool` và 7 runbook (PR #3); chưa có dashboard, Telegram, chưa áp lên cluster.)*
 - [ ] Bảo mật tối thiểu đạt checklist ([Vận hành §8](04-van-hanh.md#8-bảo-mật-tối-thiểu)).
 - [ ] VH1, VH2 (gồm ca 1 replica), VH6 đạt ở nhà.
 - [ ] ĐG1-mini xong; có `capacity-home.json`.
-- [ ] LT1–LT8 có kết quả (dự đoán, số đo, giải thích) trong `docs/nhat-ky/van-hanh.md` ([Môi trường §19](05-moi-truong-danh-gia.md#19-kiểm-chứng-lý-thuyết-lt1lt8)).
-- [ ] Máy tạo tải đạt tiêu chí tự kiểm tra; runner chạy 2 lượt **không cần can thiệp** trên V1; `make bootstrap` dựng xong VM dưới 30 phút.
+- [ ] LT1–LT8 có kết quả (dự đoán, số đo, giải thích) trong `docs/nhat-ky/van-hanh.md` ([Môi trường §19](05-moi-truong-danh-gia.md#19-kiểm-chứng-lý-thuyết-lt1lt8)). *(04/11: LT2 có kết quả, LT1 mới có dự đoán, cả hai trên nhánh `docs/quang-w4`; LT3–LT8 chưa làm.)*
+- [ ] Máy tạo tải đạt tiêu chí tự kiểm tra; runner chạy 2 lượt **không cần can thiệp** trên V1; `make bootstrap` dựng xong VM dưới 30 phút. *(04/11: máy tạo tải v1 có tự kiểm tra (PR #4) nhưng mới thử với server giả; chưa có runner, chưa có V1.)*
 
 ### M3 (15/11, muộn nhất 22/11): xong đánh giá
 - [ ] `capacity.json` đã chốt (C, B\*, SLO, threshold), có ADR-003 đi kèm.
@@ -100,7 +117,7 @@ Việc gắn với máy: các bước cài đặt trên PC (driver, k3s server) 
 
 ```text
 Thử vLLM trên 5060 (W1) ─► k3s + Argo CD + giám sát ở nhà (W2) ─► A1/A2, graceful shutdown, cảnh báo (W3)
-      ─► rolling update, runbook, runner (W4) ─► V2: toàn bộ đánh giá (07–08/11) ─► phân tích (W6) ─► chương 5 (W7)
+      ─► rolling update, runbook, runner (W4) ─► V2: toàn bộ đánh giá (14–15/11, dời từ 07–08/11) ─► phân tích (W6) ─► chương 5 (W7)
 Simulator: A2, dashboard, cảnh báo, runner (W1–W4, song song) ──────────────────────┘
 Tìm offer Vast (W1–W2) ─► V0 (17–18/10) ─► chốt cloud (18/10) ─► V1 (31/10–01/11) ─┘
 Viết chương 2–4 (W5–W7) ─► bản thảo (29/11) ─► bản cuối (06/12)
@@ -108,7 +125,7 @@ Viết chương 2–4 (W5–W7) ─► bản thảo (29/11) ─► bản cuối 
 
 - **Đường găng:** cài GPU nhà → nền tảng ở nhà → vận hành thử → V1 → **V2** → phân tích → chương 5 → bản thảo. Gần như không có độ dư; mỗi tuần có điểm dừng ở §2.
 - **Có thời gian đệm:** dashboard, cảnh báo, runner và autoscaling làm trên simulator song song với phần GPU thật.
-- **Phụ thuộc bên ngoài:** có máy 4 × 4090 chế độ VM vào cuối tuần 07–08/11.
+- **Phụ thuộc bên ngoài:** có máy 4 × 4090 chế độ VM vào cuối tuần 14–15/11 (dời từ 07–08/11, xem §1.1).
 
 ---
 
