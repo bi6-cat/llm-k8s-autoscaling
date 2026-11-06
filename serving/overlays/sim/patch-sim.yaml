@@ -1,0 +1,63 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# serving/overlays/sim/patch-sim.yaml
+# Khái niệm: llm-d-inference-sim = chương trình giả lập API và metric của vLLM (cùng tên metric
+#            vllm:num_requests_running…), không cần GPU, độ trễ cấu hình được.
+# Mục đích:  Đổi image, bỏ mọi thứ liên quan tới GPU (runtime, nodeSelector, volume), đặt độ trễ giả:
+#            TTFT 200 ms, 50 ms/token. JSON patch: cách đọc ở serving/overlays/home/patch-vllm.yaml.
+# Tham khảo: docs/huong-dan/w2.md §9.1
+# ──────────────────────────────────────────────────────────────────────────────
+# Giữ nguyên Deployment, Service, PodMonitor của base; chỉ đổi image và tham số.
+
+- op: replace
+  path: /spec/template/spec/containers/0/image
+  value: ghcr.io/llm-d/llm-d-inference-sim:v0.12.0      # ghim (docs/phien-ban.md)
+# Thay CẢ danh sách args (khác home/cloud là nối thêm), vì simulator không hiểu cờ của vLLM
+- op: replace
+  path: /spec/template/spec/containers/0/args
+  value:
+    - --model=qwen2.5-1.5b
+    - --served-model-name=qwen2.5-1.5b
+    - --port=8000
+    - --force-dummy-tokenizer          # không tải tokenizer thật từ Hugging Face
+    # Mỗi pod xử lý tối đa 16 request cùng lúc. Threshold A2 của simulator (10) ≈ 0,6 × 16 (w2.md §9.1)
+    - --max-num-seqs=16
+    - --max-model-len=4096
+    - --time-to-first-token=200ms      # độ trễ giả tới token đầu tiên
+    - --inter-token-latency=50ms       # độ trễ giả giữa hai token (TPOT)
+# Không có GPU: bỏ runtime NVIDIA và ràng buộc node GPU
+- op: remove
+  path: /spec/template/spec/runtimeClassName
+- op: remove
+  path: /spec/template/spec/nodeSelector
+# Request giả ngắn hơn nhiều so với thật, 60 s là đủ để tắt êm
+- op: replace
+  path: /spec/template/spec/terminationGracePeriodSeconds
+  value: 60
+# Simulator gắn tên pod và namespace vào metric (giống label của vLLM thật) qua hai biến này.
+# Thay cả env của base: simulator không cần API key và cache.
+- op: replace
+  path: /spec/template/spec/containers/0/env
+  value:
+    - name: POD_NAME
+      valueFrom: {fieldRef: {fieldPath: metadata.name}}        # Downward API: lấy giá trị từ chính pod
+    - name: POD_NAMESPACE
+      valueFrom: {fieldRef: {fieldPath: metadata.namespace}}
+# Simulator rất nhẹ: 50m CPU, 64 MiB RAM; không xin GPU
+- op: replace
+  path: /spec/template/spec/containers/0/resources
+  value:
+    requests: {cpu: 50m, memory: 64Mi}
+    limits: {memory: 256Mi}
+# Không cần cache model và /dev/shm
+- op: remove
+  path: /spec/template/spec/containers/0/volumeMounts
+- op: remove
+  path: /spec/template/spec/volumes
+# Simulator báo "chưa sẵn sàng" qua /health/ready (giả lập thời gian nạp model khi có --startup-duration),
+# còn /health luôn trả OK. Probe khởi động và readiness phải dùng /health/ready.
+- op: replace
+  path: /spec/template/spec/containers/0/startupProbe/httpGet/path
+  value: /health/ready
+- op: replace
+  path: /spec/template/spec/containers/0/readinessProbe/httpGet/path
+  value: /health/ready

@@ -1,0 +1,21 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# serving/base/podmonitor.yaml
+# Khái niệm: PodMonitor (xem platform/gpu/exporter/podmonitor.yaml) cho vLLM: scrape /metrics mỗi 5 s.
+# Mục đích:  Nguồn của mọi metric autoscaling (vllm:num_requests_running, vllm:num_requests_waiting) và
+#            SLI (histogram TTFT, TPOT). Đây là chỗ nối giữa serving (Quang) và giám sát (Trình): đổi tên
+#            cổng, đường dẫn hay nhãn thì phải qua review của người kia (Kế hoạch §6, hợp đồng "Metric").
+# Tham khảo: docs/huong-dan/w2.md §8.1
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: vllm
+  namespace: llm-serving
+spec:
+  selector:
+    matchLabels: {app: vllm}
+  podMetricsEndpoints:
+    - port: http
+      path: /metrics                   # không cần API key: vLLM chỉ kiểm khoá với đường dẫn /v1/*
+      # 5 s: tín hiệu scale càng mới thì autoscaling phản ứng càng nhanh (scrape 5 s + HPA 5 s ≈ 10 s)
+      interval: 5s

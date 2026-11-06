@@ -1,0 +1,20 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# serving/base/service.yaml
+# Khái niệm: Service = một địa chỉ ổn định (tên DNS `vllm.llm-serving.svc`) đứng trước các pod; chia
+#            request tới các pod Ready có nhãn app=vllm (kube-proxy chọn gần như ngẫu nhiên, đều nhau).
+#            Kiểu mặc định ClusterIP: chỉ gọi được từ trong cluster.
+# Mục đích:  Traefik (Ingress) và máy tạo tải gọi vào đây; pod mới chỉ nhận request khi readinessProbe
+#            đạt, pod đang tắt bị rút ra trước (preStop).
+# Tham khảo: docs/huong-dan/w2.md §8.1, Kiến trúc §3.4
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: vllm
+  namespace: llm-serving
+  labels: {app: vllm}
+spec:
+  selector: {app: vllm}
+  ports:
+    # port: cổng của Service; targetPort: cổng tên `http` (8000) trong container
+    - {name: http, port: 8000, targetPort: http}
