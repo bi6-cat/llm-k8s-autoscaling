@@ -50,7 +50,7 @@ Lệnh mở 3 PR còn lại (mô tả PR viết theo nhật ký tuần 05):
 - [ ] **Q6 runner v1 trên simulator** (đường găng, hạn 10/11): áp cấu hình A1/A2, reset, chạy `loadgen` trong pod (gọi Service, **không** dùng `port-forward`), thu metric Prometheus, checkpoint, phát hiện pod vLLM đổi tên giữa lượt thì đánh dấu lượt không hợp lệ. Thay script tạm `runs/dg1-mini-home-20261105/dg1_mini.py` (chỉ có trên máy dev, gitignore).
 - [ ] **Q2 tìm máy Vast** 4 × 4090 chế độ VM cho 11–12/11 và 14–15/11 (dự phòng 3090/A5000); làm rõ 800.000 VND đã nạp vào đâu, nạp thêm nếu cần; sửa ADR-004 K6 (chọn Vast, GCP bị chặn quota).
 - [ ] **Họp ngắn với Trình:** ngưỡng `throttle_ok` (đề xuất theo `throttled_usec`); lọc lỗi theo cột `error` chứ không theo `status` trong `requests.csv`; sửa comment `pollingInterval` của A2; `for: 1m` của `LLMErrorRateHigh`; cột `id`, `n_in_target`. Nhắc Trình push `feat/tr2-sim`.
-- [ ] **Q6 đo lại ĐG1-mini với cấu hình nhà mới** (0,5B, 1 pod, `gpu-memory-utilization` 0,40): `capacity-home.json` hiện là của 1,5B nên ngưỡng A2 ở nhà phải tính lại. Luồng lấy mẫu ra ngoài pod máy tạo tải (hoặc pod 2 lõi) để hết throttle.
+- [x] (06/11, runner phiên `dg1-home-05b`: C = 12,5 req/s, B\* = 28,4) **Q6 đo lại ĐG1-mini với cấu hình nhà mới** (0,5B, 1 pod, `gpu-memory-utilization` 0,40): `capacity-home.json` hiện là của 1,5B nên ngưỡng A2 ở nhà phải tính lại. Luồng lấy mẫu ra ngoài pod máy tạo tải (hoặc pod 2 lõi) để hết throttle.
 - [ ] **Q2:** tách `vast.sh`, overlay `cloud`, Ansible cho VM sang `feat/cloud`; kiểm cú pháp.
 
 ## 3. Cần PC bật
@@ -90,4 +90,4 @@ Lệnh mở 3 PR còn lại (mô tả PR viết theo nhật ký tuần 05):
 | PodMonitor vLLM và GPU ở nhà, số đo từ Prometheus | kube-prometheus-stack trên cluster nhà (TR3) |
 | Serving qua Argo CD | Argo CD + App-of-Apps (TR1) |
 | Đo 8 pha (Q4) | `parse_vllm_log` (TR5) |
-| LT5, LT6 | Dữ liệu đã có trong `capacity-home.json`, Trình phân tích (TR8) |
+| LT5, LT6 | Dữ liệu đã có trong `capacity-home-1.5b.json` (1,5B) và `capacity-home.json` (0,5B, 06/11), Trình phân tích (TR8) |

@@ -98,7 +98,7 @@ Theo mẫu ở [Môi trường §19](../chi-tiet/05-moi-truong-danh-gia.md#19-ki
 
 - **Lý thuyết** ([Kiến thức nền §2.2](../chi-tiet/02-kien-thuc-nen.md#22-continuous-batching)): vLLM ghép mọi request đang chạy vào cùng một bước decode. Khi batch còn nhỏ, mỗi bước vẫn chủ yếu là đọc weights (LT1), nên thêm request gần như không làm chậm từng token; throughput tăng gần tuyến tính theo số request đồng thời rồi bão hoà ở một điểm gãy.
 - **Dự đoán:** throughput tăng gần tuyến tính đến gần B\*; điểm gãy nằm gần B\*.
-- **Số đo** (RTX 5060, 1 replica, CONST, `max_tokens` 256, prompt 256–1024 từ; mỗi mức 120 s đo; bảng đầy đủ ở `experiments/capacity-home.json`):
+- **Số đo** (RTX 5060, 1 replica, CONST, `max_tokens` 256, prompt 256–1024 từ; mỗi mức 120 s đo; bảng đầy đủ ở `experiments/capacity-home-1.5b.json`, trước 06/11 tên là `capacity-home.json`):
 
 | λ (req/s) | B (request trong hệ thống) | TPOT p50 | TTFT p95 | waiting TB | Throughput ra (≈ λ × 256) |
 |---|---|---|---|---|---|
