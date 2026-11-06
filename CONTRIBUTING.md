@@ -111,7 +111,7 @@ Tên file và thư mục: chữ thường, nối bằng `-`, không dấu (`scal
 
 - **Nhánh:** `main` luôn chạy được, vì Argo CD đọc từ đó. Mọi việc làm trên `feat/<chủ-đề>`, `fix/<chủ-đề>` hoặc `docs/<chủ-đề>`, ví dụ `feat/alerts-telegram`.
 - **Commit:** tiếng Anh, thể mệnh lệnh, dạng `<phạm vi>: <mô tả>`. Phạm vi là thư mục cấp một hoặc thành phần (`serving`, `alerts`, `loadgen`, `ansible`, `docs`, `ci`). Ví dụ: `alerts: add LLMPodPending with runbook`.
-- **PR:** nhỏ (lý tưởng dưới 400 dòng, không tính file sinh tự động) và giải quyết đúng một việc. Mô tả PR ghi mã việc (Q1…, TR1…, xem [Kế hoạch §5.1](docs/chi-tiet/06-ke-hoach-quan-ly.md#51-phân-công)) và cách đã kiểm thử. Người review là **người còn lại**: từ W3 cần 1 approval, trả lời trong 48 giờ.
+- **PR:** nhỏ (lý tưởng dưới 400 dòng, không tính file sinh tự động) và giải quyết đúng một việc. Mô tả PR dùng các nhãn **Task** (Q1…, TR1…, xem [Kế hoạch §5.1](docs/chi-tiet/06-ke-hoach-quan-ly.md#51-phân-công)), **Environment**, **Tested** (đã kiểm thế nào, kết quả) và **Base** (với PR xếp chồng). Người review là **người còn lại**: từ W3 cần 1 approval, trả lời trong 48 giờ.
 - **Trước khi mở PR**, chạy:
   - `make lint` (yamllint, kustomize build, ansible syntax-check);
   - `pytest` và `ruff check` với gói Python đã sửa;

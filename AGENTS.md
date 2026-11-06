@@ -33,17 +33,18 @@ Cuối mỗi phiên làm việc, hoặc ngay sau khi xong một việc có ý ng
 ```markdown
 ## YYYY-MM-DD – <tiêu đề ngắn>
 
-- **Mã việc:** <Q1…Q7 / TR1…TR7 / chung> · **Môi trường:** <nhà / simulator / V0 / V1 / V2 / không>
-- **Đã làm:** các bước chính, theo thứ tự.
-- **Quyết định và lý do:** chọn gì, bỏ phương án nào, vì sao.
-- **Kết quả và số đo:** lệnh then chốt và output rút gọn, con số đo được (kèm đơn vị, điều kiện đo).
-- **Sự cố:** triệu chứng → nguyên nhân → cách sửa. Ghi cả việc thất bại hoặc bỏ dở.
-- **Khác thiết kế:** điểm nào làm khác tài liệu `docs/chi-tiet/`, vì sao.
-- **Liên kết:** commit, PR, issue, file chính đã sửa.
-- **Dùng cho luận văn:** mục nào (ví dụ §4.3, §5 cold start); hình hoặc ảnh chụp nên có.
+- **Task:** <Q1…Q8 / TR1…TR8 / chung> · **Environment:** <home / sim / V0 / V1 / V2 / none>
+- **Done:** các bước chính, theo thứ tự.
+- **Decision:** chọn gì, bỏ phương án nào, vì sao.
+- **Results:** lệnh then chốt và output rút gọn, con số đo được (kèm đơn vị, điều kiện đo).
+- **Incidents:** triệu chứng → nguyên nhân → cách sửa. Ghi cả việc thất bại hoặc bỏ dở.
+- **Deviations:** điểm nào làm khác tài liệu `docs/chi-tiet/`, vì sao.
+- **Links:** commit, PR, issue, file chính đã sửa.
+- **Thesis:** dùng cho mục nào (ví dụ §4.3, §5 cold start); hình hoặc ảnh chụp nên có.
 ```
 
-Bỏ dòng nào không có nội dung. Viết tiếng Việt, ngắn, sự kiện cụ thể.
+Bỏ dòng nào không có nội dung. Nội dung viết tiếng Việt, ngắn, sự kiện cụ thể; nhãn và thuật ngữ chuyên ngành giữ tiếng Anh (GPU replica, graceful shutdown, threshold…), không Việt hoá.
+Các mục ghi trước 06/11/2026 dùng nhãn tiếng Việt cũ (Mã việc, Môi trường, Đã làm…); giữ nguyên, không cần sửa lại.
 
 ### Quy tắc
 
