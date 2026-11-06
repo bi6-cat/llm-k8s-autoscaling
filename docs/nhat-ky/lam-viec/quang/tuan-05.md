@@ -217,3 +217,17 @@
 - **Deviations:** metric lưu `metrics.csv.gz` thay vì `metrics.parquet` (Môi trường §17) để không thêm pandas/pyarrow; đổi khi phân tích cần. Chưa có upload R2, systemd, Grafana annotation (để runner v2).
 - **Links:** nhánh `feat/runner`; `experiments/runner/`, `experiments/matrix-sim.yaml`, `experiments/tests/test_runner.py`, `.github/workflows/ci.yaml`.
 - **Thesis:** §3 (thiết kế runner: các bước một lượt, tiêu chí hợp lệ), §4.3 (quy trình đo tự động, tái lập được), T2/T3 trên simulator lần 2 qua runner.
+
+## 2026-11-06 – Runner chạy 1 lượt trên cluster nhà (vLLM thật, 0,5B)
+
+- **Task:** Q6 · **Environment:** home
+- **Done:** sau khi merge PR #12, xoá cluster kind (`make sim-down`) và khởi động lại PC để giải phóng RAM. Thêm `experiments/matrix-home.yaml` (session `home-smoke`: S1 cố định 1 replica, CONST 2 req/s × 180 s, API key qua Secret `vllm-api-key`). Chạy runner với `KUBECONFIG=~/.kube/llm-home.yaml`. Xong thì scale vLLM về 0.
+- **Decision:** chỉ chạy S1 vì RAM của PC chỉ an toàn cho 1 pod vLLM; A2 ở nhà cần 2 pod nên để V0+V1. `reset_timeout_s` 900 s (gấp đôi cold start đo hôm trước).
+- **Results:**
+  - Lượt `S1-CONST-1` 15:43:40 → 15:51:00 (7 phút 20 giây), `done`, `valid: true`, không can thiệp tay.
+  - Cold start: pod Scheduled 15:43:40 → runner thấy Ready 15:46:11, **≈ 151 s** (độ phân giải theo chu kỳ kiểm của runner), nhanh hơn nhiều so với 400 s đo lúc 21:42 ngày 05/11 (giờ UTC). Lần này máy vừa khởi động lại, RAM khả dụng 8,9 GB; lần trước máy đang chật RAM. Chưa xác định nguyên nhân, để Q4 đo kỹ 8 pha.
+  - 357/357 request HTTP 200, 256 token đầu ra mỗi request. TTFT p50 28 ms, p99 47 ms; thời gian cả request p50 0,92 s, p99 1,02 s. `vllm:num_requests_running` tối đa 5, không có hàng đợi.
+  - Máy tạo tải: lệch lịch p99 1,7 ms, CPU tối đa 11,8 %. Khoảng trống scrape tối đa 5 s. `nvidia_smi_utilization_gpu_ratio` = 1 trong hầu hết phase chính (chỉ số này đo tỉ lệ thời gian có kernel chạy, không phải mức tận dụng GPU).
+  - RAM khả dụng còn ~5,0 GB khi pod chạy; RAM container vLLM tối đa 3,59 GiB.
+- **Links:** `experiments/matrix-home.yaml`; dữ liệu `runs/home-smoke/` trên PC (chưa đẩy R2).
+- **Thesis:** §4.3 (runner chạy trên GPU thật, cùng code với kind), §5 cold start (151 s so với 400 s: ảnh hưởng của áp lực RAM, cần kiểm chứng).
