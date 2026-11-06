@@ -1,15 +1,27 @@
 # ──────────────────────────────────────────────────────────────────────────────
 # serving/overlays/sim/kustomization.yaml
-# Khái niệm: Overlay `sim` = cùng base nhưng thay vLLM bằng simulator (llm-d-inference-sim).
-# Mục đích:  Thử autoscaling trên laptop không cần GPU, với ĐÚNG Deployment/Service/PodMonitor như thật.
-#            Nhờ vậy kết quả T1–T5 trên simulator áp dụng được cho vLLM thật.
-# Dùng:      make sim-up (áp bằng kubectl, không qua Argo CD)
-# Tham khảo: docs/huong-dan/w2.md §9.1
+# Khái niệm: Overlay `sim` = dùng lại đúng base của vLLM (Deployment, Service, PodMonitor) nhưng thay
+#            vLLM bằng llm-d-inference-sim, một chương trình giả lập API và metric của vLLM, chạy
+#            trên CPU, không cần GPU.
+# Mục đích:  Thử autoscaling, cảnh báo và runner trên kind (máy dev) trước khi dùng GPU thật. Vì giữ
+#            nguyên tên Deployment `vllm`, nhãn `app: vllm`, cổng `http` và tên metric `vllm:*`, mọi
+#            thứ chạy được trên simulator cũng trỏ đúng vào vLLM thật ở nhà và trên VM.
+# Dùng:      kubectl --context kind-llm-sim apply -k serving/overlays/sim
+# Tham khảo: docs/huong-dan/w2.md §9.1, Môi trường §3 (tầng simulator)
 # ──────────────────────────────────────────────────────────────────────────────
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - ../../base
+# Đổi image theo tên: mọi container dùng `vllm/vllm-openai` (tên ghi trong base) được thay bằng image
+# simulator. Ghim theo digest như mọi image khác (CONTRIBUTING §2); base đã ghim digest của vLLM thật,
+# `images:` ở overlay ghi đè cả tên, tag và digest.
+images:
+  - name: vllm/vllm-openai
+    newName: ghcr.io/llm-d/llm-d-inference-sim
+    newTag: v0.12.0
+    # Digest đọc bằng `docker image inspect` ngày 04/11/2026 (bản linux/amd64)
+    digest: sha256:c6838d8616c9818f4cdb0e9ef7597e483a71c081b869d34c7eafac1481d76c60
 patches:
   - path: patch-sim.yaml
     target: {kind: Deployment, name: vllm}

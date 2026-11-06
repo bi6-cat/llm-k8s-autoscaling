@@ -61,3 +61,80 @@
 - **Khác thiết kế:** mất phiên dự phòng V3; đóng băng dữ liệu 22/11 thay vì 15/11.
 - **Liên kết:** `docs/chi-tiet/06-ke-hoach-quan-ly.md`, `docs/chi-tiet/05-moi-truong-danh-gia.md`, `docs/nhat-ky/tuan-05.md`.
 - **Dùng cho luận văn:** §1 hoặc phụ lục quản lý dự án: ví dụ áp dụng kế hoạch dự phòng (§8) khi trễ mốc.
+
+## 2026-11-04 – Vòng autoscaling chạy local trên kind: simulator, Prometheus, KEDA, A2, máy tạo tải
+
+- **Mã việc:** Q3 (overlay `sim`), thử chéo TR2, TR3, TR5 · **Môi trường:** simulator (kind trên máy dev Linux, 12 lõi, 15 GB RAM)
+- **Đã làm:**
+  1. Kéo image `llm-d-inference-sim:v0.12.0`, đọc `--help` để đối chiếu cờ với bản nháp `serving/overlays/sim`. Lấy digest bằng `docker image inspect`.
+  2. Sửa `serving/overlays/sim`: ghim image theo digest qua `images:` của kustomization (bản cũ ghi tag thẳng trong patch, trái CONTRIBUTING §2); bỏ cờ `--force-dummy-tokenizer` (deprecated ở v0.12.0); viết lại comment. Ghi digest vào `docs/phien-ban.md`.
+  3. Dựng môi trường thử bằng file nháp của `temp/w2-scaffold` chép ra thư mục tạm (không commit, vì `infra/kind`, `platform/*`, `autoscaling/` là phần TR2, TR3 của Trình đang làm ở `feat/tr2-sim`): kind 3 node (`kind-config.yaml`, HPA sync 5 s), kube-prometheus-stack 92.1.1, KEDA 2.21.0, ScaledObject A2 overlay `sim` (max 3, threshold 10), theo đúng các bước của `make sim-up` trong scaffold.
+  4. Cài `uv` 0.13.7 bằng `pipx`; `pytest` của `loadgen`: 41 passed trên Python 3.14 (Linux).
+  5. Lượt 1: máy tạo tải chạy trên máy dev, gọi qua `kubectl port-forward svc/vllm`. Lượt 2: máy tạo tải chạy trong pod `python:3.12-slim` (CPU 1, RAM 512 Mi, request = limit) trong namespace `llm-serving`, gọi `http://vllm.llm-serving.svc:8000`.
+- **Quyết định và lý do:**
+  - Không commit môi trường thử, chỉ commit phần thuộc Q3, để không làm trùng và xung đột với nhánh chưa push của Trình. Kết quả dưới đây vẫn dùng được làm bằng chứng cho mục M1 "A2 scale 1 → 3 trên simulator".
+  - Chọn tải CONST 2 req/s, `max_tokens` 256 để dự đoán trước được: mỗi request ≈ 0,2 + 256 × 0,05 = 13 s, theo định luật Little số request đồng thời L = λW ≈ 26, A2 tính desired = ⌈26 / 10⌉ = 3.
+- **Kết quả và số đo:**
+  - Simulator: `/v1/models` trả `qwen2.5-1.5b`, `max_model_len` 4096; streaming có chunk `usage` cuối cùng khi gửi `stream_options.include_usage`; `ignore_eos` cho đúng 256 token. Prometheus scrape target `llm-serving/vllm` mỗi 5 s, metric có nhãn `namespace`, `pod`, `model_name`.
+  - **Lượt 2 (trong cluster, CONST 2 req/s × 180 s):** 357/357 request, 0 lỗi; tự kiểm tra hợp lệ (lệch lịch p99 1,4 ms; CPU tối đa 9 % một lõi; không bị throttle). HPA quyết định 3 replica ở giây 16, 3 pod Ready ở giây 32. Giá trị trung bình mỗi pod ở trạng thái ổn định 7–11 (dự đoán 26 / 3 ≈ 8,7). TTFT p99 của request gửi trong 30 s đầu: 19,3 s (xếp hàng trên 1 pod trước khi scale xong); request gửi từ giây 60: TTFT p99 0,205 s (= độ trễ giả 200 ms). E2E p50 13,2 s.
+  - **Scale-down:** metric về 0, khoảng 5 phút sau HPA giảm 3 → 2, 60 s sau giảm 2 → 1, đúng `stabilizationWindowSeconds: 300` và chính sách 1 pod/60 s của A2.
+- **Sự cố:**
+  - Lượt 1 (qua `port-forward`): cả 357 request vào **một** pod (Prometheus: `increase(vllm:request_success_total[15m])` chỉ có pod đầu tiên), dù HPA đã lên 3 replica; TTFT p50 47 s, 5 request timeout ở 120 s. Nguyên nhân: `kubectl port-forward svc/…` chọn một pod của Service lúc bắt đầu rồi chỉ chuyển tới pod đó, không cân bằng tải. Cách sửa: chạy máy tạo tải trong cluster, gọi Service. Đúng với thiết kế Môi trường §3.6 (máy tạo tải là pod trong cluster); không đo bằng `port-forward`.
+  - Request timeout giữa luồng vẫn ghi `status=200` trong `requests.csv` (header 200 đã về trước khi bị cắt), lỗi nằm ở cột `error`. Khi phân tích phải lọc theo `error`, không theo `status`. Báo Trình (TR5, TR7).
+  - `kind load docker-image python:3.12-slim` lỗi `content digest … not found` (image nhiều kiến trúc); pod vẫn tự kéo image từ Docker Hub nên không ảnh hưởng.
+- **Khác thiết kế:**
+  - KEDA cảnh báo khi áp A2: `pollingInterval` không ảnh hưởng tới scale khi `minReplicaCount ≥ 1`. Khi đó HPA hỏi metric server của KEDA mỗi chu kỳ sync (5 s trên kind và k3s), KEDA truy vấn Prometheus ngay lúc đó. Comment "KEDA hỏi Prometheus mỗi 5 s" trong A2 của scaffold chưa đúng; báo Trình sửa ở `feat/tr2-sim`.
+  - Pod máy tạo tải lần này cài `httpx` bằng `pip` lúc chạy, chưa có image riêng ghim digest (còn thiếu của TR5).
+- **Liên kết:** `serving/overlays/sim/`, `docs/phien-ban.md` (nhánh `feat/serving-sim`).
+- **Dùng cho luận văn:** §4.4 (autoscaling trên simulator), §5 (kiểm chứng định luật Little: L dự đoán 26, đo ≈ 3 × 8,7); bài học "port-forward không cân bằng tải" cho phần phương pháp đo. Hình nên có: chuỗi thời gian replica và giá trị metric của lượt 2 (đã lưu tạm, cần vẽ lại từ Prometheus khi có runner).
+
+## 2026-11-05 – LT1 trên RTX 5060, ĐG1-mini ở nhà, `capacity-home.json` tạm
+
+- **Mã việc:** Q8 (LT1, LT2, LT3), Q6 (ĐG1-mini) · **Môi trường:** nhà (từ xa qua Tailscale, `kubectl`)
+- **Đã làm:**
+  1. Thấy pod vLLM bị thay khoảng 01:25 do k3s tự khởi động lại; ghi sự cố vào `docs/nhat-ky/van-hanh.md`, chưa rõ nguyên nhân.
+  2. LT1: `vllm bench serve` chạy trong pod vLLM (API key lấy từ biến môi trường của pod, không in ra), `--max-concurrency 1 --num-prompts 20`, random 512/256, `--ignore-eos`, `--seed 1`; kiểm thông số bộ nhớ bằng `nvidia-smi`.
+  3. ĐG1-mini: tạo pod `loadgen` (`python:3.12-slim` ghim digest, CPU 1 / RAM 512 Mi request = limit, `LOADGEN_API_KEY` lấy từ Secret `vllm-api-key`), chép `loadgen/` và script tạm `dg1_mini.py` vào pod. Script quét λ = 1, 2, … req/s ở chế độ CONST, mỗi mức 60 s làm ấm + 120 s đo, lấy mẫu `vllm:num_requests_running|waiting`, `vllm:kv_cache_usage_perc` và GPU exporter mỗi 2 s; dừng khi TTFT p95 > 7,5 s hoặc hàng đợi trung bình > 32.
+  4. Ghi `experiments/capacity-home.json`; ghi LT1, LT2 (KV lúc tải cao), LT3 vào `van-hanh.md`; cập nhật ghi chú checklist Kế hoạch §3. Dữ liệu thô ở `runs/dg1-mini-home-20261105/` (gitignore, chỉ trên máy dev).
+- **Quyết định và lý do:**
+  - Gọi vLLM qua Service từ pod trong cluster, vì đã thấy `port-forward` chỉ nối một pod (mục 04/11). Với 1 replica thì không lệch, nhưng giữ cùng cách đo cho mọi phép.
+  - Mỗi mức đo 120 s thay vì 4 phút, bước λ = 1 thay vì 0,25 quanh điểm gãy, để ĐG1-mini nằm trong ~30 phút như Thông số §8.3. Số liệu chỉ là target tạm.
+  - C chọn = 6 req/s: mức lớn nhất có SLO attainment ≥ 95 % (100 %, TTFT p95 1,35 s). λ = 7 chỉ đạt 28 %.
+  - Threshold A2 tạm = 0,8 × B\* = 0,8 × 26,8 ≈ 21 (Kiến trúc §11).
+- **Kết quả và số đo:**
+  - LT1: TPOT p50 8,68 ms, p99 8,69 ms (dự đoán 8,3–9,6 ms; cận dưới 6,9 ms); băng thông hiệu dụng ≈ 356 GB/s ≈ 79 % của 448 GB/s (`clocks.max.memory` 14.001 MHz, GDDR7, bus 128 bit theo thông số hãng).
+  - ĐG1-mini (đã dừng sau λ = 8 vì hàng đợi > 32): C = 6 req/s; B\* = 26,8; GPU util tại C 100 %; KV-cache tại C 19 %. TPOT p50 tăng từ 8,9 ms (λ = 1) lên 18,1 ms rồi đứng yên khi số request chạy chạm `max-num-seqs` = 32. 0 lỗi HTTP ở mọi mức. Little (với λ thực trong cửa sổ): lệch ≤ 2 % ở λ = 1–7.
+  - Máy tạo tải tự kiểm tra: lệch lịch p99 ≤ 2,3 ms, CPU ≤ 17,4 % một lõi ở mọi mức.
+- **Sự cố:**
+  - Script lần đầu tính `n_meas = 0`: `requests.csv` ghi thời gian **tương đối** (giây từ đầu lượt), còn mẫu metric ghi giờ Unix; trừ nhầm hai loại. Sửa hàm thống kê và tính lại từ dữ liệu thô (không phải chạy lại). Hệ quả phụ: điều kiện dừng theo TTFT không chạy (NaN), lượt quét dừng nhờ điều kiện hàng đợi.
+  - Máy tạo tải đánh dấu lượt λ = 6 và λ = 8 **không hợp lệ** vì cgroup throttle đúng 1 chu kỳ (4,4 ms và 1,4 ms trên ~1.800–2.000 chu kỳ). Nghi do luồng lấy mẫu của script chạy chung pod, chung giới hạn 1 lõi. Ảnh hưởng tới số đo không đáng kể (lệch lịch p99 2,1 ms) nhưng vẫn ghi là không hợp lệ.
+  - Không SSH được vào PC: máy dev chưa có host key cho IP Tailscale; không tự chấp nhận.
+- **Khác thiết kế:**
+  - ĐG1-mini rút gọn (bước 1 req/s, 120 s đo) như trên. Cần đo lại λ = 5,75–7 bước 0,25, với luồng lấy mẫu ở ngoài pod máy tạo tải hoặc pod 2 lõi.
+  - Tiêu chí `throttle_ok` (`nr_throttled == 0`) rất chặt: 1 chu kỳ 4 ms cũng loại cả lượt. Đề xuất Trình xem có nên đặt ngưỡng theo `throttled_usec` (ví dụ < 0,1 % thời gian lượt), cần chốt ở Môi trường §17.
+  - Script `dg1_mini.py` là script tạm (chưa có test), giữ ở `runs/` trên máy dev; runner Q6 sẽ thay.
+- **Liên kết:** `experiments/capacity-home.json`, `docs/nhat-ky/van-hanh.md` (LT1, LT2, LT3, sự cố 05/11), `docs/chi-tiet/06-ke-hoach-quan-ly.md` §3 (nhánh `feat/serving-sim`).
+- **Dùng cho luận văn:** chương 5 mục kiểm chứng lý thuyết (LT1 trọn mẫu, LT3 bảng và đường cong, LT2 phần KV lúc tải cao); dữ liệu cho LT5, LT6 của Trình; §4.11 năng lực (minh hoạ quy trình ĐG1 trên GPU nhà). Hình nên có: TTFT p95 và TPOT p50 theo λ, B theo λ (có thể vẽ từ `curves` trong `capacity-home.json`).
+
+## 2026-11-05 – Cập nhật trang tiến độ, tìm ra PC treo khi suspend
+
+- **Mã việc:** chung, Q1 · **Môi trường:** nhà (đọc log trên PC, `kubectl`)
+- **Đã làm:**
+  1. Cập nhật trang web tiến độ (artifact riêng tư trên claude.ai) từ bản 04/11: thêm bảng "thay đổi so với 04/11", trạng thái vòng autoscaling trên kind, C = 6 req/s, LT1–LT3, việc tiếp theo.
+  2. Kiểm cluster nhà: vLLM 1/1 sau lượt boot 11:17; còn 5 pod vLLM cũ và pod `loadgen` ở `Unknown`/`Completed`.
+  3. Đọc `journalctl --list-boots`, `journalctl -b -1`, `-b -2`, `-b -4` để xem các lượt boot kết thúc thế nào.
+- **Kết quả và số đo:**
+  - Lệnh suspend 03:16 treo ở `nvidia-suspend`, máy boot lại 11:17. Ghi ở `van-hanh.md`.
+  - Vụ "k3s tự khởi động lại 05/11" thực ra là PC tắt bình thường lúc 19:32 ngày 04/11 rồi bật lại khoảng 02:01; RTC lúc boot lệch 7 giờ. Đã bổ sung vào mục sự cố đó trong `van-hanh.md`.
+  - k3s tự lên sau mỗi lượt boot, tức drop-in chờ Tailscale (mục 02/11) đã chạy thật.
+- **Quyết định và lý do:** không suspend PC khi đang chạy vLLM; chưa dọn pod `Unknown` (chờ Quang đồng ý thao tác trên cluster).
+- **Liên kết:** `docs/nhat-ky/van-hanh.md`.
+- **Dùng cho luận văn:** §3.6 hoặc chương 5 phần hạn chế của môi trường nhà (máy cá nhân, dual-boot, nguồn điện, suspend).
+
+## 2026-11-05 – Thử xin quota GPU trên GCP: không đủ điều kiện
+
+- **Mã việc:** Q2 · **Môi trường:** GCP (console)
+- **Đã làm:** xin quota Compute Engine `GPUs (all regions)` = 2 và `NVIDIA L4 GPUs` ở `asia-southeast1` = 2.
+- **Kết quả:** cả hai bị chặn ngay trong form: "Enter a new quota value between 0 and 0. Based on your service usage history, you are not eligible for a quota increase at this time", gợi ý liên hệ Sales. Không gửi được yêu cầu.
+- **Quyết định và lý do:** chưa quyết. Đề xuất coi Vast là phương án cloud duy nhất cho V0+V1 và V2, vì GCP cần lịch sử dùng mới được xin GPU mà không còn thời gian trước 11/11. Cần chốt K6 trong ADR-004.
+- **Dùng cho luận văn:** phần hạn chế, lý do chọn nền tảng thuê GPU (§3.2 Môi trường).
