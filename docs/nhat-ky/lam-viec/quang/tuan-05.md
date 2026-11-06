@@ -217,3 +217,32 @@
 - **Deviations:** metric lưu `metrics.csv.gz` thay vì `metrics.parquet` (Môi trường §17) để không thêm pandas/pyarrow; đổi khi phân tích cần. Chưa có upload R2, systemd, Grafana annotation (để runner v2).
 - **Links:** nhánh `feat/runner`; `experiments/runner/`, `experiments/matrix-sim.yaml`, `experiments/tests/test_runner.py`, `.github/workflows/ci.yaml`.
 - **Thesis:** §3 (thiết kế runner: các bước một lượt, tiêu chí hợp lệ), §4.3 (quy trình đo tự động, tái lập được), T2/T3 trên simulator lần 2 qua runner.
+
+## 2026-11-06 – ĐG1-mini với 0,5B bằng runner: C = 12,5 req/s
+
+- **Task:** Q6 · **Environment:** home
+- **Done:**
+  1. Sửa runner: `run_id` của CONST kèm tốc độ (`S1-CONST4-1`) để một phiên quét nhiều mức λ; CPU máy tạo tải chỉnh được trong file ma trận (`loadgen_cpu`, lần này 2 lõi).
+  2. Thêm `experiments/runner/capacity.py`: đọc phiên runner, tính SLO attainment, TTFT/TPOT p50/p95, B (Prometheus và log client), KV-cache, GPU util cho từng mức; kiểm Little; chọn C, B\*, threshold A1–A3. Thay script tạm `dg1_fix.py`. 2 unit test mới (27/27).
+  3. Phiên `dg1-home-05b` (`experiments/matrix-dg1-home.yaml`): S1, CONST mỗi mức 180 s (bỏ 60 s đầu, đo 120 s), λ = 2–14 bước 2 (17:03–17:36), rồi thêm 12,5 / 13 / 13,5 và chạy lại phiên, runner bỏ qua 7 lượt đã xong (17:36–17:50). Xong thì scale vLLM về 0.
+  4. Giữ bản 1,5B ngày 05/11 thành `experiments/capacity-home-1.5b.json` (LT1–LT3, LT5/LT6 dùng), ghi bản mới vào `capacity-home.json`; sửa các chỗ tham chiếu; tích mục ĐG1-mini của M2.
+- **Results:** 10/10 lượt `done`, hợp lệ; máy tạo tải không bị throttle (CPU tối đa 25,5 % ở λ = 10), 0 request lỗi.
+
+  | λ (req/s) | SLO | TTFT p95 | TPOT p95 | B (Prometheus / Little) | waiting TB |
+  |---|---|---|---|---|---|
+  | 2 | 100 % | 0,038 s | 3,7 ms | 2,1 / 1,8 | 0 |
+  | 6 | 100 % | 0,042 s | 4,5 ms | 6,5 / 6,2 | 0 |
+  | 10 | 100 % | 0,335 s | 5,0 ms | 11,7 / 12,3 | 0,4 |
+  | 12 | 100 % | 1,568 s | 5,0 ms | 21,4 / 20,7 | 6,0 |
+  | 12,5 | 99,0 % | 2,315 s | 5,1 ms | 28,4 / 27,9 | 12,9 |
+  | 13 | 6,9 % | 7,04 s | 5,1 ms | 68,2 / 72,1 | 52,3 |
+  | 14 | 0 % | 20,5 s | 5,1 ms | 182 / 209 | 166 |
+
+  - **C = 12,5 req/s, B\* = 28,4, threshold A2 tạm = 23** (0,8 × B\*), A3 = 0,066; A1 giữ 70 %.
+  - Ở λ = 12 hàng đợi dao động 0–19 nhưng liên tục về 0; ở 12,5 dao động 0–30, có xu hướng tăng cuối cửa sổ; từ 13 tăng liên tục. C = 12,5 là sát biên (TTFT p95 2,32 s so với SLO 2,5 s).
+  - Little khớp trong 15 % ở mọi mức trừ λ = 2 (2,1 so với 1,8, số nhỏ nên mẫu 5 s lệch nhiều).
+  - TPOT gần như không đổi (3,7 → 5,1 ms) và KV-cache chỉ 8,5 % khi bão hoà: năng lực bị chặn bởi `max-num-seqs` 16 (request thứ 17 trở đi phải xếp hàng), không phải băng thông hay VRAM. `nvidia_smi_utilization_gpu_ratio` đã = 1 từ λ = 6, tức A1 (70 %) sẽ scale từ khoảng λ ≈ 3, quá sớm.
+- **Decision:** lấy C theo đúng quy tắc (λ lớn nhất còn đạt SLO) = 12,5, ghi rõ trong `note` là sát biên và λ = 12 ổn định hơn. Không đổi `max-num-seqs` lúc này: muốn tăng năng lực ở nhà thì phải đo lại cả phiên; để Quang và Trình quyết.
+- **Deviations:** chưa đối chiếu một mức với `vllm bench serve` (Môi trường §8 bước 7).
+- **Links:** nhánh `feat/dg1-home-05b`; `experiments/runner/capacity.py`, `experiments/matrix-dg1-home.yaml`, `experiments/capacity-home.json`, `experiments/capacity-home-1.5b.json`.
+- **Thesis:** §5.2 phương pháp ĐG1 (ví dụ ở nhà, đường cong TTFT theo λ), LT3 (điểm gãy do `max-num-seqs`, không do bộ nhớ: lặp lại kết luận của 1,5B), LT6/A1 (GPU util bão hoà sớm, Trình).
