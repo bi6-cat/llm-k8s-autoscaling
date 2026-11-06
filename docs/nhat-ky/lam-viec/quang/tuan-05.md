@@ -179,3 +179,12 @@
 - **Khác thiết kế:** nhà chỉ 2 GPU replica và tạm thời chỉ chạy được 1 pod vLLM (RAM). Các thành phần đang cài bằng helm/kubectl, chưa qua Argo CD.
 - **Liên kết:** nhánh `feat/m1-home-rebuild` (chồng trên `feat/home-timeslicing`); `platform/argocd/project-default.yaml`, `infra/ansible/roles/argocd-bootstrap/tasks/main.yml`, `serving/overlays/home/patch-vllm.yaml`, `platform/gpu/device-plugin-values-home.yaml`; log Ansible `~/k3s-rebuild-*.log` trên PC.
 - **Dùng cho luận văn:** §4.1 (dựng lại từ máy trắng bằng Ansible: 29 s cho k3s; tiền đề cho VH5/N8), §4.2 (bẫy Argo CD core thiếu AppProject), §5 hạn chế (GPU sharing ở nhà giới hạn bởi RAM, không phải VRAM), T2/T3 trên simulator.
+
+## 2026-11-06 – Chạy được 2 pod vLLM chung một RTX 5060
+
+- **Mã việc:** Q1, Q3 · **Môi trường:** nhà (PC)
+- **Đã làm:** sau khi PC khởi động lại (10:19), chạy watchdog RAM bằng root: mỗi 2 s đọc `MemAvailable`, dưới 700 MB thì `k3s crictl stop` container vLLM mới nhất rồi scale về 1. Scale vLLM lên 2 lúc 10:45:45. Gửi 40 request song song qua Service.
+- **Kết quả và số đo:** pod thứ hai Ready sau ~141 s; watchdog không phải ra tay. RAM khả dụng 5182 MB trước khi scale → ~1,7–1,9 GB khi có 2 pod; VRAM 2,6 → 5,7 GB/8 GB; load average ≤ 1,0. 40/40 request HTTP 200; Prometheus `vllm:request_success_total`: 26 và 14 request ở hai pod (kube-proxy chọn ngẫu nhiên). RAM mỗi pod ~3,7 GiB khi rảnh.
+- **Sự cố:** đêm qua `sudo pkill -9` vLLM báo `Permission denied` vì container chạy dưới profile AppArmor `cri-containerd`, chặn tín hiệu từ ngoài kể cả root; phải dừng qua containerd (`crictl stop`).
+- **Quyết định và lý do:** giữ 2 GPU replica. Hai pod chạy được nếu RAM khả dụng trước khi scale ≥ ~5 GB; dư sau đó chỉ ~1,7 GB nên vẫn cần kiểm `free -m` và nên chạy watchdog. Khác với lần treo đêm qua chủ yếu ở RAM khả dụng lúc bắt đầu (~3 GB so với ~5,2 GB).
+- **Dùng cho luận văn:** §4.1 (GPU sharing bằng time-slicing: 2 replica trên 1 GPU 8 GB, cân bằng tải qua Service), §5 hạn chế (mỗi replica tốn ~3,5 GiB RAM cố định, RAM hết trước VRAM).
