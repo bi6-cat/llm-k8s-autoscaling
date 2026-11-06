@@ -47,10 +47,10 @@
 # pod; limits.memory: vượt thì bị kill (OOM). Đo 06/11 (`kubectl top pod`): một pod vLLM 0,5B dùng
 # ~3,3–3,4 GiB RAM lúc khởi động, nên request 3,5Gi và limit 5Gi để còn khoảng dư. Giữ nvidia.com/gpu
 # (= 1 GPU replica) trong limits vì `replace` thay cả khối resources của base.
-# Lưu ý (06/11): 2 pod vừa VRAM nhưng KHÔNG vừa RAM khi PC còn chạy desktop (GNOME, VS Code…, ~4–5 GB):
-# pod thứ 2 đẩy RAM khả dụng xuống ~0,4 GB, máy không có swap nên thrash (đọc lại code từ đĩa
-# 0,4–1,2 GB/s), API server timeout và PC treo tới khi khởi động lại. Chưa chạy 2 pod ở nhà cho tới khi
-# giải quyết RAM (tắt desktop, thêm zram, hoặc giảm thành phần giám sát).
+# Lưu ý (06/11): 2 pod sát giới hạn RAM của PC khi còn chạy desktop (GNOME, VS Code…, ~4–5 GB).
+# Chạy được khi trước lúc scale còn ≥ ~5 GB RAM khả dụng (sau đó còn ~1,7 GB). Lần thử khi chỉ còn
+# ~3 GB thì máy không có swap nên thrash, API server timeout và PC treo tới khi khởi động lại
+# (docs/nhat-ky/van-hanh.md). Trước khi lên 2 pod: kiểm `free -m`, và nên chạy watchdog RAM.
 - op: replace
   path: /spec/template/spec/containers/0/resources
   value:
