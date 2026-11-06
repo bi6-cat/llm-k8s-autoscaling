@@ -152,3 +152,30 @@
 - **Khác thiết kế:** model nhà 1,5B → 0,5B; nhà có 3 GPU replica thay vì 1–2 GPU thật; VH3 drain node chỉ làm trên simulator. LT1–LT3 và `experiments/capacity-home.json` là số đo của 1,5B trước ngày đổi, nên ngưỡng A2 ở nhà phải đo lại. A1 (theo GPU util của cả card) không có nghĩa ở nhà khi có > 1 pod.
 - **Liên kết:** nhánh `feat/home-timeslicing`; `platform/gpu/device-plugin-values-home.yaml`, `serving/overlays/home/patch-vllm.yaml`, ADR-004 §7.
 - **Dùng cho luận văn:** §4.1 (môi trường nhà, GPU sharing bằng time-slicing), phần hạn chế (nhà không cô lập GPU nên không đo hiệu năng).
+
+## 2026-11-06 – Dựng lại cluster nhà sau khi cài lại hệ điều hành; chạy thử M1
+
+- **Mã việc:** Q1, Q3 (kèm phần nháp của TR1, TR2, TR3 để Trình review) · **Môi trường:** nhà (PC), simulator (kind trên PC)
+- **Đã làm:**
+  1. Quang cài lại Ubuntu 26.04.1 lên NVMe lúc 23:08 ngày 05/11 (ổ cũ SATA `sda5` còn nguyên). Mount `sda5` chỉ đọc: repo cũ sạch, không có commit chưa push; chép `runs/` (dữ liệu thô ĐG1-mini 05/11 và lượt A2 04/11, 632 KB) về repo mới. Không chép cache model 1,5B (3 GB) vì nhà đã chuyển sang 0,5B.
+  2. Lấy từ `temp/w2-scaffold` các file nháp còn thiếu: kind config, values kube-prometheus-stack và KEDA, ScaledObject A2, App-of-Apps nhà. Commit từng nhóm trên nhánh `feat/m1-home-rebuild`; thêm values time-slicing vào Application `gpu-device-plugin`.
+  3. Kind: `make sim-up` 188 s; bài T2/T3 với Job 25 vòng curl gọi Service.
+  4. Cài Tailscale 1.104.5 từ kho apt có ký số (script cài bị auto mode chặn); IP mới `100.120.67.28`, tên `zorsche-upc`. Sửa inventory.
+  5. Ansible dựng k3s, rồi bằng helm/kubectl: kube-prometheus-stack, device plugin (time-slicing), GPU exporter, KEDA, PodMonitor Traefik, vLLM overlay `home`. Chạy lại playbook với `argocd_enabled` để cài Argo CD core và Application gốc.
+- **Kết quả và số đo:**
+  - T2/T3 trên kind (threshold 10, max 3): HPA quyết định 3 replica ở t = 17 s, 3 pod Ready ở t = 27 s; metric mỗi pod 6,3–10,3 khi có tải; hết tải ở t ≈ 200 s, giảm 3 → 2 ở t = 487 s, 2 → 1 ở t = 548 s (đúng window 300 s và 1 pod/60 s).
+  - Ansible: lần 1 lỗi sau 53 s (xem Sự cố), lần 2 dựng xong k3s `v1.36.5+k3s1` trong **29 s**, node Ready trên IP Tailscale, có RuntimeClass `nvidia`. kube-prometheus-stack 59 s. Node báo `nvidia.com/gpu` = 3, sau đó sửa về 2.
+  - Prometheus scrape được GPU exporter, Traefik, vLLM (5 s) và các thành phần cluster. Qua Ingress `llm.home`: 3/3 request HTTP 200, TTFB 0,06–0,11 s; Traefik đếm đúng 3 request mã 200.
+  - vLLM 0,5B: không có key → 401, có key → stream được. Image `v0.31.0` 9,0 GB kéo trong 4 phút 14 giây. Với `gpu-memory-utilization` 0,40: 3186 MiB VRAM, KV-cache 1,81 GiB (158.448 token, đồng thời tối đa 77× ở 2048 token), RAM pod ~3,3–3,4 GiB. Cold start 400 s (tạo pod 21:42:03 → Ready 21:48:43 UTC) dù image, model và compile cache đã có; riêng `init engine` 354 s, chậm hơn nhiều so với 155 s của 1,5B trước đây, chưa rõ vì sao.
+  - Argo CD core chạy; Application gốc báo `platform/argocd/apps/home: app path does not exist` vì thư mục chưa có trên `main`. Đúng dự kiến: sẽ tự sync sau khi merge chuỗi PR.
+- **Sự cố:**
+  - Ansible lần 1 lỗi `Failed to update apt cache`: mình đặt `umask 077` trong shell để tạo file mật khẩu, umask lan sang Ansible nên khoá GPG kho NVIDIA và `/etc/sysctl.d/90-k8s.conf` có quyền 600, `apt` (user `_apt`) không đọc được. Sửa về 644, chạy lại. Bài học: chỉ đặt umask trong subshell.
+  - Argo CD core không có argocd-server nên không có AppProject `default`: Application gốc bị từ chối. Thêm `platform/argocd/project-default.yaml`, role `argocd-bootstrap` áp trước Application gốc.
+  - Secret API key tạo bằng `--from-file` dính ký tự xuống dòng; tạo lại bằng `--from-literal`. Key mới cất ở `~/.config/llm-k8s/vllm-api-key` (ngoài repo).
+  - `gpu-memory-utilization` 0,25 không đủ: sau ~45 phút vLLM thoát với `No available memory for the cache blocks`. Lần đó capture CUDA graph mất 30 s/graph vì máy quá tải (hai pod cùng giải nén image, load average tới 241); lần sau chỉ 1 s.
+  - Pod vLLM bị xoá khi đang kéo image kẹt `Terminating` cho tới khi kéo xong (> 5 phút, quá grace period 180 s). Liên quan việc Q5 "pod đang khởi tạo không thoát khi nhận SIGTERM".
+  - **Scale lên 2 pod làm PC hết RAM** (chi tiết ở `van-hanh.md`): máy treo nhiều giờ, khởi động lại khoảng 10:19. Sau khi lên lại, Deployment vẫn lưu 2 replica nên 2 pod lại cùng khởi động; scale về 1 ngay.
+- **Quyết định và lý do:** giữ IP Tailscale mới thay vì đổi về `100.73.95.48`: cluster mới có chứng chỉ mới nên Trình đằng nào cũng cần kubeconfig mới, còn đổi IP sau khi k3s chạy có thể gây crash loop như 02/11. Time-slicing 2 replica thay vì 3, `gpu-memory-utilization` 0,40, RAM request 3,5Gi/limit 5Gi, theo số đo. Không push theo dặn của Quang; Argo CD trỏ `main` như thiết kế.
+- **Khác thiết kế:** nhà chỉ 2 GPU replica và tạm thời chỉ chạy được 1 pod vLLM (RAM). Các thành phần đang cài bằng helm/kubectl, chưa qua Argo CD.
+- **Liên kết:** nhánh `feat/m1-home-rebuild` (chồng trên `feat/home-timeslicing`); `platform/argocd/project-default.yaml`, `infra/ansible/roles/argocd-bootstrap/tasks/main.yml`, `serving/overlays/home/patch-vllm.yaml`, `platform/gpu/device-plugin-values-home.yaml`; log Ansible `~/k3s-rebuild-*.log` trên PC.
+- **Dùng cho luận văn:** §4.1 (dựng lại từ máy trắng bằng Ansible: 29 s cho k3s; tiền đề cho VH5/N8), §4.2 (bẫy Argo CD core thiếu AppProject), §5 hạn chế (GPU sharing ở nhà giới hạn bởi RAM, không phải VRAM), T2/T3 trên simulator.
