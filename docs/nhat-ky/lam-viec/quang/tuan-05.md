@@ -198,3 +198,22 @@
 - **Decision:** giữ trunk-based theo CONTRIBUTING §7 (PR thẳng vào `main`, Argo CD đọc `main`); nhánh `dev` cũ (đi sau `main` 74 commit) không dùng. Từ nay không `helm upgrade` cluster nhà, mọi thay đổi qua Git.
 - **Links:** PR #7–#11; `docs/chi-tiet/06-ke-hoach-quan-ly.md` §3.
 - **Thesis:** §4.2 GitOps (App-of-Apps tiếp quản thành phần cài tay; bẫy AppProject của bản core).
+
+## 2026-11-06 – Runner v1: chạy được phiên sim-smoke trên kind, không cần can thiệp tay
+
+- **Task:** Q6 · **Environment:** sim (kind)
+- **Done:**
+  1. Tạo package `experiments/` (uv, pyproject + uv.lock riêng như `loadgen/`) với runner `python -m experiments.runner`: đọc file ma trận YAML → với mỗi lượt: áp cấu hình (static hoặc ScaledObject đang pause), reset về trạng thái đầu, warm-up 0,3 × tốc độ, unpause rồi chạy phase chính, cooldown về 1 replica, thu dữ liệu, kiểm điều kiện hợp lệ, ghi `progress.json`.
+  2. Máy tạo tải chạy trong cluster dưới dạng Job (image `python:3.12-slim` ghim digest, code loadgen qua ConfigMap, dependency ghim từ `loadgen/uv.lock`); runner chờ file `DONE` rồi `kubectl cp` kết quả ra.
+  3. Prometheus truy vấn qua API server proxy (`kubectl get --raw`), không cần port-forward.
+  4. 24 unit test cho các hàm thuần; CI chạy pytest/ruff cho `experiments/`.
+  5. `make sim-up` (175 s), chạy phiên `experiments/matrix-sim.yaml`: S1 (static 1 replica) và A2 (threshold 10, max 3), mỗi lượt CONST 2 req/s.
+- **Decision:** dùng annotation `autoscaling.keda.sh/paused-replicas` để giữ 1 replica suốt reset/warm-up, chỉ bỏ pause khi phase chính bắt đầu, nên warm-up không kích scale-up. Runner dừng ngay nếu Application Argo CD `autoscaling` đang auto-sync (Argo CD sẽ ghi đè ScaledObject runner áp). Một lượt lỗi thì ghi `error.txt` rồi chạy tiếp lượt sau; chạy lại phiên thì bỏ qua lượt `done`, tối đa 2 lần thử.
+- **Results:**
+  - Cả phiên 12:06:57 → 12:21:57 (15 phút), `S1-CONST-1=done`, `A2-CONST-1=done`, không phải can thiệp tay.
+  - S1: 226 request trong 120 s; máy tạo tải lệch lịch p99 2,0 ms, CPU tối đa 5,4 %, không bị throttle; khoảng trống scrape tối đa 5 s.
+  - A2: 357 request trong 180 s; replicas 1 → 3 khoảng 30 s sau khi phase chính bắt đầu (độ phân giải 5 s); hết tải rồi 3 → 2 sau ~315 s, 2 → 1 khoảng 60 s sau đó (đúng window 300 s, 1 pod/60 s); cả 3 pod scrape đều 5 s. Pod có từ đầu lượt còn nguyên, không restart.
+  - Mỗi lượt sinh khoảng 150 KB dữ liệu (`metadata.json`, `requests.csv`, `metrics.csv.gz`, `checks.json`, events, logs).
+- **Deviations:** metric lưu `metrics.csv.gz` thay vì `metrics.parquet` (Môi trường §17) để không thêm pandas/pyarrow; đổi khi phân tích cần. Chưa có upload R2, systemd, Grafana annotation (để runner v2).
+- **Links:** nhánh `feat/runner`; `experiments/runner/`, `experiments/matrix-sim.yaml`, `experiments/tests/test_runner.py`, `.github/workflows/ci.yaml`.
+- **Thesis:** §3 (thiết kế runner: các bước một lượt, tiêu chí hợp lệ), §4.3 (quy trình đo tự động, tái lập được), T2/T3 trên simulator lần 2 qua runner.
