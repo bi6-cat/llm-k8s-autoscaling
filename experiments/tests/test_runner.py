@@ -39,9 +39,16 @@ BASE = {
 
 def test_matrix_parse_expands_repeats_and_ids():
     m = matrix.parse(BASE)
-    assert [r.run_id for r in m.runs] == ["S1-CONST-1", "A2-KB2-1", "A2-KB2-2"]
+    assert [r.run_id for r in m.runs] == ["S1-CONST2-1", "A2-KB2-1", "A2-KB2-2"]
     assert m.runs[2].repeat == 2 and m.runs[2].capacity == 1.2
     assert m.target.api_key_secret is None and m.timing.settle_s == 60
+    assert m.target.loadgen_cpu == "1"
+
+
+def test_matrix_const_rates_get_distinct_ids():
+    runs = [{"config": "S1", "scenario": "CONST", "rate": r, "duration": 60} for r in (2, 2.5, 4)]
+    m = matrix.parse({**BASE, "runs": runs})
+    assert [r.run_id for r in m.runs] == ["S1-CONST2-1", "S1-CONST2.5-1", "S1-CONST4-1"]
 
 
 @pytest.mark.parametrize(
@@ -120,10 +127,11 @@ def test_loadgen_args():
 
 def test_job_manifest_is_guaranteed_and_optional_secret():
     t = matrix.parse(BASE).target
-    t = matrix.Target(**{**t.__dict__, "api_key_secret": "vllm-api-key"})
+    t = matrix.Target(**{**t.__dict__, "api_key_secret": "vllm-api-key", "loadgen_cpu": "2"})
     j = loadjob.job_manifest("j", t, "A2-KB2-1", "main", ["--x"], ["httpx==0.28.1"], 100)
     c = j["spec"]["template"]["spec"]["containers"][0]
     assert c["resources"]["requests"] == c["resources"]["limits"]  # QoS Guaranteed
+    assert c["resources"]["limits"]["cpu"] == "2"
     assert c["env"][0]["valueFrom"]["secretKeyRef"]["optional"] is True
     assert "@sha256:" in c["image"] and j["spec"]["backoffLimit"] == 0
 

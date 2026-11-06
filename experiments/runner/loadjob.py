@@ -140,8 +140,8 @@ def job_manifest(
                             "env": env,
                             # request = limit → QoS Guaranteed: có CPU riêng, không bị pod khác chen
                             "resources": {
-                                "requests": {"cpu": "1", "memory": "512Mi"},
-                                "limits": {"cpu": "1", "memory": "512Mi"},
+                                "requests": {"cpu": target.loadgen_cpu, "memory": "512Mi"},
+                                "limits": {"cpu": target.loadgen_cpu, "memory": "512Mi"},
                             },
                             "volumeMounts": [
                                 {"name": "code", "mountPath": "/code"},
