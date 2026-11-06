@@ -188,3 +188,13 @@
 - **Sự cố:** đêm qua `sudo pkill -9` vLLM báo `Permission denied` vì container chạy dưới profile AppArmor `cri-containerd`, chặn tín hiệu từ ngoài kể cả root; phải dừng qua containerd (`crictl stop`).
 - **Quyết định và lý do:** giữ 2 GPU replica. Hai pod chạy được nếu RAM khả dụng trước khi scale ≥ ~5 GB; dư sau đó chỉ ~1,7 GB nên vẫn cần kiểm `free -m` và nên chạy watchdog. Khác với lần treo đêm qua chủ yếu ở RAM khả dụng lúc bắt đầu (~3 GB so với ~5,2 GB).
 - **Dùng cho luận văn:** §4.1 (GPU sharing bằng time-slicing: 2 replica trên 1 GPU 8 GB, cân bằng tải qua Service), §5 hạn chế (mỗi replica tốn ~3,5 GiB RAM cố định, RAM hết trước VRAM).
+
+## 2026-11-06 – Merge chuỗi PR #7–#11, Argo CD tiếp quản cluster nhà
+
+- **Task:** Q1, Q3; TR1 (nháp) · **Environment:** home
+- **Done:** tạo 5 PR xếp chồng (#7–#11). Quang tự review và merge từng PR (merge commit), mỗi lần đổi base PR kế tiếp sang `main` rồi bỏ draft. Sau #11, refresh Application `root-home`.
+- **Results:** #7–#11 vào `main` từ 11:23 đến 11:46 (giờ Việt Nam). Khoảng 1 phút sau #11, Argo CD core trên PC tạo đủ Application con; cả 7 (`root-home`, `gpu-device-plugin`, `gpu-exporter`, `monitoring`, `monitoring-extras`, `keda`, `serving`) đều `Synced`/`Healthy`, tiếp quản các thành phần trước đó cài bằng helm/kubectl mà không xoá gì. Deployment `vllm` vẫn 0 replica (manifest không có `replicas`, Argo CD không đụng số pod). Tích 3 mục M1: Argo CD, Prometheus, A2 trên kind.
+- **Incidents:** CI không chạy trên cả 5 PR: "The job was not started because your account is locked due to a billing issue". Code đã kiểm trên máy trước khi merge: `yamllint`, `kustomize` 9 thư mục, Ansible syntax-check, `pytest` 41/41, lychee 498 link 0 lỗi. Chưa chạy `kubeconform` và `promtool` trên máy. Push lần đầu lỗi vì máy mới chưa cấu hình credential cho Git, sửa bằng `gh auth setup-git`.
+- **Decision:** giữ trunk-based theo CONTRIBUTING §7 (PR thẳng vào `main`, Argo CD đọc `main`); nhánh `dev` cũ (đi sau `main` 74 commit) không dùng. Từ nay không `helm upgrade` cluster nhà, mọi thay đổi qua Git.
+- **Links:** PR #7–#11; `docs/chi-tiet/06-ke-hoach-quan-ly.md` §3.
+- **Thesis:** §4.2 GitOps (App-of-Apps tiếp quản thành phần cài tay; bẫy AppProject của bản core).
