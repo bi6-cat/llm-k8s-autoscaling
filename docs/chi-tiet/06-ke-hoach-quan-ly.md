@@ -88,7 +88,7 @@ Việc gắn với máy: các bước cài đặt trên PC (driver, k3s server) 
 - [ ] Đủ 3 dashboard; 6 cảnh báo có unit test, tới được Telegram; **mỗi cảnh báo có runbook**. *(04/11: đã có 7 quy tắc cho 6 cảnh báo, 8 unit test `promtool` và 7 runbook (PR #3); chưa có dashboard, Telegram, chưa áp lên cluster.)*
 - [ ] Bảo mật tối thiểu đạt checklist ([Vận hành §8](04-van-hanh.md#8-bảo-mật-tối-thiểu)).
 - [ ] VH1, VH2 (gồm ca 1 replica), VH6 đạt ở nhà.
-- [ ] ĐG1-mini xong; có `capacity-home.json`. *(05/11: có bản tạm `experiments/capacity-home.json`: C = 6 req/s, B\* ≈ 27, threshold A2 tạm 21. Còn thiếu: quét bước 0,25 quanh λ = 6; lượt λ = 6 bị máy tạo tải đánh dấu không hợp lệ vì 1 chu kỳ CPU throttle.)*
+- [x] ĐG1-mini xong; có `capacity-home.json`. *(06/11: đo lại với 0,5B bằng runner, 10 mức λ đều hợp lệ: C = 12,5 req/s, B\* = 28,4, threshold A2 tạm 23; chưa đối chiếu với `vllm bench serve` (bước 7). Bản 1,5B giữ ở `capacity-home-1.5b.json`.)* *(05/11: có bản tạm `experiments/capacity-home.json`: C = 6 req/s, B\* ≈ 27, threshold A2 tạm 21. Còn thiếu: quét bước 0,25 quanh λ = 6; lượt λ = 6 bị máy tạo tải đánh dấu không hợp lệ vì 1 chu kỳ CPU throttle.)*
 - [ ] LT1–LT8 có kết quả (dự đoán, số đo, giải thích) trong `docs/nhat-ky/van-hanh.md` ([Môi trường §19](05-moi-truong-danh-gia.md#19-kiểm-chứng-lý-thuyết-lt1lt8)). *(05/11: LT1 (5060), LT2, LT3 có kết quả trong `van-hanh.md`; dữ liệu ĐG1-mini đã có cho LT5, LT6 của Trình; LT1 trên 4050, LT4, LT7, LT8 chưa làm.)*
 - [ ] Máy tạo tải đạt tiêu chí tự kiểm tra; runner chạy 2 lượt **không cần can thiệp** trên V1; `make bootstrap` dựng xong VM dưới 30 phút. *(04/11: máy tạo tải v1 có tự kiểm tra (PR #4) nhưng mới thử với server giả; chưa có runner, chưa có V1.)*
 

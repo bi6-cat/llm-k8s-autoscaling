@@ -39,6 +39,9 @@ class Target:
     model: str  # --served-model-name của vLLM
     prometheus_service: str  # "<namespace>/<service>:<port>", truy vấn qua API server proxy
     api_key_secret: str | None  # Secret chứa API key (key `key`); None nếu server không cần key
+    # CPU của pod máy tạo tải (request = limit). 1 lõi đủ ở vài req/s; tốc độ cao hơn thì tăng lên để
+    # cgroup không throttle (ĐG1-mini 05/11 bị loại 2 mức λ vì throttle ở 1 lõi).
+    loadgen_cpu: str = "1"
 
 
 @dataclass(frozen=True)
@@ -58,7 +61,7 @@ class Config:
 class RunSpec:
     """Một lượt: cấu hình × kịch bản × lần lặp."""
 
-    run_id: str  # ví dụ "A2-KB2-1"; tên thư mục runs/<session>/<run_id>
+    run_id: str  # ví dụ "A2-KB2-1", "S1-CONST4-1" (CONST kèm tốc độ); tên thư mục runs/<session>/<run_id>
     config: Config
     scenario: str
     repeat: int  # lần lặp thứ mấy (1, 2…); cũng là --run-index của loadgen (cùng lịch)
@@ -111,6 +114,7 @@ def parse(data: dict[str, Any]) -> Matrix:
         model=str(_require(t, "model", "target")),
         prometheus_service=str(_require(t, "prometheus_service", "target")),
         api_key_secret=t.get("api_key_secret"),
+        loadgen_cpu=str(t.get("loadgen_cpu", "1")),
     )
     timing = Timing(**data.get("timing", {}))
 
@@ -145,10 +149,12 @@ def parse(data: dict[str, Any]) -> Matrix:
             raise MatrixError(f"{where}: CONST cần `rate` và `duration`")
         if scenario != "CONST" and "capacity" not in r:
             raise MatrixError(f"{where}: {scenario} cần `capacity` (C, req/s)")
+        # CONST ghi kèm tốc độ vào tên, để một phiên quét nhiều mức λ (ĐG1) không trùng run_id
+        label = f"CONST{float(r['rate']):g}" if scenario == "CONST" else scenario
         for rep in range(1, int(r.get("repeats", 1)) + 1):
             runs.append(
                 RunSpec(
-                    run_id=f"{cid}-{scenario}-{rep}",
+                    run_id=f"{cid}-{label}-{rep}",
                     config=configs[cid],
                     scenario=scenario,
                     repeat=rep,

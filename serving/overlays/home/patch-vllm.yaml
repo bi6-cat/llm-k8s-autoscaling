@@ -13,7 +13,7 @@
 # ──────────────────────────────────────────────────────────────────────────────
 
 # Model 0,5B (~1 GB ở BF16, KV-cache ~12 KB/token). Đổi từ 1,5B ngày 06/11: 1,5B (~3,1 GB) chỉ vừa
-# 1 pod trên 8 GB, còn 0,5B để được 2 pod. Số đo LT1–LT3 và capacity-home.json cũ là của 1,5B.
+# 1 pod trên 8 GB, còn 0,5B để được 2 pod. Số đo LT1–LT3 và capacity-home-1.5b.json là của 1,5B.
 - op: add
   path: /spec/template/spec/containers/0/args/-
   value: --model=Qwen/Qwen2.5-0.5B-Instruct
