@@ -7,7 +7,7 @@ Ví dụ:
     uv run --project experiments python -m experiments.runner --matrix experiments/matrix-sim.yaml \\
         --context kind-llm-sim
     # Chỉ chạy một lượt
-    ... --only A2-CONST-1
+    ... --only A2-CONST2-1
 """
 
 from __future__ import annotations
