@@ -188,3 +188,32 @@
 - **Sự cố:** đêm qua `sudo pkill -9` vLLM báo `Permission denied` vì container chạy dưới profile AppArmor `cri-containerd`, chặn tín hiệu từ ngoài kể cả root; phải dừng qua containerd (`crictl stop`).
 - **Quyết định và lý do:** giữ 2 GPU replica. Hai pod chạy được nếu RAM khả dụng trước khi scale ≥ ~5 GB; dư sau đó chỉ ~1,7 GB nên vẫn cần kiểm `free -m` và nên chạy watchdog. Khác với lần treo đêm qua chủ yếu ở RAM khả dụng lúc bắt đầu (~3 GB so với ~5,2 GB).
 - **Dùng cho luận văn:** §4.1 (GPU sharing bằng time-slicing: 2 replica trên 1 GPU 8 GB, cân bằng tải qua Service), §5 hạn chế (mỗi replica tốn ~3,5 GiB RAM cố định, RAM hết trước VRAM).
+
+## 2026-11-06 – Merge chuỗi PR #7–#11, Argo CD tiếp quản cluster nhà
+
+- **Task:** Q1, Q3; TR1 (nháp) · **Environment:** home
+- **Done:** tạo 5 PR xếp chồng (#7–#11). Quang tự review và merge từng PR (merge commit), mỗi lần đổi base PR kế tiếp sang `main` rồi bỏ draft. Sau #11, refresh Application `root-home`.
+- **Results:** #7–#11 vào `main` từ 11:23 đến 11:46 (giờ Việt Nam). Khoảng 1 phút sau #11, Argo CD core trên PC tạo đủ Application con; cả 7 (`root-home`, `gpu-device-plugin`, `gpu-exporter`, `monitoring`, `monitoring-extras`, `keda`, `serving`) đều `Synced`/`Healthy`, tiếp quản các thành phần trước đó cài bằng helm/kubectl mà không xoá gì. Deployment `vllm` vẫn 0 replica (manifest không có `replicas`, Argo CD không đụng số pod). Tích 3 mục M1: Argo CD, Prometheus, A2 trên kind.
+- **Incidents:** CI không chạy trên cả 5 PR: "The job was not started because your account is locked due to a billing issue". Code đã kiểm trên máy trước khi merge: `yamllint`, `kustomize` 9 thư mục, Ansible syntax-check, `pytest` 41/41, lychee 498 link 0 lỗi. Chưa chạy `kubeconform` và `promtool` trên máy. Push lần đầu lỗi vì máy mới chưa cấu hình credential cho Git, sửa bằng `gh auth setup-git`.
+- **Decision:** giữ trunk-based theo CONTRIBUTING §7 (PR thẳng vào `main`, Argo CD đọc `main`); nhánh `dev` cũ (đi sau `main` 74 commit) không dùng. Từ nay không `helm upgrade` cluster nhà, mọi thay đổi qua Git.
+- **Links:** PR #7–#11; `docs/chi-tiet/06-ke-hoach-quan-ly.md` §3.
+- **Thesis:** §4.2 GitOps (App-of-Apps tiếp quản thành phần cài tay; bẫy AppProject của bản core).
+
+## 2026-11-06 – Runner v1: chạy được phiên sim-smoke trên kind, không cần can thiệp tay
+
+- **Task:** Q6 · **Environment:** sim (kind)
+- **Done:**
+  1. Tạo package `experiments/` (uv, pyproject + uv.lock riêng như `loadgen/`) với runner `python -m experiments.runner`: đọc file ma trận YAML → với mỗi lượt: áp cấu hình (static hoặc ScaledObject đang pause), reset về trạng thái đầu, warm-up 0,3 × tốc độ, unpause rồi chạy phase chính, cooldown về 1 replica, thu dữ liệu, kiểm điều kiện hợp lệ, ghi `progress.json`.
+  2. Máy tạo tải chạy trong cluster dưới dạng Job (image `python:3.12-slim` ghim digest, code loadgen qua ConfigMap, dependency ghim từ `loadgen/uv.lock`); runner chờ file `DONE` rồi `kubectl cp` kết quả ra.
+  3. Prometheus truy vấn qua API server proxy (`kubectl get --raw`), không cần port-forward.
+  4. 24 unit test cho các hàm thuần; CI chạy pytest/ruff cho `experiments/`.
+  5. `make sim-up` (175 s), chạy phiên `experiments/matrix-sim.yaml`: S1 (static 1 replica) và A2 (threshold 10, max 3), mỗi lượt CONST 2 req/s.
+- **Decision:** dùng annotation `autoscaling.keda.sh/paused-replicas` để giữ 1 replica suốt reset/warm-up, chỉ bỏ pause khi phase chính bắt đầu, nên warm-up không kích scale-up. Runner dừng ngay nếu Application Argo CD `autoscaling` đang auto-sync (Argo CD sẽ ghi đè ScaledObject runner áp). Một lượt lỗi thì ghi `error.txt` rồi chạy tiếp lượt sau; chạy lại phiên thì bỏ qua lượt `done`, tối đa 2 lần thử.
+- **Results:**
+  - Cả phiên 12:06:57 → 12:21:57 (15 phút), `S1-CONST-1=done`, `A2-CONST-1=done`, không phải can thiệp tay.
+  - S1: 226 request trong 120 s; máy tạo tải lệch lịch p99 2,0 ms, CPU tối đa 5,4 %, không bị throttle; khoảng trống scrape tối đa 5 s.
+  - A2: 357 request trong 180 s; replicas 1 → 3 khoảng 30 s sau khi phase chính bắt đầu (độ phân giải 5 s); hết tải rồi 3 → 2 sau ~315 s, 2 → 1 khoảng 60 s sau đó (đúng window 300 s, 1 pod/60 s); cả 3 pod scrape đều 5 s. Pod có từ đầu lượt còn nguyên, không restart.
+  - Mỗi lượt sinh khoảng 150 KB dữ liệu (`metadata.json`, `requests.csv`, `metrics.csv.gz`, `checks.json`, events, logs).
+- **Deviations:** metric lưu `metrics.csv.gz` thay vì `metrics.parquet` (Môi trường §17) để không thêm pandas/pyarrow; đổi khi phân tích cần. Chưa có upload R2, systemd, Grafana annotation (để runner v2).
+- **Links:** nhánh `feat/runner`; `experiments/runner/`, `experiments/matrix-sim.yaml`, `experiments/tests/test_runner.py`, `.github/workflows/ci.yaml`.
+- **Thesis:** §3 (thiết kế runner: các bước một lượt, tiêu chí hợp lệ), §4.3 (quy trình đo tự động, tái lập được), T2/T3 trên simulator lần 2 qua runner.

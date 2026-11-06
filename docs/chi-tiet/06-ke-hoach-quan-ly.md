@@ -75,12 +75,12 @@ Việc gắn với máy: các bước cài đặt trên PC (driver, k3s server) 
 
 ### M1 (18/10): nền tảng tối thiểu
 - [x] vLLM chạy trên GPU nhà (5060 hoặc 4050); đã ghim digest và revision model. *(04/11: RTX 5060, `v0.31.0@sha256:…`, Qwen2.5-1.5B ghim revision; xem [phiên bản](../phien-ban.md).)*
-- [ ] vLLM được triển khai **bằng Argo CD** từ overlay `home`; gọi được API có streaming; có `--shutdown-timeout`. *(04/11: manifest trên `feat/serving` đã có streaming, preStop, `--shutdown-timeout=150`, nhưng đang áp tay bằng `kubectl`; chưa có Argo CD.)*
-- [ ] Prometheus có metric vLLM, GPU, Traefik (5 s). *(04/11: chưa cài kube-prometheus-stack; mới có GPU exporter.)*
-- [ ] Simulator chạy trên kind; A2 scale 1 → 3 trên simulator. *(04/11: Trình đang làm trên `feat/tr2-sim`, chưa push. Quang đã chạy thử trên kind bằng file nháp của scaffold: A2 scale 1 → 3 sau 32 s dưới tải 2 req/s, scale-down đúng `behavior`; xem nhật ký Quang tuần 05. Tích khi phần của TR2 lên `main`.)*
+- [x] vLLM được triển khai **bằng Argo CD** từ overlay `home`; gọi được API có streaming; có `--shutdown-timeout`. *(06/11: sau khi merge PR #7–#11, Argo CD core trên PC sync App-of-Apps nhà: 7 Application `Synced`/`Healthy`, gồm `serving`. API có streaming, không key → 401. Model nhà đổi sang Qwen2.5-0.5B.)*
+- [x] Prometheus có metric vLLM, GPU, Traefik (5 s). *(06/11: kube-prometheus-stack trên PC; target `llm-serving/vllm`, `gpu/nvidia-gpu-exporter`, `monitoring/traefik` đều `up`, chu kỳ 5 s; request qua Ingress được Traefik đếm đúng.)*
+- [x] Simulator chạy trên kind; A2 scale 1 → 3 trên simulator. *(06/11: ScaledObject A2 lên `main` qua PR #11 (bản nháp, Trình review và thay bằng bản chính ở `feat/tr2-sim`). Trên kind: quyết định 3 replica ở 17 s, 3 pod Ready ở 27 s, scale-down đúng window 300 s rồi 1 pod/60 s.)*
 - [x] Repo có CI chạy xanh. *(04/11: PR #5; 6 job xanh trên `main` ngày 02/11.)*
 - [ ] V0 đạt: k3s có GPU trong VM Vast, vLLM 7B trả lời, đã đo `fio` và TPOT.
-- [ ] Đã chốt cloud (ADR-004 K6). *(04/11: chưa chốt, trễ từ 18/10.)*
+- [ ] Đã chốt cloud (ADR-004 K6). *(06/11: GCP từ chối quota GPU ngày 05/11 nên thực tế chỉ còn Vast; chưa sửa ADR-004 K6.)*
 
 ### M2 (01/11): vận hành thử đạt
 - [ ] A1, A2 qua bài kiểm thử T1–T7 (trên simulator và GPU nhà).

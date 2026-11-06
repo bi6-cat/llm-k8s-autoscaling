@@ -1,0 +1,41 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# experiments/pyproject.toml
+# Khái niệm: pyproject.toml khai báo dự án Python và thư viện cần dùng; `uv` ghim phiên bản chính xác vào
+#            uv.lock (CONTRIBUTING §5).
+# Mục đích:  Gói `experiments`: runner đánh giá (experiments/runner/). Runner điều khiển cluster bằng
+#            `kubectl` (subprocess), nên chỉ cần PyYAML để đọc file ma trận và file cấu hình.
+#            Mọi lệnh chạy từ GỐC REPO:
+#              uv run --project experiments python -m experiments.runner --help
+#              uv run --project experiments pytest experiments
+#              uv run --project experiments ruff check experiments
+# Tham khảo: Môi trường §14, CONTRIBUTING §5
+# ──────────────────────────────────────────────────────────────────────────────
+[project]
+name = "experiments"
+version = "0.1.0"
+description = "Runner đánh giá autoscaling vLLM (đồ án autoscaling LLM trên Kubernetes)"
+requires-python = ">=3.11"
+dependencies = [
+    "pyyaml>=6.0,<7",                # đọc matrix YAML, sửa ScaledObject trước khi áp
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1,<10",
+    "ruff>=0.17,<0.18",
+]
+
+[tool.uv]
+# Không đóng gói thành wheel: uv chỉ quản lý môi trường ảo và phụ thuộc.
+package = false
+
+[tool.ruff]
+line-length = 110                    # CONTRIBUTING §5
+target-version = "py311"
+
+[tool.ruff.lint]
+# E/F: lỗi cơ bản; I: thứ tự import; UP: cú pháp Python mới; B: lỗi hay gặp (bugbear)
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
