@@ -1,0 +1,50 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# experiments/matrix-dg1-home.yaml
+# Khái niệm: ĐG1-mini (Môi trường §8) = đo năng lực một replica: cố định 1 replica (S1), quét tải CONST
+#            ở các mức λ tăng dần, tìm C = λ lớn nhất còn đạt SLO. Từ C suy ra B* và threshold A2.
+# Mục đích:  Đo lại ĐG1-mini cho cấu hình nhà mới (Qwen2.5-0.5B, max-num-seqs 16, gpu-memory-utilization
+#            0,40), vì capacity-home.json ngày 05/11 là của 1,5B. Đây là lượt quét thô (bước 2 req/s);
+#            sau khi thấy điểm gãy thì thêm vài mức dày hơn quanh đó vào `runs` rồi chạy lại phiên
+#            (runner bỏ qua các lượt đã `done`).
+# Chạy:      KUBECONFIG=~/.kube/llm-home.yaml uv run --project experiments python -m experiments.runner \
+#              --matrix experiments/matrix-dg1-home.yaml
+#            uv run --project experiments python -m experiments.runner.capacity runs/dg1-home-05b \
+#              --out experiments/capacity-home.json
+# Tham khảo: Môi trường §8; Thông số §6 (SLO), §8.1 (threshold); capacity-home.json bản 05/11
+# ──────────────────────────────────────────────────────────────────────────────
+session: dg1-home-05b
+env: home
+
+target:
+  namespace: llm-serving
+  deployment: vllm
+  service_url: http://vllm.llm-serving.svc:8000
+  model: qwen2.5-0.5b
+  prometheus_service: monitoring/kps-prometheus:9090
+  api_key_secret: vllm-api-key
+  # 2 lõi để máy tạo tải không bị cgroup throttle ở λ cao (05/11: bị loại 2 mức vì throttle ở 1 lõi)
+  loadgen_cpu: "2"
+
+timing:
+  settle_s: 30
+  warmup_s: 30                         # warm-up ở 0,3 λ; cửa sổ đo còn bỏ thêm 60 s đầu phase chính
+  warmup_fraction: 0.3
+  cooldown_max_s: 600
+  reset_timeout_s: 900
+
+configs:
+  S1:
+    type: static
+    replicas: 1
+
+# Mỗi mức: phase chính 180 s; capacity.py bỏ 60 s đầu → đo 120 s, như ĐG1-mini 05/11.
+# Ước tính (chưa đo): 0,5B ở 2 req/s có E2E ~0,9 s; với max-num-seqs 16, điểm gãy có thể quanh 8–12 req/s.
+defaults: {config: S1, scenario: CONST, duration: 180}
+runs:
+  - {rate: 2}
+  - {rate: 4}
+  - {rate: 6}
+  - {rate: 8}
+  - {rate: 10}
+  - {rate: 12}
+  - {rate: 14}
