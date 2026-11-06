@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from experiments.runner import checks, collect, configs, loadjob, matrix
+from experiments.runner import capacity, checks, collect, configs, loadjob, matrix
 from experiments.runner.progress import Progress
 
 REPO = Path(__file__).resolve().parents[2]
@@ -190,3 +190,61 @@ def test_progress_resume(tmp_path):
     p.record("A", "done", "attempt-2")
     p2 = Progress(tmp_path / "progress.json")  # đọc lại từ file: như runner khởi động lại
     assert not p2.should_run("A", 5) and p2.attempts("A") == 2
+
+
+def _req(i, t_sched, ttft, e2e, n_out=256, error=""):
+    t = float(t_sched)
+    return {
+        "id": str(i),
+        "t_sched": str(t),
+        "t_send": str(t),
+        "t_first": "" if error else str(t + ttft),
+        "t_last": "" if error else str(t + e2e),
+        "n_out": "0" if error else str(n_out),
+        "error": error,
+    }
+
+
+def test_capacity_summarize_window_slo_and_little():
+    # 1 req/s trong 100 s, mỗi request 2 s → B ≈ 2. Bỏ 20 s đầu. 1 request chậm (TTFT 3 s) và 1 lỗi.
+    reqs = [_req(i, i, 0.1, 2.0) for i in range(100)]
+    reqs[50] = _req(50, 50, 3.0, 4.0)
+    reqs[60] = _req(60, 60, 0, 0, error="timeout")
+    metrics = [(1000.0 + t, "vllm_running", 2.0) for t in range(0, 100, 5)]
+    metrics += [(1000.0 + t, "vllm_waiting", 0.0) for t in range(0, 100, 5)]
+    s = capacity.summarize_run(reqs, metrics, t0_unix=1000.0, rate=1.0, skip_s=20, duration_s=100)
+    assert s["n_measured"] == 80 and s["n_error"] == 1
+    assert s["slo_attainment"] == pytest.approx(78 / 80)
+    assert s["B_server"] == 2.0 and s["little_ok"] is True
+    assert s["tpot_p50_s"] == pytest.approx(1.9 / 255)
+
+
+def test_capacity_picks_largest_passing_valid_level():
+    c = [
+        {
+            "lambda_rps": 4,
+            "valid": True,
+            "slo_attainment": 1.0,
+            "B_server": 10,
+            "kv_cache_usage": 0.1,
+            "gpu_util": 1,
+        },
+        {
+            "lambda_rps": 6,
+            "valid": False,
+            "slo_attainment": 0.99,
+            "B_server": 20,
+            "kv_cache_usage": 0.2,
+            "gpu_util": 1,
+        },
+        {
+            "lambda_rps": 8,
+            "valid": True,
+            "slo_attainment": 0.5,
+            "B_server": 90,
+            "kv_cache_usage": 0.3,
+            "gpu_util": 1,
+        },
+    ]
+    r = capacity.capacity(c)
+    assert r["C"] == 4 and r["threshold"]["A2_concurrency"] == 8
