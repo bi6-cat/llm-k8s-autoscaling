@@ -7,7 +7,8 @@ Khái niệm:
 Mục đích:
     Máy tạo tải phải chạy TRONG cluster và gọi Service: `kubectl port-forward` dồn mọi request vào một pod
     (đo ngày 04/11), và độ trễ mạng từ ngoài vào làm sai TTFT (Môi trường §3.6).
-    Pod Guaranteed (request = limit, 1 CPU) để không tranh CPU với thứ khác; loadgen tự kiểm throttle.
+    Pod Guaranteed (request = limit, số lõi nguyên) để không tranh CPU với thứ khác; loadgen tự kiểm throttle.
+    Mỗi lõi một tiến trình gửi tải (`--workers`, loadgen/workers.py), vì một event loop chỉ dùng được một lõi.
     Pod ghi kết quả vào /out rồi tạo file DONE và ngủ; runner thấy DONE thì `kubectl cp` thư mục về, rồi
     xoá Job. (Không đọc được file từ pod đã kết thúc, nên pod phải còn sống lúc runner chép.)
 """
@@ -60,6 +61,7 @@ def loadgen_args(
     url: str,
     model: str,
     out: str,
+    workers: int = 1,
 ) -> list[str]:
     """Tham số dòng lệnh của `python -m loadgen` cho một pha. Hàm thuần."""
     args = [
@@ -73,6 +75,8 @@ def loadgen_args(
         model,
         "--out",
         out,
+        "--workers",
+        str(workers),
     ]
     if scenario == "CONST":
         args += ["--rate", f"{rate:g}", "--duration", f"{duration:g}"]
@@ -119,6 +123,10 @@ def job_manifest(
             }
         )
     labels = {"app": "loadgen", "experiment/run": run_id, "experiment/phase": phase}
+    # RAM theo số tiến trình gửi tải: đo trên kind 07/11 (lượt 3 phút) khoảng 45 MiB mỗi tiến trình (46 MiB
+    # với 1, 100 MiB với 2, 133 MiB với 3). 256Mi × (k + 1) dư khoảng 5 lần, đủ cho danh sách kết quả lớn
+    # dần ở lượt 25 phút; 1 tiến trình vẫn là 512Mi như trước.
+    memory = f"{256 * (target.loadgen_workers + 1)}Mi"
     return {
         "apiVersion": "batch/v1",
         "kind": "Job",
@@ -140,8 +148,8 @@ def job_manifest(
                             "env": env,
                             # request = limit → QoS Guaranteed: có CPU riêng, không bị pod khác chen
                             "resources": {
-                                "requests": {"cpu": target.loadgen_cpu, "memory": "512Mi"},
-                                "limits": {"cpu": target.loadgen_cpu, "memory": "512Mi"},
+                                "requests": {"cpu": target.loadgen_cpu, "memory": memory},
+                                "limits": {"cpu": target.loadgen_cpu, "memory": memory},
                             },
                             "volumeMounts": [
                                 {"name": "code", "mountPath": "/code"},

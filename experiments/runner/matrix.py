@@ -42,6 +42,10 @@ CONFIG_TYPES = ("static", "scaledobject")
 # đọc mẫu gốc bằng range selector `<signal>[Ns]` (collect.signal_gap), mà Prometheus chỉ cho đặt `[Ns]`
 # ngay sau một selector.
 SELECTOR_RE = re.compile(r"[A-Za-z_:][A-Za-z0-9_:]*(\{[^{}]*\})?")
+# CPU kiểu Kubernetes ở dạng thường dùng: số lõi ("2", "1.5") hoặc millicore ("500m"). Chặt hơn cú pháp
+# quantity đầy đủ của Kubernetes (không nhận "+3", "1e1"), để giá trị lạ bị từ chối ngay lúc đọc ma trận
+# thay vì lỗi ở `kubectl apply` Job giữa phiên.
+CPU_RE = re.compile(r"\d+(\.\d+)?m?")
 
 
 class MatrixError(ValueError):
@@ -58,9 +62,25 @@ class Target:
     model: str  # --served-model-name của vLLM
     prometheus_service: str  # "<namespace>/<service>:<port>", truy vấn qua API server proxy
     api_key_secret: str | None  # Secret chứa API key (key `key`); None nếu server không cần key
-    # CPU của pod máy tạo tải (request = limit). 1 lõi đủ ở vài req/s; tốc độ cao hơn thì tăng lên để
-    # cgroup không throttle (ĐG1-mini 05/11 bị loại 2 mức λ vì throttle ở 1 lõi).
+    # CPU của pod máy tạo tải (request = limit), kiểu Kubernetes: "2", "500m". 1 lõi đủ ở vài req/s; tốc độ
+    # cao hơn thì tăng lên để cgroup không throttle (ĐG1-mini 05/11 bị loại 2 mức λ vì throttle ở 1 lõi) và
+    # để có thêm tiến trình gửi tải (loadgen_workers).
     loadgen_cpu: str = "1"
+
+    @property
+    def loadgen_workers(self) -> int:
+        """Số tiến trình gửi tải (`loadgen --workers`): một tiến trình mỗi lõi nguyên, ít nhất 1.
+
+        Mỗi tiến trình là một event loop, dùng tối đa một lõi (loadgen/workers.py); tiến trình cha chỉ chờ
+        và ghi CSV (vài chục dòng/s), gần như không tốn CPU. Ném ValueError nếu `loadgen_cpu` sai dạng.
+        """
+        cpu = self.loadgen_cpu
+        if not CPU_RE.fullmatch(cpu):
+            raise ValueError(f'cần dạng "2", "1.5" hoặc "500m", gặp {cpu!r}')
+        cores = float(cpu[:-1]) / 1000 if cpu.endswith("m") else float(cpu)
+        if cores <= 0:
+            raise ValueError("phải > 0")
+        return max(1, int(cores))
 
 
 @dataclass(frozen=True)
@@ -184,6 +204,10 @@ def parse(data: dict[str, Any]) -> Matrix:
         api_key_secret=t.get("api_key_secret"),
         loadgen_cpu=str(t.get("loadgen_cpu", "1")),
     )
+    try:
+        target.loadgen_workers  # noqa: B018 (chỉ để kiểm loadgen_cpu đúng dạng ngay lúc đọc ma trận)
+    except ValueError as e:
+        raise MatrixError(f"target: loadgen_cpu {target.loadgen_cpu!r} không hợp lệ ({e})") from None
     _check_keys(data.get("timing", {}), TIMING_KEYS, "timing")
     timing = Timing(**data.get("timing", {}))
 

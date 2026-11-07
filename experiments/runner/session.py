@@ -170,6 +170,7 @@ def run_one(ctx: Context, spec: RunSpec, attempt_dir: Path) -> str:
             url=t.service_url,
             model=t.model,
             out="/out/warmup",
+            workers=t.loadgen_workers,
         )
         job.run(spec.run_id, "warmup", args, m.timing.warmup_s, attempt_dir / "warmup")
 
@@ -188,6 +189,7 @@ def run_one(ctx: Context, spec: RunSpec, attempt_dir: Path) -> str:
         url=t.service_url,
         model=t.model,
         out="/out/main",
+        workers=t.loadgen_workers,
     )
     res = job.run(spec.run_id, "main", args, duration, attempt_dir / "loadgen-main")
     t_main0, t_main1 = res["started"], res["finished"]

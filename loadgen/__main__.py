@@ -5,6 +5,8 @@ Mục đích: Một lệnh cho một lượt tải: chọn kịch bản và C, s
     `--out`:
       requests.csv  mỗi request một dòng (Môi trường §14.2)
       loadgen.json  tham số, seed, mốc t0_unix, pha của kịch bản, kết quả tự kiểm tra (§17)
+    `--workers k` chia lịch cho k tiến trình (workers.py) khi một event loop không đủ CPU; lịch và các file
+    kết quả không đổi.
     Khoá API đọc từ biến môi trường LOADGEN_API_KEY, không nhận qua tham số dòng lệnh vì tham số hiện ra
     trong `ps` và trong log của shell.
 
@@ -19,7 +21,6 @@ Ví dụ:
 from __future__ import annotations
 
 import argparse
-import asyncio
 import json
 import os
 import sys
@@ -27,7 +28,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from loadgen import checks, scenarios, sender
+from loadgen import checks, scenarios, sender, workers
 from loadgen.schedule import PROMPT_MAX, PROMPT_MIN, build_plan, derive_seed
 
 
@@ -48,6 +49,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument(
         "--no-ignore-eos", action="store_true", help="Không gửi ignore_eos (server không phải vLLM)"
     )
+    p.add_argument(
+        "--workers",
+        type=int,
+        default=1,
+        help="Số tiến trình gửi tải, mỗi tiến trình một event loop dùng tối đa 1 lõi (mặc định 1)",
+    )
     p.add_argument("--out", type=Path, help="Thư mục kết quả (tạo nếu chưa có; không ghi đè requests.csv)")
     p.add_argument("--dry-run", action="store_true", help="Chỉ in thống kê lịch, không gửi")
     args = p.parse_args(argv)
@@ -57,6 +64,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             p.error("CONST cần --rate và --duration")
     elif args.capacity is None:
         p.error(f"{args.scenario} cần --capacity (C, req/s)")
+    if args.workers < 1:
+        p.error("--workers phải ≥ 1")
     if not args.dry_run and (args.url is None or args.model is None or args.out is None):
         p.error("chạy thật cần --url, --model, --out (hoặc dùng --dry-run)")
     return args
@@ -109,20 +118,25 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 1
+    # cpu.stat là của cả cgroup (cả pod), nên đọc một lần ở tiến trình cha là đủ cho mọi tiến trình con
     cg_before, cg_t0 = checks.read_cgroup_cpu_stat(), time.perf_counter()
     with fh:
-        result = asyncio.run(sender.run(plan, target, fh, prompt_seed))
+        result = workers.run_load(plan, target, sender.CsvSink(fh), prompt_seed, args.workers)
     cg_after, cg_t1 = checks.read_cgroup_cpu_stat(), time.perf_counter()
+    failed = [w for w in result.workers if w.error]
     summary = checks.summarize(
-        result.records,
-        result.loop_lags_s,
-        result.cpu_max_fraction,
+        result.records_by_worker,
+        [w.loop_lags_s for w in result.workers],
+        max(w.cpu_max_fraction for w in result.workers),
         cg_before,
         cg_after,
         cgroup_elapsed_s=cg_t1 - cg_t0,
+        n_planned=len(plan),
+        workers_failed=len(failed),
     )
 
-    n_err = sum(1 for r in result.records if r["error"])
+    records = result.records
+    n_err = sum(1 for r in records if r["error"])
     meta = {
         "scenario": scenario.name,
         "capacity_rps": args.capacity,
@@ -143,23 +157,41 @@ def main(argv: list[str] | None = None) -> int:
         "wall_s": result.wall_s,
         "phases_s": scenario.phases,
         "n_planned": len(plan),
-        "n_done": len(result.records),
+        "n_done": len(records),
         "n_error": n_err,
+        "workers": args.workers,
+        # Số đo của từng tiến trình, để biết tiến trình nào kéo `checks` xuống
+        "worker_stats": [
+            {
+                "n_done": w.n_done,
+                "wall_s": w.wall_s,
+                "cpu_max_pct": round(w.cpu_max_fraction * 100, 1),
+                "send_lag_ms": checks.lag_stats_ms(checks.send_lags_ms(rs)),
+                "loop_lag_ms": checks.lag_stats_ms([x * 1000 for x in w.loop_lags_s]),
+                "error": w.error,
+            }
+            for w, rs in zip(result.workers, result.records_by_worker, strict=True)
+        ],
         "checks": summary,
     }
     (args.out / "loadgen.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8")
 
     lag_p99 = summary["send_lag_ms"]["p99"]
     print(
-        f"{scenario.name}: {len(result.records)}/{len(plan)} request, {n_err} lỗi, "
+        f"{scenario.name}: {len(records)}/{len(plan)} request, {n_err} lỗi, "
         f"lệch lịch p99 {'–' if lag_p99 is None else f'{lag_p99:.1f}'} ms, "
-        f"CPU tối đa {summary['cpu_max_pct']}%, hợp lệ: {summary['valid']}"
+        f"CPU tối đa {summary['cpu_max_pct']}% ({args.workers} tiến trình), hợp lệ: {summary['valid']}"
     )
     if not summary["valid"]:
         print(
             "CẢNH BÁO: máy tạo tải không đạt tự kiểm tra, lượt này không hợp lệ (Môi trường §17)",
             file=sys.stderr,
         )
+    if failed:
+        for j, w in enumerate(result.workers):
+            if w.error:
+                print(f"Lỗi: tiến trình gửi tải {j} dừng giữa chừng: {w.error}", file=sys.stderr)
+        return 1  # thiếu request: runner đánh dấu lượt invalid theo mã thoát
     return 0
 
 

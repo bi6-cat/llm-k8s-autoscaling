@@ -22,7 +22,9 @@ target:
   model: qwen2.5-0.5b
   prometheus_service: monitoring/kps-prometheus:9090
   api_key_secret: vllm-api-key
-  # 2 lõi để máy tạo tải không bị cgroup throttle ở λ cao (05/11: bị loại 2 mức vì throttle ở 1 lõi)
+  # 2 lõi để máy tạo tải không bị cgroup throttle ở λ cao (05/11: bị loại 2 mức vì throttle ở 1 lõi).
+  # Từ 07/11 mỗi lõi một tiến trình gửi tải (loadgen --workers 2, Job 768Mi). Lịch gửi không đổi; các phiên
+  # trước 07/11 chạy 1 tiến trình, CPU tối đa 25,5 % ở λ = 10 (06/11), nên máy tạo tải không phải nút thắt.
   loadgen_cpu: "2"
 
 timing:

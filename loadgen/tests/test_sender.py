@@ -43,7 +43,10 @@ USAGE = {"choices": [], "usage": {"prompt_tokens": 300, "completion_tokens": 3}}
 
 def _run(handler, plan, target=TARGET):
     out = io.StringIO()
-    result = asyncio.run(sender.run(plan, target, out, prompt_seed=1, transport=httpx.MockTransport(handler)))
+    sink = sender.CsvSink(out)
+    result = asyncio.run(
+        sender.run(plan, target, sink, prompt_seed=1, transport=httpx.MockTransport(handler))
+    )
     return result, out.getvalue()
 
 
@@ -180,7 +183,8 @@ def test_no_client_side_connection_limit():
         port = server.sockets[0].getsockname()[1]
         target = sender.Target(base_url=f"http://127.0.0.1:{port}", model="m")
         async with server:
-            return await sender.run(_plan(n=150, spacing=0.001), target, io.StringIO(), prompt_seed=1)
+            sink = sender.CsvSink(io.StringIO())
+            return await sender.run(_plan(n=150, spacing=0.001), target, sink, prompt_seed=1)
 
     result = asyncio.run(scenario())
     assert all(r["error"] == "" for r in result.records), {r["error"] for r in result.records}
