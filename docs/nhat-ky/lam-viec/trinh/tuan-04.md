@@ -28,7 +28,7 @@
   3. Thêm target `make alerts-coverage`, đọc YAML bằng yq 4.54.1: mỗi cảnh báo phải có nhãn severity `page` hoặc `ticket`, `runbook_url` trỏ tới `docs/runbooks/<tên>.md`, file runbook đó, và ít nhất một unit test mong đợi nó bắn. `alerts-test` chạy target này trước, và dừng nếu file rule nào tách ra mà không có `groups:`. Cập nhật `docs/phien-ban.md`.
   4. Chạy `/code-review high` hai lượt. Lượt 1 được 9 điểm: `6257173` sửa 7 điểm; điểm promtool trên máy đã xử lý trước đó; điểm "thiếu nhật ký" là mục này. Lượt 2 được 9 điểm mới, không lặp điểm cũ: `afa8b40` sửa 6 điểm (đọc YAML bằng yq thay cho regex, chặn file rule rỗng, kiểm severity, link không có `/` cuối, comment của `make lint`), ghi chú 1 điểm (gói Python mới thì thêm vào job `python`), để lại 2 điểm (xem "Còn thiếu").
 - **Quyết định và lý do:**
-  - Cách lấy bản nháp theo bạn chốt hôm nay: viết file mới dựa trên bản nháp, ghi nguồn trong commit. Không cherry-pick commit scaffold, vì commit đó gom nhiều file chưa chạy và ghi "do not merge".
+  - Cách lấy bản nháp theo Trình chốt hôm nay: viết file mới dựa trên bản nháp, ghi nguồn trong commit. Không cherry-pick commit scaffold, vì commit đó gom nhiều file chưa chạy và ghi "do not merge".
   - Ghim mọi công cụ. File chạy tải đúng phiên bản và kiểm sha256; mã băm đối chiếu giữa file checksum của bản phát hành và `digest` GitHub hiển thị. Action ghim theo commit SHA. yamllint chạy qua `uvx --exclude-newer` để cố định cả PyYAML 6.0.3 và pathspec 1.1.1. Chọn setup-uv v10.3.2 (22/10, chỉ thêm checksum), không dùng v10.3.3 vì mới ra 4 ngày.
   - promtool 3.15.0, trùng Prometheus của chart kube-prometheus-stack 92.1.1 (tra `values.yaml` của chart), để PromQL được kiểm bằng đúng bộ phân tích cú pháp sẽ chạy nó. Nâng promtool trên máy từ 3.13.4 lên 3.15.0 cho khớp.
   - Bỏ `lycheeverse/lychee-action`, tải lychee trực tiếp: action này không kiểm sha256 của lychee, và đưa tham số qua `eval`.
@@ -79,8 +79,8 @@
   4. `make sim-up SIM_SERVING=/opt/llm-sim/serving/overlays/sim`, rồi kiểm điều kiện trước khi thử: kube-controller-manager có `--horizontal-pod-autoscaler-sync-period=5s`; target `podMonitor/llm-serving/vllm/0` up, chu kỳ 5 s; câu PromQL của A2 trả 0; APIService `v1beta1.external.metrics.k8s.io` True.
   5. Chạy T1–T5 bằng một script nháp ghi trạng thái HPA mỗi giây (lần 1). Sửa theo kết quả, đưa vào repo thành `autoscaling/tests/run-t1-t5.sh` (gọi bằng `make sim-test`, tự chấm đạt/trượt theo bảng w2 §9.3), chạy lại cả 5 bài (lần 2).
 - **Quyết định và lý do:**
-  - WSL2 + Docker Engine, không dùng Docker Desktop (bạn chọn): môi trường Linux giống cluster thật và CI, nhẹ hơn, sau này chạy được cả Ansible.
-  - Lấy code như TR1 (bạn chọn): nhánh mới từ `main`, viết lại, ghi nguồn. Không commit `serving/` để không đụng phần của Quang.
+  - WSL2 + Docker Engine, không dùng Docker Desktop (Trình chọn): môi trường Linux giống cluster thật và CI, nhẹ hơn, sau này chạy được cả Ansible.
+  - Lấy code như TR1 (Trình chọn): nhánh mới từ `main`, viết lại, ghi nguồn. Không commit `serving/` để không đụng phần của Quang.
   - `platform/keda/values.yaml` thêm `cpu: null`. Helm gộp values vào mặc định của chart, mà mặc định có `limits.cpu: 1`; bản nháp chỉ ghi `limits.memory` nên limit CPU vẫn còn, trái với comment "không đặt limit CPU". `helm template` xác nhận: có `cpu: null` thì cả 3 Deployment của KEDA chỉ còn limit bộ nhớ.
   - Ghim node image theo digest (`kindest/node:v1.37.0@sha256:a1ed56cf…0ae5`, lấy từ release notes kind v0.33.0), theo CONTRIBUTING §2.
   - kubectl v1.36.5, trùng CI, để `kubectl kustomize` cho cùng kết quả. helm v4.3.1, bản chính hiện tại; hai chart đã ghim cài được bằng bản này.
