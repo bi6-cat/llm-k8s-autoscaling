@@ -2,8 +2,9 @@
 
 Khái niệm:
     Runner đọc từng file eval như một ScaledObject đơn rồi ghi đè threshold, max replica
-    (experiments/runner/configs.py). Hợp đồng: tên `vllm-<id>`, nhãn `experiment/config: <ID>`, trigger
-    đầu tiên có `metadata.threshold`.
+    (experiments/runner/configs.py). Hợp đồng: tên `vllm-<id>` (runner nhận ScaledObject theo tên), trigger
+    đầu tiên có `metadata.threshold`. Nhãn `experiment/config: <ID>` là quy ước để người vận hành thấy
+    cấu hình đang áp (`kubectl get scaledobject -L experiment/config`); runner không đọc nhãn này.
 Mục đích:
     - So sánh công bằng: A1, A3, A4 chỉ được khác A2 chính thức ở tín hiệu (`query`, `threshold`). Mọi
       trường khác (min/max, fallback, behavior, timeout trigger) phải giống hệt, nên sửa A2 mà quên eval

@@ -4,8 +4,8 @@
 #            chứng cho A2. GPU utilization = tỷ lệ thời gian GPU có kernel đang chạy, KHÔNG phải mức GPU
 #            làm việc nặng hay nhẹ: chỉ vài request đã đẩy nó lên ~100 % (Kiến thức nền §4.4).
 # Mục đích:  Runner áp file này bằng `kubectl apply` ở các lượt A1 (không qua Argo CD), sau khi xoá mọi
-#            ScaledObject khác (experiments/runner/configs.py). Runner ghi đè threshold và max replica theo
-#            môi trường, nên giá trị trong file là của VM thuê 4 GPU.
+#            ScaledObject khác (experiments/runner/configs.py). Runner chỉ ghi đè max replica theo môi
+#            trường (giá trị trong file là của VM thuê 4 GPU); threshold 70 giữ nguyên ở mọi nơi (xem trigger).
 #            Mọi trường ngoài `triggers` giống hệt A2 (autoscaling/official/base/scaledobject-a2.yaml, giải
 #            thích chi tiết ở đó) để so sánh công bằng: hai cấu hình chỉ khác nhau ở tín hiệu.
 #            experiments/tests/test_eval_configs.py kiểm điều này.
@@ -16,7 +16,7 @@ kind: ScaledObject
 metadata:
   name: vllm-a1                        # quy ước: vllm-<id cấu hình> (CONTRIBUTING §3)
   namespace: llm-serving
-  labels: {experiment/config: A1}      # runner và dashboard nhận ra cấu hình đang áp qua nhãn này
+  labels: {experiment/config: A1}      # để `kubectl get scaledobject -L experiment/config` thấy cấu hình đang áp
 spec:
   scaleTargetRef: {name: vllm}
   minReplicaCount: 1
@@ -41,9 +41,13 @@ spec:
         #   namespace. Cộng cả node vẫn đúng vì node chỉ chạy vLLM; GPU rảnh cộng thêm 0 (ADR-005 T9).
         # - Ở nhà, time-slicing chia 1 RTX 5060 thành nhiều GPU replica nhưng exporter chỉ thấy 1 GPU vật
         #   lý, nên tổng ≤ 100 và desired ≤ ⌈100 ÷ 70⌉ = 2.
-        # - `or vector(0)`: không có chuỗi nào (simulator không có GPU, exporter đang khởi động lại) thì
-        #   trả 0 thay vì rỗng; rỗng làm KEDA báo lỗi và bật fallback (Kiến trúc §13.4). Trên simulator,
-        #   A1 vì vậy luôn ở 1 replica: chỉ dùng để kiểm đường đi (áp, đổi cấu hình, T6), không để đo.
+        # - Không có chuỗi nào (simulator không có GPU, exporter chết hoặc chưa được scrape) thì query rỗng.
+        #   KEDA v2.21.0 coi rỗng là 0, KHÔNG báo lỗi, nên fallback không bật (`ignoreNullValues` mặc định
+        #   true, pkg/scalers/prometheus_scaler.go). `or vector(0)` chỉ ghi rõ hành vi đó, và giữ nó kể cả
+        #   khi đặt `ignoreNullValues: "false"` (Kiến trúc §13.4). Hệ quả: mất exporter thì A1 đứng ở
+        #   1 replica mà không có lỗi nào; lượt đó không hợp lệ, phải xem chuỗi `gpu_util` trong
+        #   metrics.csv.gz của lượt. Trên simulator, A1 vì vậy luôn ở 1 replica: chỉ dùng để kiểm đường đi
+        #   (áp, đổi cấu hình, T6), không để đo.
         # Nếu chạy được DCGM (có label pod) thì thay bằng
         # sum(DCGM_FI_DEV_GPU_UTIL{exported_namespace="llm-serving"}) or vector(0) (Thông số §8.1).
         query: (sum(nvidia_smi_utilization_gpu_ratio) * 100) or vector(0)

@@ -52,6 +52,7 @@
   - Ước tính "15–30 s" của w2 cho T4 không đúng với timeout mặc định.
 - **Links:** PR #16; `1fe5b8a`, `22086c8`, `fe28a1a`; `autoscaling/official/base/scaledobject-a2.yaml`, `autoscaling/tests/run-t1-t5.sh`, `autoscaling/tests/load-sim.sh`, `docs/chi-tiet/00-thong-so.md`.
 - **Thesis:** chương "Triển khai và vận hành" (Kiến trúc §15): bảng T4 hai cấu hình timeout là ví dụ đo được vì sao tham số mặc định không đạt yêu cầu, kèm bằng chứng từ mã nguồn; có thể vẽ hình số lỗi theo thời gian của hai cấu hình. LT7: các mẫu T2 ngày 01/11 (1, 6, 8 s) đo từ lúc gọi `load-sim.sh`, nên gồm cả thời gian mở port-forward (khoảng 1 s); từ 07/11 đo từ lúc `hey` chạy (mẫu mới: 8, 9, 4, 5 s). Mọi số đo thời gian trên simulator này có sai số đồng hồ tới 1,6 %: trước khi sửa script, đo bằng giờ thật; sau khi sửa, đo bằng đồng hồ của VM. Lệch không đáng kể với T2, T4 (< 0,4 s), nhưng là 5 s với cửa sổ 300 s của T3. Đây là ví dụ đáng nêu trong phần hạn chế của môi trường thử.
+
 ## 2026-11-07 – TR2: cấu hình đánh giá A1, A3, A4 cho runner, kiểm trên kind
 
 - **Task:** TR2 · **Environment:** sim
@@ -66,7 +67,7 @@
 - **Decision:**
   - Không tạo `eval/A2.yaml`: runner (`matrix-sim.yaml`) đã dùng thẳng `official/base/scaledobject-a2.yaml`, nên lượt A2 đo đúng cấu hình Argo CD vận hành; bản sao trong `eval/` có thể lệch. Không tạo file cho S1, S4: runner đặt `replicas` trực tiếp.
   - Phần chung với A2 viết lặp lại trong từng file (runner không chạy kustomize), và dùng test để chặn lệch thay cho kustomize patch.
-  - Query A1 giữ đúng Thông số §8.1 (`(sum(nvidia_smi_utilization_gpu_ratio) * 100) or vector(0)`), không thêm `max by (uuid)` để khử trùng chuỗi: chỉ có một PodMonitor scrape exporter.
+  - Query A1 giữ tín hiệu của Thông số §8.1 (`sum(nvidia_smi_utilization_gpu_ratio) * 100`), thêm `or vector(0)` như mẫu ở Kiến trúc §13.3; không thêm `max by (uuid)` để khử trùng chuỗi: chỉ có một PodMonitor scrape exporter.
 - **Results:**
   - Đối chiếu tên metric ở bản ghim: vLLM v0.31.0 có `vllm:kv_cache_usage_perc`, `vllm:num_requests_running`, `vllm:num_requests_waiting` (`vllm/v1/metrics/loggers.py`); nvidia_gpu_exporter 1.15.1 đổi cột `[%]` thành hậu tố `_ratio`, nhân 0,01 (`internal/exporter/exporter.go:73`); llm-d-inference-sim v0.12.0 có `vllm:kv_cache_usage_perc`, nhưng giá trị chỉ đổi khi bật `--enable-kvcache` (`pkg/kvcache/block_cache.go`), overlay `sim` chưa bật.
   - Kind, 16:12–16:15, không tải:
@@ -84,3 +85,22 @@
 - **Deviations:** Kế hoạch §6 ghi mỗi ID trong {S1, S4, A1…A4} là một file eval; Môi trường §14.1 lấy ví dụ `eval/A2.yaml`. Đã sửa theo cách runner của Quang đang chạy (A2 dùng file base chính thức; S1, S4 không có file).
 - **Links:** nhánh `feat/tr2-a1-a4`; `autoscaling/eval/`, `experiments/tests/test_eval_configs.py`.
 - **Thesis:** chương "Triển khai" (Kiến trúc §13.3): bốn cấu hình chỉ khác nhau ở tín hiệu, có test bảo đảm, nên so sánh A1 với A2 là công bằng. Hạn chế của simulator: không mô phỏng được A1 (không có GPU) và A3 (cần `--enable-kvcache`).
+
+## 2026-11-07 – TR2: soát diff A1, A3, A4, sửa giải thích `or vector(0)` theo mã KEDA
+
+- **Task:** TR2 · **Environment:** none
+- **Done:**
+  1. Chạy `/code-review high` cho `feat/tr2-sim..feat/tr2-a1-a4`: 10 phát hiện, kiểm từng điểm với mã nguồn, CI và tài liệu.
+  2. Đối chiếu KEDA v2.21.0 `pkg/scalers/prometheus_scaler.go`: `ignoreNullValues` mặc định `true` (dòng 59); query trả rỗng thì scaler trả 0, không lỗi (dòng 286–291). Câu "rỗng làm KEDA báo lỗi và bật fallback" ở A1, A2 base và Kiến trúc §13.4 là sai.
+  3. Sửa theo đó: comment A1 và A2 base (lý do của `or vector(0)`); Kiến trúc §13.4 (lý do đúng và hệ quả "mất tín hiệu không gây lỗi"); runbook `KedaScalerErrors` và bảng gỡ lỗi `w2.md` (query rỗng không gây lỗi scaler).
+  4. Sửa thêm: header A1 (runner chỉ ghi đè max replica, threshold 70 giữ nguyên); comment nhãn `experiment/config` ở A1, A2 (không code nào đọc nhãn này, chỉ để `kubectl get -L` thấy); Môi trường §14.1 (bước áp cấu hình do runner làm); docstring `test_eval_configs.py`; mục nhật ký trước (thiếu dòng trống trước tiêu đề, dẫn sai Thông số §8.1).
+  5. `test_runner.py` đọc file A2 bằng `encoding="utf-8"`: Python 3.11 trên Windows đọc theo cp1252 nên báo `UnicodeDecodeError`. Lỗi có từ trước, CI Linux không bị.
+- **Decision:**
+  - Giữ `or vector(0)` ở mọi query. Với A2 nó bắt buộc ở từng vế: phép `+` chỉ giữ phần tử có ở cả hai vế. Với A1, A3, A4 nó chỉ ghi rõ hành vi mặc định.
+  - Không đặt `ignoreNullValues: "false"` cho A1 để bật fallback khi mất exporter: fallback đưa A1 lên max, trùng hành vi dự đoán của A1 (Kiến trúc §10.1), nên lượt hỏng còn khó nhận ra hơn.
+  - Trình chọn làm phần kiểm tín hiệu ở một PR riêng trước V2: thêm trường `signal` trong ma trận; lượt bị chấm invalid nếu chuỗi tín hiệu mất mẫu quá 15 s, tức áp Môi trường §17 cho cả nguồn tín hiệu.
+  - Bỏ qua 4 phát hiện: A4 `maxReplicaCount: 4` trên kind (giống A2, runner ghi đè theo môi trường); gộp phần chung của A2 vào runner (trái giao diện Kế hoạch §6, mỗi cấu hình là một file đầy đủ); threshold không có ngoặc kép (job `manifests` chạy kubeconform `-strict`, schema bắt metadata trigger là string). Dòng giao diện Kế hoạch §6 chỉ ghi lại cách runner của Quang đang chạy; đưa vào mục "Điểm cần review" của PR.
+- **Results:** pytest `experiments` 39 passed trên 3.15 và 3.11; ruff, yamllint đạt; kubeconform `autoscaling/eval` 3/3, overlay `sim` 1/1; lychee 0 lỗi.
+- **Incidents:** nhánh `feat/tr2-matrix-v2` không đạt `ruff format --check` (dòng 111 ký tự ở `test_runner.py:77`); sửa khi merge nhánh này sang.
+- **Links:** `autoscaling/eval/A1.yaml`, `autoscaling/official/base/scaledobject-a2.yaml`, `docs/chi-tiet/03-kien-truc-autoscaling.md` §13.4, `docs/runbooks/KedaScalerErrors.md`.
+- **Thesis:** chương "Triển khai" hoặc "Hạn chế": giá trị mặc định của KEDA biến việc mất tín hiệu thành "tải bằng 0" mà không báo gì. Đây là ví dụ cụ thể vì sao phải đọc mã nguồn ở bản ghim thay vì tin tài liệu thiết kế.
