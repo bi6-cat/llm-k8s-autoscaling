@@ -1,0 +1,18 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# autoscaling/eval/kustomization.yaml
+# Khái niệm: Danh sách các cấu hình đánh giá. Runner KHÔNG dùng file này: nó đọc từng file <ID>.yaml và
+#            áp riêng từng cái (experiments/runner/configs.py).
+# Mục đích:  Chỉ để job `manifests` của CI tìm thấy thư mục (nó build mọi thư mục có kustomization.yaml)
+#            và kiểm schema ScaledObject của từng file bằng kubeconform.
+#            Lưu ý: đừng `kubectl apply -k` thư mục này. Ba ScaledObject cùng trỏ Deployment `vllm`, nên
+#            admission webhook của KEDA chặn cái thứ hai (một Deployment chỉ được có một ScaledObject).
+#            A2 không có ở đây: runner dùng thẳng autoscaling/official/base/scaledobject-a2.yaml, để lượt
+#            A2 đo đúng cấu hình mà Argo CD vận hành, không phải một bản sao có thể lệch.
+# Tham khảo: Kiến trúc §13.3, §18.2; CONTRIBUTING §1, §3.
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - A1.yaml
+  - A3.yaml
+  - A4.yaml

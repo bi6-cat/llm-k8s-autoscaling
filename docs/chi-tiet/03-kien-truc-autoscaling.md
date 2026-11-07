@@ -702,7 +702,7 @@ Argo CD cài ở bản core (không có API server, UI và dex) để nhẹ trê
 ### 18.2. Cấu hình autoscaling: trong Git, tạm tách khi đánh giá
 
 - **Khi vận hành:** cấu hình chính thức (A2) nằm trong `autoscaling/official/` (`base/` + `overlays/<env>/`, vì `maxReplicaCount` và `threshold` khác nhau theo môi trường), là Application riêng `autoscaling` do Argo CD quản lý như mọi thứ khác. Application chỉ trỏ tới overlay của môi trường đó, không trỏ cả `autoscaling/` ([ADR-005](../adr/005-sua-thiet-ke-sau-review.md) T7).
-- **Khi đánh giá:** cấu hình phải đổi theo từng lượt (S1, S4, A1, A2). Runner **tắt auto-sync** của Application `autoscaling`, rồi áp từng cấu hình bằng `kubectl apply` từ `autoscaling/eval/`. S1 và S4 dùng `kubectl scale`; Argo CD không đưa về, vì Git không có trường `replicas` [cần kiểm chứng với server-side diff].
+- **Khi đánh giá:** cấu hình phải đổi theo từng lượt (S1, S4, A1, A2). Runner **tắt auto-sync** của Application `autoscaling`, rồi áp từng cấu hình bằng `kubectl apply` từ `autoscaling/eval/` (A2 dùng thẳng file base chính thức, để lượt A2 đo đúng cấu hình đang vận hành). S1 và S4 dùng `kubectl scale`; Argo CD không đưa về, vì Git không có trường `replicas` [cần kiểm chứng với server-side diff].
 - **Hết đợt đánh giá:** runner **xoá mọi ScaledObject khác A2**, rồi mới bật lại auto-sync. Nếu không, admission webhook của KEDA sẽ chặn A2 và Application ở trạng thái Degraded.
 
 Cách này giữ đúng nguyên tắc "Git là nguồn sự thật" trong vận hành, mà vẫn đổi được cấu hình ngay lập tức khi đánh giá. Khi cluster đang lệch khỏi Git trong đợt đánh giá, đó là lệch có chủ đích.

@@ -1,0 +1,40 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# autoscaling/eval/A4.yaml
+# Khái niệm: Cấu hình đánh giá A4 (mức Could, chỉ chạy trên simulator): scale CHỈ theo hàng đợi
+#            (`vllm:num_requests_waiting`, số request đã nhận nhưng chưa được đưa vào batch).
+# Mục đích:  Minh hoạ flapping cho luận văn (bài T7, Hình 14): hàng đợi bằng 0 khi chưa quá tải, nên vừa
+#            scale-up đủ pod thì metric về 0, HPA tính ra 1 replica, sau cửa sổ 300 s lại scale-down và
+#            quá tải lần nữa. Đây là lý do A2 cộng cả `running` (Kiến trúc §10.2, §10.4).
+#            Mọi trường ngoài `triggers` giống hệt A2 (autoscaling/official/base/scaledobject-a2.yaml), để
+#            dao động thấy được chỉ do tín hiệu; experiments/tests/test_eval_configs.py kiểm điều này.
+# Tham khảo: Kiến trúc §10.4, §13.3, §15 (T7); Thông số §8.1.
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: vllm-a4
+  namespace: llm-serving
+  labels: {experiment/config: A4}
+spec:
+  scaleTargetRef: {name: vllm}
+  minReplicaCount: 1
+  maxReplicaCount: 4                   # runner ghi đè (simulator: 3 = số node của kind)
+  pollingInterval: 5
+  fallback: {failureThreshold: 3, replicas: 4}
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 300
+          policies: [{type: Pods, value: 1, periodSeconds: 60}]
+  triggers:
+    - type: prometheus
+      metricType: AverageValue
+      metadata:
+        serverAddress: http://prometheus-operated.monitoring.svc:9090
+        # Tổng hàng đợi của mọi pod. Khi không quá tải, giá trị là 0 → desired = ⌈0 ÷ 5⌉ = 0, HPA kẹp về
+        # minReplicaCount = 1: chính điều này gây flapping.
+        query: sum(vllm:num_requests_waiting{namespace="llm-serving"}) or vector(0)
+        # 5 request chờ mỗi pod: không suy từ đo năng lực, chỉ cần đủ nhỏ để thấy scale-up rõ (Thông số §8.1)
+        threshold: "5"
+        timeout: "1000"                # ms; như A2 (Thông số §9.3)

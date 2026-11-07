@@ -19,7 +19,7 @@ llm-k8s-autoscaling/
 ├── serving/{base, overlays/{home,cloud,cloud-3b,sim}}/   # vLLM; cloud-3b = cloud với model 3B (đang thử)
 ├── autoscaling/
 │   ├── official/{base, overlays/<env>}/           # A2 chính thức (Argo CD quản lý)
-│   ├── eval/<ID>.yaml                             # cấu hình đánh giá A1…A4 (runner áp)
+│   ├── eval/<ID>.yaml                             # cấu hình đánh giá A1, A3, A4 (runner áp; A2 dùng official/base)
 │   └── tests/                                     # tải, NetworkPolicy cho T1–T7
 ├── observability/{rules, alerts{,/tests}, dashboards}/
 ├── loadgen/                      # gói Python: loadgen/<module>.py, tests/
@@ -82,7 +82,7 @@ Tên file và thư mục: chữ thường, nối bằng `-`, không dấu (`scal
 - Nhãn chung: `app: <tên>`. Ví dụ Deployment vLLM tên `vllm`, nhãn `app: vllm`.
 - **Deployment không có `replicas`**, để HPA của KEDA quản lý mà không tranh với Argo CD.
 - Image khai báo không kèm tag trong manifest; tag và digest ghim ở `images:` của `kustomization.yaml`.
-- ScaledObject đặt tên `vllm-<id>` (`vllm-a2`). Mỗi cấu hình đánh giá là một file `autoscaling/eval/<ID>.yaml`.
+- ScaledObject đặt tên `vllm-<id>` (`vllm-a2`). Mỗi cấu hình đánh giá là một file `autoscaling/eval/<ID>.yaml`, trừ A2 (runner dùng thẳng `official/base`) và S1, S4 (không có ScaledObject).
 - Overlay chỉ chứa phần khác biệt (patch). Thứ gì giống nhau ở mọi môi trường thì đưa lên `base/`.
 
 ## 4. Prometheus, cảnh báo, dashboard

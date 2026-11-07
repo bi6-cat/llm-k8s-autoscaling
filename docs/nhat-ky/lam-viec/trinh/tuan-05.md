@@ -52,3 +52,35 @@
   - Ước tính "15–30 s" của w2 cho T4 không đúng với timeout mặc định.
 - **Links:** PR #16; `1fe5b8a`, `22086c8`, `fe28a1a`; `autoscaling/official/base/scaledobject-a2.yaml`, `autoscaling/tests/run-t1-t5.sh`, `autoscaling/tests/load-sim.sh`, `docs/chi-tiet/00-thong-so.md`.
 - **Thesis:** chương "Triển khai và vận hành" (Kiến trúc §15): bảng T4 hai cấu hình timeout là ví dụ đo được vì sao tham số mặc định không đạt yêu cầu, kèm bằng chứng từ mã nguồn; có thể vẽ hình số lỗi theo thời gian của hai cấu hình. LT7: các mẫu T2 ngày 01/11 (1, 6, 8 s) đo từ lúc gọi `load-sim.sh`, nên gồm cả thời gian mở port-forward (khoảng 1 s); từ 07/11 đo từ lúc `hey` chạy (mẫu mới: 8, 9, 4, 5 s). Mọi số đo thời gian trên simulator này có sai số đồng hồ tới 1,6 %: trước khi sửa script, đo bằng giờ thật; sau khi sửa, đo bằng đồng hồ của VM. Lệch không đáng kể với T2, T4 (< 0,4 s), nhưng là 5 s với cửa sổ 300 s của T3. Đây là ví dụ đáng nêu trong phần hạn chế của môi trường thử.
+## 2026-11-07 – TR2: cấu hình đánh giá A1, A3, A4 cho runner, kiểm trên kind
+
+- **Task:** TR2 · **Environment:** sim
+- **Done:**
+  1. Tạo nhánh `feat/tr2-a1-a4` từ `feat/tr2-sim` (PR #16 chưa merge), vì A1, A3, A4 phải chép đúng phần chung của A2 bản mới (`timeout: "1000"`, fallback).
+  2. Đọc Kiến trúc §9–§13, Thông số §8–§9, code runner (`experiments/runner/configs.py`, `matrix.py`) và các file `matrix-*.yaml`. Runner đọc mỗi file eval như **một ScaledObject đơn** (`yaml.safe_load`, không qua kustomize) rồi ghi đè `threshold`, `maxReplicaCount`, `fallback.replicas`.
+  3. Viết `autoscaling/eval/A1.yaml` (GPU util, threshold 70), `A3.yaml` (KV-cache, 0.44 minh hoạ), `A4.yaml` (chỉ hàng đợi, 5). Mọi trường ngoài `query`, `threshold`, tên và nhãn giống hệt A2.
+  4. Thêm `autoscaling/eval/kustomization.yaml` (chỉ để job `manifests` của CI kiểm schema), thêm `autoscaling/eval` vào `make lint`.
+  5. Thêm `experiments/tests/test_eval_configs.py`: tên `vllm-<id>`, nhãn `experiment/config`, runner ghi đè được, eval chỉ khác A2 ở tín hiệu, kustomization liệt kê đủ file.
+  6. Trên kind: dựng manifest bằng `render_scaledobject` của runner (threshold như trong file, max 3), áp theo trình tự của `apply_config` (xoá ScaledObject khác → áp bản pause → bỏ pause), cho A1, A3, A4, rồi trả về A2.
+  7. Sửa tài liệu cho khớp code đã có: Kế hoạch §6, Môi trường §14.1, Kiến trúc §18.2, CONTRIBUTING §1, §3.
+- **Decision:**
+  - Không tạo `eval/A2.yaml`: runner (`matrix-sim.yaml`) đã dùng thẳng `official/base/scaledobject-a2.yaml`, nên lượt A2 đo đúng cấu hình Argo CD vận hành; bản sao trong `eval/` có thể lệch. Không tạo file cho S1, S4: runner đặt `replicas` trực tiếp.
+  - Phần chung với A2 viết lặp lại trong từng file (runner không chạy kustomize), và dùng test để chặn lệch thay cho kustomize patch.
+  - Query A1 giữ đúng Thông số §8.1 (`(sum(nvidia_smi_utilization_gpu_ratio) * 100) or vector(0)`), không thêm `max by (uuid)` để khử trùng chuỗi: chỉ có một PodMonitor scrape exporter.
+- **Results:**
+  - Đối chiếu tên metric ở bản ghim: vLLM v0.31.0 có `vllm:kv_cache_usage_perc`, `vllm:num_requests_running`, `vllm:num_requests_waiting` (`vllm/v1/metrics/loggers.py`); nvidia_gpu_exporter 1.15.1 đổi cột `[%]` thành hậu tố `_ratio`, nhân 0,01 (`internal/exporter/exporter.go:73`); llm-d-inference-sim v0.12.0 có `vllm:kv_cache_usage_perc`, nhưng giá trị chỉ đổi khi bật `--enable-kvcache` (`pkg/kvcache/block_cache.go`), overlay `sim` chưa bật.
+  - Kind, 16:12–16:15, không tải:
+
+    | Cấu hình | Target HPA | Metric HPA thấy | Ready | Lỗi trong log KEDA operator | Số HPA trong ns |
+    |---|---|---|---|---|---|
+    | A1 | 70 | 0 | True | không | 1 |
+    | A3 | 440m | 0 | True | không | 1 |
+    | A4 | 5 | 0 | True | không | 1 |
+
+    Mỗi lần đổi cấu hình, HPA cũ bị xoá cùng ScaledObject, chỉ còn một HPA (cơ chế của T6, làm trên kind; T6 theo thiết kế là bài ở nhà, chưa chạy). Trả về A2: `keda-hpa-vllm-a2` 0/10, 1 replica.
+  - `pytest experiments`: 39 passed, gồm 8 test mới. Thử làm lệch có chủ đích (A1 `stabilizationWindowSeconds` 60; A4 `timeout` 3000): test báo đỏ cả hai lần, rồi trả lại.
+  - `yamllint -s .`, `ruff check`, `ruff format --check` đạt; kubeconform `autoscaling/eval` 3/3 hợp lệ (schema ScaledObject từ CRDs-catalog ở commit ghim của CI); lychee 0 lỗi.
+  - A1, A3 trên simulator luôn ở 1 replica (không có GPU; KV-cache luôn 0): chỉ kiểm được đường đi, không đo được hành vi. A4 dưới tải (T7) chưa chạy.
+- **Deviations:** Kế hoạch §6 ghi mỗi ID trong {S1, S4, A1…A4} là một file eval; Môi trường §14.1 lấy ví dụ `eval/A2.yaml`. Đã sửa theo cách runner của Quang đang chạy (A2 dùng file base chính thức; S1, S4 không có file).
+- **Links:** nhánh `feat/tr2-a1-a4`; `autoscaling/eval/`, `experiments/tests/test_eval_configs.py`.
+- **Thesis:** chương "Triển khai" (Kiến trúc §13.3): bốn cấu hình chỉ khác nhau ở tín hiệu, có test bảo đảm, nên so sánh A1 với A2 là công bằng. Hạn chế của simulator: không mô phỏng được A1 (không có GPU) và A3 (cần `--enable-kvcache`).
