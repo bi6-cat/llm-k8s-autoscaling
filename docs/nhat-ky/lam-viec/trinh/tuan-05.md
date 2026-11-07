@@ -109,6 +109,7 @@
 - **Deviations:** Thông số §7 ghi máy tạo tải đi qua route Traefik riêng; `serving/` chưa có route đó, nên `matrix-v2.yaml` gọi thẳng Service như `matrix-home.yaml`.
 - **Links:** nhánh `feat/tr2-matrix-v2`; `82a3a8c`; `experiments/runner/matrix.py`, `experiments/matrix-v2.yaml`, `experiments/tests/test_runner.py`.
 - **Thesis:** chương "Đánh giá", phần phương pháp (Môi trường §14): thứ tự lượt xáo bằng seed ghi trong Git, lần lặp thứ k của mọi cấu hình nhận cùng lịch gửi (so sánh theo cặp).
+
 ## 2026-11-07 – TR2: soát diff A1, A3, A4, sửa giải thích `or vector(0)` theo mã KEDA
 
 - **Task:** TR2 · **Environment:** none
@@ -127,3 +128,29 @@
 - **Incidents:** nhánh `feat/tr2-matrix-v2` không đạt `ruff format --check` (dòng 111 ký tự ở `test_runner.py:77`); sửa khi merge nhánh này sang.
 - **Links:** `autoscaling/eval/A1.yaml`, `autoscaling/official/base/scaledobject-a2.yaml`, `docs/chi-tiet/03-kien-truc-autoscaling.md` §13.4, `docs/runbooks/KedaScalerErrors.md`.
 - **Thesis:** chương "Triển khai" hoặc "Hạn chế": giá trị mặc định của KEDA biến việc mất tín hiệu thành "tải bằng 0" mà không báo gì. Đây là ví dụ cụ thể vì sao phải đọc mã nguồn ở bản ghim thay vì tin tài liệu thiết kế.
+
+## 2026-11-07 – TR2: soát diff ma trận V2, xáo theo khối lần lặp, chặn khoá lạ trong ma trận
+
+- **Task:** TR2 · **Environment:** none
+- **Done:**
+  1. Merge `feat/tr2-a1-a4` (bản đã sửa sau soát) vào `feat/tr2-matrix-v2`. Xung đột ở `test_runner.py:77` vì hai phía cùng sửa một dòng; lấy bản đã qua `ruff format`.
+  2. Chạy `/code-review high` cho `feat/tr2-a1-a4..feat/tr2-matrix-v2`: 9 phát hiện. Chạy thử để kiểm: gõ nhầm `shufle_seed` thì runner lặng lẽ không xáo; `capacity` bằng `.nan` hay `.inf` lọt qua bước kiểm "số dương"; threshold `"24"` (chuỗi) bị từ chối, trong khi trước PR vẫn chạy được.
+  3. `matrix.py` (code của Quang):
+     - Xáo trong từng khối lần lặp: khoá sắp xếp là `(repeat, sha256(seed:run_id))`.
+     - Từ chối khoá lạ ở mọi cấp (gốc, `target`, `timing`, `configs`, `overrides`, `defaults`, từng dòng `runs`). Khoá gốc `x-…` được bỏ qua vì đó là chỗ đặt anchor.
+     - Số phải hữu hạn (`math.isfinite`). Số viết trong ngoặc kép thì báo lỗi kèm gợi ý cách sửa. `min_replicas` không được lớn hơn `max_replicas`. `kb3_replicas` và `repeats` chỉ đọc một lần (giá trị mặc định 4 trước đây viết ở hai chỗ).
+  4. `session.py`: ghi `shuffle_seed` vào `metadata.json` của mỗi lượt.
+  5. `matrix-v2.yaml`: sửa phép tính cooldown (4→1 xong ở 420 s chứ không phải 480 s; quá 600 s thì runner vẫn pause, ép về 1 replica); cập nhật comment về xáo theo khối và khoá `x-`. Thông số §8.2: thêm "trong từng khối lần lặp".
+  6. 12 test mới: các ca lỗi trên, khoá `x-` được bỏ qua, thứ tự ghim mới của seed 7, và trên file V2 thật: 11 lượt đầu là lặp-1 và phủ đủ 11 ô.
+- **Decision:**
+  - Trình chọn xáo theo khối lần lặp thay cho xáo toàn bộ. Khi xáo toàn bộ với seed 20261114, `S4-KB2-1` và `S1-KB3-1` (lượt đối chứng duy nhất của ô đó) nằm ở vị trí 16 và 17, còn `A2-KB3-2` chạy đầu tiên; phiên V2 bị cắt ở khoảng lượt 15 sẽ mất đúng các lượt đối chứng. Khi xáo theo khối, 11 lượt đầu phủ đủ 11 ô. Các lượt cùng lần lặp dùng chung lịch gửi (`--run-index k`) và chạy gần nhau, nên so sánh cặp ít bị trôi theo thời gian hơn.
+  - Threshold trong ma trận chỉ nhận kiểu số, không nhận chuỗi: chỉ một cách viết, runner tự đổi sang chuỗi cho KEDA, và thông báo lỗi chỉ cách sửa.
+  - Không cho `min_replicas: 0`: thiết kế luôn giữ ít nhất 1 pod vì cold start mất vài phút.
+  - Bỏ qua phát hiện "test phải ghim N = 4": N chốt ở ADR-003 và có thể là 2; test đã kiểm N nhất quán giữa S4, max replica và KB3.
+- **Results:**
+  - pytest `experiments` 61 passed trên 3.15 và 3.11 (49 cũ cộng 12 mới); `loadgen` 41 passed; ruff check, ruff format và yamllint đạt; kubeconform `autoscaling/eval` 3/3; lychee 0 lỗi.
+  - `--dry-run` chạy trong WSL (Python 3.12), vì trên Windows runner không chạy được do dùng `fcntl`. `matrix-sim.yaml`: 2 lượt. Bản sao `matrix-v2.yaml` điền thử C = 5, threshold 24: 17 lượt, theo thứ tự A1-KB3-1, S1-KB2-1, S4-KB1-1, A2-KB2-1, A2-KB3-1, A2-KB1-1, A1-KB1-1, S4-KB3-1, A1-KB2-1, S4-KB2-1, S1-KB3-1 (lặp-1); rồi A2-KB3-2, A1-KB1-2, A2-KB2-2, A2-KB1-2, A1-KB2-2 (lặp-2); cuối cùng A2-KB2-3.
+  - `matrix-sim.yaml`, `matrix-home.yaml`, `matrix-dg1-home.yaml` đều qua bước kiểm khoá chặt.
+- **Deviations:** Thông số §8.2 đổi cách xáo thành xáo trong từng khối lần lặp; đưa vào mục "Điểm cần review" của PR.
+- **Links:** `experiments/runner/matrix.py`, `experiments/runner/session.py`, `experiments/matrix-v2.yaml`, `experiments/tests/test_runner.py`, `docs/chi-tiet/00-thong-so.md` §8.2.
+- **Thesis:** chương "Đánh giá", phần phương pháp: xáo theo khối lần lặp (randomized block design, mỗi khối là một lần lặp có chung lịch gửi). Lý do: chống trôi theo thời gian và giữ đủ ô khi phiên bị cắt ngang.

@@ -6,10 +6,16 @@ Khái niệm: File ma trận mô tả một phiên: cluster nào (namespace, Dep
     lượt nào đã xong (progress.json) mà không cần đánh số tay.
     `shuffle_seed` (tuỳ chọn) xáo thứ tự lượt theo seed (Thông số §8.2), để thứ tự chạy không trùng với
     thứ tự cấu hình: nếu không, thứ gì trôi theo thời gian (nhiệt GPU, trạng thái node) bị tính nhầm
-    thành khác biệt giữa các cấu hình.
+    thành khác biệt giữa các cấu hình. Xáo trong từng khối lần lặp: mọi lượt lặp-1 chạy trước (mỗi ô
+    cấu hình × kịch bản một lượt), rồi mới tới lặp-2…, nên phiên bị cắt ngang chỉ mất lần lặp, không mất
+    ô nào. Các lượt cùng lần lặp dùng chung lịch gửi và chạy gần nhau, nên so sánh cặp ít bị trôi hơn.
 Mục đích: Kiểm tra file ngay khi bắt đầu, báo lỗi rõ ràng, để không phát hiện lỗi chính tả ở lượt
-    thứ 10 lúc 3 giờ sáng. Không gọi cluster: hàm thuần, có unit test. Số phải dương (bắt cả giá trị
-    `null` chưa điền trong file nháp, như matrix-v2.yaml trước ADR-003).
+    thứ 10 lúc 3 giờ sáng. Không gọi cluster: hàm thuần, có unit test.
+    - Số phải dương và hữu hạn: bắt cả giá trị `null` chưa điền trong file nháp (như matrix-v2.yaml
+      trước ADR-003) và `.nan`, `.inf` của YAML.
+    - Khoá lạ bị từ chối: gõ nhầm `shufle_seed` hay `repeat` thì báo lỗi, thay vì lặng lẽ bỏ xáo hay bỏ
+      lặp. Riêng khoá gốc bắt đầu bằng `x-` được bỏ qua: chỗ đặt YAML anchor (`x-adr003` trong
+      matrix-v2.yaml).
 
 Ví dụ một file: experiments/matrix-sim.yaml.
 """
@@ -17,7 +23,8 @@ Ví dụ một file: experiments/matrix-sim.yaml.
 from __future__ import annotations
 
 import hashlib
-from dataclasses import dataclass, field
+import math
+from dataclasses import dataclass, field, fields
 from pathlib import Path
 from typing import Any
 
@@ -97,21 +104,41 @@ class Matrix:
     shuffle_seed: int | None = None
 
 
+# Khoá hợp lệ ở từng cấp của file. `defaults` dùng chung tập khoá với một dòng `runs`.
+ROOT_KEYS = {"session", "env", "shuffle_seed", "target", "timing", "configs", "defaults", "runs"}
+TARGET_KEYS = {f.name for f in fields(Target)}
+TIMING_KEYS = {f.name for f in fields(Timing)}
+CONFIG_KEYS = {"type", "replicas", "file", "overrides"}
+OVERRIDE_KEYS = {"threshold", "max_replicas", "min_replicas"}
+RUN_KEYS = {"config", "scenario", "capacity", "rate", "duration", "kb3_replicas", "repeats"}
+
+
 def _require(d: dict[str, Any], key: str, where: str) -> Any:
     if key not in d:
         raise MatrixError(f"{where}: thiếu trường `{key}`")
     return d[key]
 
 
-def _positive(value: Any, where: str, key: str, integer: bool = False) -> Any:
-    """Trả lại `value` nếu là số dương (số nguyên khi integer=True), nếu không thì báo lỗi.
+def _check_keys(d: Any, allowed: set[str], where: str) -> None:
+    """Báo lỗi nếu `d` không phải map hoặc có khoá ngoài `allowed` (thường là gõ nhầm tên khoá)."""
+    if not isinstance(d, dict):
+        raise MatrixError(f"{where}: phải là một map YAML, gặp {d!r}")
+    extra = sorted(str(k) for k in d if k not in allowed)
+    if extra:
+        raise MatrixError(f"{where}: khoá không hợp lệ {extra}; hợp lệ: {', '.join(sorted(allowed))}")
 
-    bool bị loại riêng vì trong Python `True` cũng là int (bằng 1).
+
+def _positive(value: Any, where: str, key: str, integer: bool = False) -> Any:
+    """Trả lại `value` nếu là số dương hữu hạn (số nguyên khi integer=True), nếu không thì báo lỗi.
+
+    bool bị loại riêng vì trong Python `True` cũng là int (bằng 1). NaN bị loại riêng vì `nan <= 0` là
+    False, nên lọt qua phép so sánh.
     """
     is_num = isinstance(value, int) if integer else isinstance(value, (int, float))
-    if not is_num or isinstance(value, bool) or value <= 0:
-        kind = "số nguyên dương" if integer else "số dương"
-        raise MatrixError(f"{where}: `{key}` phải là {kind}, gặp {value!r}")
+    if not is_num or isinstance(value, bool) or not math.isfinite(value) or value <= 0:
+        kind = "số nguyên dương" if integer else "số dương hữu hạn"
+        hint = " (viết số, không đặt trong ngoặc kép)" if isinstance(value, str) else ""
+        raise MatrixError(f"{where}: `{key}` phải là {kind}, gặp {value!r}{hint}")
     return value
 
 
@@ -129,12 +156,14 @@ def parse(data: dict[str, Any]) -> Matrix:
     """Kiểm tra và chuyển dict (đã đọc từ YAML) thành Matrix. Lỗi nào cũng báo kèm vị trí."""
     if not isinstance(data, dict):
         raise MatrixError("file ma trận phải là một map YAML")
+    _check_keys({k: v for k, v in data.items() if not str(k).startswith("x-")}, ROOT_KEYS, "gốc")
     session = str(_require(data, "session", "gốc"))
     env = str(_require(data, "env", "gốc"))
     if env not in ("home", "sim", "cloud"):
         raise MatrixError(f"gốc: env `{env}` không hợp lệ (home | sim | cloud)")
 
     t = _require(data, "target", "gốc")
+    _check_keys(t, TARGET_KEYS, "target")
     target = Target(
         namespace=str(_require(t, "namespace", "target")),
         deployment=str(_require(t, "deployment", "target")),
@@ -144,16 +173,19 @@ def parse(data: dict[str, Any]) -> Matrix:
         api_key_secret=t.get("api_key_secret"),
         loadgen_cpu=str(t.get("loadgen_cpu", "1")),
     )
+    _check_keys(data.get("timing", {}), TIMING_KEYS, "timing")
     timing = Timing(**data.get("timing", {}))
 
     configs: dict[str, Config] = {}
     for cid, c in _require(data, "configs", "gốc").items():
         where = f"configs.{cid}"
+        _check_keys(c, CONFIG_KEYS, where)
         ctype = _require(c, "type", where)
         if ctype not in CONFIG_TYPES:
             raise MatrixError(f"{where}: type `{ctype}` không hợp lệ ({' | '.join(CONFIG_TYPES)})")
         if ctype == "scaledobject" and "file" not in c:
             raise MatrixError(f"{where}: cấu hình scaledobject cần `file`")
+        _check_keys(c.get("overrides", {}), OVERRIDE_KEYS, f"{where}.overrides")
         overrides = dict(c.get("overrides", {}))
         # Kiểm ngay ở đây: threshold sai (ví dụ `null` chưa điền) chỉ lộ ra khi KEDA từ chối ScaledObject,
         # tức sau khi lượt đã reset xong.
@@ -162,6 +194,8 @@ def parse(data: dict[str, Any]) -> Matrix:
         for key in ("max_replicas", "min_replicas"):
             if key in overrides:
                 _positive(overrides[key], f"{where}.overrides", key, integer=True)
+        if overrides.get("min_replicas", 1) > overrides.get("max_replicas", math.inf):
+            raise MatrixError(f"{where}.overrides: `min_replicas` lớn hơn `max_replicas`")
         configs[cid] = Config(
             id=cid,
             type=ctype,
@@ -172,8 +206,10 @@ def parse(data: dict[str, Any]) -> Matrix:
 
     runs: list[RunSpec] = []
     defaults = data.get("defaults", {})
+    _check_keys(defaults, RUN_KEYS, "defaults")
     for i, r in enumerate(_require(data, "runs", "gốc")):
         where = f"runs[{i}]"
+        _check_keys(r, RUN_KEYS, where)
         r = {**defaults, **r}  # giá trị riêng của lượt ghi đè defaults
         cid = _require(r, "config", where)
         if cid not in configs:
@@ -190,10 +226,11 @@ def parse(data: dict[str, Any]) -> Matrix:
             _positive(r["duration"], where, "duration")
         else:
             _positive(r["capacity"], where, "capacity")
-        _positive(r.get("kb3_replicas", 4), where, "kb3_replicas", integer=True)
+        kb3 = _positive(r.get("kb3_replicas", 4), where, "kb3_replicas", integer=True)
+        repeats = _positive(r.get("repeats", 1), where, "repeats", integer=True)
         # CONST ghi kèm tốc độ vào tên, để một phiên quét nhiều mức λ (ĐG1) không trùng run_id
         label = f"CONST{float(r['rate']):g}" if scenario == "CONST" else scenario
-        for rep in range(1, _positive(r.get("repeats", 1), where, "repeats", integer=True) + 1):
+        for rep in range(1, repeats + 1):
             runs.append(
                 RunSpec(
                     run_id=f"{cid}-{label}-{rep}",
@@ -203,7 +240,7 @@ def parse(data: dict[str, Any]) -> Matrix:
                     capacity=r.get("capacity"),
                     rate=r.get("rate"),
                     duration=r.get("duration"),
-                    replicas_for_kb3=int(r.get("kb3_replicas", 4)),
+                    replicas_for_kb3=kb3,
                 )
             )
     ids = [x.run_id for x in runs]
@@ -214,7 +251,8 @@ def parse(data: dict[str, Any]) -> Matrix:
     if seed is not None:
         if not isinstance(seed, int) or isinstance(seed, bool):
             raise MatrixError(f"gốc: `shuffle_seed` phải là số nguyên, gặp {seed!r}")
-        runs.sort(key=lambda x: _shuffle_key(seed, x.run_id))
+        # Khoá (lần lặp, băm): xáo trong từng khối lần lặp, mọi lượt lặp-1 chạy trước (docstring đầu file)
+        runs.sort(key=lambda x: (x.repeat, _shuffle_key(seed, x.run_id)))
     return Matrix(session=session, env=env, target=target, timing=timing, runs=runs, shuffle_seed=seed)
 
 

@@ -14,8 +14,8 @@
 
 # ── Giá trị chốt ở ADR-003 (sau ĐG1 đầu phiên V2) ───────────────────────────────
 # Mọi số phụ thuộc máy và model đặt ở đây và dùng lại bên dưới bằng YAML anchor (`&tên` đặt tên cho một
-# giá trị, `*tên` dùng lại giá trị đó), nên điền một chỗ là đủ. matrix.py chỉ đọc các khoá nó biết, nên
-# bỏ qua khoá `x-adr003`.
+# giá trị, `*tên` dùng lại giá trị đó), nên điền một chỗ là đủ. matrix.py bỏ qua khoá gốc bắt đầu bằng
+# `x-` như `x-adr003`; khoá lạ khác thì báo lỗi.
 x-adr003:
   C: &C null                           # req/s; capacity.json → "C"
   A2_threshold: &A2_THRESHOLD null     # 0,8 × B*; capacity.json → threshold.A2_concurrency
@@ -27,8 +27,10 @@ x-adr003:
 
 session: v2-dg2
 env: cloud
-# Xáo thứ tự 17 lượt theo seed (Thông số §8.2). Seed nằm trong Git nên thứ tự tái lập được; chỉ đổi seed
-# trước khi chạy lượt đầu tiên. 20261114 = ngày bắt đầu V2.
+# Xáo thứ tự 17 lượt theo seed, trong từng khối lần lặp (Thông số §8.2): 11 lượt lặp-1 (mỗi ô một lượt)
+# chạy trước, rồi 5 lượt lặp-2, rồi 1 lượt lặp-3; phiên bị cắt ngang thì chỉ mất lần lặp, không mất ô nào.
+# Seed nằm trong Git (và trong metadata.json của mỗi lượt) nên thứ tự tái lập được; chỉ đổi seed trước khi
+# chạy lượt đầu tiên. 20261114 = ngày bắt đầu V2.
 shuffle_seed: 20261114
 
 target:
@@ -50,7 +52,9 @@ timing:
   settle_s: 60                         # reset: chờ thêm sau khi hệ thống đã yên
   warmup_s: 120                        # warm-up 0,3 C trong 2 phút, không tính vào kết quả
   warmup_fraction: 0.3
-  # A2 từ 4 về 1 replica: cửa sổ 300 s + 3 pod × 60 s = 480 s, cộng chu kỳ sync, dưới 600 s
+  # Từ 4 về 1 replica: chờ hết cửa sổ 300 s rồi bớt 1 pod mỗi 60 s (4→3 ở 300 s, 3→2 ở 360 s, 2→1 ở 420 s),
+  # cộng độ trễ scrape và sync khoảng 10 s, dưới 600 s. Quá 600 s thì runner ghi cooldown = null rồi vẫn
+  # pause ScaledObject (ép về 1 replica), nên lượt sau vẫn bắt đầu từ 1 replica.
   cooldown_max_s: 600
   reset_timeout_s: 900                 # S4: 3 pod mới cold start (L2 dự kiến 0,5–1,5 phút), dư nhiều
 
