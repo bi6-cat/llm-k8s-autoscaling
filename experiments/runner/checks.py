@@ -4,8 +4,8 @@ Khái niệm: Lượt "không hợp lệ" = số đo có thể sai vì lý do ng
     nghẽn, pod vLLM bị thay giữa chừng, Prometheus mất mẫu, KEDA mất tín hiệu scale). Lượt đó vẫn giữ dữ
     liệu nhưng phải chạy lại.
 Mục đích: Gom mọi tiêu chí thành checks.json `{valid, reasons, details}`, để ai đọc cũng biết vì sao một
-    lượt bị loại. Phần tự kiểm của máy tạo tải (lệch lịch, CPU, throttle) đã có trong loadgen.json;
-    ở đây chỉ đọc kết quả `valid` của nó, không kiểm lại.
+    lượt bị loại. Phần tự kiểm của máy tạo tải (lệch lịch, event loop, CPU, throttle) đã có trong
+    loadgen.json; ở đây chỉ đọc kết quả `valid` của nó, không kiểm lại.
 """
 
 from __future__ import annotations
@@ -36,7 +36,9 @@ def evaluate(
     if loadgen_checks is None:
         reasons.append("không có loadgen.json (máy tạo tải không ghi kết quả)")
     elif loadgen_checks.get("valid") is not True:
-        failed = [k for k in ("send_lag_ok", "cpu_ok", "throttle_ok") if loadgen_checks.get(k) is False]
+        # Mọi khoá `*_ok` bằng False (lệch lịch, event loop, CPU, throttle): loadgen thêm tiêu chí mới thì
+        # lý do vẫn hiện ra mà không phải sửa ở đây
+        failed = [k for k, v in loadgen_checks.items() if k.endswith("_ok") and v is False]
         reasons.append(f"máy tạo tải không đạt tự kiểm: {', '.join(failed) or 'không rõ'}")
 
     # 2) Trạng thái đầu đúng (1 replica, hàng đợi trống; S4: N replica)

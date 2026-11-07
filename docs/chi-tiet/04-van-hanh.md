@@ -89,11 +89,11 @@ Viết `tổng − tốt` chứ không viết `1 − tốt/tổng` là có chủ
 | Cảnh báo | Điều kiện (rút gọn) | Mức | Ý nghĩa |
 |---|---|---|---|
 | `LLMSLOBurnFast` | Tỷ lệ request TTFT vượt ngưỡng ≥ 20% (burn rate 4) trên **cả** cửa sổ 5 phút và 1 phút, `for: 1m` | page | Người dùng đang phải chờ lâu |
-| `LLMErrorRateHigh` | Tỷ lệ 5xx ≥ 1% trong 5 phút | page | Request bị từ chối |
+| `LLMErrorRateHigh` | Tỷ lệ 5xx ≥ 1% trong 5 phút, `for: 1m` (một lần chuyển pod có thể sinh vài 503 lẻ; không page vì một đợt lỗi vài giây) | page | Request bị từ chối |
 | `LLMAtMaxReplicas` | Số replica bằng max trong 15 phút **và** hàng đợi > 0 | ticket | Autoscaling đã hết dư địa; cần thêm GPU hoặc giới hạn tải |
 | `LLMPodPending` | Pod vLLM ở trạng thái Pending > 10 phút | ticket | Thường do hết GPU: rolling update bị kẹt, hoặc max replica lớn hơn số GPU |
 | `LLMPodNotReady` / `LLMPodCrashLooping` | Pod vLLM không Ready > 15 phút (lâu hơn cold start tối đa); hoặc container ở `CrashLoopBackOff` > 5 phút | page | Pod không khởi động được: OOM, sai tham số, lỗi CUDA |
-| `KedaScalerErrors` | Bộ đếm lỗi scaler của KEDA tăng (ví dụ `keda_scaler_errors_total`, kiểm tra tên theo phiên bản) | page | Autoscaling bị "mù"; lỗi liên tiếp quá `failureThreshold` (lần thứ 4) thì vào chế độ fallback |
+| `KedaScalerErrors` | Bộ đếm lỗi scaler của KEDA tăng: `keda_scaler_detail_errors_total` (tên trong KEDA 2.21; `keda_scaler_errors_total` là tên cũ), ≥ 3 lỗi trong 2 phút, `for: 1m` | page | Autoscaling bị "mù"; lỗi liên tiếp quá `failureThreshold` (lần thứ 4) thì vào chế độ fallback |
 
 **Cảnh báo phụ** (Could, chỉ thêm nếu còn thời gian): `LLMSLOBurnSlow` (≥ 10% trên cả 30 phút và 5 phút, ticket); `LLMPreemptions` (`num_preemptions_total` tăng trong 5 phút, ticket); `GPUTemperatureHigh` (> 83 °C trong 5 phút, ticket); `GPUXidError` (lỗi XID, page). Có sẵn từ kube-prometheus-stack: `TargetDown`, `Watchdog`.
 

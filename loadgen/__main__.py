@@ -23,6 +23,7 @@ import asyncio
 import json
 import os
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -108,12 +109,17 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 1
-    cg_before = checks.read_cgroup_cpu_stat()
+    cg_before, cg_t0 = checks.read_cgroup_cpu_stat(), time.perf_counter()
     with fh:
         result = asyncio.run(sender.run(plan, target, fh, prompt_seed))
-    cg_after = checks.read_cgroup_cpu_stat()
+    cg_after, cg_t1 = checks.read_cgroup_cpu_stat(), time.perf_counter()
     summary = checks.summarize(
-        result.records, result.loop_lags_s, result.cpu_max_fraction, cg_before, cg_after
+        result.records,
+        result.loop_lags_s,
+        result.cpu_max_fraction,
+        cg_before,
+        cg_after,
+        cgroup_elapsed_s=cg_t1 - cg_t0,
     )
 
     n_err = sum(1 for r in result.records if r["error"])

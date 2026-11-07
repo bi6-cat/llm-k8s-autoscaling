@@ -91,17 +91,41 @@ def max_scrape_gap(samples: list[list[Any]], window: tuple[float, float] | None 
     return max(b - a for a, b in zip(ts, ts[1:], strict=False))
 
 
-def scrape_gaps(prom: Prometheus, ns: str, start: float, end: float) -> dict[str, float | None]:
-    """Khoảng trống scrape lớn nhất của từng target vLLM trong cửa sổ lượt (Môi trường §17: ≤ 15 s).
+def scrape_gaps(
+    prom: Prometheus,
+    ns: str,
+    start: float,
+    end: float,
+    *,
+    at_start: frozenset[str] = frozenset(),
+    at_end: frozenset[str] = frozenset(),
+) -> dict[str, float | None]:
+    """Khoảng trống scrape lớn nhất của từng pod vLLM trong cửa sổ lượt (Môi trường §17: ≤ 15 s).
 
     Dùng range selector `up{…}[Ns]` trong truy vấn tức thời: Prometheus trả MẪU GỐC kèm timestamp thật,
     khác query_range (luôn có giá trị ở mỗi bước nhờ lookback, nên không thấy được khoảng trống).
+
+    Chỉ tính mẫu `up == 1`: mỗi lần scrape THẤT BẠI Prometheus vẫn ghi một mẫu `up = 0`, nên đếm mọi mẫu
+    thì scrape lỗi liên tục cũng không để lại khoảng trống nào. Mép cửa sổ tính theo pod:
+    - `at_start`: pod đã có từ đầu lượt (pods_start). Tính từ `start` tới lần scrape thành công đầu tiên.
+    - `at_end`: pod còn sống, không đang bị xoá, ở cuối lượt (pods_end). Tính từ lần thành công cuối
+      tới `end`.
+    Pod mới do scale-up không có mép đầu: mẫu `up = 0` lúc cold start (chưa mở /metrics) không bị tính.
+    Pod đang tắt không có mép cuối, vì lúc drain /metrics có thể đã ngừng trả lời. Pod sống suốt lượt mà
+    không có lần thành công nào, hoặc không có chuỗi `up` nào, cho ra cả cửa sổ (end − start).
+    Pod có từ đầu lượt mà bị xoá giữa lượt thì checks.py đã loại lượt ở tiêu chí 3.
     """
-    window = max(int(end - start), 1)
+    window = max(math.ceil(end - start), 1)
     res = prom.query(f'up{{namespace="{ns}"}}[{window}s]', at=end)
-    return {
-        s["metric"].get("pod", s["metric"].get("instance", "?")): max_scrape_gap(s["values"]) for s in res
-    }
+    gaps: dict[str, float | None] = {}
+    for s in res:
+        pod = s["metric"].get("pod", s["metric"].get("instance", "?"))
+        ok = [float(t) for t, v in s["values"] if float(v) == 1 and start <= float(t) <= end]
+        edges = ([start] if pod in at_start else []) + ([end] if pod in at_end else [])
+        gaps[pod] = max_scrape_gap([[t, "1"] for t in ok + edges])
+    for pod in (at_start & at_end) - gaps.keys():  # sống suốt lượt mà Prometheus không có target nào
+        gaps[pod] = end - start
+    return gaps
 
 
 def signal_gap(prom: Prometheus, selector: str, start: float, end: float) -> dict[str, Any]:
