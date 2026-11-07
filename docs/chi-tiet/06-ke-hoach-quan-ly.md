@@ -219,7 +219,7 @@ Các phần của hệ thống được làm song song (một phần trên GPU t
 |---|---|---|
 | **Hạ tầng** | Hạ tầng → serving | Kubeconfig, danh sách node và nhãn, đường dẫn NVMe, tham số k3s; cách thuê và huỷ máy |
 | **Metric** | Serving → giám sát, đánh giá | Tên metric vLLM và GPU (theo phiên bản đã ghim), label `namespace`, `pod`; **danh sách bucket** của histogram TTFT |
-| **Cấu hình** | Autoscaling → runner | Mỗi cấu hình là một file `autoscaling/eval/<ID>.yaml` với ID ∈ {S1, S4, A1…A4}; A2 chính thức ở `autoscaling/official/`; tên ScaledObject `vllm-<id>`; cách tạm dừng và bỏ tạm dừng |
+| **Cấu hình** | Autoscaling → runner | Mỗi cấu hình autoscaling là một file ScaledObject đơn `autoscaling/eval/<ID>.yaml` với ID ∈ {A1, A3, A4}; A2 dùng thẳng file base chính thức `autoscaling/official/base/scaledobject-a2.yaml`; S1, S4 không có file (runner đặt `replicas`); tên ScaledObject `vllm-<id>`; cách tạm dừng và bỏ tạm dừng |
 | **Tham số model** | Serving → đánh giá | `served-model-name`, `max-model-len`, tokenizer để sinh prompt |
 | **Cảnh báo và runbook** | Giám sát → vận hành | Tên cảnh báo, nhãn `severity`, đường dẫn runbook; mẫu runbook |
 | **Runner** | Đánh giá → mọi phần | `make run MATRIX=…`; runner đọc `capacity.json`; hook phân tích log vLLM là một hàm `parse_vllm_log(text) → dict` |

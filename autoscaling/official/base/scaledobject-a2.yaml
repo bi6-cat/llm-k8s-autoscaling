@@ -14,7 +14,7 @@ kind: ScaledObject
 metadata:
   name: vllm-a2                        # quy ước: vllm-<id cấu hình> (CONTRIBUTING §3)
   namespace: llm-serving               # phải cùng namespace với Deployment được scale
-  labels: {experiment/config: A2}      # runner dùng nhãn này để biết cấu hình nào đang áp
+  labels: {experiment/config: A2}      # để `kubectl get scaledobject -L experiment/config` thấy cấu hình đang áp
 spec:
   scaleTargetRef: {name: vllm}         # Deployment vllm (serving/base/deployment.yaml)
   minReplicaCount: 1                   # luôn giữ ít nhất 1 pod: cold start vài phút, không scale về 0
@@ -48,9 +48,11 @@ spec:
         # Service do Prometheus Operator tạo, cùng tên ở mọi môi trường (nhà, kind, VM)
         serverAddress: http://prometheus-operated.monitoring.svc:9090
         # Tổng request đang chạy + đang chờ của mọi pod vLLM trong namespace.
-        # `or vector(0)`: khi chưa có pod nào (chuỗi rỗng) thì trả 0 thay vì "không có dữ liệu", vì
-        # rỗng làm KEDA báo lỗi và kích hoạt fallback. Dùng biểu thức gốc, không dùng recording rule,
-        # để không thêm một chu kỳ trễ (CONTRIBUTING §4).
+        # `or vector(0)` ở từng vế: phép `+` giữa hai vector chỉ giữ phần tử có ở cả hai vế, nên thiếu
+        # một vế thì cả tổng rỗng. Cả biểu thức rỗng (chưa có pod nào được scrape) thì KEDA v2.21.0 vốn coi
+        # là 0, không báo lỗi và không bật fallback (`ignoreNullValues` mặc định true,
+        # pkg/scalers/prometheus_scaler.go). Dùng biểu thức gốc, không dùng recording rule, để không thêm
+        # một chu kỳ trễ (CONTRIBUTING §4).
         query: |
           (sum(vllm:num_requests_running{namespace="llm-serving"}) or vector(0))
           + (sum(vllm:num_requests_waiting{namespace="llm-serving"}) or vector(0))

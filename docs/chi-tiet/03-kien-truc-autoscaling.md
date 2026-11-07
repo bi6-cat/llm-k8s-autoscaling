@@ -555,7 +555,8 @@ threshold: "5"
 
 ### 13.4. PromQL chống lỗi
 
-- `or vector(0)`: khi chưa có pod nào xuất metric (ví dụ đúng lúc khởi động), truy vấn trả về rỗng. Không có vế này, KEDA sẽ báo lỗi và kích hoạt fallback.
+- `or vector(0)`: khi chưa có pod nào xuất metric (ví dụ đúng lúc khởi động), truy vấn trả về rỗng. KEDA v2.21.0 vốn đã coi kết quả rỗng là 0, không báo lỗi và không bật fallback (`ignoreNullValues` mặc định `true`, `pkg/scalers/prometheus_scaler.go`). Vế này vẫn cần ở từng toán hạng của phép `+` (A2): phép `+` chỉ giữ phần tử có ở cả hai vế, nên thiếu một vế thì cả tổng rỗng. Với truy vấn một vế (A1, A3, A4), nó chỉ ghi rõ hành vi trên, kể cả khi đặt `ignoreNullValues: "false"`.
+- Hệ quả: **mất tín hiệu không gây lỗi**. Exporter GPU chết thì A1 đọc được 0 và đứng ở `minReplicaCount`. Nếu đặt `ignoreNullValues: "false"` để bật fallback thì A1 lại lên max, giống hệt hành vi dự đoán của A1 (§10.1), nên còn khó phát hiện hơn. Vì vậy lượt đánh giá phải kiểm riêng là chuỗi tín hiệu có dữ liệu.
 - Luôn lọc theo `namespace` để không cộng nhầm metric của pod khác.
 - Metric GPU: xác định đúng label chỉ pod vLLM (`pod`/`exported_pod`, `namespace`/`exported_namespace`) bằng cách chạy truy vấn thử trên Prometheus; nếu exporter không có label pod thì chỉ dùng được khi node chỉ chạy vLLM.
 - Kiểm tra giá trị mà HPA đang thấy: `kubectl get hpa keda-hpa-vllm-a2 -o yaml`, phần `status.currentMetrics`.
@@ -702,7 +703,7 @@ Argo CD cài ở bản core (không có API server, UI và dex) để nhẹ trê
 ### 18.2. Cấu hình autoscaling: trong Git, tạm tách khi đánh giá
 
 - **Khi vận hành:** cấu hình chính thức (A2) nằm trong `autoscaling/official/` (`base/` + `overlays/<env>/`, vì `maxReplicaCount` và `threshold` khác nhau theo môi trường), là Application riêng `autoscaling` do Argo CD quản lý như mọi thứ khác. Application chỉ trỏ tới overlay của môi trường đó, không trỏ cả `autoscaling/` ([ADR-005](../adr/005-sua-thiet-ke-sau-review.md) T7).
-- **Khi đánh giá:** cấu hình phải đổi theo từng lượt (S1, S4, A1, A2). Runner **tắt auto-sync** của Application `autoscaling`, rồi áp từng cấu hình bằng `kubectl apply` từ `autoscaling/eval/`. S1 và S4 dùng `kubectl scale`; Argo CD không đưa về, vì Git không có trường `replicas` [cần kiểm chứng với server-side diff].
+- **Khi đánh giá:** cấu hình phải đổi theo từng lượt (S1, S4, A1, A2). Runner **tắt auto-sync** của Application `autoscaling`, rồi áp từng cấu hình bằng `kubectl apply` từ `autoscaling/eval/` (A2 dùng thẳng file base chính thức, để lượt A2 đo đúng cấu hình đang vận hành). S1 và S4 dùng `kubectl scale`; Argo CD không đưa về, vì Git không có trường `replicas` [cần kiểm chứng với server-side diff].
 - **Hết đợt đánh giá:** runner **xoá mọi ScaledObject khác A2**, rồi mới bật lại auto-sync. Nếu không, admission webhook của KEDA sẽ chặn A2 và Application ở trạng thái Degraded.
 
 Cách này giữ đúng nguyên tắc "Git là nguồn sự thật" trong vận hành, mà vẫn đổi được cấu hình ngay lập tức khi đánh giá. Khi cluster đang lệch khỏi Git trong đợt đánh giá, đó là lệch có chủ đích.

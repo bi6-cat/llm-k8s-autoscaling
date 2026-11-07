@@ -1,0 +1,46 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# autoscaling/eval/A3.yaml
+# Khái niệm: Cấu hình đánh giá A3 (mức Could): scale theo mức dùng KV-cache. KV-cache = vùng VRAM vLLM
+#            giữ key/value của các token đã xử lý, chia thành block; `vllm:kv_cache_usage_perc` = tỷ lệ
+#            block đang dùng, 0–1. Nó tỷ lệ với số TOKEN đang nằm trong hệ thống, không phải số request.
+# Mục đích:  Runner áp file này ở các lượt A3 (Thông số §8.2: Could, thêm A3 × KB1–KB3 nếu còn thời gian).
+#            Mọi trường ngoài `triggers` giống hệt A2 (autoscaling/official/base/scaledobject-a2.yaml);
+#            experiments/tests/test_eval_configs.py kiểm điều này.
+# Tham khảo: Kiến trúc §10.3, §11, §13.3; Thông số §8.1, §9.3.
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: vllm-a3
+  namespace: llm-serving
+  labels: {experiment/config: A3}
+spec:
+  scaleTargetRef: {name: vllm}
+  minReplicaCount: 1
+  maxReplicaCount: 4                   # runner ghi đè theo môi trường
+  pollingInterval: 5
+  fallback: {failureThreshold: 3, replicas: 4}
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 300
+          policies: [{type: Pods, value: 1, periodSeconds: 60}]
+  triggers:
+    - type: prometheus
+      metricType: AverageValue
+      metadata:
+        serverAddress: http://prometheus-operated.monitoring.svc:9090
+        # Tổng tỷ lệ KV-cache của mọi pod vLLM trong namespace (tên metric đối chiếu vLLM v0.31.0,
+        # vllm/v1/metrics/loggers.py; tên cũ `vllm:gpu_cache_usage_perc` không còn).
+        # Lưu ý: prefix caching phải tắt khi đánh giá (Thông số §9.1), nếu không block đã cache cũng bị
+        # tính là "đang dùng" và A3 cao dù ít request (Kiến trúc §14).
+        # Lưu ý simulator (llm-d-inference-sim v0.12.0): metric chỉ đổi khi chạy với `--enable-kvcache`;
+        # overlay `sim` hiện không bật cờ này nên giá trị luôn 0 và A3 đứng ở 1 replica.
+        query: sum(vllm:kv_cache_usage_perc{namespace="llm-serving"}) or vector(0)
+        # 0,8 × KV* (KV* = mức KV-cache của 1 replica khi tải bằng C, đo ở ĐG1), như cách chọn target A2.
+        # 0.44 chỉ là số minh hoạ của Kiến trúc §13.3; runner ghi đè bằng `overrides.threshold` của file
+        # ma trận, chép từ capacity.json (ở nhà 06/11: KV* = 0,083 → 0,066, vì năng lực bị chặn bởi
+        # max-num-seqs chứ không bởi VRAM).
+        threshold: "0.44"
+        timeout: "1000"                # ms; như A2 (Thông số §9.3)

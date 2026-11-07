@@ -481,7 +481,7 @@ Mỗi kịch bản có một mục trong `docs/nhat-ky/van-hanh.md`: ngày, môi
 
 | Bước | Việc làm | Lệnh hoặc chi tiết |
 |---|---|---|
-| **Áp cấu hình** | Tĩnh: xoá ScaledObject, đặt số replica. Autoscaling: áp ScaledObject rồi tạm dừng ở 1 replica | `kubectl apply -f autoscaling/eval/A2.yaml`; annotation `autoscaling.keda.sh/paused-replicas: "1"` |
+| **Áp cấu hình** | Tĩnh: xoá ScaledObject, đặt số replica. Autoscaling: xoá ScaledObject khác, áp ScaledObject đang tạm dừng ở 1 replica | Runner (`experiments/runner/configs.py`) đọc `autoscaling/eval/<ID>.yaml` (A2: `autoscaling/official/base/scaledobject-a2.yaml`), ghi đè threshold và max replica theo ma trận, thêm annotation `autoscaling.keda.sh/paused-replicas: "1"`, rồi `kubectl apply` |
 | **Reset** | Chờ hệ thống yên | 1 pod Ready (S4: 4 pod Ready); hàng đợi trống; chờ thêm 60 s |
 | **Warm-up** | Làm ấm | 0,3C trong 2 phút, không tính |
 | **Chạy** | Bỏ tạm dừng, chạy kịch bản | Bỏ annotation; máy tạo tải chạy lịch; runner gửi annotation lên Grafana ở đầu mỗi pha |

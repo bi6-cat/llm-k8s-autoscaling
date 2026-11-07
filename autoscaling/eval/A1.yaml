@@ -1,0 +1,59 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# autoscaling/eval/A1.yaml
+# Khái niệm: Cấu hình đánh giá A1: scale theo GPU utilization, cách làm phổ biến mà đồ án dùng làm đối
+#            chứng cho A2. GPU utilization = tỷ lệ thời gian GPU có kernel đang chạy, KHÔNG phải mức GPU
+#            làm việc nặng hay nhẹ: chỉ vài request đã đẩy nó lên ~100 % (Kiến thức nền §4.4).
+# Mục đích:  Runner áp file này bằng `kubectl apply` ở các lượt A1 (không qua Argo CD), sau khi xoá mọi
+#            ScaledObject khác (experiments/runner/configs.py). Runner chỉ ghi đè max replica theo môi
+#            trường (giá trị trong file là của VM thuê 4 GPU); threshold 70 giữ nguyên ở mọi nơi (xem trigger).
+#            Mọi trường ngoài `triggers` giống hệt A2 (autoscaling/official/base/scaledobject-a2.yaml, giải
+#            thích chi tiết ở đó) để so sánh công bằng: hai cấu hình chỉ khác nhau ở tín hiệu.
+#            experiments/tests/test_eval_configs.py kiểm điều này.
+# Tham khảo: Kiến trúc §10.1, §11, §13.3; Thông số §8.1, §9.3; ADR-005 T9.
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: vllm-a1                        # quy ước: vllm-<id cấu hình> (CONTRIBUTING §3)
+  namespace: llm-serving
+  labels: {experiment/config: A1}      # để `kubectl get scaledobject -L experiment/config` thấy cấu hình đang áp
+spec:
+  scaleTargetRef: {name: vllm}
+  minReplicaCount: 1
+  maxReplicaCount: 4                   # = số GPU trên VM thuê; runner ghi đè (nhà 2, simulator 3)
+  pollingInterval: 5
+  fallback: {failureThreshold: 3, replicas: 4}   # mất Prometheus: lên max ở lần lỗi thứ 4, như A2
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 300
+          policies: [{type: Pods, value: 1, periodSeconds: 60}]
+  triggers:
+    - type: prometheus
+      metricType: AverageValue         # desired = ⌈tổng ÷ threshold⌉; fallback cũng cần kiểu này
+      metadata:
+        serverAddress: http://prometheus-operated.monitoring.svc:9090
+        # Tổng GPU utilization (%) của MỌI GPU mà Prometheus thấy, đọc từ nvidia_gpu_exporter 1.15.1:
+        # - `nvidia_smi_utilization_gpu_ratio`: exporter đổi cột `utilization.gpu [%]` của nvidia-smi thành
+        #   tỷ lệ 0–1 (hậu tố _ratio, nhân 0,01), nên nhân 100 để threshold viết theo %.
+        # - Không lọc theo pod được: exporter đọc nvidia-smi của cả node, không gắn label pod hay
+        #   namespace. Cộng cả node vẫn đúng vì node chỉ chạy vLLM; GPU rảnh cộng thêm 0 (ADR-005 T9).
+        # - Ở nhà, time-slicing chia 1 RTX 5060 thành nhiều GPU replica nhưng exporter chỉ thấy 1 GPU vật
+        #   lý, nên tổng ≤ 100 và desired ≤ ⌈100 ÷ 70⌉ = 2.
+        # - Không có chuỗi nào (simulator không có GPU, exporter chết hoặc chưa được scrape) thì query rỗng.
+        #   KEDA v2.21.0 coi rỗng là 0, KHÔNG báo lỗi, nên fallback không bật (`ignoreNullValues` mặc định
+        #   true, pkg/scalers/prometheus_scaler.go). `or vector(0)` chỉ ghi rõ hành vi đó, và giữ nó kể cả
+        #   khi đặt `ignoreNullValues: "false"` (Kiến trúc §13.4). Hệ quả: mất exporter thì A1 đứng ở
+        #   1 replica mà không có lỗi nào; lượt đó không hợp lệ, phải xem chuỗi `gpu_util` trong
+        #   metrics.csv.gz của lượt. Trên simulator, A1 vì vậy luôn ở 1 replica: chỉ dùng để kiểm đường đi
+        #   (áp, đổi cấu hình, T6), không để đo.
+        # Nếu chạy được DCGM (có label pod) thì thay bằng
+        # sum(DCGM_FI_DEV_GPU_UTIL{exported_namespace="llm-serving"}) or vector(0) (Thông số §8.1).
+        query: (sum(nvidia_smi_utilization_gpu_ratio) * 100) or vector(0)
+        # 70 % là ngưỡng hay gặp trong hướng dẫn, giữ nguyên để thấy hành vi thật của cách làm này, không
+        # suy từ đo năng lực như A2 (Kiến trúc §11). Hành vi dự đoán: 1 pod có tải đã ~95 % → ⌈95 ÷ 70⌉ = 2;
+        # 2 pod ~190 % → 3…, tức leo lên max ngay khi có tải, dù tải nhẹ (Kiến trúc §10.1). ĐG1-mini ở nhà
+        # (06/11) đo utilization đã = 1 từ λ = 6 req/s, trong khi C = 12,5 req/s.
+        threshold: "70"
+        timeout: "1000"                # ms; như A2, để fallback kịp N6 ≤ 30 s (Thông số §9.3)
