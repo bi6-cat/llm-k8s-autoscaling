@@ -1,0 +1,87 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# experiments/matrix-v2.yaml                                  (DEMO – điền khối x-adr003 ở V2, sau ĐG1)
+# Khái niệm: Ma trận ĐG2 = 17 lượt so sánh 4 cấu hình scale (S1, S4 cố định; A1, A2 do KEDA) dưới 3 kịch
+#            bản tải KB1–KB3, trên VM thuê ở phiên V2, mức cold start L2 (Thông số §8.2).
+#            C = năng lực một replica (req/s lớn nhất còn đạt SLO, đo ở ĐG1); mọi kịch bản tính theo bội
+#            số của C (Thông số §7).
+# Mục đích:  Chuẩn bị sẵn cấu trúc phiên để ở V2 chỉ cần điền vài số từ capacity.json. Giá trị chưa chốt
+#            để `null`: runner (matrix.py) từ chối chạy, kể cả `--dry-run`, cho tới khi điền đủ.
+# Chạy:      (trên VM V2, sau ĐG1 và ADR-003; kubeconfig của VM)
+#            uv run --project experiments python -m experiments.runner --matrix experiments/matrix-v2.yaml --dry-run
+#            uv run --project experiments python -m experiments.runner --matrix experiments/matrix-v2.yaml
+# Tham khảo: Thông số §7, §8.1, §8.2, §9.3; Môi trường §14; Kiến trúc §11, §13
+# ──────────────────────────────────────────────────────────────────────────────
+
+# ── Giá trị chốt ở ADR-003 (sau ĐG1 đầu phiên V2) ───────────────────────────────
+# Mọi số phụ thuộc máy và model đặt ở đây và dùng lại bên dưới bằng YAML anchor (`&tên` đặt tên cho một
+# giá trị, `*tên` dùng lại giá trị đó), nên điền một chỗ là đủ. matrix.py chỉ đọc các khoá nó biết, nên
+# bỏ qua khoá `x-adr003`.
+x-adr003:
+  C: &C null                           # req/s; capacity.json → "C"
+  A2_threshold: &A2_THRESHOLD null     # 0,8 × B*; capacity.json → threshold.A2_concurrency
+  # N = số GPU = max replica của A1, A2 = số replica của S4 = N trong đỉnh 0,75 × N × C của KB3.
+  # 4 theo thiết kế (4 × RTX 4090); nếu ADR-003 chọn máy 2 GPU thì đổi thành 2 (Thông số §4 N3).
+  N: &N 4
+  # --served-model-name của overlay serving đã áp: cloud = qwen2.5-7b, cloud-3b = qwen2.5-3b
+  model: &MODEL qwen2.5-7b
+
+session: v2-dg2
+env: cloud
+# Xáo thứ tự 17 lượt theo seed (Thông số §8.2). Seed nằm trong Git nên thứ tự tái lập được; chỉ đổi seed
+# trước khi chạy lượt đầu tiên. 20261114 = ngày bắt đầu V2.
+shuffle_seed: 20261114
+
+target:
+  namespace: llm-serving
+  deployment: vllm
+  # Thông số §7 ghi máy tạo tải đi qua route Traefik riêng; serving/ chưa có route đó, nên tạm gọi thẳng
+  # Service như matrix-home.yaml.
+  service_url: http://vllm.llm-serving.svc:8000
+  model: *MODEL
+  prometheus_service: monitoring/kps-prometheus:9090
+  api_key_secret: vllm-api-key         # Secret có khoá `key`, cùng Secret mà Deployment vLLM đọc
+  # Đỉnh KB3 = 0,75 × N × C req/s. Ở nhà, 1 lõi bị throttle ở λ = 6 và 8 (ĐG1-mini 05/11); 2 lõi thì cả
+  # 10 mức tới 14 req/s không bị throttle, CPU tối đa 25,5 % ở λ = 10 (06/11). Xem `throttle_ok` trong
+  # checks.json sau lượt KB3 đầu tiên, nếu bị throttle thì tăng.
+  loadgen_cpu: "2"
+
+# Giá trị mặc định của Môi trường §14.1, ghi ra để thấy được trong file
+timing:
+  settle_s: 60                         # reset: chờ thêm sau khi hệ thống đã yên
+  warmup_s: 120                        # warm-up 0,3 C trong 2 phút, không tính vào kết quả
+  warmup_fraction: 0.3
+  # A2 từ 4 về 1 replica: cửa sổ 300 s + 3 pod × 60 s = 480 s, cộng chu kỳ sync, dưới 600 s
+  cooldown_max_s: 600
+  reset_timeout_s: 900                 # S4: 3 pod mới cold start (L2 dự kiến 0,5–1,5 phút), dư nhiều
+
+configs:
+  S1: {type: static, replicas: 1}
+  S4: {type: static, replicas: *N}
+  A1:
+    type: scaledobject
+    file: autoscaling/eval/A1.yaml
+    # threshold giữ 70 % như trong file: cố ý không suy từ đo năng lực (Kiến trúc §11)
+    overrides: {max_replicas: *N}
+  A2:
+    type: scaledobject
+    # Dùng thẳng file base chính thức, để lượt A2 đo đúng cấu hình mà Argo CD vận hành
+    file: autoscaling/official/base/scaledobject-a2.yaml
+    overrides: {threshold: *A2_THRESHOLD, max_replicas: *N}
+
+# Mỗi lượt khoảng 35 phút kể cả reset, warm-up, cooldown (Thông số §8.2): 17 lượt ≈ 10 giờ.
+# Lần lặp thứ k của mọi cấu hình dùng cùng lịch gửi (loadgen --run-index k), nên A1-KB1-1, A2-KB1-1 và
+# S4-KB1-1 nhận đúng cùng một chuỗi request.
+defaults: {capacity: *C, kb3_replicas: *N}
+runs:
+  # S1 × KB1 bỏ: ở 0,5 C, S1 và A2 cùng chạy 1 replica, không thêm thông tin
+  - {config: S1, scenario: KB2}
+  - {config: S1, scenario: KB3}
+  - {config: S4, scenario: KB1}
+  - {config: S4, scenario: KB2}
+  - {config: S4, scenario: KB3}
+  - {config: A1, scenario: KB1, repeats: 2}
+  - {config: A1, scenario: KB2, repeats: 2}
+  - {config: A1, scenario: KB3}
+  - {config: A2, scenario: KB1, repeats: 2}
+  - {config: A2, scenario: KB2, repeats: 3}
+  - {config: A2, scenario: KB3, repeats: 2}
