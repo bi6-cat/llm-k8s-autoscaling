@@ -309,6 +309,43 @@ def test_max_scrape_gap_with_window_edges():
     assert collect.max_scrape_gap(every_5s, (0, 60)) == 5
 
 
+def _up(*values):
+    return [[t * 5, str(v)] for t, v in enumerate(values)]  # mỗi 5 s một mẫu `up`
+
+
+def test_scrape_gaps_counts_only_successful_scrapes():
+    res = [
+        # Sống suốt lượt; scrape lỗi 3 lần liền ở giây 10–20: khoảng 5 → 25 giữa hai lần thành công
+        {"metric": {"pod": "vllm-a"}, "values": _up(1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1)},
+        # Pod mới do scale-up, còn sống ở cuối: bỏ mẫu `up = 0` lúc cold start (giây 0–15), mép cuối vẫn tính
+        {"metric": {"pod": "vllm-b"}, "values": _up(0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1)},
+        # Pod mới rồi đang bị xoá ở cuối lượt: /metrics ngừng lúc drain (giây 35–60) không bị tính
+        {"metric": {"pod": "vllm-c"}, "values": _up(0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0)},
+    ]
+    prom = FakeProm(res)
+    gaps = collect.scrape_gaps(
+        prom, "llm-serving", 0.0, 60.4, at_start=frozenset({"vllm-a"}), at_end=frozenset({"vllm-a", "vllm-b"})
+    )
+    assert prom.queries == [('up{namespace="llm-serving"}[61s]', 60.4)]  # làm tròn lên để phủ cửa sổ
+    assert gaps == {"vllm-a": 20, "vllm-b": 5, "vllm-c": 5}
+    assert "scrape" in _eval(scrape_gaps=gaps)["reasons"][0]  # 20 s > 15 s: lượt invalid
+
+
+def test_scrape_gaps_edges_for_pods_alive_the_whole_run():
+    whole = frozenset({"vllm-a"})
+
+    def gaps(*values, edges=True):
+        res = [{"metric": {"pod": "vllm-a"}, "values": _up(*values)}] if values else []
+        kw = {"at_start": whole, "at_end": whole} if edges else {}
+        return collect.scrape_gaps(FakeProm(res), "ns", 0.0, 60.0, **kw)["vllm-a"]
+
+    # Sống suốt lượt nhưng /metrics ngừng trả lời từ giây 30 tới hết lượt: chỉ mép cuối thấy được
+    assert gaps(1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0) == 35
+    assert gaps(0, 0, 0) == 60  # không lần nào thành công (sai cổng, NetworkPolicy): cả cửa sổ
+    assert gaps() == 60  # không có chuỗi `up` nào (PodMonitor không chọn được pod): cũng cả cửa sổ
+    assert gaps(0, 0, 0, edges=False) is None  # không biết pod nào sống suốt lượt: không thêm mép
+
+
 class FakeProm:
     """Prometheus giả: ghi lại câu truy vấn, trả kết quả dựng sẵn (hoặc raise `error`)."""
 
@@ -373,7 +410,7 @@ def test_check_signals_queries_each_selector_once(capsys):
 
 
 POD = {"name": "vllm-a", "deleting": False, "restarts": 0, "last_terminated": []}
-GOOD_LG = {"valid": True, "send_lag_ok": True, "cpu_ok": True, "throttle_ok": True}
+GOOD_LG = {"valid": True, "send_lag_ok": True, "loop_lag_ok": True, "cpu_ok": True, "throttle_ok": True}
 
 
 def _eval(**kw):
@@ -406,6 +443,7 @@ def test_checks_valid_and_scale_down_of_new_pods_is_fine():
     [
         ({"loadgen_rc": 1}, "mã 1"),
         ({"loadgen_checks": {**GOOD_LG, "valid": False, "throttle_ok": False}}, "throttle_ok"),
+        ({"loadgen_checks": {**GOOD_LG, "valid": False, "loop_lag_ok": False}}, "loop_lag_ok"),
         ({"loadgen_checks": None}, "loadgen.json"),
         ({"initial_ok": False, "initial_note": "ready=0"}, "trạng thái đầu"),
         ({"pods_end": [{**POD, "name": "vllm-z"}]}, "bị thay"),

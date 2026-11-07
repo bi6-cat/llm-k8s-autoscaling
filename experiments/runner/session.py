@@ -215,7 +215,14 @@ def run_one(ctx: Context, spec: RunSpec, attempt_dir: Path) -> str:
     collect.write_logs(
         ctx.kube, t.namespace, [p["name"] for p in pods_end], int(t_end - t_begin) + 60, attempt_dir / "logs"
     )
-    gaps = collect.scrape_gaps(ctx.prom, t.namespace, t_main0, t_main1)
+    gaps = collect.scrape_gaps(
+        ctx.prom,
+        t.namespace,
+        t_main0,
+        t_main1,
+        at_start=frozenset(p["name"] for p in pods_start),
+        at_end=frozenset(p["name"] for p in pods_end if not p.get("deleting")),
+    )
     sig = spec.config.signal
     signal = collect.signal_gap(ctx.prom, sig, t_main0, t_main1) if sig else None
 

@@ -223,7 +223,7 @@ Nếu máy chỉ có 32 vCPU: dùng 5 lõi cho mỗi pod vLLM và 3 lõi cho má
 ### 3.6. Máy tạo tải chạy cùng VM
 
 - Trên marketplace khó thuê được một máy CPU riêng nằm cùng datacenter. Nhóm vì thế đặt máy tạo tải **trong chính cluster**, dưới dạng pod Guaranteed có lõi riêng, và gửi request qua Traefik. Độ trễ mạng gần như bằng 0 và không dao động.
-- **Kiểm chứng trong mỗi lượt:** CPU của pod máy tạo tải < 70% và **không bị giới hạn CPU** (đọc `nr_throttled` trong `cpu.stat` của cgroup); độ lệch lịch gửi p99 < 50 ms; độ trễ event loop (§9).
+- **Kiểm chứng trong mỗi lượt:** CPU của pod máy tạo tải < 70%; thời gian **bị giới hạn CPU** (throttle) < 0,1% thời gian lượt (đọc `throttled_usec` trong `cpu.stat` của cgroup); độ lệch lịch gửi p99 < 50 ms; độ trễ event loop (§9). Ngưỡng ở §17.
 - Runner chạy dưới dạng dịch vụ `systemd` trên chính VM, ngoài cluster, dùng `kubectl` và API của Prometheus. Runner tốn rất ít CPU, và vẫn chạy tiếp khi mất SSH.
 
 ### 3.7. Tự động hoá bằng Makefile
@@ -402,8 +402,8 @@ async def one_request(client, i, t_sched, prompt):
 ```
 
 **Tự kiểm tra ở mọi lượt:**
-- Phía gửi: độ lệch `t_send − t_sched` p99 < 50 ms; CPU < 70% và không bị throttle.
-- Phía nhận: **độ trễ event loop** được đo liên tục (một tác vụ nền đo độ trễ khi thức dậy). Nếu event loop nghẽn khi phân tích SSE, `t_first` bị trễ mà kiểm tra phía gửi không phát hiện.
+- Phía gửi: độ lệch `t_send − t_sched` p99 < 50 ms; CPU < 70%; thời gian bị throttle < 0,1% thời gian lượt.
+- Phía nhận: **độ trễ event loop** được đo liên tục (một tác vụ nền hẹn ngủ 10 ms rồi đo nó dậy muộn bao nhiêu); p99 < 50 ms và không lần nào quá 500 ms. Nếu event loop nghẽn khi phân tích SSE, `t_first` bị trễ mà kiểm tra phía gửi không phát hiện.
 - Đối chiếu TTFT phía client với histogram TTFT phía server trong cùng lượt; chênh lệch bất thường thì xem lại máy tạo tải.
 
 Không đạt thì lượt đó không hợp lệ (§17).
@@ -496,12 +496,22 @@ Mỗi kịch bản có một mục trong `docs/nhat-ky/van-hanh.md`: ngày, môi
 ```text
 runs/<run-id>/
 ├── metadata.json     # cấu hình, kịch bản, seed, session_id, phiên bản (digest), tham số vLLM, máy, thời gian
-├── requests.csv      # một dòng cho mỗi request: t_sched, t_send, t_first, t_last, n_in, n_out, status, error
+├── requests.csv      # một dòng cho mỗi request: id, t_sched, t_send, t_first, t_last, n_in_target, n_in, n_out, status, error
+├── loadgen.json      # tham số và seed của máy tạo tải, mốc t0_unix, các pha, kết quả tự kiểm tra (§9)
 ├── metrics.parquet   # chuỗi Prometheus trong cửa sổ lượt (replicas, hàng đợi, KV-cache, GPU, CPU/RAM pod…)
 ├── events.jsonl      # pod conditions, sự kiện HPA, sự kiện Kubernetes
 ├── alerts.jsonl      # cảnh báo firing trong cửa sổ lượt (từ chuỗi ALERTS, cho VH6)
 └── checks.json       # kết quả tự kiểm tra
 ```
+
+Các cột của `requests.csv`. Thời gian tính bằng giây kể từ `t0_unix` (ghi trong `loadgen.json`), đo bằng đồng hồ đơn điệu:
+
+| Cột | Ý nghĩa |
+|---|---|
+| `id` | Số thứ tự trong lịch gửi. Cùng kịch bản và cùng số thứ tự lượt thì cùng `id`, cùng `t_sched`, cùng prompt, nên ghép được từng request giữa các cấu hình |
+| `n_in_target` | Độ dài prompt theo lịch (số từ, 256–1024). `n_in` là số token server báo trong `usage` |
+| `status` | Mã HTTP của phần đầu câu trả lời. Stream bị cắt giữa chừng vẫn có `status` 200 |
+| `error` | **Rỗng nghĩa là request thành công.** Khác rỗng là lỗi: `HTTPStatus` (mã khác 200), `Timeout` (quá 120 s), `IncompleteStream` (không có chunk `usage`), `StreamError` (vLLM báo lỗi giữa stream), hoặc tên exception (lỗi mạng). Mọi chỉ số lỗi ở §15 lọc theo cột này, không theo `status` |
 
 Một script `analysis/build_tables.py` (có unit test) đọc các thư mục này và tạo một bảng mỗi lượt một dòng. Notebook vẽ biểu đồ từ bảng đó.
 
@@ -515,7 +525,7 @@ Một script `analysis/build_tables.py` (có unit test) đọc các thư mục n
 | | **TPOT** p50/p95 | (t_last − t_first) ÷ (n_out − 1), với n_out lấy từ `usage` (một chunk có thể chứa nhiều token) | Log máy tạo tải |
 | | **SLO attainment** | Số request đạt SLO ÷ **số request đã gửi** trong pha. Request lỗi vẫn nằm ở mẫu số | Log máy tạo tải |
 | | **Throughput** | Token output mỗi giây | Log máy tạo tải, đối chiếu `vllm:generation_tokens_total` |
-| | **Tỷ lệ lỗi** | Request lỗi HTTP, timeout, hoặc stream bị cắt (không có `usage`) | Log máy tạo tải |
+| | **Tỷ lệ lỗi** | Request lỗi HTTP, timeout, hoặc stream bị cắt (không có `usage`), tức cột `error` khác rỗng (§14.2) | Log máy tạo tải |
 | Tài nguyên | **GPU-giờ** | Tổng thời gian các pod vLLM giữ GPU, **tính cả lúc cold start và lúc drain** | Sự kiện pod (chính xác); `kube_deployment_status_replicas` (xấp xỉ) |
 | | **GPU-giờ so với S4** | GPU-giờ của cấu hình ÷ GPU-giờ của S4 trong cùng kịch bản | Tính toán |
 | | **Token / GPU-giờ** | Tổng token output ÷ GPU-giờ | Tính toán |
@@ -585,9 +595,10 @@ Yêu cầu không đạt **không bị giấu đi**. Luận văn phân tích ngu
 | Kiểm tra | Ngưỡng |
 |---|---|
 | Độ lệch gửi p99 của máy tạo tải | < 50 ms |
-| CPU máy tạo tải (tối đa) | < 70%, không bị throttle |
-| Độ trễ event loop của máy tạo tải | Không có khoảng nghẽn bất thường |
-| Khoảng trống scrape của Prometheus | ≤ 15 s |
+| CPU máy tạo tải (tối đa, theo cửa sổ 5 s, tính trên một lõi) | < 70% |
+| Thời gian máy tạo tải bị throttle (`throttled_usec` ÷ thời gian lượt) | < 0,1%. Kernel cộng `throttled_usec` theo từng CPU bị dừng, nên đây là cận trên. Không dùng `nr_throttled == 0`: ở ĐG1-mini ngày 05/11, một chu kỳ throttle 1,4–4,4 ms trong mức đo khoảng 3 phút (≤ 0,0025%) đã loại cả lượt, trong khi lệch lịch p99 chỉ 2 ms |
+| Độ trễ event loop của máy tạo tải | p99 < 50 ms (cùng ngưỡng với độ lệch gửi) và không lần nào quá 500 ms (20% ngưỡng TTFT) |
+| Khoảng trống scrape của Prometheus | ≤ 15 s giữa hai lần scrape **thành công** (`up == 1`) của cùng một pod. Scrape lỗi vẫn ghi mẫu `up = 0`, nên phải bỏ các mẫu đó mới thấy khoảng trống. Pod có từ đầu lượt thì tính cả mép đầu pha chính; pod còn sống ở cuối thì tính cả mép cuối. Pod mới đang cold start và pod đang tắt không bị tính phần chưa có hoặc đã hết `/metrics` |
 | Tín hiệu scale của cấu hình autoscaling (trường `signal` trong file ma trận; A1: `nvidia_smi_utilization_gpu_ratio`, A2: `vllm:num_requests_running`) | Có mẫu suốt pha chính, không mất mẫu quá 15 s. KEDA coi truy vấn rỗng là 0 mà không báo lỗi ([Kiến trúc §13.4](03-kien-truc-autoscaling.md#134-promql-chống-lỗi)), nên mất tín hiệu chỉ lộ ra ở kiểm tra này |
 | Node có sự cố, pod bị OOMKilled ngoài dự kiến | Không có |
 | Trạng thái đầu đúng (1 replica, hàng đợi trống; S4: 4 replica) | Đúng |
