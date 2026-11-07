@@ -17,7 +17,7 @@ import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, TextIO
+from typing import Any, Protocol, TextIO
 
 import httpx
 
@@ -114,6 +114,13 @@ async def one_request(
     return rec
 
 
+class RecordSink(Protocol):
+    """Nơi nhận từng dòng kết quả ngay khi request xong: CsvSink (ghi file) hoặc kênh về tiến trình cha
+    (workers.py). Protocol = kiểu "có hàm write(rec)", không cần kế thừa lớp nào."""
+
+    def write(self, rec: dict[str, Any]) -> None: ...
+
+
 class CsvSink:
     """Ghi requests.csv, flush sau MỖI dòng.
 
@@ -145,25 +152,35 @@ class RunResult:
 async def run(
     plan: Sequence[PlannedRequest],
     target: Target,
-    out_csv: TextIO,
+    sink: RecordSink,
     prompt_seed: int,
     transport: httpx.AsyncBaseTransport | None = None,  # unit test truyền MockTransport
+    t0_unix: float | None = None,
 ) -> RunResult:
-    """Chạy cả lượt: gửi đúng lịch, chờ mọi request kết thúc, trả về các dòng và số đo tự kiểm tra."""
+    """Chạy cả lượt: gửi đúng lịch, chờ mọi request kết thúc, trả về các dòng và số đo tự kiểm tra.
+
+    `t0_unix`: mốc t = 0 của lịch, theo giờ hệ thống, do tiến trình cha đặt khi chạy nhiều tiến trình
+    (workers.py) để mọi tiến trình gửi theo cùng một mốc. None = lấy ngay lúc bắt đầu.
+    """
     headers = {"Authorization": f"Bearer {target.api_key}"} if target.api_key else {}
     # Cái bẫy: httpx mặc định chỉ mở tối đa 100 kết nối. Quá 100 request đồng thời thì request thứ 101 phải
     # chờ trong pool của CLIENT, tức là máy tạo tải lặng lẽ biến thành closed-loop. None = không giới hạn.
     limits = httpx.Limits(max_connections=None, max_keepalive_connections=None)
     # Timeout của httpx chỉ giữ cho bước kết nối; timeout của cả request do asyncio.timeout lo (one_request)
     timeout = httpx.Timeout(None, connect=10.0)
-    sink = CsvSink(out_csv)
     records: list[dict[str, Any]] = []
     loop_mon, cpu_mon = LoopLagMonitor(), CpuMonitor()
 
     async with httpx.AsyncClient(
         base_url=target.base_url, headers=headers, limits=limits, timeout=timeout, transport=transport
     ) as client:
-        t0_perf, t0_unix = time.perf_counter(), time.time()
+        if t0_unix is None:
+            t0_perf, t0_unix = time.perf_counter(), time.time()
+        else:
+            # Đổi mốc giờ hệ thống sang perf_counter MỘT lần, rồi chỉ dùng perf_counter. Mốc chung giữa các
+            # tiến trình phải là giờ hệ thống, vì Python không bảo đảm perf_counter của hai tiến trình cùng
+            # gốc. Sai số chỉ là khoảng giữa hai lần đọc đồng hồ (vài µs).
+            t0_perf = time.perf_counter() + (t0_unix - time.time())
 
         def clock() -> float:
             return time.perf_counter() - t0_perf  # perf_counter: đồng hồ đơn điệu, không nhảy khi chỉnh giờ
@@ -189,7 +206,8 @@ async def run(
             task.add_done_callback(tasks.discard)
         if tasks:
             await asyncio.gather(*tasks)
-        wall_s = clock()
+        # Tiến trình không được chia request nào (lịch ít hơn số tiến trình) xong trước cả t0: không để âm
+        wall_s = max(0.0, clock())
         for m in monitors:
             m.cancel()
         await asyncio.gather(*monitors, return_exceptions=True)

@@ -42,10 +42,12 @@ target:
   model: *MODEL
   prometheus_service: monitoring/kps-prometheus:9090
   api_key_secret: vllm-api-key         # Secret có khoá `key`, cùng Secret mà Deployment vLLM đọc
-  # Đỉnh KB3 = 0,75 × N × C req/s. Ở nhà, 1 lõi bị throttle ở λ = 6 và 8 (ĐG1-mini 05/11); 2 lõi thì cả
-  # 10 mức tới 14 req/s không bị throttle, CPU tối đa 25,5 % ở λ = 10 (06/11). Xem `throttle_ok` trong
-  # checks.json sau lượt KB3 đầu tiên, nếu bị throttle thì tăng.
-  loadgen_cpu: "2"
+  # Đỉnh KB3 = 0,75 × N × C req/s. Mỗi lõi một tiến trình gửi tải (loadgen --workers). Đo trên kind 07/11:
+  # một tiến trình ở 10 req/s tốn 53–58 % một lõi, ở 20 req/s lên 87–88 %; 3 tiến trình ở 30 req/s: 55–56 %
+  # mỗi tiến trình, không throttle. Ước tính một tiến trình chạm 70 % ở ~12–14 req/s, nên 3 lõi chịu
+  # ~36–42 req/s, gấp đôi đỉnh ước tính 12–18 req/s (C = 4–6, chưa đo), và vừa cả máy 32 lẫn 48 vCPU
+  # (Môi trường §3.5). Xem `cpu_ok`, `throttle_ok` trong checks.json sau lượt KB3 đầu tiên.
+  loadgen_cpu: "3"
 
 # Giá trị mặc định của Môi trường §14.1, ghi ra để thấy được trong file
 timing:

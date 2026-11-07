@@ -215,15 +215,15 @@ Với `cpu-manager-policy=static`, pod có QoS **Guaranteed** (requests = limits
 |---|---|---|
 | Hệ thống, k3s (`reserved-cpus`) | 0–3 | Không cấp riêng cho pod nào |
 | 4 pod vLLM | 4 × 6 lõi riêng | Theo [Thông số §9.2](00-thong-so.md#92-deployment-vllm) |
-| Pod máy tạo tải | 4 lõi riêng | `cpu 4, memory 4Gi` |
+| Pod máy tạo tải | 3 lõi riêng | Mỗi lõi một tiến trình gửi tải (§9); memory 256Mi × (số lõi + 1) |
 | Các pod còn lại (Prometheus, Grafana, KEDA, Argo CD, Traefik) | Vùng CPU dùng chung | Không đòi lõi riêng |
 
-Nếu máy chỉ có 32 vCPU: dùng 5 lõi cho mỗi pod vLLM và 3 lõi cho máy tạo tải.
+Nếu máy chỉ có 32 vCPU: dùng 5 lõi cho mỗi pod vLLM; máy tạo tải giữ 3 lõi. Vì sao 3 lõi: đo trên kind (07/11), một tiến trình gửi tải ở 10 req/s tốn 53–58% một lõi, ở 20 req/s lên 87–88%. Ước tính một tiến trình chạm ngưỡng 70% ở khoảng 12–14 req/s, nên 3 tiến trình chịu khoảng 36–42 req/s, gấp đôi đỉnh KB3 ước tính 12–18 req/s (C chưa đo; §9).
 
 ### 3.6. Máy tạo tải chạy cùng VM
 
 - Trên marketplace khó thuê được một máy CPU riêng nằm cùng datacenter. Nhóm vì thế đặt máy tạo tải **trong chính cluster**, dưới dạng pod Guaranteed có lõi riêng, và gửi request qua Traefik. Độ trễ mạng gần như bằng 0 và không dao động.
-- **Kiểm chứng trong mỗi lượt:** CPU của pod máy tạo tải < 70%; thời gian **bị giới hạn CPU** (throttle) < 0,1% thời gian lượt (đọc `throttled_usec` trong `cpu.stat` của cgroup); độ lệch lịch gửi p99 < 50 ms; độ trễ event loop (§9). Ngưỡng ở §17.
+- **Kiểm chứng trong mỗi lượt:** CPU của từng tiến trình gửi tải < 70% một lõi; thời gian **bị giới hạn CPU** (throttle) < 0,1% thời gian lượt (đọc `throttled_usec` trong `cpu.stat` của cgroup); độ lệch lịch gửi p99 < 50 ms; độ trễ event loop (§9). Ngưỡng ở §17.
 - Runner chạy dưới dạng dịch vụ `systemd` trên chính VM, ngoài cluster, dùng `kubectl` và API của Prometheus. Runner tốn rất ít CPU, và vẫn chạy tiếp khi mất SSH.
 
 ### 3.7. Tự động hoá bằng Makefile
@@ -401,9 +401,14 @@ async def one_request(client, i, t_sched, prompt):
     writer.write(rec)                                 # một dòng CSV cho mỗi request
 ```
 
+**Nhiều tiến trình gửi tải.** Event loop của asyncio chạy trên một luồng, nên một tiến trình Python chỉ dùng được một lõi, dù pod có bao nhiêu lõi. CPU tăng theo số chunk SSE nhận được mỗi giây (khoảng 0,2 ms mỗi chunk, phần lớn ở httpx và asyncio, `json.loads` chỉ khoảng 2 µs). Đo 07/11 trên laptop: 10 req/s × 256 token (khoảng 2.560 chunk/s) tốn 53–58% một lõi; 20 req/s (khoảng 5.100 chunk/s) lên 87–88%, vượt ngưỡng 70%. Vì vậy máy tạo tải chia lịch cho k tiến trình theo `id mod k` (`--workers k`; runner đặt k bằng số lõi nguyên của pod):
+- Mọi tiến trình gửi theo **cùng một mốc** `t0_unix` do tiến trình cha đặt sau khi các tiến trình con đã sẵn sàng.
+- Tiến trình cha gom kết quả vào **một** `requests.csv`, ghi từng dòng ngay khi request xong.
+- Lịch gộp lại đúng bằng lịch của một tiến trình (cùng seed, cùng `id`, cùng `t_sched`), nên số tiến trình không làm đổi tải mà hệ thống nhận.
+
 **Tự kiểm tra ở mọi lượt:**
-- Phía gửi: độ lệch `t_send − t_sched` p99 < 50 ms; CPU < 70%; thời gian bị throttle < 0,1% thời gian lượt.
-- Phía nhận: **độ trễ event loop** được đo liên tục (một tác vụ nền hẹn ngủ 10 ms rồi đo nó dậy muộn bao nhiêu); p99 < 50 ms và không lần nào quá 500 ms. Nếu event loop nghẽn khi phân tích SSE, `t_first` bị trễ mà kiểm tra phía gửi không phát hiện.
+- Phía gửi: độ lệch `t_send − t_sched` p99 < 50 ms và CPU < 70% một lõi, ở mọi tiến trình; thời gian bị throttle < 0,1% thời gian lượt; mọi request trong lịch có đúng một dòng kết quả.
+- Phía nhận: **độ trễ event loop** được đo liên tục ở từng tiến trình (một tác vụ nền hẹn ngủ 10 ms rồi đo nó dậy muộn bao nhiêu); p99 < 50 ms và không lần nào quá 500 ms. Nếu event loop nghẽn khi phân tích SSE, `t_first` bị trễ mà kiểm tra phía gửi không phát hiện. Lệch lịch gửi, event loop và CPU đều chấm riêng từng tiến trình rồi lấy tiến trình tệ nhất: gộp mẫu thì một tiến trình nghẽn bị các tiến trình rảnh "pha loãng" (4 tiến trình: 1% mẫu của nó chỉ còn 0,25% mẫu chung).
 - Đối chiếu TTFT phía client với histogram TTFT phía server trong cùng lượt; chênh lệch bất thường thì xem lại máy tạo tải.
 
 Không đạt thì lượt đó không hợp lệ (§17).
@@ -497,7 +502,7 @@ Mỗi kịch bản có một mục trong `docs/nhat-ky/van-hanh.md`: ngày, môi
 runs/<run-id>/
 ├── metadata.json     # cấu hình, kịch bản, seed, session_id, phiên bản (digest), tham số vLLM, máy, thời gian
 ├── requests.csv      # một dòng cho mỗi request: id, t_sched, t_send, t_first, t_last, n_in_target, n_in, n_out, status, error
-├── loadgen.json      # tham số và seed của máy tạo tải, mốc t0_unix, các pha, kết quả tự kiểm tra (§9)
+├── loadgen.json      # tham số và seed của máy tạo tải, số tiến trình, mốc t0_unix, các pha, tự kiểm tra (§9)
 ├── metrics.parquet   # chuỗi Prometheus trong cửa sổ lượt (replicas, hàng đợi, KV-cache, GPU, CPU/RAM pod…)
 ├── events.jsonl      # pod conditions, sự kiện HPA, sự kiện Kubernetes
 ├── alerts.jsonl      # cảnh báo firing trong cửa sổ lượt (từ chuỗi ALERTS, cho VH6)
@@ -594,10 +599,11 @@ Yêu cầu không đạt **không bị giấu đi**. Luận văn phân tích ngu
 
 | Kiểm tra | Ngưỡng |
 |---|---|
-| Độ lệch gửi p99 của máy tạo tải | < 50 ms |
-| CPU máy tạo tải (tối đa, theo cửa sổ 5 s, tính trên một lõi) | < 70% |
-| Thời gian máy tạo tải bị throttle (`throttled_usec` ÷ thời gian lượt) | < 0,1%. Kernel cộng `throttled_usec` theo từng CPU bị dừng, nên đây là cận trên. Không dùng `nr_throttled == 0`: ở ĐG1-mini ngày 05/11, một chu kỳ throttle 1,4–4,4 ms trong mức đo khoảng 3 phút (≤ 0,0025%) đã loại cả lượt, trong khi lệch lịch p99 chỉ 2 ms |
-| Độ trễ event loop của máy tạo tải | p99 < 50 ms (cùng ngưỡng với độ lệch gửi) và không lần nào quá 500 ms (20% ngưỡng TTFT) |
+| Độ lệch gửi p99 của máy tạo tải, ở từng tiến trình gửi tải | < 50 ms |
+| CPU máy tạo tải (tối đa, theo cửa sổ 5 s, tính trên một lõi, ở tiến trình gửi tải bận nhất) | < 70% |
+| Thời gian máy tạo tải bị throttle (`throttled_usec` ÷ thời gian lượt) | < 0,1%. Kernel cộng `throttled_usec` theo từng CPU bị dừng, nên đây là cận trên (chạy k tiến trình thì có thể tới k lần thời gian thực). Không dùng `nr_throttled == 0`: ở ĐG1-mini ngày 05/11, một chu kỳ throttle 1,4–4,4 ms trong mức đo khoảng 3 phút (≤ 0,0025%) đã loại cả lượt, trong khi lệch lịch p99 chỉ 2 ms |
+| Độ trễ event loop của máy tạo tải, ở từng tiến trình gửi tải | p99 < 50 ms (cùng ngưỡng với độ lệch gửi) và không lần nào quá 500 ms (20% ngưỡng TTFT) |
+| Máy tạo tải chạy hết lịch | Mọi request trong lịch có đúng một dòng kết quả, mọi tiến trình gửi tải chạy hết (`complete_ok`). Một tiến trình lỗi thì máy tạo tải dừng các tiến trình còn lại ngay |
 | Khoảng trống scrape của Prometheus | ≤ 15 s giữa hai lần scrape **thành công** (`up == 1`) của cùng một pod. Scrape lỗi vẫn ghi mẫu `up = 0`, nên phải bỏ các mẫu đó mới thấy khoảng trống. Pod có từ đầu lượt thì tính cả mép đầu pha chính; pod còn sống ở cuối thì tính cả mép cuối. Pod mới đang cold start và pod đang tắt không bị tính phần chưa có hoặc đã hết `/metrics` |
 | Tín hiệu scale của cấu hình autoscaling (trường `signal` trong file ma trận; A1: `nvidia_smi_utilization_gpu_ratio`, A2: `vllm:num_requests_running`) | Có mẫu suốt pha chính, không mất mẫu quá 15 s. KEDA coi truy vấn rỗng là 0 mà không báo lỗi ([Kiến trúc §13.4](03-kien-truc-autoscaling.md#134-promql-chống-lỗi)), nên mất tín hiệu chỉ lộ ra ở kiểm tra này |
 | Node có sự cố, pod bị OOMKilled ngoài dự kiến | Không có |

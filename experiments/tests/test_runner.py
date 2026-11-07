@@ -281,6 +281,21 @@ def test_loadgen_args():
         out="/o",
     )
     assert b[b.index("--capacity") + 1] == "1.2" and b[b.index("--replicas") + 1] == "4"
+    assert a[a.index("--workers") + 1] == "1"  # mặc định một tiến trình, như trước khi có --workers
+
+
+@pytest.mark.parametrize(
+    "cpu, workers", [("1", 1), ("2", 2), ("3", 3), ("2.5", 2), ("500m", 1), ("4000m", 4)]
+)
+def test_loadgen_workers_one_per_whole_core(cpu, workers):
+    t = matrix.parse(BASE).target
+    assert matrix.Target(**{**t.__dict__, "loadgen_cpu": cpu}).loadgen_workers == workers
+
+
+@pytest.mark.parametrize("cpu", ["0", "0m", "-1", "hai", "", "inf", "nan", " 2", "1_000m", "+3", "1e1m"])
+def test_matrix_rejects_bad_loadgen_cpu(cpu):
+    with pytest.raises(matrix.MatrixError, match="loadgen_cpu"):
+        matrix.parse({**BASE, "target": {**BASE["target"], "loadgen_cpu": cpu}})
 
 
 def test_job_manifest_is_guaranteed_and_optional_secret():
@@ -290,6 +305,7 @@ def test_job_manifest_is_guaranteed_and_optional_secret():
     c = j["spec"]["template"]["spec"]["containers"][0]
     assert c["resources"]["requests"] == c["resources"]["limits"]  # QoS Guaranteed
     assert c["resources"]["limits"]["cpu"] == "2"
+    assert c["resources"]["limits"]["memory"] == "768Mi"  # 2 tiến trình: 256Mi × 3
     assert c["env"][0]["valueFrom"]["secretKeyRef"]["optional"] is True
     assert "@sha256:" in c["image"] and j["spec"]["backoffLimit"] == 0
 

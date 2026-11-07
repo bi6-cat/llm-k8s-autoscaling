@@ -11,6 +11,7 @@ Các module:
     schedule   lịch gửi (quá trình Poisson) và độ dài prompt, sinh từ seed
     prompts    văn bản prompt tổng hợp
     sender     gửi request, đọc stream, ghi CSV
-    checks     tự kiểm tra: độ lệch lịch gửi, độ trễ event loop, CPU
+    workers    chia lịch cho nhiều tiến trình khi một event loop không đủ CPU
+    checks     tự kiểm tra: độ lệch lịch gửi, độ trễ event loop, CPU, throttle
     __main__   dòng lệnh: python -m loadgen
 """
