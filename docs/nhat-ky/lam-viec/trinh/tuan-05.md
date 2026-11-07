@@ -371,3 +371,46 @@
   - §4.11 (công cụ đánh giá): máy tạo tải nhiều tiến trình vẫn giữ lịch open-loop tái lập được; vì sao chấm event loop theo tiến trình tệ nhất.
   - §5.1 (cách bảo đảm số đo đúng): bảng 3 phiên cho thấy máy tạo tải quá tải làm TTFT p99 tăng 32 ms, và tự kiểm bắt được lượt đó.
   - Phần hạn chế: giới hạn một lõi của Python asyncio, và cách khắc phục bằng nhiều tiến trình.
+
+## 2026-11-07 – TR5: merge PR #22 (`loadgen` nhiều tiến trình)
+
+- **Task:** TR5 · **Environment:** none (GitHub)
+- **Done:** Trình merge PR #22 lúc 22:01 bằng merge commit. Trước khi merge: CI 6/6 xanh, `MERGEABLE`/`CLEAN`, 0 review.
+- **Results:** merge commit `6905cfe`, base `1f307db`; CI trên `main` (push) đạt. PR chỉ sửa `loadgen/`, `experiments/` và `docs/`, nên cluster nhà không đổi.
+- **Links:** PR #22.
+
+## 2026-11-07 – TR3: 3 dashboard Grafana, kiểm trên kind
+
+- **Task:** TR3 · **Environment:** sim
+- **Done:**
+  1. Đọc Vận hành §1–§3, §9; Kiến trúc §17; Thông số §3, §6, §8.1, §9; CONTRIBUTING §4. Đối chiếu tên metric và nhãn với mã nguồn ở bản đã ghim: vLLM v0.31.0 (`vllm/v1/metrics/loggers.py`, `buckets.py`, `FinishReason`), nvidia_gpu_exporter 1.15.1 (`internal/exporter/exporter.go`, cách đặt tên theo đơn vị), KEDA v2.21.0 (`pkg/metricscollector/prommetrics.go`), và kube-state-metrics đang chạy trên kind.
+  2. Viết 3 dashboard JSON trong `observability/dashboards/`: Serving và GPU (20 panel), Autoscaling (9 panel), SLO và chi phí (16 panel). Mỗi panel có mô tả tiếng Việt giải thích metric và ngưỡng (JSON không có comment).
+  3. Thêm `configMapGenerator` vào `observability/kustomization.yaml` (label `grafana_dashboard: "1"`, không hash); README cách nạp, sửa, quy ước, annotation; target `make dashboards-check` và bước tương ứng trong job `alerts` của CI.
+  4. Áp `observability/` lên kind (Grafana 13.2.3 của chart 92.1.1); sidecar nạp cả 3 dashboard. Bơm 2 lượt tải `hey` 25 request đồng thời × 240 s qua `autoscaling/tests/load-sim.sh`. Chạy mọi truy vấn của dashboard qua `/api/ds/query` của Grafana, rồi chụp ảnh panel bằng grafana-image-renderer v5.12.7. Renderer chỉ bật tạm trên kind bằng một file values cục bộ, không commit.
+  5. Thêm `serving/overlays/sim/patch-podmonitor-sim.yaml` để đổi nhãn `finish_reason` của simulator thành `finished_reason` lúc scrape.
+- **Decision:**
+  - JSON là nguồn sự thật (CONTRIBUTING §4). Trình sinh lần đầu bằng script cục bộ, không commit script. Giải nghĩa PromQL nằm trong `description` của panel.
+  - Datasource là biến `${datasource}` để một file chạy ở home, cloud, sim. Giữ tên ConfigMap cố định (không hash), vì `kubectl apply` không xoá ConfigMap cũ, dẫn tới hai bản cùng uid.
+  - Đổi nhãn của simulator ở PodMonitor của overlay `sim`, không dùng `label_replace` trong truy vấn, để dashboard chỉ dùng tên của vLLM thật.
+  - TPOT của SLO đo bằng `vllm:request_time_per_output_token_seconds` (mỗi request một mẫu, có bucket 0,1); ITL chỉ vẽ ở dashboard Serving.
+  - Các ô "trong khoảng đang xem" (GPU-giờ, chi phí, ngân sách lỗi) tính trên khoảng thời gian chọn ở Grafana, để đọc được đúng một lượt ĐG2. Panel theo ngày dùng `offset -1d` để cột của một ngày gồm chính ngày đó.
+  - Annotation pha của runner: Grafana API, tag `llm-run`. Dashboard đã có lớp lọc tag này; runner chưa gửi.
+  - GPU-giờ đếm pod vLLM đã được xếp lên node (`kube_pod_status_scheduled{condition="true"}`), không dùng `kube_deployment_status_replicas` như ví dụ ở Vận hành §9: cách cũ đếm cả pod Pending chưa có GPU và bỏ sót pod đang tắt (vẫn giữ GPU).
+- **Results:**
+  - `make dashboards-check`: 3 dashboard đạt. Thử một file hỏng có 4 lỗi (uid trùng, còn `id`, datasource ghi cứng, PromQL thiếu ngoặc): bắt đủ 4, mã thoát khác 0. `make alerts-test`, `yamllint -s .`, `actionlint`, kubeconform (`observability` 6/6, `serving/overlays/sim` 4/4) đều đạt.
+  - Lượt tải 1: 15:19:56–15:24:08 UTC, 947 request đều HTTP 200, độ trễ phía `hey` p50 4,67 s, p95 13,0 s. Lượt 2: 15:26:47–15:31:00 UTC, 991 request đều HTTP 200.
+  - Dashboard Autoscaling thấy đủ chuỗi: tín hiệu 25 so với target × replica 10 → desired 3. Mốc lượt 1 (Prometheus, UTC): `hey` bắt đầu 15:19:56; 16 request đang chạy lúc 15:19:58; desired = 3 lúc 15:20:04; Ready = 3 lúc 15:20:19 (kube-state-metrics scrape 15 s, hai mốc sau sai số tới 15 s); 2 pod ở "Running, chưa Ready" khoảng 7 s (cold start trên simulator 6–7 s theo bảng tạo → Ready). Scale-down 3 → 2 → 1, về 1 lúc 22:36:56, mỗi lần có pod "đang tắt" khoảng 20 s. Đường Prometheus đi trước đường HPA vài giây.
+  - Sau lượt 1 (cửa sổ 1 phút): TTFT p95 0,24 s, thời gian chờ hàng đợi p95 4,68 s, toàn request p95 14,3 s; request đang chạy chạm 16 = `--max-num-seqs`.
+  - Dashboard SLO và chi phí, khung 22:15–22:39: 1929 request vLLM trả xong (Prometheus `increase`, ước lượng); TTFT, TPOT tốt 100%; GPU-giờ 0,95; 149,9 nghìn token; 0,48 USD với đơn giá 0,5; 3,169 USD / 1 triệu token; 66,7% thời gian ở max replica; đỉnh 25 request đồng thời. Cảnh báo `LLMAtMaxReplicas` và `LLMPodNotReady` hiện ở trạng thái pending.
+  - Trống đúng dự kiến trên kind: hàng GPU, preemption, hàng KEDA (chưa thu metric KEDA operator), 5xx (không có Traefik).
+- **Incidents:**
+  - Image Prometheus không có `wget` → gọi API qua `kubectl port-forward` + `curl`.
+  - Simulator v0.12.0 dùng nhãn `finish_reason`, vLLM v0.31.0 dùng `finished_reason` → panel lý do kết thúc trống trên kind → sửa bằng `metricRelabelings` ở overlay `sim`.
+  - TTFT của simulator không gồm thời gian chờ hàng đợi (p95 0,24 s trong khi chờ p95 4,7 s). Vì vậy quá tải trên kind không làm burn rate hay `LLMSLOBurnFast` thay đổi. Đã ghi vào README.
+  - Panel state-timeline trên Grafana 13.2.3 không áp màu của value mapping khi chế độ màu là `thresholds`. Trình thử 3 biến thể trên một dashboard tạm (đã xoá) và chọn chế độ `fixed`.
+  - Ô stat không có dữ liệu hiện chữ "No data" đỏ cỡ lớn → đặt `noValue` là "–", bậc màu đầu là màu chữ thường.
+  - Panel theo ngày ban đầu trống vì ngày hôm nay chưa trọn → `offset -1d`. Khi dashboard đặt khoảng thời gian tuyệt đối, Grafana bỏ qua thiết lập 7 ngày riêng của panel (ghi trong mô tả panel).
+- **Review:** `/code-review high` trên nhánh báo 10 điểm; sửa 9: cách đếm GPU-giờ; `dashboards-check` bắt thêm datasource dạng chuỗi, thiếu uid hoặc `null` và thay đủ biến Grafana (`$__range_s`, `${var:format}`), báo rõ khi thiếu promtool (đã thử lại từng ca); bảng cold start giữ cả pod đã scale-down (`max_over_time` trên subquery, kiểm trên kind: đủ 3 pod 6/7/6 s); mô tả mốc ngày sửa thành giờ trình duyệt (ảnh chụp cho cột ở 00:00 giờ Việt Nam, không phải 07:00); ô đơn giá ghi rõ dấu chấm thập phân; ô "Hiện tại" chạy truy vấn instant; ghi chú rủi ro `op: add` trong patch PodMonitor. Không làm: recording rule cho TPOT và GPU-giờ chỉ để bớt lặp biểu thức trong JSON (TPOT không có cảnh báo).
+- **Deviations:** Vận hành §9: GPU-giờ đếm pod đã xếp lên node thay cho `kube_deployment_status_replicas`. Kiến trúc §17.3: chưa vẽ "độ lệch lịch gửi của máy tạo tải", vì `loadgen` không xuất metric Prometheus và lệch lịch đã được chấm trong `checks.json`. Annotation pha đã có phía dashboard, runner chưa gửi. Vận hành §9: GPU-giờ và chi phí tính trên khoảng đang xem thay cho cố định 24 giờ, và có thêm panel theo ngày. Hàng KEDA trống cho tới khi có việc thu metric KEDA operator.
+- **Links:** nhánh `feat/tr3-dashboards`. File chính: `observability/dashboards/*.json`, `observability/dashboards/README.md`, `observability/kustomization.yaml`, `Makefile` (`dashboards-check`), `.github/workflows/ci.yaml`, `serving/overlays/sim/patch-podmonitor-sim.yaml`.
+- **Thesis:** §4 (giám sát): ba dashboard, cách nạp bằng sidecar, kiểm PromQL trong CI. Ảnh chụp ba dashboard trên kind (máy Trình, `.work/tr3/screens/`) dùng làm hình minh hoạ chuỗi tín hiệu → HPA → pod → Ready; bản cuối nên chụp lại trên V2. Phần hạn chế: TTFT của simulator không gồm thời gian chờ.

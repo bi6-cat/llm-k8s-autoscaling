@@ -1,0 +1,26 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# serving/overlays/sim/patch-podmonitor-sim.yaml
+# Khái niệm: metricRelabelings = luật Prometheus áp lên từng chuỗi ngay sau khi scrape, trước khi lưu:
+#            đổi tên nhãn, bỏ nhãn, bỏ chuỗi. Khác `relabelings` (áp lên target, trước khi scrape).
+# Mục đích:  Simulator llm-d-inference-sim v0.12.0 ghi lý do kết thúc của vllm:request_success_total vào
+#            nhãn `finish_reason`, còn vLLM v0.31.0 dùng `finished_reason` (vllm/v1/metrics/loggers.py;
+#            đọc /metrics của simulator trên kind ngày 07/11). Đổi tên ngay lúc scrape để dashboard, cảnh
+#            báo và runner chỉ cần biết tên của vLLM thật, đúng mục đích của overlay sim.
+# Lưu ý:     `op: add` vào một trường đã có thì THAY cả danh sách. Base (serving/base/podmonitor.yaml) hiện
+#            chưa có metricRelabelings; nếu sau này base thêm, đổi patch này thành từng phần tử với path
+#            …/metricRelabelings/- (nối vào cuối) để không âm thầm bỏ luật của base trên kind.
+# Tham khảo: observability/dashboards/README.md; Kiến trúc §17.1
+# ──────────────────────────────────────────────────────────────────────────────
+- op: add
+  path: /spec/podMetricsEndpoints/0/metricRelabelings
+  value:
+    # Chép giá trị finish_reason sang finished_reason. regex (.+): chỉ chuỗi có nhãn này mới bị sửa;
+    # chuỗi khác giữ nguyên. $1 = phần khớp trong ngoặc của regex, tức toàn bộ giá trị cũ.
+    - sourceLabels: [finish_reason]
+      regex: (.+)
+      targetLabel: finished_reason
+      replacement: $1
+      action: replace
+    # Bỏ nhãn cũ để mỗi chuỗi chỉ có một tên nhãn, như vLLM thật
+    - regex: finish_reason
+      action: labeldrop
