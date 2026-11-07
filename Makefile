@@ -78,7 +78,7 @@ sim-down: ## Xoá cluster simulator
 	kind delete cluster --name $(KIND_CLUSTER)
 
 # Bơm tải cho bài T2: `hey` giữ C request đồng thời trong DUR giây (autoscaling/tests/load-sim.sh, cùng file
-# make sim-test dùng). Dùng port-forward cổng 8000 đang mở ở terminal khác (w2.md §9.3), chưa có thì tự mở.
+# make sim-test dùng). Tự mở port-forward riêng ở cổng ngẫu nhiên tới đúng cluster, xong thì tự tắt.
 # `$${DUR:-120s}` = biến môi trường DUR, mặc định 120s. Gọi: make sim-test-load C=25 DUR=180s
 sim-test-load: ## Tải đồng thời cho T2 (C=25, DUR=120s)
 	CTX=kind-$(KIND_CLUSTER) autoscaling/tests/load-sim.sh $${C:-25} $${DUR:-120s}

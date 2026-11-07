@@ -39,7 +39,13 @@ current() { hpa currentReplicas; }     # số replica HPA đang tính (= replica
 metric() { hpa 'currentMetrics[0].external.current.averageValue'; }   # đã chia cho số replica (AverageValue)
 # so <jsonpath>: một trường của ScaledObject
 so() { "${K[@]}" "${N[@]}" get scaledobject "$SO" -o jsonpath="$1" 2>/dev/null || true; }
-failures() { so '{.status.health.*.numberOfFailures}'; }   # số lần lỗi liên tiếp khi KEDA gọi Prometheus
+# failures: số lần lỗi liên tiếp khi KEDA gọi Prometheus. status.health có một mục cho mỗi metric; lấy max
+# như watch_loop, để luôn ra MỘT số kể cả khi có nhiều mục (thêm trigger, hoặc mục cũ sau khi đổi tên).
+failures() {
+  "${K[@]}" "${N[@]}" get scaledobject "$SO" -o json 2>/dev/null \
+    | jq -r '[.status.health[]?.numberOfFailures] | max // 0' 2>/dev/null || true
+}
+paused() { so '{.status.conditions[?(@.type=="Paused")].status}'; }   # "True" khi KEDA đã tạm dừng SO
 # replicas: số replica Deployment đang được đặt (do HPA, hoặc do KEDA khi tạm dừng)
 replicas() { "${K[@]}" "${N[@]}" get deploy vllm -o jsonpath='{.spec.replicas}' 2>/dev/null || true; }
 # qty: đổi số lượng kiểu Kubernetes sang số thường: "8334m" (m = mili) = 8,334; "25" = 25
@@ -72,11 +78,11 @@ watch_loop() {
   done
 }
 
-# wait_for <hàm đọc> <giá trị> <tối đa giây>: chờ tới khi hàm trả đúng giá trị; in số giây đã chờ,
-# hoặc "quá-hạn" (và trả mã 1) nếu hết giờ.
+# wait_for <hàm đọc> <giá trị> <tối đa giây> [mốc 0]: chờ tới khi hàm trả đúng giá trị; in số giây tính
+# từ mốc 0 (epoch; mặc định là lúc gọi), hoặc "quá-hạn" (và trả mã 1) nếu hết giờ.
 wait_for() {
-  local fn=$1 want=$2 limit=$3 t0
-  t0=$(now)
+  local fn=$1 want=$2 limit=$3 t0=${4:-}
+  [ -n "$t0" ] || t0=$(now)
   while (( $(now) - t0 <= limit )); do
     if [ "$($fn)" = "$want" ]; then echo $(( $(now) - t0 )); return 0; fi
     sleep 1
@@ -90,29 +96,51 @@ ensure_idle() {
   wait_for replicas 1 900 >/dev/null || { say "không về được 1 replica sau 900 s"; exit 1; }
 }
 
+# load_start <epoch lúc gọi load-sim.sh>: chờ load-sim.sh in mốc "hey bắt đầu <epoch>" vào $LOG.hey (tối đa
+# 20 s, gồm thời gian mở port-forward), in epoch đó. Chỉ nhận mốc ≥ lúc gọi, để T5 không đọc nhầm mốc
+# của T2 trong cùng file log.
+load_start() {
+  local t
+  for _ in $(seq 1 40); do
+    t=$(sed -nE 's/^load-sim: hey bắt đầu ([0-9]+)$/\1/p' "$LOG.hey" 2>/dev/null | tail -1)
+    if [ -n "$t" ] && (( t >= $1 )); then echo "$t"; return 0; fi
+    sleep 0.5
+  done
+  return 1
+}
+
 # ── Các bài ─────────────────────────────────────────────────────────────────────
 t1() {  # T1: không tải 120 s → giữ 1 replica, metric 0
   ensure_idle
   say "T1 bắt đầu: không tải 120 s"
-  local t0 bad=0
+  local t0 m bad=0
   t0=$(now)
   while (( $(now) - t0 < 120 )); do
-    { [ "$(desired)" = 1 ] && [ "$(qty "$(metric)")" = 0.000 ]; } || bad=$((bad + 1))
+    # metric rỗng = HPA chưa thấy giá trị nào (`<unknown>`): không tính là 0, vì qty "" cũng ra 0.000
+    m=$(metric)
+    { [ "$(desired)" = 1 ] && [ -n "$m" ] && [ "$(qty "$m")" = 0.000 ]; } || bad=$((bad + 1))
     sleep 2
   done
   if (( bad == 0 )); then result "T1 ĐẠT: desired=1, metric=0 suốt 120 s"
-  else result "T1 TRƯỢT: $bad lần đọc có desired≠1 hoặc metric≠0"; fi
+  else result "T1 TRƯỢT: $bad lần đọc có desired≠1, hoặc metric≠0 hay chưa có metric"; fi
 }
 
 t2() {  # T2: C request đồng thời (2,5 × threshold) → desired=UP trong ≤ 15 s, metric HPA ≈ C ÷ số replica.
         # T3: tắt tải → giữ UP trong 300 s (cửa sổ ổn định), rồi bớt 1 pod mỗi 60 s (Thông số §9.3).
-  local t_load pid up m e
+  local t_call t_load pid up m e
   ensure_idle
   say "T2 bắt đầu: hey C=$C trong 180 s"
-  t_load=$(now)
+  t_call=$(now)
   autoscaling/tests/load-sim.sh "$C" 180s >> "$LOG.hey" 2>&1 &
   pid=$!
-  up=$(wait_for desired "$UP" 60 || true)
+  # Mốc 0 của T2 là lúc hey thật sự chạy, không phải lúc gọi load-sim.sh (trước đó còn mở port-forward)
+  if ! t_load=$(load_start "$t_call"); then
+    result "T2 TRƯỢT: load-sim.sh không bắt đầu tải sau 20 s (xem $LOG.hey); bỏ qua T3"
+    kill "$pid" 2>/dev/null || true; wait "$pid" || true
+    return
+  fi
+  say "T2: hey bắt đầu sau $(( t_load - t_call )) s mở port-forward"
+  up=$(wait_for desired "$UP" 60 "$t_load" || true)
   # Đọc metric khi HPA đã tính với UP replica: đợi current=UP, thêm 2 chu kỳ sync (5 s) cho chắc
   wait_for current "$UP" 30 >/dev/null || true
   sleep 10
@@ -128,9 +156,9 @@ t2() {  # T2: C request đồng thời (2,5 × threshold) → desired=UP trong �
   fi
   wait "$pid" || true                  # hey hoặc port-forward lỗi thì vẫn đi tiếp sang T3 (log ở $LOG.hey)
 
-  # Mốc 0 của T3 là hạn dừng của hey (t_load + 180 s), KHÔNG phải lúc tiến trình hey thoát: tới hạn, hey
-  # thôi gửi request mới nhưng còn chờ các request dở dang (tới ~10 s với 200 token × 50 ms). Đo từ lúc hey
-  # thoát thì T3 ngắn đi đúng khoảng đó (lần chạy 01/11: 291 s thay vì 301 s).
+  # Mốc 0 của T3 là hạn dừng của hey (t_load + 180 s, t_load = lúc hey bắt đầu), KHÔNG phải lúc tiến trình
+  # hey thoát: tới hạn, hey thôi gửi request mới nhưng còn chờ các request dở dang (tới ~10 s với 200 token
+  # × 50 ms). Đo từ lúc hey thoát thì T3 ngắn đi đúng khoảng đó (lần chạy 01/11: 291 s thay vì 301 s).
   local t_end=$(( t_load + 180 )) t_mid="" d_mid d_one
   say "T3 bắt đầu: hết tải (hey thôi gửi request mới lúc $(date -d "@$t_end" +%T))"
   if wait_for desired $(( UP - 1 )) 600 >/dev/null; then t_mid=$(now); d_mid=$(( t_mid - t_end )); else d_mid="quá-hạn"; fi
@@ -182,7 +210,14 @@ t5() {  # T5: annotation paused-replicas=1 → giữ đúng 1 replica dù có t�
   ensure_idle
   say "T5 bắt đầu: paused-replicas=1 rồi hey C=$C trong 60 s"
   "${K[@]}" "${N[@]}" annotate scaledobject "$SO" autoscaling.keda.sh/paused-replicas="1" --overwrite >> "$LOG"
-  sleep 10                             # chờ KEDA xử lý annotation (xoá HPA) trước khi bơm tải
+  # Chờ KEDA xử lý xong annotation rồi mới bơm tải: điều kiện Paused=True VÀ HPA đã bị xoá (desired rỗng).
+  # Bơm tải khi HPA cũ còn thì HPA scale lên và T5 trượt oan.
+  if ! wait_for paused True 30 >/dev/null || ! wait_for desired "" 30 >/dev/null; then
+    result "T5 TRƯỢT: sau 30 s KEDA chưa tạm dừng (Paused=$(paused), HPA desired=$(desired)); xem log keda-operator"
+    "${K[@]}" "${N[@]}" annotate scaledobject "$SO" autoscaling.keda.sh/paused-replicas- >> "$LOG"
+    return
+  fi
+  say "T5: KEDA đã tạm dừng (Paused=True, HPA đã xoá)"
   autoscaling/tests/load-sim.sh "$C" 60s >> "$LOG.hey" 2>&1 &
   pid=$!
   while kill -0 "$pid" 2>/dev/null; do   # kill -0: chỉ hỏi tiến trình còn sống không, không gửi tín hiệu
@@ -216,6 +251,9 @@ THRESHOLD=$(so '{.spec.triggers[0].metadata.threshold}')
 [[ $MAX =~ ^[0-9]+$ && $FALLBACK =~ ^[0-9]+$ && $THRESHOLD =~ ^[0-9]+$ ]] \
   || { echo "ScaledObject $SO thiếu maxReplicaCount, fallback.replicas hoặc threshold nguyên"; exit 1; }
 (( MAX >= 3 )) || { echo "T1–T5 cần maxReplicaCount ≥ 3 (đang là $MAX)"; exit 1; }
+# Thông số §9.3: fallback.replicas = maxReplicaCount. Overlay đổi max mà quên đổi fallback thì HPA kẹp
+# desired ở max, T4 chờ FALLBACK mãi không tới và trượt oan; dừng ngay để báo đúng chỗ sai.
+(( FALLBACK == MAX )) || { echo "fallback.replicas ($FALLBACK) ≠ maxReplicaCount ($MAX): sửa overlay (Thông số §9.3)"; exit 1; }
 C=$(( THRESHOLD * 5 / 2 ))             # 2,5 × threshold (w2.md §9.3): threshold 10 → 25 request đồng thời
 UP=$(( (C + THRESHOLD - 1) / THRESHOLD ))   # desired mong đợi ở T2 = ⌈C ÷ threshold⌉ = 3
 # Câu PromQL và địa chỉ Prometheus lấy đúng từ trigger, để T5 kiểm cùng tín hiệu KEDA dùng. serverAddress
@@ -224,6 +262,12 @@ UP=$(( (C + THRESHOLD - 1) / THRESHOLD ))   # desired mong đợi ở T2 = ⌈C 
 QUERY=$(jq -rn --arg q "$(so '{.spec.triggers[0].metadata.query}')" '$q | @uri')
 PROM=$(so '{.spec.triggers[0].metadata.serverAddress}' \
   | sed -E 's#^http://([^.]+)\.([^.]+)\.svc(\.cluster\.local)?:([0-9]+).*#/api/v1/namespaces/\2/services/http:\1:\4/proxy#')
+# a2() đổi mọi lỗi thành 0, nên kiểm một lần ở đây: serverAddress không đúng dạng trên (sed không đổi được)
+# hoặc câu PromQL lỗi thì dừng ngay, thay vì để T5 báo "A2 cao nhất 0" như thể tải không tới simulator.
+[[ $PROM == /api/v1/namespaces/* ]] \
+  || { echo "serverAddress '$PROM' không có dạng http://<service>.<namespace>.svc:<cổng>"; exit 1; }
+"${K[@]}" get --raw "$PROM/api/v1/query?query=$QUERY" 2>/dev/null | jq -e '.status == "success"' >/dev/null \
+  || { echo "Không chạy được câu PromQL của $SO qua $PROM (Prometheus chưa sẵn sàng?)"; exit 1; }
 
 mkdir -p "$(dirname "$LOG")"
 say "cấu hình: max=$MAX fallback=$FALLBACK threshold=$THRESHOLD → C=$C, T2 mong đợi desired=$UP"
