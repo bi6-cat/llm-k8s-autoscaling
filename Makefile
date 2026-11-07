@@ -30,7 +30,7 @@ PROMTOOL ?= promtool
 YQ ?= yq
 
 # .PHONY: các target này không phải tên file, make luôn chạy chúng (kể cả khi có file trùng tên)
-.PHONY: help home-up sim-up sim-down sim-test-load sim-test find rent bootstrap release lint alerts-test alerts-coverage
+.PHONY: help home-up sim-up sim-down sim-test-load sim-test find rent bootstrap release lint alerts-test alerts-coverage dashboards-check
 
 # In mọi target có comment `## mô tả` cùng dòng. Thêm target mới thì nhớ viết `## …` để nó hiện ở đây.
 help: ## In danh sách lệnh
@@ -171,6 +171,40 @@ alerts-coverage: ## Mỗi cảnh báo có severity, runbook và unit test (CONTR
 	  grep -qxF "$$name" <<< "$$tested" || err "chưa có unit test nào mong đợi cảnh báo bắn (exp_alerts) trong observability/alerts/tests/"; \
 	done <<< "$$alerts"; \
 	echo "alerts-coverage: đã kiểm $$(wc -l <<< "$$alerts") cảnh báo"; \
+	exit $$fail
+
+# Dashboard Grafana lưu dạng JSON (CONTRIBUTING §4). Grafana chỉ báo PromQL sai khi đã mở panel, nên
+# target này bắt lỗi trước khi merge, không cần cluster. Với mỗi file observability/dashboards/*.json:
+#   1) `uid` có và không trùng giữa các file (sidecar nạp hai dashboard cùng uid thì chỉ giữ một);
+#      không có `id` (id do từng Grafana tự cấp, để lại thì import vào Grafana khác bị lỗi);
+#   2) mọi `datasource` là object có `uid` bằng biến `$${datasource}` hoặc nguồn có sẵn `-- Grafana --`
+#      (annotation), để cùng một file chạy được ở home, cloud và sim. Kiểu cũ `"datasource": "Prometheus"`
+#      (chuỗi), object thiếu uid hay `null` (rơi về datasource mặc định) đều bị báo;
+#   3) file < 200 KiB: Argo CD và `kubectl apply` lưu cả object vào annotation last-applied-configuration,
+#      mà annotation bị giới hạn 256 KiB;
+#   4) lấy mọi `expr` (truy vấn của panel và annotation; yq `..` = duyệt mọi tầng), thay biến của
+#      Grafana bằng giá trị mẫu, theo thứ tự: $$__range_s, $$__interval_ms… (số) → 1; $$__rate_interval,
+#      $$__interval, $$__range (khoảng thời gian) → 5m; $${tên} hay $${tên:định_dạng} → 1; $$tên → 1. "1" vừa
+#      là số vừa là chuỗi hợp lệ. Rồi gói thành recording rule giả cho `promtool check rules` phân tích cú pháp.
+#      `--lint=none`: hai panel dùng cùng biểu thức là bình thường, không phải lỗi "rule trùng".
+dashboards-check: ## Kiểm JSON dashboard: uid, datasource, kích thước, PromQL (cần yq, promtool)
+	@set -euo pipefail; tmp=$$(mktemp -d); trap 'rm -rf "$$tmp"' EXIT; \
+	command -v $(YQ) >/dev/null || { echo "::error::Cần yq (bản mikefarah); hoặc truyền YQ=/đường/dẫn/yq"; exit 1; }; \
+	command -v $(PROMTOOL) >/dev/null || { echo "::error::Cần promtool; hoặc truyền PROMTOOL=/đường/dẫn/promtool"; exit 1; }; \
+	files=(observability/dashboards/*.json); [ -f "$${files[0]}" ] || { echo "::error::Không thấy dashboard nào"; exit 1; }; \
+	fail=0; err() { echo "::error file=$$f::$$1"; fail=1; }; uids=""; \
+	for f in "$${files[@]}"; do \
+	  uid=$$($(YQ) -p json -o yaml '.uid // ""' "$$f"); \
+	  if [ -z "$$uid" ]; then err "thiếu uid"; continue; fi; \
+	  grep -qxF "$$uid" <<< "$$uids" && err "uid '$$uid' trùng với dashboard khác"; uids+="$$uid"$$'\n'; \
+	  [ "$$($(YQ) -p json -o yaml 'has("id")' "$$f")" = false ] || err "còn trường id: xoá đi"; \
+	  bad=$$($(YQ) -p json -o yaml '[.. | select(tag == "!!map" and has("datasource")) | .datasource | select(tag != "!!map" or ((.uid // "") != "$${datasource}" and (.uid // "") != "-- Grafana --")) | @json] | unique | join(", ")' "$$f"); \
+	  [ -z "$$bad" ] || err "datasource phải có uid \$${datasource} (đang có: $$bad)"; \
+	  [ "$$(wc -c < "$$f")" -lt 204800 ] || err "file ≥ 200 KiB"; \
+	  $(YQ) -p json -o yaml '{"groups": [{"name": .uid, "rules": [.. | select(tag == "!!map" and has("expr")) | .expr | sub("\$$\{?__(rate_interval|interval|range)_(s|ms)\}?"; "1") | sub("\$$\{?__(rate_interval|interval|range)\}?"; "5m") | sub("\$$\{[^}]*\}"; "1") | sub("\$$[A-Za-z_][A-Za-z0-9_]*"; "1") | {"record": "dashboard:expr", "expr": .}]}]}' "$$f" > "$$tmp/$$uid.yaml"; \
+	  $(PROMTOOL) check rules --lint=none "$$tmp/$$uid.yaml" >/dev/null || err "PromQL không hợp lệ (lỗi của promtool ở trên)"; \
+	done; \
+	echo "dashboards-check: đã kiểm $${#files[@]} dashboard"; \
 	exit $$fail
 
 # ── Lệnh đã đặt tên nhưng chưa làm ──────────────────────────────────────────────

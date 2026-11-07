@@ -178,8 +178,8 @@ jobs:
             echo "::endgroup::"
           done
 
-  # ── alerts: rule Prometheus đúng cú pháp, unit test đạt, mỗi cảnh báo đủ test và runbook ──
-  # Trên máy: make alerts-test   (Windows: chạy trong Git Bash, thêm SHELL=bash)
+  # ── alerts: rule Prometheus đúng cú pháp, unit test đạt, mỗi cảnh báo đủ test và runbook; dashboard hợp lệ ──
+  # Trên máy: make alerts-test dashboards-check   (Windows: chạy trong Git Bash, thêm SHELL=bash)
   alerts:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -211,6 +211,12 @@ jobs:
       # thành file rule thuần, rồi chạy promtool check rules và promtool test rules. Chi tiết trong Makefile.
       - name: make alerts-test
         run: make alerts-test
+
+      # Dashboard JSON dùng chung promtool và yq ở trên: uid cố định và không trùng, không còn `id`,
+      # datasource là biến ${datasource}, và mọi PromQL trong panel phân tích cú pháp được. Grafana chỉ báo
+      # PromQL sai khi đã mở panel, nên bắt ở đây rẻ hơn nhiều. Chi tiết trong Makefile.
+      - name: make dashboards-check
+        run: make dashboards-check
 
   # ── python: lint, format và unit test cho loadgen/ ──
   # Trên máy: uv run --project loadgen pytest loadgen   (và ruff check / ruff format --check như dưới)

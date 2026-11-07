@@ -1,11 +1,11 @@
 # ──────────────────────────────────────────────────────────────────────────────
 # observability/kustomization.yaml
 # Khái niệm: Kustomization = danh sách manifest mà `kubectl apply -k <thư mục>` (hoặc Argo CD) áp cùng lúc.
-# Mục đích:  Gom recording rule và cảnh báo thành một đơn vị triển khai. Giống nhau ở mọi môi trường
-#            (home, cloud, sim) nên không có overlay. Dashboard (TR3) thêm vào đây sau.
+# Mục đích:  Gom recording rule, cảnh báo và dashboard thành một đơn vị triển khai. Giống nhau ở mọi môi
+#            trường (home, cloud, sim) nên không có overlay.
 #            Chưa có Application Argo CD trỏ vào đây: thêm khi merge phần Argo CD (Kiến trúc §18.1,
 #            monitoring-extras). Trước đó áp tay: kubectl apply -k observability.
-# Tham khảo: Kiến trúc §17.2, §18.1
+# Tham khảo: Kiến trúc §17.2–§17.3, §18.1; observability/dashboards/README.md
 # ──────────────────────────────────────────────────────────────────────────────
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
@@ -13,3 +13,25 @@ resources:
   - rules/slo.yaml
   - rules/vllm.yaml
   - alerts/llm.yaml
+
+# Mỗi dashboard thành một ConfigMap. Sidecar của Grafana (values của kube-prometheus-stack) theo dõi mọi
+# ConfigMap có label grafana_dashboard: "1" ở mọi namespace, chép JSON vào thư mục dashboard rồi bảo
+# Grafana nạp lại. Sửa JSON rồi áp lại là Grafana cập nhật, không phải import tay.
+generatorOptions:
+  # Giá trị "1": sidecar của chart 92.1.1 lọc theo LABEL_VALUE=1 (đọc từ env của container
+  # grafana-sc-dashboard trên kind ngày 07/11), không chỉ theo tên label.
+  labels: {grafana_dashboard: "1"}
+  # Mặc định kustomize thêm hash nội dung vào tên ConfigMap (…-abc123) để pod dùng nó tự khởi động lại
+  # khi đổi nội dung. Ở đây không cần: sidecar tự thấy thay đổi. Giữ hash lại còn có hại: `kubectl apply`
+  # không xoá ConfigMap cũ, nên hai bản cùng uid nằm song song và Grafana chỉ nạp được một.
+  disableNameSuffixHash: true
+configMapGenerator:
+  - name: grafana-dashboard-llm-serving-gpu
+    namespace: monitoring              # cùng namespace với Grafana cho dễ tìm; sidecar đọc mọi namespace
+    files: [dashboards/serving-gpu.json]
+  - name: grafana-dashboard-llm-autoscaling
+    namespace: monitoring
+    files: [dashboards/autoscaling.json]
+  - name: grafana-dashboard-llm-slo-cost
+    namespace: monitoring
+    files: [dashboards/slo-cost.json]
