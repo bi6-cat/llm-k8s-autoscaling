@@ -84,7 +84,7 @@ Việc gắn với máy: các bước cài đặt trên PC (driver, k3s server) 
 
 ### M2 (01/11): vận hành thử đạt
 - [ ] A1, A2 qua bài kiểm thử T1–T7 (trên simulator và GPU nhà).
-- [ ] Graceful shutdown: 0 lỗi trong 3 lần thử, ca đối chứng có lỗi.
+- [ ] Graceful shutdown: 0 lỗi trong 3 lần thử, ca đối chứng có lỗi. *(06/11: 0 lỗi trong 3 lần (144/144 stream); đối chứng không preStop, timeout 0 nhưng grace 180 s cũng 0 lỗi, chỉ đối chứng grace 5 s mới cắt 48/48. vLLM 0.31.0 không dừng khi nhận SIGTERM, nên request an toàn là nhờ grace period, drain chưa hoạt động như thiết kế; pod giữ GPU đủ 180 s. Xem [van-hanh.md](../nhat-ky/van-hanh.md) 06/11.)*
 - [ ] Đủ 3 dashboard; 6 cảnh báo có unit test, tới được Telegram; **mỗi cảnh báo có runbook**. *(04/11: đã có 7 quy tắc cho 6 cảnh báo, 8 unit test `promtool` và 7 runbook (PR #3); chưa có dashboard, Telegram, chưa áp lên cluster.)*
 - [ ] Bảo mật tối thiểu đạt checklist ([Vận hành §8](04-van-hanh.md#8-bảo-mật-tối-thiểu)).
 - [ ] VH1, VH2 (gồm ca 1 replica), VH6 đạt ở nhà.

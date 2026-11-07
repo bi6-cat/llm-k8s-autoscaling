@@ -260,3 +260,114 @@
 - **Deviations:** chưa đối chiếu một mức với `vllm bench serve` (Môi trường §8 bước 7).
 - **Links:** nhánh `feat/dg1-home-05b`; `experiments/runner/capacity.py`, `experiments/matrix-dg1-home.yaml`, `experiments/capacity-home.json`, `experiments/capacity-home-1.5b.json`.
 - **Thesis:** §5.2 phương pháp ĐG1 (ví dụ ở nhà, đường cong TTFT theo λ), LT3 (điểm gãy do `max-num-seqs`, không do bộ nhớ: lặp lại kết luận của 1,5B), LT6/A1 (GPU util bão hoà sớm, Trình).
+
+## 2026-11-06 – Khảo sát giá GPU thuê real-time (Vast.ai, RunPod, Lambda, GCP)
+
+- **Task:** chung (chuẩn bị V0/V1, V2) · **Environment:** none
+- **Done:**
+  1. Gọi API tìm offer công khai của Vast (`console.vast.ai/api/v0/bundles/`, không cần key), lọc on-demand, chưa thuê, theo từng GPU (4090, 3090, A5000, 5090, L4, 4080S) × số GPU (1, 4) × có/không `vms_enabled`. API trả tối đa 64 offer/truy vấn.
+  2. Đối chiếu với tiêu chí [Thông số §10.2](../../../chi-tiet/00-thong-so.md#102-gpu-thuê) (VM, reliability ≥ 0,98, RAM ≥ 128 GB, ≤ 0,50 USD/GPU-giờ).
+  3. Xem trang giá RunPod, Lambda và giá g2-standard-48 của GCP (qua gcloud-compute.com).
+- **Results:** (thời điểm chụp: chiều thứ Sáu 06/11/2026; giá Vast là `dph_total`, gồm cả phí ổ mặc định)
+  - Vast, 4 × RTX 4090, **chế độ VM**: chỉ 5–6 offer. 0,36 USD/GPU-giờ (RU, rel 0,989, 128 vCPU, 252 GB; chỉ thấy ở 1 truy vấn, có thể đã bị thuê); 0,40 (IS, rel 0,998, 403 GB, deverified, số vCPU báo 0); 0,41 (GB, rel 0,968, RAM 126 GB: trượt tiêu chí); 0,47 (CA, rel 0,942: trượt); 0,53 (US, rel 0,988, 128 vCPU, 504 GB, đĩa 8 GB/s: vượt ngưỡng giá một chút); 0,67 (RO, verified).
+  - Vast, 4 × 4090 không cần VM: 33 offer, min 0,27, median 0,48 USD/GPU-giờ.
+  - Vast, 1 × 4090 VM (cho V0/V1): 25 offer, min 0,30, median 0,56; nhiều máy 0,36–0,42 có rel ≥ 0,985.
+  - Vast, dự phòng 4 × 3090 VM: 1 offer 0,15 (CN, rel 0,975); 4 × A5000 và mọi L4: không có offer VM. 4 × 5090 VM: 0,60–0,73.
+  - RunPod (container, không phải VM): 4090 0,34 (Community) / 0,89 (Secure); 3090 0,22 / 0,50; 5090 0,69 / 1,19.
+  - Lambda: không có 4090; rẻ nhất A6000 1,09 USD/GPU-giờ (giá áp dụng từ 16/11/2026).
+  - GCP g2-standard-48 (4 × L4) us-central1: on-demand 4,00 USD/giờ, spot 2,39 USD/giờ.
+  - Ước tính lại: V2 (22 giờ × 4 × 4090 VM ở 0,40–0,53) ≈ 35–47 USD; V0+V1 (~12 giờ × 1 × 4090 VM ở 0,36–0,42) ≈ 4–5 USD; cộng đĩa/băng thông → **~45–55 USD**, vẫn dưới trần 150 USD. GCP dự phòng 22 giờ ≈ 88 USD on-demand, nằm trong credit 200 USD.
+- **Decision:** chưa quyết định; ghi nhận rủi ro: số máy 4 × 4090 VM đạt đủ tiêu chí rất ít (1–2 máy), nên cân nhắc nới ngưỡng giá lên ~0,55 USD/GPU-giờ hoặc nới reliability, và kiểm tra lại giá sáng T7 14/11 trước khi thuê.
+- **Incidents:** trang `cloud.vast.ai/pricing` và trang giá GCP render bằng JS nên WebFetch không đọc được; chuyển sang API của Vast và trang gcloud-compute.com.
+- **Deviations:** số đã nạp (~30 USD) thấp hơn mức tối thiểu trước V2 (≥ 1,3 × ~40 USD ≈ 52 USD, [Thông số §11](../../../chi-tiet/00-thong-so.md#11-ngân-sách)): cần nạp thêm trước 14/11.
+- **Thesis:** §4.1 (chọn nhà cung cấp GPU, bảng so sánh giá), §5 (chi phí thực tế so với dự toán).
+
+## 2026-11-06 – Thêm overlay `cloud-3b` để thử Qwen2.5-3B trên VM GPU 16 GB
+
+- **Task:** Q2 (serving) · **Environment:** none (chỉ build manifest, chưa chạy trên GPU)
+- **Done:**
+  1. Khảo sát thêm offer VM trên Vast cho GPU nhỏ và GPU có MIG: 4 × RTX A4000 16 GB (CZ) 0,59 USD/giờ cả máy (16 vCPU, 126 GB, rel 0,981, deverified, driver 580); 3060 12 GB và 4060 Ti 16 GB có VM nhưng chỉ 1–2 GPU mỗi máy; A100, H100, A30: 0 offer VM.
+  2. Tra Qwen2.5-3B-Instruct trên HF: revision `aa8e7253…d1`, 36 lớp, 2 KV head, head_dim 128, BF16, safetensors 3,97 + 2,20 GB.
+  3. Tạo `serving/overlays/cloud-3b/` = overlay `cloud` + JSON patch đổi `--model`, `--revision`, `--served-model-name` (`qwen2.5-3b`) và CPU/RAM 3 lõi / 16Gi; giữ max-model-len 8192, max-num-seqs 64, gpu-memory-utilization 0,90 như 7B.
+  4. Cập nhật CONTRIBUTING (cây thư mục, ngoại lệ tên overlay) và `docs/phien-ban.md`.
+- **Decision:**
+  - Nhóm muốn thử 3B trước khi chốt model cho V2: 3B vẫn giữ được luận điểm (decode giới hạn bởi băng thông, cold start hàng chục giây, KV-cache có giới hạn) và chạy được trên VM 4 × GPU 16 GB rẻ hơn ~3 lần. Chưa đổi Thông số §9.1; chốt ở ADR-003 sau phiên thử.
+  - Bỏ phương án ghép nhiều VM 1 GPU (mạng WAN giữa node làm nhiễu TTFT, replica không đồng nhất) và phương án chia một GPU to bằng time-slicing/MPS (các replica chia băng thông bộ nhớ nên thêm replica không thêm năng lực); MIG không có offer VM.
+  - Overlay riêng thay vì sửa `cloud`, để 7B vẫn dùng được ngay. Thay args theo chỉ số có `op: test` đi trước, để đổi thứ tự args ở base/cloud thì build lỗi thay vì thay nhầm.
+  - KV-cache 3B ≈ 2 × 36 × 2 × 128 × 2 B = 36 KiB/token; GPU 16 GB còn ~6,5–7 GB KV ≈ 180–200 nghìn token [ước lượng, chưa đo] → giới hạn đồng thời là max-num-seqs 64.
+- **Results:** `kubectl kustomize serving/overlays/cloud-3b` build được; diff với `cloud` chỉ gồm 3 args model và CPU/RAM. Thử đổi revision 7B trong bản sao của `cloud` → build `cloud-3b` lỗi `testing value …/args/4 failed` như mong muốn. `yamllint -s` (qua `uvx`) qua. Chưa chạy kubeconform (máy chưa cài; CI sẽ chạy).
+- **Incidents:** đặt overlay ở `serving/overlays/cloud/model-3b/` với `resources: [..]` → kustomize báo `cycle detected` (thư mục cha chứa overlay trỏ về nó) → chuyển sang thư mục ngang hàng `cloud-3b/`. `git mv -k` lặng lẽ bỏ qua thư mục chưa được track, phải dùng `mv`.
+- **Deviations:** CONTRIBUTING §1 chỉ cho 3 tên môi trường; `cloud-3b` là ngoại lệ đã ghi trong CONTRIBUTING. Giấy phép Qwen2.5-3B là Qwen Research License (không phải Apache 2.0 như 7B); dùng cho đồ án học thuật được, cần ghi trong luận văn.
+- **Links:** `serving/overlays/cloud-3b/`, `CONTRIBUTING.md`, `docs/phien-ban.md`.
+- **Thesis:** §3 (lựa chọn model và GPU, lý do không dùng chia GPU), §4.1 (môi trường thuê), phần hạn chế nếu V2 dùng 3B.
+
+## 2026-11-06 – Khảo sát lại offer VM nhiều GPU (≥ 16 GB, compute capability ≥ 7.5)
+
+- **Task:** chung (chuẩn bị V0/V1, V2) · **Environment:** none
+- **Done:** truy vấn API Vast: VM, on-demand, ≥ 2 GPU, VRAM ≥ 15 GB, compute capability ≥ 7.5 → 45 offer, phần lớn là máy 2 GPU. Kiểm tra thêm Titan Xp: 28 offer, toàn container, 0 VM; compute capability 6.1 < 7.0 tối thiểu của vLLM, image CUDA 13 không hỗ trợ Pascal → loại.
+- **Results:** (chiều 06/11, giá cả máy)
+  - 4 × RTX 5060 Ti 16 GB (CN): 0,54 USD/giờ, rel 0,988, 64 vCPU, 157 GB, driver host 580, unverified.
+  - 4 × RTX 5070 Ti 16 GB (CN): 0,76 USD/giờ, rel 0,985, 96 vCPU, 126 GB, verified.
+  - 4 × A4000 (CZ) 0,59; 4 × 3090 (CN) 0,59 nhưng driver host 535; 4 × 4090 rẻ nhất 1,60 (IS, driver host 535).
+  - Máy 2 GPU rẻ: 2 × 5060 Ti 0,27; 2 × A4000 0,30; 2 × 4090 0,72–1,10 USD/giờ.
+- **Decision:** chưa chốt (cần họp với Trình, ghi ở ADR-003). Sau khi lọc như giao diện web (chỉ máy verified, không `is_vm_deverified`), các phương án còn lại: (A) N = 2, 3B trên 2 × 5060 Ti (GB, verified, 0,27 USD/giờ, V2 ~6 USD); (B) N = 2, 7B trên 2 × 4090 (CA, 0,94 USD/giờ, ~21 USD); (C) N = 4, 7B trên 4 × 4090 (RO, verified, 2,67 USD/giờ), V2 rút còn ~12 giờ (~32 USD); (D) máy 4 GPU chưa xác minh (4 × 5060 Ti CN, 0,54 USD/giờ), rủi ro không lên VM và bị chặn mạng. Đề xuất A: rẻ nhất, verified, cùng kiến trúc Blackwell với PC nhà; trọng tâm đồ án là vận hành (ADR-002) nên N = 2 chủ yếu làm yếu phần so sánh hiệu năng. Nếu N = 2: KB2 hạ đỉnh từ 3C xuống ~1,6C, KB3 = 0,75 × N = 1,5C, N3 viết lại theo N.
+- **Incidents:** đọc sai kết quả API → API trả mọi máy có `vms_enabled`, gồm cả unverified, deverified và máy trượt kiểm tra VM (`is_vm_deverified=True`, 15/45 offer); giao diện web mặc định chỉ hiện máy verified, nên người dùng lọc theo VM không thấy các máy 4 GPU giá rẻ (4 × 5060 Ti, 4 × A4000, 4 × 3090 đều không verified; 4 × 5070 Ti trượt kiểm tra VM) → lọc lại theo `verification=verified` và `is_vm_deverified=false`: máy 4 GPU duy nhất còn lại là 4 × L40S 3,20 USD/giờ. Bài học: `vast.sh find` phải lọc cả hai trường này.
+- **Thesis:** §4.1 (chọn GPU thuê).
+
+## 2026-11-06 – Gỡ conflict PR #14; rà mức sẵn sàng chạy trên cloud
+
+- **Task:** Q6, Q2, chung · **Environment:** none
+- **Done:**
+  1. PR #14 (`feat/dg1-home-05b`) báo `CONFLICTING` sau khi PR #13 được merge vào `main`. Thử merge bằng `git merge-tree` (không đụng thư mục làm việc): chỉ conflict ở `tuan-05.md`, vì cả hai nhánh cùng thêm mục vào cuối file.
+  2. Stash các thay đổi chưa commit của phiên (overlay `cloud-3b`, CONTRIBUTING, phien-ban, nhật ký), `git merge origin/main`, giữ cả hai mục theo thứ tự giờ (home-smoke 15:43 trước, ĐG1-mini 17:03 sau), kiểm không mất dòng nào của hai phía, commit `58815f5`, push. PR #14 → `MERGEABLE`/`CLEAN`.
+  3. Rà repo để trả lời "đã sẵn sàng chạy trên cloud chưa": **chưa**. Thiếu: `infra/provision/vast.sh` (chỉ có bản nháp trên `temp/w2-scaffold`), inventory cloud, Argo CD + values cho cloud (chỉ có `home`), overlay autoscaling cloud, `autoscaling/eval/` trống (chưa có A1), file ma trận V2, runner chưa có R2/systemd/Telegram, các target `make` `burnin prefetch capacity run ops-tests backup` còn "chưa làm", ADR-003. M2 mới đạt 1/8.
+  4. Kiểm Grafana: pod `kps-grafana` chạy trên cluster nhà, sidecar dashboard bật, có 25 dashboard mặc định của chart; chưa có dashboard vLLM/autoscaling (`observability/dashboards/` chưa tồn tại; F5 là Must, phần của Trình). Xem bằng `kubectl port-forward -n monitoring svc/kps-grafana 3000:80`.
+- **Decision:**
+  - Viết code trước, thuê máy sau: gần hết phần thiếu thử được ở nhà/kind; chỉ driver trong VM, mạng tới HF/Docker Hub, `fio`, TPOT và thời gian bootstrap thật cần máy thuê. Trình tự: code (7–10/11) → thuê VM 1 GPU rẻ vài giờ để gỡ lỗi bootstrap → V0 trên đúng loại máy V2 (~12/11) → V2 chỉ chạy, không sửa code.
+  - Ước tính thời gian (chưa đo trên GPU): một lượt KB1 ~26–30 phút, KB2/KB3 ~31–37 phút; ma trận 17 lượt ~9–10 giờ; cả V2 ~17 giờ nếu suôn sẻ, ~22 giờ nếu phải chạy lại.
+  - Phụ thuộc vào Trình: review #14; push A1/A2 + ma trận (`feat/tr2-sim` chưa có trên remote); Argo CD/Prometheus/KEDA cho cloud; dashboard và Telegram. Cần họp chốt N, model và ADR-003.
+- **Incidents:** `git stash pop` sau merge lại conflict ở `tuan-05.md` (git ghép mục khảo sát vào giữa) và sinh một mục ĐG1-mini lặp → dựng lại file = bản đã merge (HEAD) + 3 mục của phiên lấy từ stash, kiểm hai bản lặp giống hệt rồi bỏ một; diff so với HEAD chỉ còn phần thêm.
+- **Links:** PR #13, #14; commit `58815f5`.
+- **Thesis:** §6 (quản lý dự án: phụ thuộc giữa hai người, quy trình PR xếp chồng và conflict nhật ký), §4.1 (quyết định thuê máy).
+
+## 2026-11-06 – `vast.sh` lọc máy verified; ADR-004 K6; chuẩn bị nhánh `feat/cloud-prep`
+
+- **Task:** Q2 · **Environment:** none (chỉ gọi API tìm offer, chưa thuê máy)
+- **Done:**
+  1. Tạo nhánh `feat/cloud-prep` từ `feat/dg1-home-05b` (đã merge vào `main` qua PR #14), mang theo thay đổi chưa commit của phiên (overlay `cloud-3b`, nhật ký).
+  2. Đưa `infra/provision/vast.sh` từ bản nháp `temp/w2-scaffold` lên và sửa:
+     - `vastai` chạy qua `uvx -q --python 3.12 vastai@1.11.0` (ghim bản, không phải cài vào máy).
+     - `find` thêm `verified=true` vào điều kiện search và lọc bỏ `is_vm_deverified` bằng jq (trường này không lọc được trong cú pháp search); in 8 offer, có giá/GPU và driver của host; báo rõ khi không có offer.
+     - Loại GPU, số GPU, trần giá thành tham số: `GPU`, `NGPU` (mặc định 4), `MAX_DPH` (mặc định 2.0); CPU/RAM tối thiểu của v2 tăng theo số GPU (8 vCPU và 32 GB mỗi GPU). v0 hạ từ 12 vCPU/48 GB xuống 8 vCPU/32 GB để có máy 1 GPU rẻ cho gỡ lỗi bootstrap.
+     - `wait` báo lỗi nếu sau 30 phút máy chưa `running` (bản nháp đi tiếp sang chờ SSH mãi).
+  3. Makefile: mô tả `make find` kèm biến; biến trên dòng lệnh make tự vào môi trường của script (đã thử).
+  4. ADR-004 §6, §7: ghi K6 không đạt và GCP bị chặn, nên chỉ còn Vast; loại máy, N, model chốt ở ADR-003.
+  5. `docs/phien-ban.md`: thêm dòng vastai; `viec-sap-lam.md`: cập nhật tình trạng, bảng nhánh/PR, việc tiếp theo.
+- **Results:**
+  - `vast.sh find v0` (1 × 4090 verified): 6 offer, rẻ nhất 0,522 USD/giờ (AU, rel 99,3 %, driver 580.178).
+  - `GPU=RTX_5060_Ti NGPU=2 MAX_DPH=1 vast.sh find v2`: 1 offer, 0,268 USD/giờ (GB, rel 98,7 %, 24 vCPU, 126 GB, đĩa 10,5 GB/s, driver 580.82) — khớp khảo sát chiều.
+  - `vast.sh find v2` (4 × 4090 ≤ 2 USD/giờ, verified): không có offer → in gợi ý, mã thoát 1.
+  - shellcheck (`uvx --from shellcheck-py`) sạch; `ansible-playbook --syntax-check` với inventory cloud giả (IP tài liệu 192.0.2.10, trong scratchpad) đạt, chỉ cảnh báo không có nhóm `k3s_agent` như thiết kế; `yamllint -s .`, `kubectl kustomize` mọi overlay, syntax-check inventory nhà đạt; lychee 0.24.2 (bản của CI) `--offline --include-fragments`: 503 OK, 0 lỗi.
+  - Chưa chạy: `rent`, `wait`, `inventory`, `ssh`, `tunnel`, `status`, `release` (cần API key, template VM và tiền thật).
+- **Decision:** giữ CLI `vastai` thay vì gọi thẳng API bằng curl như lúc khảo sát: `create instance`, `ssh-url`, `destroy` cần xác thực và CLI đã lo phần đó; `find` qua CLI cho cùng kết quả với API. Chưa commit theo ý Quang: commit vào sáng 07/11 để lịch sử không dồn vào một ngày; kế hoạch chia commit ở cuối phiên.
+- **Incidents:** `uvx vastai` hỏng khi build pillow 12.2.0 trên Python 3.14 mặc định của máy → ép `--python 3.12`. Lần đầu đọc đầu ra tưởng có dòng rác trước JSON, thực ra là log build của uvx ở stderr (do gộp `2>&1`) → thêm `-q`.
+- **Links:** `infra/provision/vast.sh`, `Makefile`, `docs/adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md`, `docs/phien-ban.md`, `docs/nhat-ky/lam-viec/quang/viec-sap-lam.md`.
+- **Thesis:** §4.1 (cấp phát máy thuê bằng script, tiêu chí lọc), §4.4/VH5 (bootstrap từ VM trắng), Hạn chế (không có máy 4 GPU verified giá rẻ).
+
+## 2026-11-06 – Q5: test graceful shutdown trên k8s; vLLM 0.31.0 không dừng khi nhận SIGTERM
+
+- **Task:** Q5 · **Environment:** home
+- **Done:**
+  1. Viết `experiments/ops/graceful_shutdown.py`: mở N stream dài qua ClusterIP của Service, xoá pod, phân loại ok / cut / rejected, ghi log vLLM (`kubectl logs -f --timestamps` từ trước khi xoá), thời điểm pod mất; tự scale vLLM về 0 và xoá Deployment đối chứng khi xong. Ca đối chứng là Deployment riêng `vllm-gs-control` sinh từ overlay home (bỏ preStop, `--shutdown-timeout=0`, tuỳ chọn grace ngắn), Argo CD không quản lý nên không phải tắt auto-sync của `serving`. 4 unit test cho `classify()` (31/31 test của `experiments/` qua, ruff sạch).
+  2. Chạy (RAM khả dụng 8,2 GB trước khi chạy): ca chính 3 lần, đối chứng 1 (grace 180 s), rồi thêm đối chứng 2 (grace 5 s) sau khi đối chứng 1 không có lỗi.
+- **Results:** bảng chi tiết ở [`van-hanh.md`](../../van-hanh.md) (mục 06/11). Tóm tắt: ca chính 144/144 stream ok, 0 cut, mỗi lần 16 stream xong sau SIGTERM; đối chứng 1 cũng 48/48 ok; đối chứng 2 cắt 48/48 ở giây 5,5. Pod ở mọi ca grace 180 s chỉ mất sau 181,5–182,9 s (SIGKILL).
+- **Decision:**
+  - 48 stream × 1900 token thay vì "khoảng 30" (Kiến trúc §8.3): ở nhà mỗi stream chỉ ~10 s, 30 stream sẽ xong trong preStop 20 s và bước drain không được thử.
+  - Thêm đối chứng 2 (grace 5 s) vì đối chứng 1 không phân biệt được với ca chính. Kết luận đúng là "grace period giữ pod sống nên request chạy xong", không phải "nhờ drain". Không tích mục graceful shutdown của M2 như đạt trọn: 0 lỗi trong 3 lần thì đạt, nhưng cơ chế drain chưa hoạt động như thiết kế.
+- **Incidents:**
+  - vLLM 0.31.0 không dừng engine khi nhận SIGTERM, ở cả `mode=drain` và `mode=abort`; API server không tự thoát kể cả sau 150 s; pod nhàn rỗi cũng vậy. Đây là hiện tượng "không tự thoát" đã thấy ở W1 (Docker) và W3 (pod đang khởi tạo), nay xác nhận cho mọi trạng thái. Chưa tìm nguyên nhân gốc.
+  - Lần chạy đầu thoát giữa chừng sau ca chính: `kubectl wait --for=delete --timeout=300s` bị timeout 120 s mặc định của `Kube.run` cắt (pod kẹt tới giây 180) → truyền `timeout_s=320`, chạy riêng ca đối chứng. Phần dọn dẹp trong `finally` vẫn chạy đúng.
+  - `kubectl create --dry-run=client -o json` với nhiều object in ra nhiều JSON nối nhau (không phải List) → đọc YAML của kustomize bằng `yaml.safe_load_all` (pyyaml đã có trong `experiments`).
+- **Deviations:** Kiến trúc §8.2 giả định vLLM tự thoát sau drain, nên pod chỉ chiếm GPU tới khi request xong; thực tế chiếm đủ 180 s. Ảnh hưởng rolling update (`maxSurge: 0`), GPU-giờ khi scale-down, và VH1/VH2 trên cloud. Cần cân nhắc: rút grace period (đánh đổi request dài bị cắt) hoặc sửa nguyên nhân.
+- **Links:** `experiments/ops/graceful_shutdown.py`, `experiments/tests/test_graceful_shutdown.py`, `docs/nhat-ky/van-hanh.md`; dữ liệu `runs/graceful-20261106-2006`, `-control`, `-control-grace5` (PC, gitignore).
+- **Thesis:** §4 (graceful shutdown: thiết kế so với thực tế), §5 N4 (bảng 3 ca), Hạn chế (vLLM không tự thoát, GPU bị giữ 180 s). Nên vẽ timeline một lần thử: xoá → SIGTERM (+20 s) → stream cuối (+23 s) → SIGKILL (+180 s).

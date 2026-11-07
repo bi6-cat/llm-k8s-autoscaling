@@ -60,6 +60,24 @@ Mỗi kịch bản VH, mỗi sự cố thật và mỗi phiên thuê có một m
 - **Runbook đã dùng:** không có.
 - **Bài học:** ở nhà, RAM chứ không phải VRAM là giới hạn số replica. Trước khi chạy 2 pod: tắt desktop (chạy `multi-user.target`), hoặc thêm zram/swap để máy chậm thay vì treo, hoặc giảm thành phần giám sát; cân nhắc đặt `maxReplicaCount` của A2 ở nhà = 1 cho tới khi xong. Tạo pod mới trên node đang thiếu RAM có thể làm chính control-plane mất phản hồi: nên viết runbook "node hết RAM".
 
+## 2026-11-06 – Test graceful shutdown ở nhà; sự cố: vLLM không dừng khi nhận SIGTERM
+
+- **Môi trường:** nhà, PC (k3s một node, RTX 5060 chia 2 GPU replica), vLLM `v0.31.0`, Qwen2.5-0.5B, `--max-num-seqs 16`, `--max-model-len 2048`, 1 pod. Script `experiments/ops/graceful_shutdown.py`, client chạy trên PC gọi ClusterIP của Service. Người chạy: Quang (Claude hỗ trợ).
+- **Các bước:** mỗi lần thử mở 48 stream `/v1/completions` × 1900 token (`ignore_eos`), chờ 16 stream đầu nhận token, `kubectl delete pod`, đếm stream ok / cut (đã nhận 200 nhưng thiếu `[DONE]` hoặc thiếu token) / rejected. 48 thay vì "khoảng 30" (Kiến trúc §8.3) để vẫn còn stream chạy lúc SIGTERM đến ở giây 20.
+- **Số đo:**
+
+  | Ca | preStop | `--shutdown-timeout` | grace | ok / cut / rejected | stream cuối xong | pod mất sau |
+  |---|---|---|---|---|---|---|
+  | Chính, lần 1–3 | 20 s | 150 | 180 s | 48/0/0 mỗi lần (144/144) | +23,1–23,3 s | +181,5 / 181,9 / 181,9 s |
+  | Đối chứng 1 | không | 0 | 180 s | 48/0/0 | +23,1 s | +182,9 s |
+  | Đối chứng 2 | không | 0 | 5 s | 0/48/0 (16 đang sinh, nhiều nhất 1432/1900 token; 32 đang xếp hàng) | cắt ở +5,5 s | +6,5 s |
+
+  Mỗi lần thử của ca chính có 16 stream xong sau giây 20 (sau SIGTERM). RAM khả dụng thấp nhất 1,26 GB (20:14:17), lúc pod cũ còn kẹt và pod thay thế đang nạp model.
+- **Sự cố:** ở mọi ca, sau SIGTERM vLLM log `[shutdown] … mode=drain timeout=150s` (hoặc `mode=abort timeout=0s`) và `send sigterm to process EngineCore`, nhưng **engine vẫn chạy**: 3–18 s sau vẫn `Running: 16 reqs` và còn nhận request từ hàng đợi (prompt throughput > 0), kể cả ở chế độ abort. API server vẫn trả `/health` 200 và **không tự thoát, kể cả sau mốc 150 s**; tiến trình chỉ dừng khi kubelet SIGKILL ở giây 180. Pod nhàn rỗi (scale về 0, không có request) cũng kẹt y hệt. Ở W1 (Docker, 1,5B, 1 stream) chế độ abort có cắt stream; chưa rõ vì sao lần này khác. Chưa tìm nguyên nhân gốc.
+- **Kết luận:** request không bị cắt là **nhờ grace period 180 s giữ pod sống**, không phải nhờ drain của vLLM (đối chứng 1 cũng 0 lỗi; đối chứng 2 rút grace xuống 5 s thì cắt cả 48). Hệ quả: (1) request kéo dài quá ~160 s sau SIGTERM vẫn bị SIGKILL cắt; (2) mỗi lần tắt pod giữ GPU đủ 180 s: rolling update với `maxSurge: 0` chờ thêm 3 phút mỗi pod, scale-down tốn thêm 3 phút GPU-giờ; (3) ở nhà pod kẹt chồng với pod mới làm RAM xuống 1,26 GB.
+- **Runbook đã dùng:** không.
+- **Bài học / việc tiếp:** tìm nguyên nhân EngineCore bỏ qua SIGTERM (thử `kill -TERM` tay trong pod, xem tiến trình con, thử bản vLLM khác); kiểm lại trên VM thuê ở V0. Ghi vào phần hạn chế nếu không sửa được. Dữ liệu: `runs/graceful-20261106-2006*` trên PC (chưa đẩy R2).
+
 ## Kiểm chứng lý thuyết LT1–LT4 (Quang, Q8)
 
 Theo mẫu ở [Môi trường §19](../chi-tiet/05-moi-truong-danh-gia.md#19-kiểm-chứng-lý-thuyết-lt1lt8): lý thuyết → dự đoán (tính trước khi đo) → số đo → lệch → giải thích. Thông số model lấy từ `config.json` của `Qwen/Qwen2.5-1.5B-Instruct@989aa798…` (đúng revision đã ghim): 28 lớp, hidden 1536, 12 attention head, **2 KV head**, head_dim 1536 ÷ 12 = 128, BF16 (2 byte), `tie_word_embeddings: true`.
