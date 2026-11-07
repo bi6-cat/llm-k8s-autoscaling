@@ -30,7 +30,7 @@ PROMTOOL ?= promtool
 YQ ?= yq
 
 # .PHONY: các target này không phải tên file, make luôn chạy chúng (kể cả khi có file trùng tên)
-.PHONY: help home-up sim-up sim-down sim-test-load find rent bootstrap release lint alerts-test alerts-coverage
+.PHONY: help home-up sim-up sim-down sim-test-load sim-test find rent bootstrap release lint alerts-test alerts-coverage
 
 # In mọi target có comment `## mô tả` cùng dòng. Thêm target mới thì nhớ viết `## …` để nó hiện ở đây.
 help: ## In danh sách lệnh
@@ -77,11 +77,17 @@ sim-up: ## Dựng kind + Prometheus + KEDA + simulator + A2 trên laptop
 sim-down: ## Xoá cluster simulator
 	kind delete cluster --name $(KIND_CLUSTER)
 
-# Bơm tải cho bài T2: `hey` giữ C request đồng thời trong DUR giây. Cần port-forward cổng 8000 ở terminal
-# khác (w2.md §9.3). `$${DUR:-120s}` = biến môi trường DUR, mặc định 120s. Gọi: make sim-test-load C=25 DUR=180s
-sim-test-load: ## Tải đồng thời cho T2 (C=25, DUR=120s); cần port-forward ở terminal khác
-	hey -z $${DUR:-120s} -c $${C:-25} -m POST -T application/json -D autoscaling/tests/request-sim.json \
-	  http://localhost:8000/v1/chat/completions
+# Bơm tải cho bài T2: `hey` giữ C request đồng thời trong DUR giây (autoscaling/tests/load-sim.sh, cùng file
+# make sim-test dùng). Tự mở port-forward riêng ở cổng ngẫu nhiên tới đúng cluster, xong thì tự tắt.
+# `$${DUR:-120s}` = biến môi trường DUR, mặc định 120s. Gọi: make sim-test-load C=25 DUR=180s
+sim-test-load: ## Tải đồng thời cho T2 (C=25, DUR=120s)
+	CTX=kind-$(KIND_CLUSTER) autoscaling/tests/load-sim.sh $${C:-25} $${DUR:-120s}
+
+# Chạy T1–T5 tự động (tự bơm tải qua load-sim.sh), chấm đạt/trượt theo bảng ở w2.md §9.3, ghi log mỗi giây
+# vào runs/sim/. Cả 5 bài mất khoảng 20 phút, phần lớn là chờ scale-down (cửa sổ 300 s + 60 s mỗi pod).
+# Một bài: make sim-test T=t4 (t2 gồm cả T3).
+sim-test: ## Chạy T1–T5 trên simulator, chấm đạt/trượt (T=t1|t2|t4|t5|all)
+	CTX=kind-$(KIND_CLUSTER) autoscaling/tests/run-t1-t5.sh $${T:-all}
 
 # ── Máy thuê trên Vast.ai ───────────────────────────────────────────────────────
 # Mọi thao tác với Vast nằm trong infra/provision/vast.sh; ở đây chỉ đặt tên ngắn cho chúng.

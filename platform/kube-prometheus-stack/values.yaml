@@ -1,10 +1,12 @@
 # ──────────────────────────────────────────────────────────────────────────────
 # platform/kube-prometheus-stack/values.yaml
-# Khái niệm: Values chung cho chart kube-prometheus-stack ở mọi môi trường (home, cloud, sim). File
+# Khái niệm: Values chung cho chart kube-prometheus-stack 92.1.1 (Prometheus Operator, Prometheus,
+#            Alertmanager, Grafana, kube-state-metrics, node-exporter) ở mọi môi trường. File
 #            values-<env>.yaml đi sau và ghi đè các giá trị riêng (RAM, retention…).
 # Mục đích:  Tắt các target mà k3s/kind không có; cho Prometheus nhận MỌI PodMonitor/Rule mà không
 #            đòi label release; Grafana đọc mật khẩu từ Secret và tự nạp dashboard.
-# Tham khảo: docs/huong-dan/w2.md §6.1, Thông số §9.4
+# Tham khảo: docs/huong-dan/w2.md §6.1, Kiến trúc §17.1, Thông số §9.4.
+#            Dựa trên bản nháp của Quang (temp/w2-scaffold, 12c4e27).
 # ──────────────────────────────────────────────────────────────────────────────
 # Tên ngắn, cố định cho mọi tài nguyên: Service là kps-prometheus, kps-grafana… (dễ port-forward)
 fullnameOverride: kps
@@ -12,8 +14,8 @@ fullnameOverride: kps
 crds:
   enabled: true
 
-# k3s và kind không mở metric của etcd, scheduler, controller-manager, kube-proxy ra ngoài.
-# Không tắt thì các target này luôn "down" và sinh cảnh báo giả.
+# k3s và kind không mở metric của etcd, scheduler, controller-manager, kube-proxy ra ngoài (chỉ nghe
+# trên 127.0.0.1 của node). Không tắt thì các target này luôn "down" và sinh cảnh báo giả.
 kubeEtcd: {enabled: false}
 kubeControllerManager: {enabled: false}
 kubeScheduler: {enabled: false}
@@ -29,31 +31,36 @@ defaultRules:
 
 prometheus:
   prometheusSpec:
-    # Chu kỳ scrape mặc định cho target hệ thống. vLLM, GPU, Traefik đặt riêng 5 s trong PodMonitor.
+    # Chu kỳ scrape mặc định cho target hệ thống (chart để trống = 30 s). vLLM, GPU, Traefik đặt riêng
+    # 5 s trong PodMonitor của chúng.
     scrapeInterval: 15s
-    # Chu kỳ tính recording rule và cảnh báo
+    # Chu kỳ tính recording rule và cảnh báo, cho group không tự đặt `interval:` (chart để trống = 30 s)
     evaluationInterval: 15s
     # Mặc định Prometheus chỉ nhận PodMonitor/… có label `release: kps` (cạm bẫy ở Kiến trúc §17.1).
-    # Đặt false = nhận MỌI PodMonitor/ServiceMonitor/PrometheusRule/Probe trong cluster, khỏi nhớ gắn label.
+    # Đặt false = nhận MỌI PodMonitor/ServiceMonitor/PrometheusRule/Probe/ScrapeConfig trong cluster,
+    # khỏi nhớ gắn label.
     podMonitorSelectorNilUsesHelmValues: false
     serviceMonitorSelectorNilUsesHelmValues: false
     ruleSelectorNilUsesHelmValues: false
     probeSelectorNilUsesHelmValues: false
+    scrapeConfigSelectorNilUsesHelmValues: false
     # Bật API quản trị để chụp snapshot dữ liệu (TSDB) khi kết thúc phiên đánh giá, rồi sao lưu
     enableAdminAPI: true
 
 alertmanager:
   alertmanagerSpec:
-    retention: 72h                     # giữ lịch sử cảnh báo 3 ngày
+    retention: 72h                     # giữ lịch sử cảnh báo 3 ngày (chart mặc định 120h)
 
 grafana:
-  # Tài khoản admin lấy từ Secret grafana-admin (tạo tay, w2.md §4.4), không để mật khẩu trong Git
+  # Tài khoản admin lấy từ Secret grafana-admin (Makefile `sim-up` tạo ở simulator; ở nhà tạo tay,
+  # w2.md §4.4), không để mật khẩu trong Git
   admin:
     existingSecret: grafana-admin
     userKey: admin-user
     passwordKey: admin-password
   # Sidecar = container chạy kèm Grafana, tự nạp mọi ConfigMap có label grafana_dashboard ở mọi
   # namespace thành dashboard. Thêm dashboard = thêm một ConfigMap, không phải bấm import trên giao diện.
+  # Ba giá trị dưới trùng mặc định của chart 92.1.1; vẫn ghi rõ vì dashboard của nhóm dựa vào chúng.
   sidecar:
     dashboards:
       enabled: true

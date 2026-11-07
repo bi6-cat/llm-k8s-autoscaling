@@ -1,12 +1,13 @@
 # ──────────────────────────────────────────────────────────────────────────────
 # autoscaling/official/base/scaledobject-a2.yaml
-# Khái niệm: ScaledObject (CRD của KEDA) = "scale Deployment X theo metric Y". KEDA chạy câu PromQL
-#            mỗi pollingInterval giây, rồi giao kết quả cho một HPA do KEDA tự tạo (keda-hpa-vllm-a2).
-#            HPA tính số pod mong muốn: với AverageValue, desired = ⌈tổng metric ÷ threshold⌉.
+# Khái niệm: ScaledObject (CRD của KEDA) = "scale Deployment X theo metric Y". KEDA tự tạo một HPA
+#            (Horizontal Pod Autoscaler, keda-hpa-vllm-a2); mỗi chu kỳ sync, HPA hỏi KEDA giá trị metric,
+#            KEDA chạy câu PromQL rồi trả kết quả. Với AverageValue: desired = ⌈tổng metric ÷ threshold⌉.
 # Mục đích:  Cấu hình A2: scale theo số request đang chạy + đang chờ của vLLM (Kiến trúc §10.2).
 #            Khác A1 (theo GPU util): tín hiệu này tăng tỷ lệ thuận với tải (định luật Little), còn GPU
 #            util bão hoà ~100% ngay từ tải vừa.
-# Tham khảo: docs/huong-dan/w2.md §9.1, Kiến trúc §10.2, §13, Thông số §9.3
+# Tham khảo: docs/huong-dan/w2.md §9.1, Kiến trúc §9, §10.2, §12, §13.2, Thông số §9.3.
+#            Dựa trên bản nháp của Quang (temp/w2-scaffold, 12c4e27).
 # ──────────────────────────────────────────────────────────────────────────────
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
@@ -18,9 +19,17 @@ spec:
   scaleTargetRef: {name: vllm}         # Deployment vllm (serving/base/deployment.yaml)
   minReplicaCount: 1                   # luôn giữ ít nhất 1 pod: cold start vài phút, không scale về 0
   maxReplicaCount: 4                   # = số GPU trên VM thuê; overlay nhà/simulator ghi đè
-  pollingInterval: 5                   # KEDA hỏi Prometheus mỗi 5 s (cùng chu kỳ scrape 5 s)
-  # Prometheus lỗi 3 lần liên tiếp (~15 s) → giữ số replica = 4 (tối đa). Mất tín hiệu thì thà thừa
-  # GPU còn hơn thiếu: thiếu thì người dùng chịu trễ, thừa chỉ tốn tiền (bài T4, VH4).
+  # Chu kỳ vòng lặp riêng của KEDA. Với minReplicaCount ≥ 1 nó KHÔNG ảnh hưởng tốc độ scale (KEDA
+  # v2.21.0 in cảnh báo này khi áp): mỗi chu kỳ sync (5 s, đặt ở k3s và infra/kind/kind-config.yaml) HPA
+  # hỏi metric server của KEDA, và KEDA truy vấn Prometheus ngay lúc đó. Nó chỉ ảnh hưởng scale khi
+  # minReplicaCount = 0, có idleReplicaCount hoặc bật useCachedMetrics (đồ án không dùng), nhưng vẫn quyết
+  # định bao lâu KEDA làm mới điều kiện trong status (Fallback, Paused) và event. 5 s theo Thông số §9.3.
+  pollingInterval: 5
+  # Hỏi Prometheus lỗi QUÁ 3 lần liên tiếp, tức lần thứ 4 (KEDA so `số lỗi > failureThreshold`,
+  # pkg/fallback/fallback.go v2.21.0) → HPA nhận giá trị giả để lên đúng 4 replica (tối đa). Mất tín hiệu
+  # thì thà thừa GPU còn hơn thiếu: thiếu thì người dùng chịu trễ, thừa chỉ tốn tiền (bài T4, VH4).
+  # Mỗi lần hỏi cách nhau khoảng 5 s, nên fallback sau khoảng 20 s, trong N6 (≤ 30 s). Đo trên kind 07/11.
+  # Lưu ý: fallback chỉ chạy với metricType AverageValue.
   fallback: {failureThreshold: 3, replicas: 4}
   advanced:
     horizontalPodAutoscalerConfig:
@@ -47,3 +56,10 @@ spec:
           + (sum(vllm:num_requests_waiting{namespace="llm-serving"}) or vector(0))
         # Số request đồng thời mục tiêu mỗi pod. Giá trị tạm; chốt từ đo năng lực (B*) ở ADR-003.
         threshold: "24"
+        # Timeout HTTP cho mỗi lần hỏi Prometheus, đơn vị ms (số không kèm đơn vị = ms). Mặc định 3000 ms
+        # (KEDA_HTTP_DEFAULT_TIMEOUT) là dư cho Prometheus trong cluster: trên kind (07/11), 459 query
+        # /api/v1/query trong khoảng 40 phút đều < 0,1 s, trung bình 0,6 ms (nhà, V2 chưa đo). Khi mạng bị
+        # chặn (gói tin bị bỏ, không bị từ chối), mỗi lần hỏi phải chờ hết timeout mới thành một lần lỗi:
+        # với 3000 ms, T4 mất 24–38 s, 3/7 lần vượt N6 ≤ 30 s (01/11 và 07/11); với 1000 ms: 17–23 s,
+        # 8/8 lần đạt (07/11). Thông số §9.3.
+        timeout: "1000"

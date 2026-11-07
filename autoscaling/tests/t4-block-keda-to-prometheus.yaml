@@ -2,10 +2,14 @@
 # autoscaling/tests/t4-block-keda-to-prometheus.yaml
 # Khái niệm: NetworkPolicy = tường lửa giữa các pod, khai báo bằng nhãn. Khi một pod bị NetworkPolicy
 #            chọn, chỉ những nguồn được liệt kê trong `ingress.from` mới gọi vào pod đó được.
-# Mục đích:  Bài T4: cắt đường KEDA → Prometheus để kiểm chứng fallback (KEDA lỗi 3 lần → lên max).
+# Mục đích:  Bài T4: cắt đường KEDA → Prometheus để kiểm chứng fallback (KEDA lỗi quá 3 lần → lên max).
 #            CHỈ dùng tạm trên simulator; xoá ngay sau khi thử (`kubectl delete -f <file này>`).
 #            Đây cũng là cách gây sự cố cho VH4 (ADR-005 T6): Operator và Argo CD không hoàn tác nó.
-# Tham khảo: docs/huong-dan/w2.md §9.3
+# Lưu ý:     NetworkPolicy chỉ chặn kết nối MỚI. File này chỉ có tác dụng khi KEDA mở kết nối mới cho
+#            mỗi lần hỏi: KEDA_HTTP_DISABLE_KEEP_ALIVE=true trong platform/keda/values.yaml. Thiếu biến đó
+#            thì kết nối keep-alive cũ vẫn đi qua và KEDA không lỗi lần nào (gặp ngày 01/11).
+# Tham khảo: docs/huong-dan/w2.md §9.3, Kiến trúc §15. Dựa trên bản nháp của Quang (temp/w2-scaffold,
+#            12c4e27).
 # ──────────────────────────────────────────────────────────────────────────────
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -14,7 +18,7 @@ metadata:
   namespace: monitoring
 spec:
   podSelector:
-    matchLabels: {app.kubernetes.io/name: prometheus}   # áp lên pod Prometheus
+    matchLabels: {app.kubernetes.io/name: prometheus}   # áp lên pod Prometheus (nhãn do Operator gắn)
   policyTypes: [Ingress]               # chỉ lọc chiều VÀO Prometheus
   ingress:
     # Cho phép mọi namespace TRỪ keda gọi vào (Grafana, kubectl port-forward vẫn dùng được).
@@ -23,5 +27,5 @@ spec:
         - namespaceSelector:
             matchExpressions:
               - {key: kubernetes.io/metadata.name, operator: NotIn, values: [keda]}
-# Nếu sau 30 s vẫn không thấy fallback: có thể CNI của kind không thực thi NetworkPolicy; làm T4 theo
-# cách khác ở w2.md §9.3.
+# kindnet (CNI mặc định của kind v0.33.0) có thực thi NetworkPolicy: pod mới trong ns keda gọi Prometheus
+# thì bị timeout, ở ns khác thì gọi được (kiểm 01/11, lệnh ở w2.md §9.3).

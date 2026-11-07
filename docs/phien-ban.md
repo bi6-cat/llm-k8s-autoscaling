@@ -20,7 +20,8 @@ Tra ngày 09/10/2026; các dòng của CI tra ngày 01/11/2026. Đổi phiên b�
 | Model cloud (thử) | `Qwen/Qwen2.5-3B-Instruct@aa8e72537993ba99e69dfaafa59ed015b17504d1` (tra 06/11) | `serving/overlays/cloud-3b` |
 | vastai (CLI) | `vastai@1.11.0`, chạy qua `uvx --python 3.12` (Python 3.14 không build được pillow, 06/11) | `infra/provision/vast.sh` |
 | llm-d-inference-sim | `ghcr.io/llm-d/llm-d-inference-sim:v0.12.0@sha256:c6838d86…60` (linux/amd64, tra 04/11) | `serving/overlays/sim/kustomization.yaml` |
-| kind / node image | `v0.33.0` / `kindest/node:v1.37.0` | laptop; image ở `infra/kind/kind-config.yaml` |
+| kind / node image | `v0.33.0` / `kindest/node:v1.37.0@sha256:a1ed56cf…0ae5` | máy simulator; image ở `infra/kind/kind-config.yaml` |
+| Helm, kubectl (máy simulator) | `v4.3.1`, `v1.36.5` (= kubectl của CI) | `make sim-up` |
 | kubeconform (CI) | `v0.8.0` | `.github/workflows/ci.yaml` |
 | kubectl (CI) | `v1.36.5`, trùng k3s | `.github/workflows/ci.yaml` |
 | Schema CRD cho kubeconform | `datreeio/CRDs-catalog` commit `5a706a68…` (01/11/2026) | `.github/workflows/ci.yaml` |

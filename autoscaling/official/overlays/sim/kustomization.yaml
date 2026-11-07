@@ -1,11 +1,13 @@
 # ──────────────────────────────────────────────────────────────────────────────
 # autoscaling/official/overlays/sim/kustomization.yaml
-# Khái niệm: Overlay simulator. Patch viết thẳng trong file (inline) thay vì file riêng vì chỉ có 3 dòng;
-#            cú pháp JSON patch như serving/overlays/home/patch-vllm.yaml.
+# Khái niệm: Overlay simulator. Patch viết thẳng trong file (inline) thay vì file riêng vì chỉ có 3 dòng.
+#            JSON patch: `op` = thao tác (replace = thay giá trị), `path` = đường tới trường cần sửa,
+#            `/triggers/0` = phần tử đầu tiên của danh sách triggers.
 # Mục đích:  max 3 replica (cluster kind có 3 node) và threshold 10, vì mỗi pod simulator chỉ chạy tối
 #            đa 16 request (--max-num-seqs=16). Với threshold 10, bài T2 tính tay dễ:
-#            25 request đồng thời → ⌈25 ÷ 10⌉ = 3 replica.
-# Tham khảo: docs/huong-dan/w2.md §9.1, §9.3
+#            25 request đồng thời → ⌈25 ÷ 10⌉ = 3 replica. fallback đổi theo, vì fallback = max.
+# Tham khảo: docs/huong-dan/w2.md §9.1, §9.3, Thông số §9.3.
+#            Dựa trên bản nháp của Quang (temp/w2-scaffold, 12c4e27).
 # ──────────────────────────────────────────────────────────────────────────────
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
