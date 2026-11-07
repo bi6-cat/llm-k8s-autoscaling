@@ -25,3 +25,6 @@ images:
 patches:
   - path: patch-sim.yaml
     target: {kind: Deployment, name: vllm}
+  # Nhãn của simulator đổi cho giống vLLM thật (finish_reason → finished_reason)
+  - path: patch-podmonitor-sim.yaml
+    target: {kind: PodMonitor, name: vllm}
