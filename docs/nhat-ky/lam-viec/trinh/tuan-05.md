@@ -276,3 +276,98 @@
   - §5.1 (cách bảo đảm số đo đúng): bảng `loop-probe` cho thấy máy tạo tải tự kiểm được sai số của chính nó. TTFT đo lệch 7–35 ms so với độ trễ đặt trong simulator, nhỏ so với SLO 2,5 s.
   - §4.11 (công cụ đánh giá): giao diện `requests.csv`, và lý do lọc lỗi theo `error`.
   - Phần hạn chế: giới hạn CPU một luồng của máy tạo tải viết bằng Python asyncio.
+
+## 2026-11-07 – TR5: merge PR #21 (tiêu chí hợp lệ của lượt)
+
+- **Task:** TR5 · **Environment:** none (GitHub)
+- **Done:** Trình merge PR #21 lúc 20:51 bằng merge commit, như các PR trước. Trước khi merge: CI 6/6 xanh, `MERGEABLE`/`CLEAN`, 0 review.
+- **Results:** merge commit `1f307db`; CI trên `main` (push) đạt. PR chỉ sửa `loadgen/`, `experiments/` và `docs/`, không có file nào Argo CD ở nhà đọc, nên cluster nhà không đổi.
+- **Links:** PR #21.
+
+## 2026-11-07 – TR5: `loadgen` chạy nhiều tiến trình
+
+- **Task:** TR5 · **Environment:** sim (kind trong WSL2, máy Trình)
+- **Done:**
+  1. Tạo nhánh `feat/tr5-loadgen-multiproc` từ `origin/main`. Lý do: một tiến trình `loadgen` lên 87 % CPU ở 20 req/s trên laptop, vượt ngưỡng 70 % (mục "tiêu chí hợp lệ" ở trên). Event loop của asyncio chạy một luồng, nên thêm lõi cho pod không giúp được.
+  2. `loadgen/workers.py` (mới):
+     - chia lịch theo `id mod k`;
+     - tiến trình con (`multiprocessing` kiểu `spawn`) báo sẵn sàng; tiến trình cha đặt mốc chung `t0_unix` = lúc mọi con sẵn sàng + 1 s;
+     - mỗi request xong, con gửi dòng kết quả qua Pipe; cha ghi một `requests.csv`, flush từng dòng như trước;
+     - một con lỗi giữa chừng thì cha dừng ngay các con còn lại, ghi lỗi vào `worker_stats` và vẫn trả kết quả, không treo.
+  3. `loadgen/sender.py`: `run` nhận `sink` (nơi ghi từng dòng) và `t0_unix`. Mỗi tiến trình đổi `t0_unix` sang `perf_counter` một lần.
+  4. `loadgen/checks.py`:
+     - lệch lịch gửi và event loop chấm riêng từng tiến trình rồi lấy tiến trình tệ nhất;
+     - CPU lấy tiến trình bận nhất;
+     - thêm `complete_ok`: số dòng kết quả bằng số request trong lịch, và không tiến trình nào lỗi.
+  5. `loadgen/__main__.py`:
+     - thêm cờ `--workers` (mặc định 1: chạy trong tiến trình chính, như trước);
+     - `loadgen.json` thêm `workers` và `worker_stats` (số request, CPU, lệch lịch, event loop của từng tiến trình);
+     - một tiến trình lỗi thì `valid: false` và mã thoát 1.
+  6. Runner:
+     - `Target.loadgen_workers` = số lõi nguyên của `loadgen_cpu`, truyền `--workers` ở cả warm-up lẫn pha chính;
+     - `matrix.parse` từ chối `loadgen_cpu` không khớp `\d+(\.\d+)?m?` hoặc bằng 0 (" 2", "1_000m", "inf");
+     - memory của Job = 256Mi × (k + 1).
+  7. `experiments/matrix-v2.yaml`: `loadgen_cpu` đổi từ "2" sang "3".
+  8. `experiments/matrix-dg1-home.yaml`: chỉ thêm comment. Ma trận ĐG1 ở nhà (`loadgen_cpu: "2"`) từ nay chạy 2 tiến trình.
+  9. Tài liệu: Môi trường §3.5 (pod máy tạo tải 3 lõi, memory theo số tiến trình), §3.6, §9 (đoạn "Nhiều tiến trình gửi tải"), §14.2, §17.
+  10. Kiểm trên kind:
+     - simulator patch tạm (`--max-num-seqs=256`, `--inter-token-latency=10ms`, mỗi stream 100 chunk/s), 3 replica tĩnh;
+     - 3 phiên runner, mỗi phiên một lượt CONST 180 s;
+     - xong thì áp lại `serving/overlays/sim` và `autoscaling/official/overlays/sim` (runner đã xoá ScaledObject A2 khi áp cấu hình tĩnh S3).
+  11. `/code-review high` trên diff (10 điểm, công cụ ghi rõ là chưa xác minh). Sửa 8:
+      - lệch lịch gửi trước đó còn gộp mẫu của mọi tiến trình;
+      - mất dòng kết quả (lỗi khi ghi CSV bị nuốt trong task) mà không tiêu chí nào bắt, nên thêm `complete_ok`;
+      - một con lỗi mà cha vẫn chờ các con khác chạy hết lịch (KB3 25 phút trên máy thuê);
+      - `wall_s` âm khi một tiến trình không được chia request nào;
+      - `loadgen_cpu` lạ lọt qua `float()`;
+      - comment ma trận ĐG1 ở nhà đã cũ;
+      - số liệu CPU lệch nhau giữa các file, có số ước tính viết như số đo;
+      - lặp code tạo `WorkerStats`.
+
+      Không sửa 2 điểm, xem Decision.
+- **Decision:**
+  - Chia xoay vòng theo `id`, không chia theo khúc thời gian: mọi tiến trình cùng bận ở mọi pha của λ(t). Mỗi request đều 256 token, nên chunk/s chia đều.
+  - Mốc chung là giờ hệ thống, đổi sang `perf_counter` một lần ở mỗi tiến trình. Python không bảo đảm `perf_counter` của hai tiến trình cùng gốc.
+  - Cha ghi một `requests.csv`, không để mỗi con ghi một file rồi gộp:
+    - giữ nguyên giao diện dữ liệu (Môi trường §14.2);
+    - giữ runbook "60 s không có dòng CSV mới" (Kế hoạch §9.5).
+  - Event loop chấm theo tiến trình tệ nhất, không gộp mẫu. Với 4 tiến trình, 1 % mẫu của một tiến trình nghẽn chỉ còn 0,25 % mẫu chung, nên p99 chung không thấy nó. Throttle vẫn đọc theo cgroup của cả pod.
+  - Số tiến trình suy từ `loadgen_cpu`, không thêm khoá ma trận riêng: chỉ một núm, nên không lệch nhau được.
+  - Dùng `spawn`, không dùng `fork`: không thừa kế trạng thái của cha, và chạy giống nhau trên Linux lẫn Windows. Khởi động chậm khoảng 0,3 s mỗi con, nhưng xảy ra trước t0 nên không ảnh hưởng số đo.
+  - `matrix-v2` dùng 3 lõi:
+    - đo được: một tiến trình ở 10 req/s tốn 53–58 % CPU, ở 20 req/s lên 87–88 %. Ước tính (chưa đo ở mức đó) một tiến trình chạm 70 % ở khoảng 12–14 req/s, nên 3 tiến trình chịu khoảng 36–42 req/s, gấp đôi đỉnh KB3 ước tính 12–18 req/s (C = 4–6, chưa đo);
+    - 3 lõi vừa cả máy 32 lẫn 48 vCPU (Môi trường §3.5).
+    - Bỏ "2": chỉ dư khoảng 1,4–1,6 lần nếu C = 6. Bỏ "4": không vừa máy 32 vCPU.
+  - Hai điểm soát không sửa:
+    - Chuẩn hoá `throttled_usec` theo số lõi. Tỷ lệ hiện tại là cận trên đã chủ ý chọn ở PR #21. Chia cho k thì bỏ sót trường hợp chỉ một tiến trình bị dừng. Hai phiên nhiều tiến trình đều 0 throttle.
+    - Giảm CPU mỗi chunk thay cho chạy nhiều tiến trình. Đo `json.loads` một chunk 222 byte: 1,8 µs, tức 0,9 % của 0,2 ms. Phần lớn chi phí nằm ở httpx và asyncio, sửa phần parse không giảm được bao nhiêu.
+- **Results:**
+  - pytest `loadgen` 54 passed (thêm 7 test, gồm 3 test chạy 2 tiến trình thật qua server HTTP giả); `experiments` 96 passed, 1 skipped; trên Python 3.15 và 3.11. ruff check, ruff format, yamllint, lychee (0 lỗi) đạt.
+  - Test mốc chung: giờ request tới server khớp `t0_unix + t_sched` trong 100 ms ở mọi request của cả 2 tiến trình.
+  - Kind, CONST 180 s, phiên `mp-probe-w1/w2/w3` (21:15–21:29):
+
+    | λ | Tiến trình | Chunk/s | CPU tối đa (tiến trình bận nhất) | Throttle | Event loop p99 / max | Lệch lịch p99 | TTFT p50 / p99 (sim đặt 200 ms) | RAM pod | Kết quả |
+    |---|---|---|---|---|---|---|---|---|---|
+    | 20 req/s | 1 | ~5.100 | 88,2 % | 10 chu kỳ, 194 ms (0,106 %) | 5,9 / 67,1 ms | 8,1 ms | 211 / 246 ms | 46 MiB | invalid (`cpu_ok`, `throttle_ok`) |
+    | 20 req/s | 2 | ~5.100 | 57,7 % / 57,6 % | 0 | 2,6 / 57,2 ms | 3,3 ms | 207 / 214 ms | 100 MiB | hợp lệ |
+    | 30 req/s | 3 | ~7.700 | 54,7 / 54,9 / 56,2 % | 0 | 2,5 / 39,1 ms | 3,0 ms | 207 / 213 ms | 133 MiB | hợp lệ |
+
+  - Mỗi tiến trình ở 10 req/s (khoảng 2.560 chunk/s) tốn 55–58 % CPU, tức khoảng 0,22 ms CPU mỗi chunk, cùng mức với đo trước đó trong ngày.
+  - Lịch của phiên 1 và 2 tiến trình trùng nhau ở cả 3.576 request (`id`, `t_sched`, `n_in_target`).
+  - Ở 20 req/s, TTFT p99 từ 246 ms còn 214 ms khi tách 2 tiến trình. Hai lượt cùng simulator, cùng lịch, chỉ khác số tiến trình, nên phần chênh khoảng 32 ms nhiều khả năng là sai số do máy tạo tải quá tải.
+  - RAM lấy từ `container_memory_working_set_bytes`, giá trị lớn nhất trong lượt.
+  - Ba phiên trên chạy bản trước khi soát. Bản cuối (sau khi sửa theo soát) chạy thêm phiên `mp-final-w2` (21:44–21:48):
+    - simulator cấu hình gốc, S1, CONST 2 req/s × 60 s, 2 tiến trình;
+    - 114/114 request, mỗi tiến trình 57; mọi khoá `*_ok`, kể cả `complete_ok`, đạt;
+    - lệch lịch p99 2,4 / 2,0 ms theo từng tiến trình; runner chấm `done`.
+    - Sau đó áp lại A2 trên kind.
+- **Incidents:**
+  - Lượt 1 tiến trình hôm nay bị throttle 0,106 % (194 ms), lần đo trước đó trong ngày chỉ 0,0026 %. CPU 88 % mà pod 1 lõi thì thời gian bị throttle dao động mạnh; tách tiến trình thì hết throttle.
+  - Lúc đầu ghi nhầm ngày đo là 08/11 trong comment và tài liệu. Lệnh `sed` thay hàng loạt "08/11" → "07/11" trên cả `docs/chi-tiet/` đổi nhầm 10 ngày hợp lệ (lịch V2 cũ "07–08/11", "Chủ nhật 08/11", tuần W5 "02–08/11") ở Môi trường và Kế hoạch.
+    `git status` lộ ra file Kế hoạch không định sửa. Đã khôi phục cả 10 chỗ trước khi push, và đối chiếu `git diff origin/main` của từng file. Bài học: sửa ngày thì sửa từng chỗ, không thay hàng loạt.
+- **Deviations:** Môi trường §3.5 trước ghi pod máy tạo tải 4 lõi, `memory 4Gi` (máy 48 vCPU); nay là 3 lõi, memory 256Mi × (số lõi + 1). Nêu ở mục "Điểm cần review" của PR.
+- **Links:** nhánh `feat/tr5-loadgen-multiproc`. File chính: `loadgen/workers.py`, `sender.py`, `checks.py`, `__main__.py`; `experiments/runner/matrix.py`, `loadjob.py`, `session.py`; `experiments/matrix-v2.yaml`; Môi trường §3.5, §3.6, §9, §14.2, §17.
+- **Thesis:**
+  - §4.11 (công cụ đánh giá): máy tạo tải nhiều tiến trình vẫn giữ lịch open-loop tái lập được; vì sao chấm event loop theo tiến trình tệ nhất.
+  - §5.1 (cách bảo đảm số đo đúng): bảng 3 phiên cho thấy máy tạo tải quá tải làm TTFT p99 tăng 32 ms, và tự kiểm bắt được lượt đó.
+  - Phần hạn chế: giới hạn một lõi của Python asyncio, và cách khắc phục bằng nhiều tiến trình.
