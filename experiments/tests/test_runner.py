@@ -137,7 +137,9 @@ def test_matrix_v2_draft_refuses_unfilled_values_then_matches_design():
 
 
 def test_render_scaledobject_overrides_and_pause():
-    doc = yaml.safe_load((REPO / "autoscaling/official/base/scaledobject-a2.yaml").read_text(encoding="utf-8"))
+    doc = yaml.safe_load(
+        (REPO / "autoscaling/official/base/scaledobject-a2.yaml").read_text(encoding="utf-8")
+    )
     so = configs.render_scaledobject(doc, {"threshold": 10, "max_replicas": 3}, paused=True)
     assert so["spec"]["triggers"][0]["metadata"]["threshold"] == "10"  # KEDA đòi string
     assert so["spec"]["maxReplicaCount"] == 3 and so["spec"]["fallback"]["replicas"] == 3

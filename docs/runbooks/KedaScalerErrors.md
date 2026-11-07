@@ -17,7 +17,7 @@
    kubectl -n llm-serving describe scaledobject vllm-a2 | sed -n '/Conditions:/,$p'   # Ready, Fallback
    kubectl -n keda logs deploy/keda-operator --since=10m | grep -i error | tail -20
    ```
-3. PromQL của trigger còn trả về giá trị không? Chạy đúng câu `query` trong ScaledObject trên Grafana (Explore). Rỗng thì KEDA báo lỗi.
+3. PromQL của trigger còn chạy được không? Chạy đúng câu `query` trong ScaledObject trên Grafana (Explore). KEDA báo lỗi khi câu sai cú pháp hoặc trả **nhiều** chuỗi (`returned multiple elements`, thường do thiếu `sum(…)`). Câu trả **rỗng** thì KEDA v2.21.0 không báo lỗi mà coi là 0 (`ignoreNullValues` mặc định `true`), nên không gây cảnh báo này, nhưng HPA đứng ở `minReplicaCount` dù có tải.
 4. KEDA có tới được Prometheus không (NetworkPolicy, DNS `prometheus-operated.monitoring.svc`)?
 
 **Xử lý.**
@@ -26,7 +26,7 @@
 |---|---|
 | Prometheus sập hoặc đang khởi động lại | Xem log và `describe` pod Prometheus (thường OOM trên máy nhà 16 GB): tăng limit hoặc giảm retention |
 | Mạng KEDA → Prometheus bị chặn | Kiểm tra NetworkPolicy vừa áp (kịch bản VH4 chặn có chủ đích, gỡ khi xong) |
-| PromQL trả rỗng | Đổi tên metric sau khi nâng vLLM? Sửa `query` qua PR; giữ `or vector(0)` |
+| PromQL sai cú pháp hoặc trả nhiều chuỗi | Vừa sửa `query`? Sửa lại qua PR; tổng hợp bằng `sum(…)` để chỉ còn một chuỗi |
 | Sai `serverAddress` | So với Service thật của Prometheus trong namespace `monitoring` |
 
 **Leo thang.** Fallback chạy quá 30 phút mà chưa sửa được thì báo cả nhóm, vì trong lúc đó chi phí GPU cao hơn bình thường.
