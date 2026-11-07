@@ -211,3 +211,68 @@
   - `git diff origin/feat/tr2-signal-check origin/main` rỗng: cây của `main` trùng với bản CI đã kiểm ở #19.
   - Chưa kiểm: ở nhà, Argo CD tự sync `keda` (pod khởi động lại với `KEDA_HTTP_DISABLE_KEEP_ALIVE=true`, không còn limit CPU) và `monitoring` (`values.yaml`). Các app khác ở nhà không đọc file nào trong 4 PR này, và nhà chưa có app cho `autoscaling/` hay `observability/`. Trình chưa vào được cluster nhà, nên Quang theo dõi hai app trên.
 - **Links:** PR #16, #17, #18, #19.
+
+## 2026-11-07 – TR5: chốt tiêu chí hợp lệ của lượt và giao diện dữ liệu trước V2
+
+- **Task:** TR5 (đụng runner của Q6) · **Environment:** sim (kind trong WSL2, máy Trình)
+- **Done:**
+  1. Trình giao tự chốt các câu còn treo về dữ liệu và tiêu chí hợp lệ: các câu hỏi Quang từ 25/10 và 07/11, cùng 2 câu Quang hỏi ở `viec-sap-lam.md` §2. Lý do: V2 (14–15/11) ghi dữ liệu theo định dạng lúc đó, và sau 22/11 không đo lại được. Tạo nhánh `feat/tr5-run-validity` từ `origin/main`.
+  2. Đo độ trễ event loop của `loadgen` trên kind trước khi chọn ngưỡng (bảng ở Results):
+     - simulator patch tạm (`--max-num-seqs=256`, `--inter-token-latency=10ms`, mỗi stream 100 chunk/s), 3 replica tĩnh;
+     - runner chạy phiên `loop-probe` gồm CONST 10 và 20 req/s, mỗi mức 180 s; pod `loadgen` Guaranteed 1 CPU. Runner nạp code `loadgen` vào ConfigMap ở mỗi lượt, nên lượt 10 req/s chạy code của `main`, lượt 20 req/s chạy code của nhánh (đã có `loop_lag_ok`, `throttled_pct`);
+     - xong thì áp lại `serving/overlays/sim` từ Git.
+  3. `loadgen/checks.py`:
+     - thêm `loop_lag_ok`: p99 < 50 ms và max < 500 ms;
+     - `throttle_ok` tính theo tỷ lệ `throttled_usec` ÷ thời gian giữa hai lần đọc `cpu.stat` (< 0,1 %), thay cho `nr_throttled == 0`; ghi thêm `throttled_pct`. Không tính được tỷ lệ thì quay về `nr_throttled == 0`;
+     - `loadgen/__main__.py` đo thời gian giữa hai lần đọc.
+  4. `experiments/runner/checks.py`: lý do trượt liệt kê mọi khoá `*_ok` bằng False, nên tiêu chí mới của `loadgen` tự hiện ra mà không phải sửa runner.
+  5. `experiments/runner/collect.py` và `session.py`: `scrape_gaps` chỉ tính mẫu `up == 1`, kèm mép cửa sổ theo pod (lấy từ `pods_start`, `pods_end`).
+  6. Tài liệu:
+     - Môi trường §3.6, §9, §14.2 (cột `requests.csv`, `loadgen.json`, nghĩa của `status` và `error`), §15, §17;
+     - Vận hành §3.2 (`for: 1m` của `LLMErrorRateHigh` và `KedaScalerErrors`, tên `keda_scaler_detail_errors_total`).
+  7. `/code-review high` cho 8 phát hiện:
+     - Sửa 6: mép cửa sổ của `scrape_gaps` (trước đó bỏ sót scrape lỗi ở đầu và cuối lượt, cả pod không scrape được lần nào); ghi rõ `throttled_usec` là cận trên; đường dự phòng `nr_throttled`; số liệu ca 05/11 (mức đo khoảng 3 phút, không phải 5 phút); `for: 1m` ở dòng `KedaScalerErrors`; thiếu nhật ký.
+     - Không sửa 1: chép ngưỡng sang `00-thong-so.md` (xem Decision).
+  8. Chạy `experiments/matrix-sim.yaml` (S1 rồi A2) bằng nhánh này trên kind: mốc "runner 2 lượt liền không cần can thiệp" của Kế hoạch §1.1, hạn 10/11.
+- **Decision:**
+  - Giữ cột `id`, `n_in_target` và file `loadgen.json` (câu hỏi 25/10). Runner và `capacity.py` đã dùng chúng từ 06/11. Có `id` thì ghép được từng request giữa các cấu hình, vì cùng lịch gửi.
+  - Một request thành công khi và chỉ khi cột `error` rỗng; không lọc theo `status` (câu 2 của Quang). Stream bị cắt giữa chừng vẫn có `status` 200. `capacity.py` đã lọc theo `error`.
+  - `throttle_ok` theo tỷ lệ thời gian < 0,1 % (câu 1 của Quang).
+    - Một chu kỳ 1,4–4,4 ms trong mức đo khoảng 3 phút (≤ 0,0025 %) đã loại hai mức ĐG1-mini ngày 05/11 mà số đo không đổi.
+    - Kernel cộng `throttled_usec` theo từng CPU, nên tỷ lệ là cận trên.
+    - Không bỏ hẳn kiểm throttle, vì thiết kế đòi; lệch lịch và event loop chỉ bắt được gián tiếp.
+  - Event loop:
+    - p99 < 50 ms, cùng ngưỡng với lệch lịch gửi, vì hai kiểm này đo cùng một sai số (một lúc gửi, một lúc nhận chunk);
+    - max < 500 ms, để bắt một lần nghẽn dài mà p99 không thấy (1 % của lượt 25 phút là 15 s). 500 ms là 20 % ngưỡng TTFT 2,5 s.
+  - `scrape_gaps`:
+    - Pod có từ đầu lượt thì tính từ đầu pha chính. Pod còn sống, không đang bị xoá, ở cuối lượt thì tính tới cuối pha.
+    - Pod mới đang cold start và pod đang drain không có mép tương ứng, nên lượt có scale-up hoặc scale-down không bị loại nhầm.
+    - Pod sống suốt lượt mà không scrape được lần nào, hoặc không có chuỗi `up` nào, thì khoảng trống là cả cửa sổ.
+    - Bỏ phương án đoán mép theo dung sai thời gian (mẫu đầu "gần" `start`): dễ sai khi scale-up sớm. Danh sách pod đầu và cuối lượt thì runner đã có sẵn.
+  - Giữ `for: 1m` cho `LLMErrorRateHigh`: một lần chuyển pod sinh vài 503 lẻ, mà vẫn kịp N7.
+  - Ngưỡng hợp lệ để ở Môi trường §17, cùng chỗ với 50 ms, 70 %, 15 s. Không chép sang `00-thong-so.md`, vì file đó không có mục điều kiện hợp lệ, và chép hai nơi thì dễ lệch.
+  - Giữ CPU < 70 %, không nới ngưỡng sau khi thấy lượt 20 req/s trượt. Gần 100 % thì hàng đợi của event loop tăng phi tuyến. Muốn chịu tải cao hơn thì tách `loadgen` thành nhiều tiến trình (Incidents).
+- **Results:**
+  - pytest `loadgen` 47 passed; `experiments` 79 passed, 1 skipped; trên cả Python 3.15 và 3.11. ruff check, ruff format, lychee (0 lỗi) đều đạt.
+  - Phiên `loop-probe`:
+
+    | λ | Chunk/s | CPU tối đa | Event loop p99 / max | Lệch lịch p99 | Throttle | TTFT p50 / p99 (sim đặt 200 ms) | Kết quả |
+    |---|---|---|---|---|---|---|---|
+    | 10 req/s | ~2.500 | 53,1 % | 2,6 / 36,5 ms | 3,2 ms | 0 chu kỳ | 207 / 214 ms | hợp lệ |
+    | 20 req/s | ~5.100 | 86,6 % | 4,9 / 56,0 ms | 6,1 ms | 1 chu kỳ, 4,7 ms (0,0026 %) | 210 / 235 ms | invalid (`cpu_ok`) |
+
+    Ngưỡng event loop còn dư ít nhất 9 lần, ngay cả khi CPU lên 87 %. Lượt 20 req/s có 1 chu kỳ throttle 4,7 ms: luật mới chấm `throttle_ok` đạt (`throttled_pct` 0,0026), luật cũ sẽ loại; lượt chỉ trượt vì `cpu_ok`.
+  - `matrix-sim.yaml`, phiên `sim-smoke` (20:18–20:34), không can thiệp tay:
+    - `S1-CONST2-1`: hợp lệ; event loop p99 2,1 / max 17,0 ms; CPU 13,0 %; `throttled_pct` 0; khoảng trống scrape 5 s.
+    - `A2-CONST2-1`: hợp lệ; scale 1 → 3 replica, cooldown về 1 replica sau 357 s; 357/357 request, 0 lỗi; event loop p99 1,9 / max 16,9 ms; CPU 20,7 %; tín hiệu `vllm:num_requests_running` có 3 chuỗi, 114 mẫu, khoảng trống 5 s.
+    - Runner trong phiên này dùng bản `scrape_gaps` trước khi thêm mép, vì sửa sau soát làm sau khi phiên đã bắt đầu. Chạy lại bản cuối (`at_start`, `at_end` lấy từ `pods_start.json`, `pods_end.json`) trên Prometheus của kind, cùng cửa sổ, chỉ đọc: cả 3 pod của A2 (1 pod có từ đầu, 2 pod mới) và pod của S1 đều 5 s. Mép theo pod không làm loại nhầm pod mới.
+- **Incidents:**
+  - CPU của `loadgen` tăng theo số chunk/s, khoảng 0,2 ms CPU mỗi chunk trên laptop này. Ở nhà, ĐG1-mini λ = 10 cũng khoảng 2.500 chunk/s nhưng chỉ tốn 25,5 %. Chưa tách được bao nhiêu phần do CPU, bao nhiêu do WSL2.
+  - Mỗi request 256 token là 256 chunk, nên ngưỡng 70 % ứng với khoảng 13 req/s cả cluster trên CPU như laptop, và khoảng 27 req/s trên CPU như máy nhà. Đỉnh KB3 ở V2 là 3C. Nếu C của 7B trên 4090 khoảng 4–6 req/s (ước tính, chưa đo), đỉnh là 12–18 req/s. VM thuê có CPU chậm như laptop thì các lượt KB3 có thể bị loại vì `cpu_ok`.
+  - Event loop chạy một luồng, nên thêm lõi cho pod không giúp được. Việc tiếp theo, trước V2: `loadgen` chạy nhiều tiến trình, chia lịch gửi theo `id`.
+- **Deviations:** Môi trường §17 đổi tiêu chí throttle, thêm ngưỡng số cho event loop, và định nghĩa lại khoảng trống scrape. Thay đổi được nêu ở mục "Điểm cần review" của PR.
+- **Links:** nhánh `feat/tr5-run-validity`. File chính: `loadgen/checks.py`, `loadgen/__main__.py`, `experiments/runner/checks.py`, `collect.py`, `session.py`; Môi trường §9, §14.2, §17; Vận hành §3.2.
+- **Thesis:**
+  - §5.1 (cách bảo đảm số đo đúng): bảng `loop-probe` cho thấy máy tạo tải tự kiểm được sai số của chính nó. TTFT đo lệch 7–35 ms so với độ trễ đặt trong simulator, nhỏ so với SLO 2,5 s.
+  - §4.11 (công cụ đánh giá): giao diện `requests.csv`, và lý do lọc lỗi theo `error`.
+  - Phần hạn chế: giới hạn CPU một luồng của máy tạo tải viết bằng Python asyncio.
