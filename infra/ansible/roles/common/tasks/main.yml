@@ -1,0 +1,94 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# infra/ansible/roles/common/tasks/main.yml
+# Khái niệm: Role = gói task dùng lại được; tasks/main.yml là danh sách task chạy lần lượt.
+#            Mỗi task gọi một module (ansible.builtin.apt, …) và mô tả TRẠNG THÁI MONG MUỐN, không phải
+#            lệnh: module tự kiểm tra, chỉ thay đổi khi máy chưa đúng trạng thái đó (idempotent).
+# Mục đích:  Chuẩn bị hệ điều hành cho Kubernetes: gói cơ bản, tắt swap, tăng giới hạn inotify, mở
+#            cổng firewall, giữ laptop không ngủ khi gập màn hình.
+# Tham khảo: docs/huong-dan/w2.md §3.3
+# ──────────────────────────────────────────────────────────────────────────────
+
+# curl, jq, gnupg: script cài đặt cần. chrony: đồng bộ giờ, để mốc thời gian giữa các node (log, metric)
+# so được với nhau. fio: đo tốc độ đọc ổ đĩa (cold start, V0).
+- name: Gói cơ bản
+  ansible.builtin.apt:
+    name: [curl, jq, ca-certificates, gnupg, chrony, fio]
+    update_cache: true
+    cache_valid_time: 3600          # chỉ `apt update` lại nếu lần trước đã quá 1 giờ: chạy lại nhanh hơn
+
+# kubelet mặc định từ chối chạy khi có swap: bộ nhớ swap làm giới hạn RAM của pod mất ý nghĩa.
+# `command` không biết trạng thái nên phải tự khai báo: chỉ chạy khi đang có swap (`when`), và luôn báo
+# "changed" khi đã chạy (`changed_when: true`).
+- name: Tắt swap ngay
+  ansible.builtin.command: swapoff -a
+  when: ansible_swaptotal_mb > 0
+  changed_when: true
+
+# swapoff chỉ có tác dụng tới lần khởi động lại. Comment dòng swap trong /etc/fstab để tắt hẳn.
+# Regex: dòng KHÔNG bắt đầu bằng # (`^[^#]`) và có chữ " swap " → thêm "# " vào đầu dòng (\1 = cả dòng).
+- name: Tắt swap vĩnh viễn (comment dòng swap trong fstab)
+  ansible.builtin.replace:
+    path: /etc/fstab
+    regexp: '^([^#].*\sswap\s.*)$'
+    replace: '# \1'
+
+# inotify = cơ chế Linux báo khi file thay đổi. Prometheus, sidecar của Grafana và kubelet theo dõi rất
+# nhiều file; giới hạn mặc định của Ubuntu thấp, hết thì pod lỗi "too many open files".
+# sysctl_file: ghi vào file riêng để còn hiệu lực sau khi khởi động lại.
+- name: Giới hạn inotify đủ cho nhiều pod (Prometheus, Grafana sidecar, kubelet)
+  ansible.posix.sysctl:
+    name: "{{ item.k }}"
+    value: "{{ item.v }}"
+    sysctl_file: /etc/sysctl.d/90-k8s.conf
+  loop:                             # chạy task một lần cho mỗi phần tử; `item` là phần tử hiện tại
+    - {k: fs.inotify.max_user_instances, v: "1024"}
+    - {k: fs.inotify.max_user_watches, v: "524288"}
+
+# Laptop là node agent: gập màn hình mà máy ngủ thì node "NotReady" và pod vLLM trên đó chết.
+# `block` = nhóm nhiều task dùng chung một điều kiện `when`.
+- name: Laptop không ngủ khi gập máy
+  when: is_laptop | bool
+  block:
+    # systemd-logind quyết định làm gì khi gập nắp. Đặt cả 3 trường hợp (pin, cắm sạc, cắm dock) = ignore.
+    # regexp "^#?Key=" khớp cả dòng đang bị comment; lineinfile thay đúng dòng đó thay vì thêm dòng mới.
+    - name: logind bỏ qua nắp máy
+      ansible.builtin.lineinfile:
+        path: /etc/systemd/logind.conf
+        regexp: "^#?{{ item }}="
+        line: "{{ item }}=ignore"
+      loop: [HandleLidSwitch, HandleLidSwitchExternalPower, HandleLidSwitchDocked]
+      notify: Restart logind        # chỉ restart logind nếu file thực sự đổi (xem handlers/main.yml)
+    # "mask" = khoá hẳn unit, không gì kích hoạt được (kể cả nút nguồn hay hết thời gian chờ)
+    - name: Chặn các chế độ ngủ
+      ansible.builtin.systemd_service:
+        name: "{{ item }}"
+        masked: true
+      loop: [sleep.target, suspend.target, hibernate.target, hybrid-sleep.target]
+
+# Chỉ đọc trạng thái ufw để quyết định task sau. failed_when: false = máy không có ufw cũng không lỗi.
+- name: Xem ufw có bật không
+  ansible.builtin.command: ufw status
+  register: ufw_status              # lưu kết quả (stdout, rc…) vào biến ufw_status
+  changed_when: false               # lệnh chỉ đọc, không bao giờ coi là "đã thay đổi"
+  failed_when: false
+
+# Nếu firewall ufw đang bật thì phải mở các cổng node cần để nói chuyện với nhau trong LAN.
+- name: Mở cổng k3s trong LAN (chỉ khi ufw đang bật)
+  community.general.ufw:
+    rule: allow
+    port: "{{ item.port }}"
+    proto: "{{ item.proto }}"
+  loop:
+    - {port: "6443", proto: tcp}    # API server: agent và kubectl gọi vào
+    - {port: "10250", proto: tcp}   # kubelet: API server gọi xuống để lấy log, exec, metrics
+    - {port: "8472", proto: udp}    # flannel VXLAN: mạng pod giữa các node
+  when: "'Status: active' in ufw_status.stdout"
+
+# Trên VM thuê: một thư mục cache trên ổ NVMe, mount vào pod vLLM (serving/overlays/cloud) chứa cả
+# model (hf/) lẫn compile cache (vllm/). Nằm trên NVMe để nạp model nhanh (mức L2).
+- name: Thư mục cache model trên VM thuê
+  ansible.builtin.file:
+    path: /mnt/nvme/cache
+    state: directory
+    mode: "0755"
+  when: env_name == 'cloud'

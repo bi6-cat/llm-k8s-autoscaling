@@ -1,0 +1,24 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# platform/argocd/apps/home/monitoring-extras.yaml
+# Khái niệm: Application cho các thứ giám sát KHÔNG nằm trong chart: PodMonitor của Traefik, sau này
+#            thêm recording rule, cảnh báo, dashboard (W3–W4).
+# Mục đích:  Tách khỏi app `monitoring` để sửa rule/dashboard mà không đụng tới chart.
+# Tham khảo: docs/huong-dan/w2.md §4.3, §6.2
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: monitoring-extras
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/bi6-cat/llm-k8s-autoscaling.git
+    targetRevision: main
+    path: platform/kube-prometheus-stack/extras
+  destination: {server: https://kubernetes.default.svc, namespace: monitoring}
+  syncPolicy:
+    automated: {prune: true, selfHeal: true}
+    # Chờ CRD PodMonitor do app `monitoring` cài (giải thích ở gpu-exporter.yaml)
+    syncOptions: [SkipDryRunOnMissingResource=true]
+    retry: {limit: 10, backoff: {duration: 15s, factor: 2, maxDuration: 5m}}

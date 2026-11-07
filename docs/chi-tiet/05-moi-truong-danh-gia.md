@@ -3,8 +3,8 @@
 > Thuộc [bộ tài liệu đồ án](../mo-ta-chi-tiet-do-an.md#bộ-tài-liệu) · Dùng cho mục 3.6, 4.1, 4.11 và chương 5 của luận văn · Cấu hình máy, kịch bản, ma trận và ngân sách: [Thông số](00-thong-so.md) · Quyết định: [ADR-004](../adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md)
 
 **Tóm tắt nhanh**
-- **Tầng 1 (máy nhà và simulator):** PC RTX 5060, có thể thêm laptop RTX 4050, dựng k3s có GPU; máy không GPU dùng `llm-d-inference-sim`. Đây là **môi trường chức năng**: phát triển, kiểm thử, kịch bản vận hành; không dùng số liệu hiệu năng.
-- **Tầng 2 (GPU thuê):** **Vast.ai chế độ VM, 4 × RTX 4090, thuê trọn máy**. Toàn bộ ĐG1–ĐG3 đo trong **một lần thuê liền** cuối tuần 07–08/11 (khoảng 20–22 giờ), runner chạy qua đêm. Dự phòng: máy Vast khác, rồi GCP g2/L4.
+- **Tầng 1 (máy nhà và simulator):** PC RTX 5060 chia thành 2 GPU replica (time-slicing) để chạy 2 pod vLLM model 0,5B, dựng k3s có GPU; máy không GPU dùng `llm-d-inference-sim`. Đây là **môi trường chức năng**: phát triển, kiểm thử, kịch bản vận hành; không dùng số liệu hiệu năng.
+- **Tầng 2 (GPU thuê):** **Vast.ai chế độ VM, 4 × RTX 4090, thuê trọn máy**. Toàn bộ ĐG1–ĐG3 đo trong **một lần thuê liền** cuối tuần 14–15/11 (dời từ 07–08/11; khoảng 20–22 giờ), runner chạy qua đêm. Dự phòng: máy Vast khác, rồi GCP g2/L4.
 - **Chi phí:** ước tính 30–75 USD tiền thật cho 4 phiên thuê (V0–V3), dưới trần 150 USD.
 - **Đánh giá để nghiệm thu**, không phải nghiên cứu thống kê. Ba lớp: kiểm thử chức năng, **kịch bản vận hành VH1–VH6**, và **ĐG1–ĐG3** trên GPU thuê. ĐG2 so sánh S1, S4, A1, A2 dưới **3 kịch bản tải của đề cương**, tổng **17 lượt**.
 - **Kiểm chứng lý thuyết LT1–LT8** (§19): dự đoán bằng công thức có sẵn rồi đo ở nhà hoặc trên simulator, để phần xây dựng có chiều sâu phân tích mà không tốn máy thuê.
@@ -23,8 +23,8 @@
 | | Tầng 1: máy nhà và simulator | Tầng 2: GPU thuê |
 |---|---|---|
 | Mục đích | Phát triển; kiểm thử chức năng; kịch bản vận hành (rolling update, cảnh báo, sự cố); ĐG1-mini để lấy target tạm | Đo năng lực, đánh giá autoscaling, cold start, kịch bản vận hành trên GPU thật |
-| GPU | PC RTX 5060 8 GB (+ laptop RTX 4050 6 GB nếu được); simulator không cần GPU | 4 × RTX 4090 24 GB (Vast.ai, chế độ VM) |
-| Model | Qwen2.5-1.5B-Instruct (hoặc 3B AWQ) | Qwen2.5-7B-Instruct |
+| GPU | PC RTX 5060 8 GB, time-slicing 2 GPU replica (laptop RTX 4050 6 GB tuỳ chọn); simulator không cần GPU | 4 × RTX 4090 24 GB (Vast.ai, chế độ VM) |
+| Model | Qwen2.5-0.5B-Instruct (trước 06/11: 1,5B) | Qwen2.5-7B-Instruct |
 | Chi phí | ≈ 0 (tiền điện) | Theo giờ |
 | Số liệu dùng trong chương đánh giá? | Chỉ kết quả đạt/không đạt của kiểm thử và kịch bản vận hành | **Có** |
 
@@ -289,7 +289,7 @@ Trên Vast.ai, giá hiển thị cho mỗi máy thường đã gồm CPU và RAM
 | Kiểm soát chi phí | Budget alert 50/100/150/190 USD (alert **không** tự chặn chi tiêu); runner `shutdown -h` khi xong |
 | Quy tắc | Đo lại **toàn bộ** ĐG1–ĐG3 trên L4; không trộn với số liệu RTX 4090 |
 
-**Kế hoạch Z** (hoàn toàn không thuê được GPU): chạy ma trận ở nhà với model 1,5B, N = 2 (PC và laptop), hoặc trên simulator. Phần vận hành gần như không bị ảnh hưởng; số liệu hiệu năng chỉ mang tính minh hoạ và được ghi trong phần hạn chế.
+**Kế hoạch Z** (hoàn toàn không thuê được GPU): chạy ma trận ở nhà với model 0,5B, N = 2–2 GPU replica trên PC, hoặc trên simulator. Phần vận hành gần như không bị ảnh hưởng; số liệu hiệu năng chỉ mang tính minh hoạ và được ghi trong phần hạn chế.
 
 ---
 
@@ -299,10 +299,10 @@ Trên Vast.ai, giá hiển thị cho mỗi máy thường đã gồm CPU và RAM
 
 | Phiên | Ngày | Máy | Việc | Giờ | GPU-giờ | USD (0,30–0,50/GPU-giờ) |
 |---|---|---|---|---|---|---|
-| V0 smoke | 17–18/10 | VM 1 × 4090 | k3s trong VM, GPU, vLLM 7B, `fio`, TPOT ở batch 1/16/32, thử `make bootstrap` | 3–4 | 4 | 1–2 |
-| V1 phát triển | 31/10–01/11 | VM 1 × 4090 | L2 (pre-pull, compile cache); runner chạy 2 lượt không cần can thiệp; ĐG1 thử (không dùng làm số liệu chính) | 6–8 | 6–8 | 2–4 |
-| **V2 đợt chính** | T7 07/11 08:00 → CN 08/11 ~06:00 | VM 4 × 4090 | Burn-in rút gọn; VH5 từ VM trắng; **ĐG1 → ADR-003**; ĐG3; ma trận 17 lượt; VH2–VH4 trên GPU thật; quay video thô | 20–22 | 80–88 | 24–44 |
-| V3 dự phòng | 14–15/11 | VM 4 × 4090 (máy khác) | Chỉ khi V2 hỏng: chạy lại trọn bộ cấu hình của kịch bản hỏng + ĐG1 | ≤ 10 | ≤ 40 | ≤ 20 |
+| V0 smoke | ~~17–18/10~~ gộp với V1, ~11–12/11 ([Kế hoạch §1.1](06-ke-hoach-quan-ly.md#11-điều-chỉnh-ngày-04112026)) | VM 1 × 4090 | k3s trong VM, GPU, vLLM 7B, `fio`, TPOT ở batch 1/16/32, thử `make bootstrap` | 3–4 | 4 | 1–2 |
+| V1 phát triển | ~~31/10–01/11~~ gộp với V0, ~11–12/11 | VM 1 × 4090 | L2 (pre-pull, compile cache); runner chạy 2 lượt không cần can thiệp; ĐG1 thử (không dùng làm số liệu chính) | 6–8 | 6–8 | 2–4 |
+| **V2 đợt chính** | ~~07–08/11~~ **T7 14/11 08:00 → CN 15/11 ~06:00** | VM 4 × 4090 | Burn-in rút gọn; VH5 từ VM trắng; **ĐG1 → ADR-003**; ĐG3; ma trận 17 lượt; VH2–VH4 trên GPU thật; quay video thô | 20–22 | 80–88 | 24–44 |
+| V3 dự phòng | ~~14–15/11~~ bỏ (đã dùng cho V2) | VM 4 × 4090 (máy khác) | Chỉ khi V2 hỏng: chạy lại trọn bộ cấu hình của kịch bản hỏng + ĐG1 | ≤ 10 | ≤ 40 | ≤ 20 |
 | Đĩa, băng thông | – | – | – | – | – | ~3–6 |
 | **Tổng** | | | | | ~90–140 | **~30–75** |
 
@@ -598,7 +598,7 @@ Lượt không đạt được đánh dấu `invalid` kèm lý do và **chạy l
 ## 18. Câu hỏi hội đồng có thể đặt ra
 
 **Sao không làm luôn trên máy nhà cho rẻ?**
-GPU nhà chỉ có 6–8 GB VRAM, chỉ chạy được model khoảng 1,5B, và hai GPU khác loại nhau. Máy nhà phù hợp để phát triển, kiểm thử chức năng và kịch bản vận hành. Số liệu hiệu năng phải đo trên GPU 24 GB cùng loại.
+GPU nhà chỉ có 8 GB VRAM. Muốn có nhiều replica, nhóm chia một card thành 2 GPU replica (time-slicing) chạy model 0,5B; các pod dùng chung nhân GPU nên số đo hiệu năng của từng pod không độc lập. Máy nhà phù hợp để phát triển, kiểm thử chức năng và kịch bản vận hành. Số liệu hiệu năng phải đo trên GPU 24 GB cùng loại.
 
 **Marketplace như Vast.ai có đủ tin cậy cho việc đánh giá không?**
 Có, với năm biện pháp:

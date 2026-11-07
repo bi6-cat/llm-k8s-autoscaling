@@ -165,13 +165,13 @@ B\* và KV\* là số request đồng thời trung bình và mức KV-cache trê
 
 ### 9.1. vLLM
 
-| Tham số | Cloud (GPU 24 GB) | Nhà (GPU 6–8 GB) |
+| Tham số | Cloud (GPU 24 GB) | Nhà (RTX 5060 8 GB, 2 pod chung card nhờ time-slicing) |
 |---|---|---|
-| Model | `Qwen/Qwen2.5-7B-Instruct` (revision ghim) | `Qwen/Qwen2.5-1.5B-Instruct` (hoặc bản 3B AWQ) |
-| `--served-model-name` | `qwen2.5-7b` | `qwen2.5-1.5b` |
-| `--max-model-len` | 8192 | 4096 |
-| `--max-num-seqs` | 64 | 32 |
-| `--gpu-memory-utilization` | 0,90 | 0,85 (0,80 nếu GPU còn chạy màn hình) |
+| Model | `Qwen/Qwen2.5-7B-Instruct` (revision ghim) | `Qwen/Qwen2.5-0.5B-Instruct` (revision ghim; trước 06/11 là 1,5B) |
+| `--served-model-name` | `qwen2.5-7b` | `qwen2.5-0.5b` |
+| `--max-model-len` | 8192 | 2048 |
+| `--max-num-seqs` | 64 | 16 |
+| `--gpu-memory-utilization` | 0,90 | 0,40 mỗi pod (2 pod ≈ 6,5 GB, chừa ~1,2 GB cho màn hình); 0,25 không đủ chỗ cho KV-cache (đo 06/11) |
 | `--max-num-batched-tokens` | Mặc định, ghi lại giá trị | như cloud |
 | Prefix caching | **Tắt** khi đánh giá (`--no-enable-prefix-caching`); bật khi vận hành thật | như cloud |
 | `--shutdown-timeout` | **150** (s) (*cần kiểm chứng* tên cờ trên bản ghim) | như cloud |
@@ -183,9 +183,9 @@ B\* và KV\* là số request đồng thời trung bình và mức KV-cache trê
 | Trường | Giá trị |
 |---|---|
 | `replicas` | **Không đặt** (HPA quản lý) |
-| GPU | `nvidia.com/gpu: 1` mỗi pod |
-| CPU, RAM | Cloud: requests = limits, `cpu: 6`, `memory: 24Gi` (QoS Guaranteed). Nhà: request `cpu: 2`, `memory: 4–6Gi`; limit `memory: 8Gi` |
-| `/dev/shm` | `emptyDir: {medium: Memory}`; `sizeLimit` cloud `8Gi`, nhà `1Gi` (tính vào giới hạn RAM của pod) |
+| GPU | `nvidia.com/gpu: 1` mỗi pod (ở nhà là 1 trong 2 GPU replica của RTX 5060) |
+| CPU, RAM | Cloud: requests = limits, `cpu: 6`, `memory: 24Gi` (QoS Guaranteed). Nhà: request `cpu: 1`, `memory: 3584Mi`; limit `memory: 5Gi` (đo 06/11: ~3,4 GiB mỗi pod) |
+| `/dev/shm` | `emptyDir: {medium: Memory}`; `sizeLimit` cloud `8Gi`, nhà `512Mi` (tính vào giới hạn RAM của pod) |
 | `startupProbe` | `/health`, chu kỳ 5 s, `failureThreshold: 120` (tối đa 10 phút) |
 | `readinessProbe` | `/health`, chu kỳ 5 s |
 | `livenessProbe` | `/health`, chu kỳ 10 s, `failureThreshold: 6` |
@@ -227,8 +227,8 @@ B\* và KV\* là số request đồng thời trung bình và mức KV-cache trê
 
 | Máy | Cấu hình | Vai trò |
 |---|---|---|
-| PC | RTX 5060 8 GB (Blackwell, sm_120); CPU 6 nhân/12 luồng; RAM 16 GB; ổ trống 100–200 GB; bật 24/7; Tailscale; mạng ~30 MB/s | Node chủ k3s có GPU |
-| Laptop (nếu được) | RTX 4050 Laptop 6 GB (Ada, sm_89); RAM 16 GB | Node agent có GPU |
+| PC | RTX 5060 8 GB (Blackwell, sm_120); CPU 6 nhân/12 luồng; RAM 16 GB; ổ trống 100–200 GB; bật 24/7; Tailscale; mạng ~30 MB/s | Node chủ k3s có GPU; time-slicing thành 2 GPU replica (từ 06/11) |
+| Laptop (tuỳ chọn) | RTX 4050 Laptop 6 GB (Ada, sm_89); RAM 16 GB | Node agent có GPU; từ 06/11 không còn bắt buộc (ADR-004 §7) |
 | Laptop không GPU | – | kind/k3d + `llm-d-inference-sim`; truy cập cluster nhà qua Tailscale |
 
 Máy nhà là **môi trường chức năng**: không dùng số liệu hiệu năng của nó trong chương đánh giá.

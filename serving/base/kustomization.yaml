@@ -1,0 +1,23 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# serving/base/kustomization.yaml
+# Khái niệm: Kustomize base = phần chung cho mọi môi trường. Mỗi overlay (home, cloud, sim) trỏ về
+#            base rồi chỉ ghi các điểm khác (patch). `kubectl kustomize serving/overlays/home` xem kết quả.
+# Mục đích:  Liệt kê manifest của vLLM và ghim image theo DIGEST (yêu cầu N8: mọi phiên bản được ghim).
+# Tham khảo: docs/huong-dan/w2.md §8.1
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - deployment.yaml
+  - service.yaml
+  - podmonitor.yaml
+# Thay image `vllm/vllm-openai` trong mọi manifest bằng tag + digest dưới đây.
+# Tag dễ đọc nhưng có thể bị đẩy đè; digest (sha256 của nội dung image) thì không đổi được, nên kéo
+# về luôn đúng một image. Có digest thì Kubernetes dùng digest, tag chỉ để người đọc biết phiên bản.
+images:
+  - name: vllm/vllm-openai
+    newTag: v0.31.0                    # vLLM 0.31.0, build cho CUDA 13.0 (cần driver ≥ 580)
+    # Digest ghi ở W1 (23/10/2026). Không dùng bản -cu129: hỏng lúc khởi động vì torchcodec đòi
+    # libnvrtc.so.13 (ADR-004 §7, docs/nhat-ky/tuan-01.md).
+    digest: sha256:c1c9f6fd5c109ba7f0546a59f5b2f15fb87f64c77782e90a27b648b42a8e67c3

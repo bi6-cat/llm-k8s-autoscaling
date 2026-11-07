@@ -1,0 +1,37 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# experiments/matrix-home.yaml
+# Khái niệm: File ma trận = danh sách lượt mà runner chạy trong một phiên (experiments/runner/matrix.py).
+# Mục đích:  Một lượt runner trên cluster nhà (vLLM thật, Qwen2.5-0.5B, RTX 5060) để kiểm runner với GPU
+#            thật trước V0+V1: cold start thật, API key, metric GPU. Chỉ S1 (cố định 1 replica): RAM của PC
+#            chỉ đủ an toàn cho 1 pod vLLM (2 pod từng làm máy hết RAM, nhật ký vận hành 06/11).
+# Chạy:      KUBECONFIG=~/.kube/llm-home.yaml free -m   # cần ≥ 5 GB khả dụng trước khi chạy
+#            KUBECONFIG=~/.kube/llm-home.yaml uv run --project experiments python -m experiments.runner \
+#              --matrix experiments/matrix-home.yaml
+# Tham khảo: Môi trường §14, §17; Thông số §9–§10
+# ──────────────────────────────────────────────────────────────────────────────
+session: home-smoke
+env: home
+
+target:
+  namespace: llm-serving
+  deployment: vllm
+  service_url: http://vllm.llm-serving.svc:8000
+  model: qwen2.5-0.5b                  # --served-model-name (serving/overlays/home/patch-vllm.yaml)
+  prometheus_service: monitoring/kps-prometheus:9090
+  api_key_secret: vllm-api-key         # vLLM nhà đòi API key; Secret tạo tay (w2.md §4.4)
+
+timing:
+  settle_s: 30
+  warmup_s: 60
+  warmup_fraction: 0.3
+  cooldown_max_s: 600
+  reset_timeout_s: 900                 # cold start 0,5B ở nhà đo được 400 s (06/11); để dư gấp đôi
+
+configs:
+  S1:
+    type: static
+    replicas: 1
+
+runs:
+  # Ước tính (chưa đo): 2 req/s × ~1,5 s/request ≈ 3 request đồng thời, dưới max-num-seqs 16: không có hàng đợi.
+  - {config: S1, scenario: CONST, rate: 2, duration: 180}

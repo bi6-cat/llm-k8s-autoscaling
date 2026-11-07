@@ -1,0 +1,68 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# serving/overlays/sim/patch-sim.yaml
+# Khái niệm: JSON patch (RFC 6902) = danh sách thao tác op/path/value sửa từng chỗ của manifest base.
+#            `path` trỏ theo chỉ số: containers/0 là container vllm (xem cuối serving/base/deployment.yaml).
+# Mục đích:  Bỏ mọi thứ cần GPU (runtime NVIDIA, nodeSelector, cache model), thay cờ của vLLM bằng cờ
+#            của simulator, và đặt độ trễ giả để simulator "chậm" gần giống model nhỏ trên GPU.
+# Tham khảo: docs/huong-dan/w2.md §9.1; cờ đối chiếu với `--help` của image v0.12.0 ngày 04/11/2026
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Thay CẢ danh sách args (overlay home/cloud thì nối thêm), vì simulator không hiểu cờ của vLLM
+# (`--no-enable-prefix-caching`, `--shutdown-timeout` của base sẽ làm simulator báo lỗi cờ lạ).
+- op: replace
+  path: /spec/template/spec/containers/0/args
+  value:
+    # Tên model trả về ở /v1/models và gắn vào label `model_name` của metric. Giống overlay home để
+    # máy tạo tải và runner dùng chung một cấu hình. Không truyền --render-url nên simulator dùng
+    # tokenizer giả, không tải gì từ Hugging Face (cờ --force-dummy-tokenizer cũ đã deprecated).
+    - --model=qwen2.5-1.5b
+    - --served-model-name=qwen2.5-1.5b
+    - --port=8000
+    # Tối đa 16 request chạy cùng lúc mỗi pod; request thứ 17 trở đi vào hàng đợi, làm tăng
+    # vllm:num_requests_waiting. Threshold A2 trên simulator là 10 ≈ 0,6 × 16 (w2.md §9.1).
+    - --max-num-seqs=16
+    # Mặc định của simulator chỉ 1024 token; đặt bằng vLLM nhà để prompt dài của KB không bị từ chối.
+    - --max-model-len=4096
+    # Độ trễ giả: 200 ms tới token đầu (TTFT), 50 ms giữa hai token (TPOT). Cố định, không tăng theo
+    # tải (--time-factor-under-load mặc định 1), nên trễ chỉ tăng khi request phải xếp hàng.
+    - --time-to-first-token=200ms
+    - --inter-token-latency=50ms
+# Không có GPU trên kind: bỏ runtime NVIDIA và ràng buộc "chỉ xếp lên node có GPU"
+- op: remove
+  path: /spec/template/spec/runtimeClassName
+- op: remove
+  path: /spec/template/spec/nodeSelector
+# Request giả ngắn hơn nhiều so với thật (tối đa vài chục giây), 60 s đủ cho preStop 20 s + tắt êm
+- op: replace
+  path: /spec/template/spec/terminationGracePeriodSeconds
+  value: 60
+# Thay cả env của base: simulator không kiểm API key và không cần thư mục cache.
+# POD_NAME, POD_NAMESPACE: simulator đọc hai biến này để gắn label `pod`, `namespace` vào metric,
+# giống label mà Prometheus gắn cho vLLM thật. Lấy bằng Downward API (giá trị từ chính pod).
+- op: replace
+  path: /spec/template/spec/containers/0/env
+  value:
+    - name: POD_NAME
+      valueFrom: {fieldRef: {fieldPath: metadata.name}}
+    - name: POD_NAMESPACE
+      valueFrom: {fieldRef: {fieldPath: metadata.namespace}}
+# Simulator rất nhẹ; không xin GPU (thay cả `resources` để bỏ nvidia.com/gpu của base)
+- op: replace
+  path: /spec/template/spec/containers/0/resources
+  value:
+    requests: {cpu: 50m, memory: 64Mi}   # 50m = 0,05 lõi CPU
+    limits: {memory: 256Mi}
+# Không cần cache model và /dev/shm
+- op: remove
+  path: /spec/template/spec/containers/0/volumeMounts
+- op: remove
+  path: /spec/template/spec/volumes
+# Simulator có hai đường dẫn kiểm tra: /health luôn trả OK, còn /health/ready trả 503 trong lúc
+# "nạp model" giả (cờ --startup-duration). Probe khởi động và readiness dùng /health/ready để hành vi
+# giống vLLM thật (chưa nạp xong thì chưa nhận request).
+- op: replace
+  path: /spec/template/spec/containers/0/startupProbe/httpGet/path
+  value: /health/ready
+- op: replace
+  path: /spec/template/spec/containers/0/readinessProbe/httpGet/path
+  value: /health/ready

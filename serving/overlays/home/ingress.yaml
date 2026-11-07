@@ -1,0 +1,25 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# serving/overlays/home/ingress.yaml
+# Khái niệm: Ingress = luật định tuyến HTTP từ bên ngoài cluster vào một Service, theo tên miền và
+#            đường dẫn. Ingress controller (ở đây Traefik, có sẵn trong k3s) là thứ thực thi luật này.
+# Mục đích:  Mở http://llm.home (cổng 80 của PC) vào vLLM. Chưa có DNS nên client dùng
+#            `curl --resolve llm.home:80:<PC_IP>` (w2.md §8.3). Rate limit (F7) thêm ở W4.
+# Tham khảo: docs/huong-dan/w2.md §8.2
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: vllm
+  namespace: llm-serving
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: llm.home                   # chỉ request có header Host: llm.home mới đi theo luật này
+      http:
+        paths:
+          - path: /
+            pathType: Prefix           # mọi đường dẫn bắt đầu bằng / (tức là tất cả)
+            backend:
+              service:
+                name: vllm
+                port: {name: http}

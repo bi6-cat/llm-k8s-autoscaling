@@ -1,0 +1,19 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# infra/ansible/inventory/group_vars/cloud.yaml
+# Khái niệm: Biến riêng cho nhóm `cloud` (VM thuê trên Vast). Inventory của nhóm này
+#            (inventory/cloud.yaml) do `vast.sh inventory` sinh mỗi lần thuê, nên không nằm trong Git.
+# Mục đích:  Kubeconfig đi qua SSH tunnel; bật CPU manager static để pod vLLM Guaranteed có lõi CPU riêng.
+# Tham khảo: docs/huong-dan/w2.md §3.2, §11
+# ──────────────────────────────────────────────────────────────────────────────
+env_name: cloud
+argocd_enabled: false       # V0 triển khai tay; Argo CD trên VM bật từ W4
+kubeconfig_name: llm-cloud
+# API server của VM không mở ra Internet (an toàn hơn). `vast.sh tunnel` chuyển cổng 6443 của VM về
+# 127.0.0.1:16443 trên laptop qua SSH; kubeconfig trỏ vào đầu tunnel này.
+kubeconfig_server: https://127.0.0.1:16443
+# CPU manager static: pod có QoS Guaranteed (requests = limits, CPU số nguyên) được giữ RIÊNG các lõi CPU,
+# không bị pod khác chen vào → số đo ổn định hơn. reserved-cpus=0-3: chừa lõi 0–3 cho hệ điều hành,
+# k3s và máy tạo tải (Môi trường §3.5).
+k3s_kubelet_args:
+  - cpu-manager-policy=static
+  - reserved-cpus=0-3

@@ -1,0 +1,11 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# serving/base/namespace.yaml
+# Khái niệm: Namespace = không gian tên tách biệt tài nguyên trong cluster (tên chỉ cần duy nhất trong
+#            một namespace; quyền và giới hạn tài nguyên đặt được theo namespace).
+# Mục đích:  Mọi thứ của tầng serving nằm trong `llm-serving`; PromQL và cảnh báo lọc theo namespace này.
+# Tham khảo: docs/huong-dan/w2.md §8.1, CONTRIBUTING.md §3
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: llm-serving

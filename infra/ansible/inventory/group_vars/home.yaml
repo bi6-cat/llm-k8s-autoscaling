@@ -1,0 +1,28 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# infra/ansible/inventory/group_vars/home.yaml
+# Khái niệm: Biến riêng cho nhóm `home` (ghi đè all.yaml).
+# Mục đích:  Bật Argo CD, đặt tên kubeconfig, cho k3s chạy trên mạng Tailscale và thêm tên MagicDNS
+#            vào chứng chỉ API server.
+#            Tên và IP Tailscale lấy từ `tailscale status` trên PC (23/10/2026).
+# Tham khảo: docs/huong-dan/w2.md §3.2
+# ──────────────────────────────────────────────────────────────────────────────
+env_name: home
+argocd_enabled: true
+# Tên context kubectl và tên file ~/.kube/llm-home.yaml
+kubeconfig_name: llm-home
+
+# k3s ở nhà dùng IP Tailscale thay vì IP LAN (đổi ngày 02/11/2026).
+# Lý do: PC ở chung cư, IP LAN do router của toà nhà cấp qua DHCP và không đặt reservation được.
+# Ngày 02/11 router đổi dải (192.168.0.100 → 192.168.10.42), k3s crash 1087 lần vì node-ip không còn.
+# IP Tailscale (dải 100.64.0.0/10) gắn với máy, không đổi khi router đổi.
+# ansible_facts['tailscale0'] = thông tin card tailscale0 mà Ansible thu thập lúc bắt đầu play.
+# Đánh đổi: MTU của tailscale0 là 1280 nên MTU của pod còn ~1230; k3s phụ thuộc dịch vụ tailscaled.
+node_ip: "{{ ansible_facts['tailscale0']['ipv4']['address'] }}"
+flannel_iface: tailscale0
+# Địa chỉ API server ghi vào kubeconfig: node_ip (IP Tailscale) của máy đầu tiên trong nhóm k3s_server.
+# 6443 là cổng mặc định của Kubernetes API server. Ai trong tailnet cũng dùng được file này, không cần sửa.
+kubeconfig_server: "https://{{ hostvars[groups['k3s_server'][0]].node_ip }}:6443"
+# Tên thêm vào chứng chỉ API server để kubectl gọi bằng tên không lỗi "x509: certificate is valid for…".
+# IP Tailscale không cần ghi ở đây: nó đã là node_ip, template luôn thêm node_ip vào tls-san.
+k3s_tls_sans:
+  - zorsche-upc             # tên MagicDNS của PC (từ 06/11/2026; trước đó zett-ubuntu-pc)

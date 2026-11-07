@@ -1,0 +1,54 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# infra/ansible/roles/nvidia/tasks/main.yml
+# Khái niệm: Driver NVIDIA cho hệ điều hành thấy GPU. NVIDIA Container Toolkit là lớp nối thêm, cho
+#            container (containerd của k3s) dùng được GPU: nó cung cấp `nvidia-container-runtime`.
+# Mục đích:  Kiểm tra driver đã chạy, rồi cài toolkit. Khi k3s khởi động và thấy toolkit, k3s tự thêm
+#            runtime `nvidia` vào containerd và tạo RuntimeClass `nvidia` (pod vLLM dùng runtime này).
+#            Role KHÔNG cài driver: ở nhà đã cài tay (W1), trên Vast có sẵn trong template VM.
+# Tham khảo: docs/huong-dan/w2.md §3.3–§3.4
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Dừng sớm nếu driver chưa chạy: mọi bước sau đều vô nghĩa khi không có GPU.
+# Lệnh in tên GPU và phiên bản driver, ví dụ "NVIDIA GeForce RTX 5060, 580.xx".
+- name: Driver phải chạy được (cài tay ở nhà, có sẵn trong template VM)
+  ansible.builtin.command: nvidia-smi --query-gpu=name,driver_version --format=csv,noheader
+  register: smi
+  changed_when: false
+
+- name: In GPU
+  ansible.builtin.debug:
+    msg: "{{ inventory_hostname }}: {{ smi.stdout }}"
+
+# Khoá GPG để apt tin gói từ kho của NVIDIA. `gpg --dearmor` đổi khoá dạng text sang dạng nhị phân
+# apt cần. `creates:` = bỏ qua task nếu file đã có (giúp task shell trở nên idempotent).
+# `set -o pipefail`: nếu curl lỗi thì cả lệnh lỗi, không âm thầm ghi ra khoá rỗng.
+- name: Khoá ký của kho NVIDIA Container Toolkit
+  ansible.builtin.shell: |
+    set -o pipefail
+    curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey \
+      | gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+  args:
+    executable: /bin/bash
+    creates: /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+
+# Khai báo kho apt. signed-by: chỉ tin khoá ở trên cho kho này. `$(ARCH)` là biến của apt
+# (amd64…), không phải của shell hay Ansible.
+- name: Kho apt của NVIDIA Container Toolkit
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/nvidia-container-toolkit.list
+    content: |
+      deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://nvidia.github.io/libnvidia-container/stable/deb/$(ARCH) /
+    mode: "0644"
+
+# Cài lần đầu hoặc khi có bản mới thì notify handler restart k3s (xem handlers/main.yml).
+# Lần dựng đầu tiên k3s chưa có nên handler không làm gì; k3s cài sau sẽ tự thấy toolkit.
+- name: Cài NVIDIA Container Toolkit
+  ansible.builtin.apt:
+    name: nvidia-container-toolkit
+    update_cache: true
+  notify: Restart k3s
+
+# Kiểm tra cuối: binary runtime nằm trong PATH, vì k3s dò đúng tên này lúc khởi động.
+- name: Toolkit có runtime cho containerd
+  ansible.builtin.command: which nvidia-container-runtime
+  changed_when: false

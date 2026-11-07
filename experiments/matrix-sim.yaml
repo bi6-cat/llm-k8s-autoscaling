@@ -1,0 +1,45 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# experiments/matrix-sim.yaml
+# Khái niệm: File ma trận = danh sách lượt mà runner chạy trong một phiên (experiments/runner/matrix.py).
+# Mục đích:  Phiên ngắn trên kind + simulator để kiểm runner: 2 lượt liền không cần can thiệp (hạn 10/11).
+#            S1 (cố định 1 replica) và A2 (KEDA theo running + waiting) với tải CONST ngắn, nên cả phiên
+#            khoảng 15 phút. Phiên đánh giá thật dùng KB1–KB3 (Thông số §8), ở file ma trận khác.
+# Chạy:      make sim-up   (cluster kind + Prometheus + KEDA + simulator)
+#            uv run --project experiments python -m experiments.runner --matrix experiments/matrix-sim.yaml \
+#              --context kind-llm-sim
+# Tham khảo: Môi trường §14, §17; Kiến trúc §10.2
+# ──────────────────────────────────────────────────────────────────────────────
+session: sim-smoke
+env: sim
+
+target:
+  namespace: llm-serving
+  deployment: vllm
+  # Máy tạo tải chạy trong cluster nên gọi Service bằng DNS nội bộ (không qua port-forward)
+  service_url: http://vllm.llm-serving.svc:8000
+  model: qwen2.5-1.5b                  # --served-model-name của simulator (serving/overlays/sim)
+  prometheus_service: monitoring/kps-prometheus:9090
+  api_key_secret: null                 # simulator không đòi API key
+
+# Khoảng chờ ngắn hơn mặc định vì simulator khởi động trong vài giây (không có cold start thật)
+timing:
+  settle_s: 20
+  warmup_s: 30
+  warmup_fraction: 0.3
+  cooldown_max_s: 600                  # A2 về 1 replica: 300 s window + 1 pod/60 s ≈ 7 phút từ 3 replica
+  reset_timeout_s: 300
+
+configs:
+  S1:
+    type: static
+    replicas: 1
+  A2:
+    type: scaledobject
+    file: autoscaling/official/base/scaledobject-a2.yaml
+    # Mỗi request của simulator kéo dài ~13 s (TTFT 200 ms + 256 token × 50 ms), nên 2 req/s ≈ 26 request
+    # đồng thời → ⌈26 ÷ 10⌉ = 3 replica (giống bài T2). max 3 = số node của kind.
+    overrides: {threshold: 10, max_replicas: 3}
+
+runs:
+  - {config: S1, scenario: CONST, rate: 2, duration: 120}
+  - {config: A2, scenario: CONST, rate: 2, duration: 180}

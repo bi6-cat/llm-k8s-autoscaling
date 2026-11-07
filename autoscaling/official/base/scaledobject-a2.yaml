@@ -19,8 +19,10 @@ spec:
   scaleTargetRef: {name: vllm}         # Deployment vllm (serving/base/deployment.yaml)
   minReplicaCount: 1                   # luôn giữ ít nhất 1 pod: cold start vài phút, không scale về 0
   maxReplicaCount: 4                   # = số GPU trên VM thuê; overlay nhà/simulator ghi đè
-  # Chu kỳ KEDA tự hỏi Prometheus. Chủ yếu dùng cho kích hoạt 0 ↔ 1 (đồ án không dùng); tốc độ scale
-  # 1 ↔ N do chu kỳ sync của HPA quyết định (5 s, đặt ở k3s và infra/kind/kind-config.yaml).
+  # Chu kỳ KEDA tự hỏi Prometheus, chỉ dùng cho kích hoạt 0 ↔ 1 (đồ án không dùng). Với
+  # minReplicaCount ≥ 1 nó KHÔNG ảnh hưởng tốc độ scale, KEDA cũng cảnh báo điều này khi áp: mỗi chu kỳ
+  # sync (5 s, đặt ở k3s và infra/kind/kind-config.yaml) HPA hỏi metric server của KEDA, và KEDA truy
+  # vấn Prometheus ngay lúc đó (Quang kiểm trên kind 04/11). Vẫn ghi 5 để khớp Thông số §9.3.
   pollingInterval: 5
   # Hỏi Prometheus lỗi 3 lần liên tiếp → HPA nhận giá trị giả để lên đúng 4 replica (tối đa). Mất tín
   # hiệu thì thà thừa GPU còn hơn thiếu: thiếu thì người dùng chịu trễ, thừa chỉ tốn tiền (bài T4, VH4).
