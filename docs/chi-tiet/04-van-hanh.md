@@ -93,7 +93,7 @@ Viết `tổng − tốt` chứ không viết `1 − tốt/tổng` là có chủ
 | `LLMAtMaxReplicas` | Số replica bằng max trong 15 phút **và** hàng đợi > 0 | ticket | Autoscaling đã hết dư địa; cần thêm GPU hoặc giới hạn tải |
 | `LLMPodPending` | Pod vLLM ở trạng thái Pending > 10 phút | ticket | Thường do hết GPU: rolling update bị kẹt, hoặc max replica lớn hơn số GPU |
 | `LLMPodNotReady` / `LLMPodCrashLooping` | Pod vLLM không Ready > 15 phút (lâu hơn cold start tối đa); hoặc container ở `CrashLoopBackOff` > 5 phút | page | Pod không khởi động được: OOM, sai tham số, lỗi CUDA |
-| `KedaScalerErrors` | Bộ đếm lỗi scaler của KEDA tăng (ví dụ `keda_scaler_errors_total`, kiểm tra tên theo phiên bản) | page | Autoscaling bị "mù", đang chạy chế độ fallback |
+| `KedaScalerErrors` | Bộ đếm lỗi scaler của KEDA tăng (ví dụ `keda_scaler_errors_total`, kiểm tra tên theo phiên bản) | page | Autoscaling bị "mù"; lỗi liên tiếp quá `failureThreshold` (lần thứ 4) thì vào chế độ fallback |
 
 **Cảnh báo phụ** (Could, chỉ thêm nếu còn thời gian): `LLMSLOBurnSlow` (≥ 10% trên cả 30 phút và 5 phút, ticket); `LLMPreemptions` (`num_preemptions_total` tăng trong 5 phút, ticket); `GPUTemperatureHigh` (> 83 °C trong 5 phút, ticket); `GPUXidError` (lỗi XID, page). Có sẵn từ kube-prometheus-stack: `TargetDown`, `Watchdog`.
 

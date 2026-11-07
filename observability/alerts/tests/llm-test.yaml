@@ -230,5 +230,5 @@ tests:
           - exp_labels: {severity: page, scaledObject: vllm-a2}
             exp_annotations:
               summary: "KEDA không lấy được metric cho ScaledObject vllm-a2"
-              description: "Autoscaling đang chạy chế độ fallback (giữ số replica cố định). Kiểm tra Prometheus và đường mạng KEDA → Prometheus."
+              description: "KEDA lỗi liên tục khi hỏi Prometheus: autoscaling không thấy tải, và từ lần lỗi liên tiếp thứ 4 thì vào fallback (giữ số replica tối đa). Kiểm tra Prometheus và đường mạng KEDA → Prometheus."
               runbook_url: "https://github.com/bi6-cat/llm-k8s-autoscaling/blob/main/docs/runbooks/KedaScalerErrors.md"

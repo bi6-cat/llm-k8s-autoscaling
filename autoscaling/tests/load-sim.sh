@@ -46,9 +46,11 @@ if [ -z "$port" ] || ! ready "$port"; then
   exit 1
 fi
 
-# Mốc bắt đầu tải (epoch, giây). run-t1-t5.sh đọc dòng này để đo T2/T3 từ lúc hey thật sự chạy, không
-# tính thời gian mở port-forward ở trên (thường 1–2 s, tối đa 10 s).
-echo "load-sim: hey bắt đầu $(date +%s)"
+# Mốc bắt đầu tải, theo cùng đồng hồ đơn điệu với now() của run-t1-t5.sh (giây trong /proc/uptime; xem lý
+# do ở đó). run-t1-t5.sh đọc dòng này để đo T2/T3 từ lúc hey thật sự chạy, không tính thời gian mở
+# port-forward ở trên (thường 1–2 s, tối đa 10 s).
+if read -r up _ 2>/dev/null < /proc/uptime; then t0=${up%.*}; else t0=$(date +%s); fi
+echo "load-sim: hey bắt đầu $t0"
 # -z: thời lượng; -c: số worker đồng thời; -D: body lấy từ file; -T: Content-Type
 hey -z "$DUR" -c "$C" -m POST -T application/json -D autoscaling/tests/request-sim.json \
   "http://127.0.0.1:$port/v1/chat/completions" &

@@ -2,7 +2,7 @@
 # autoscaling/tests/t4-block-keda-to-prometheus.yaml
 # Khái niệm: NetworkPolicy = tường lửa giữa các pod, khai báo bằng nhãn. Khi một pod bị NetworkPolicy
 #            chọn, chỉ những nguồn được liệt kê trong `ingress.from` mới gọi vào pod đó được.
-# Mục đích:  Bài T4: cắt đường KEDA → Prometheus để kiểm chứng fallback (KEDA lỗi 3 lần → lên max).
+# Mục đích:  Bài T4: cắt đường KEDA → Prometheus để kiểm chứng fallback (KEDA lỗi quá 3 lần → lên max).
 #            CHỈ dùng tạm trên simulator; xoá ngay sau khi thử (`kubectl delete -f <file này>`).
 #            Đây cũng là cách gây sự cố cho VH4 (ADR-005 T6): Operator và Argo CD không hoàn tác nó.
 # Lưu ý:     NetworkPolicy chỉ chặn kết nối MỚI. File này chỉ có tác dụng khi KEDA mở kết nối mới cho

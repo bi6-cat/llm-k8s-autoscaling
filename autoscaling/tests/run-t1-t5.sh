@@ -25,7 +25,18 @@ HPA=keda-hpa-$SO                       # HPA do KEDA tạo cho ScaledObject (tê
 LOG=runs/sim/$(date +%Y%m%d-%H%M%S)-t1-t5.log    # runs/ nằm trong .gitignore: dữ liệu thô không commit
 RESULTS=()                             # mỗi phần tử: "T2 ĐẠT: …" để in tổng kết ở cuối
 
-now() { date +%s; }
+# now: số giây theo đồng hồ đơn điệu (monotonic: chỉ tăng đều, không bị chỉnh giờ), dùng cho mọi khoảng thời
+# gian. HPA và KEDA (viết bằng Go) đo cửa sổ ổn định, chu kỳ sync bằng đồng hồ này, nên đo cùng đồng hồ mới
+# kiểm đúng cấu hình. Trên máy có đồng hồ chuẩn, đo bằng `date +%s` (đồng hồ thực) cũng ra như nhau. Nhưng trên
+# WSL2 của máy Trình, đồng hồ của VM chạy nhanh hơn giờ Windows 1,6 % (đo 07/11). Đồng hồ thực bị kéo về theo
+# Windows khoảng mỗi 32 s ("Clock change detected" trong journal), đồng hồ đơn điệu thì không. Vì vậy cửa sổ
+# 300 s của HPA chỉ dài khoảng 295 s giờ thật, và T3 đo bằng `date` ra 292–304 s, có lần trượt oan.
+# /proc/uptime = số giây từ lúc máy (hoặc VM WSL) khởi động; chung kernel với các node kind. Không có file này
+# (không phải Linux) thì quay về `date +%s`.
+now() { local u; if read -r u _ 2>/dev/null < /proc/uptime; then echo "${u%.*}"; else date +%s; fi; }
+# wall <mốc now>: giờ đồng hồ (HH:MM:SS) ứng với một mốc của now(), để in cho người đọc
+wall() { date -d "@$(( $(date +%s) - $(now) + $1 ))" +%T; }
+# Mỗi dòng log: <giây đơn điệu> <giờ đồng hồ> <nội dung>. Cột 1 dùng để tính khoảng cách, cột 2 để đọc.
 say() { echo "$(now) $(date +%T) $*" | tee -a "$LOG"; }
 result() { RESULTS+=("$1"); say "KẾT QUẢ $1"; }
 
@@ -46,6 +57,7 @@ failures() {
     | jq -r '[.status.health[]?.numberOfFailures] | max // 0' 2>/dev/null || true
 }
 paused() { so '{.status.conditions[?(@.type=="Paused")].status}'; }   # "True" khi KEDA đã tạm dừng SO
+fallback_on() { so '{.status.conditions[?(@.type=="Fallback")].status}'; }   # "True" khi KEDA đang fallback
 # replicas: số replica Deployment đang được đặt (do HPA, hoặc do KEDA khi tạm dừng)
 replicas() { "${K[@]}" "${N[@]}" get deploy vllm -o jsonpath='{.spec.replicas}' 2>/dev/null || true; }
 # qty: đổi số lượng kiểu Kubernetes sang số thường: "8334m" (m = mili) = 8,334; "25" = 25
@@ -57,7 +69,7 @@ a2() {
     | jq -r '.data.result[0].value[1] // "0"' 2>/dev/null || echo 0
 }
 
-# Ghi mỗi giây một dòng: epoch, giờ, desired, current (HPA), spec/ready (Deployment), metric HPA đang
+# Ghi mỗi giây một dòng: giây now(), giờ, desired, current (HPA), spec/ready (Deployment), metric HPA đang
 # thấy, số lần lỗi liên tiếp KEDA gọi Prometheus, điều kiện Fallback của SO. Một lệnh kubectl lấy cả 3
 # object; --ignore-not-found: thiếu HPA (lúc tạm dừng) thì in "-" chứ không lỗi.
 # jq: first(…) // {} = lấy object đầu tiên đúng kind, không có thì dùng {} để các trường ra "-".
@@ -79,7 +91,7 @@ watch_loop() {
 }
 
 # wait_for <hàm đọc> <giá trị> <tối đa giây> [mốc 0]: chờ tới khi hàm trả đúng giá trị; in số giây tính
-# từ mốc 0 (epoch; mặc định là lúc gọi), hoặc "quá-hạn" (và trả mã 1) nếu hết giờ.
+# từ mốc 0 (một giá trị now(); mặc định là lúc gọi), hoặc "quá-hạn" (và trả mã 1) nếu hết giờ.
 wait_for() {
   local fn=$1 want=$2 limit=$3 t0=${4:-}
   [ -n "$t0" ] || t0=$(now)
@@ -96,9 +108,9 @@ ensure_idle() {
   wait_for replicas 1 900 >/dev/null || { say "không về được 1 replica sau 900 s"; exit 1; }
 }
 
-# load_start <epoch lúc gọi load-sim.sh>: chờ load-sim.sh in mốc "hey bắt đầu <epoch>" vào $LOG.hey (tối đa
-# 20 s, gồm thời gian mở port-forward), in epoch đó. Chỉ nhận mốc ≥ lúc gọi, để T5 không đọc nhầm mốc
-# của T2 trong cùng file log.
+# load_start <mốc now() lúc gọi load-sim.sh>: chờ load-sim.sh in mốc "hey bắt đầu <giây>" vào $LOG.hey (tối
+# đa 20 s, gồm thời gian mở port-forward), in mốc đó. Hai script cùng đọc /proc/uptime nên mốc so được với
+# nhau. Chỉ nhận mốc ≥ lúc gọi, để T5 không đọc nhầm mốc của T2 trong cùng file log.
 load_start() {
   local t
   for _ in $(seq 1 40); do
@@ -160,22 +172,24 @@ t2() {  # T2: C request đồng thời (2,5 × threshold) → desired=UP trong �
   # hey thoát: tới hạn, hey thôi gửi request mới nhưng còn chờ các request dở dang (tới ~10 s với 200 token
   # × 50 ms). Đo từ lúc hey thoát thì T3 ngắn đi đúng khoảng đó (lần chạy 01/11: 291 s thay vì 301 s).
   local t_end=$(( t_load + 180 )) t_mid="" d_mid d_one
-  say "T3 bắt đầu: hết tải (hey thôi gửi request mới lúc $(date -d "@$t_end" +%T))"
+  say "T3 bắt đầu: hết tải (hey thôi gửi request mới lúc $(wall "$t_end"))"
   if wait_for desired $(( UP - 1 )) 600 >/dev/null; then t_mid=$(now); d_mid=$(( t_mid - t_end )); else d_mid="quá-hạn"; fi
   if [ -n "$t_mid" ] && wait_for desired 1 300 >/dev/null; then d_one=$(( $(now) - t_mid )); else d_one="quá-hạn"; fi
-  # Cửa sổ 300 s tính từ lần cuối HPA còn muốn UP: ngay sau hạn dừng, cộng độ trễ scrape 5 s + sync 5 s,
-  # nên cho tới 330 s. Bước sau không được nhanh hơn 60 s (policy). Cận dưới trừ 2 s vì thời gian chỉ đọc
-  # được theo từng giây.
+  # Cửa sổ 300 s tính từ lần cuối HPA còn muốn UP. Lần đó rơi quanh hạn dừng: sớm nhất là lần scrape cuối
+  # còn thấy đủ tải, có thể trước hạn dừng tới 1 chu kỳ scrape (5 s); muộn nhất là sau hạn dừng cộng độ trễ
+  # scrape 5 s + sync 5 s + thời gian xả request dở dang. Nên chấp nhận 295–330 s, đo bằng now() (đồng hồ
+  # đơn điệu, cùng loại HPA dùng). Bước sau không được nhanh hơn 60 s (policy); cận dưới trừ 2 s vì thời gian
+  # chỉ đọc theo giây.
   if [[ $d_mid =~ ^[0-9]+$ && $d_one =~ ^[0-9]+$ ]] \
-     && (( d_mid >= 298 && d_mid <= 330 && d_one >= 58 && d_one <= 90 )); then
-    result "T3 ĐẠT: giữ $UP trong $d_mid s sau khi hết tải rồi về $(( UP - 1 )); về 1 sau thêm $d_one s (tiêu chí 300–330 s; 60–90 s)"
+     && (( d_mid >= 295 && d_mid <= 330 && d_one >= 58 && d_one <= 90 )); then
+    result "T3 ĐẠT: giữ $UP trong $d_mid s sau khi hết tải rồi về $(( UP - 1 )); về 1 sau thêm $d_one s (tiêu chí 295–330 s; 58–90 s)"
   else
-    result "T3 TRƯỢT: về $(( UP - 1 )) sau $d_mid s, về 1 sau thêm $d_one s (tiêu chí 300–330 s; 60–90 s)"
+    result "T3 TRƯỢT: về $(( UP - 1 )) sau $d_mid s, về 1 sau thêm $d_one s (tiêu chí 295–330 s; 58–90 s)"
   fi
 }
 
-t4() {  # T4: NetworkPolicy chặn KEDA → Prometheus → sau 3 lần lỗi, fallback lên FALLBACK replica (≤ 30 s)
-  local ka f0 up f rec
+t4() {  # T4: NetworkPolicy chặn KEDA → Prometheus → lỗi quá FT lần, fallback lên FALLBACK replica (≤ N6 s)
+  local ka f0 up fb f rec
   ensure_idle
   # NetworkPolicy chỉ chặn kết nối MỚI. KEDA phải mở kết nối mới cho mỗi lần hỏi (KEDA_HTTP_DISABLE_KEEP_ALIVE
   # trong platform/keda/values.yaml); thiếu biến này thì kết nối keep-alive cũ vẫn đi qua và T4 trượt oan.
@@ -192,16 +206,21 @@ t4() {  # T4: NetworkPolicy chặn KEDA → Prometheus → sau 3 lần lỗi, fa
   say "T4 bắt đầu: áp NetworkPolicy chặn keda → Prometheus"
   "${K[@]}" apply -f autoscaling/tests/t4-block-keda-to-prometheus.yaml >> "$LOG"
   up=$(wait_for desired "$FALLBACK" 120 || true)
-  f=$(failures)
+  # Bằng chứng fallback là điều kiện Fallback=True do KEDA ghi, không phải một lần đọc numberOfFailures:
+  # hai luồng của KEDA (HPA hỏi, vòng polling) cùng ghi số đó, nên một lần đọc có thể thấp hơn số đã gây
+  # fallback. Điều kiện được làm mới mỗi pollingInterval (5 s), nên chờ thêm tối đa 10 s.
+  if wait_for fallback_on True 10 >/dev/null; then fb=True; else fb=$(fallback_on); fi
+  f=$(failures)                        # chỉ để ghi vào kết quả
   "${K[@]}" delete -f autoscaling/tests/t4-block-keda-to-prometheus.yaml >> "$LOG"
   say "T4: đã gỡ NetworkPolicy"
   rec=$(wait_for failures 0 30 || true)
-  # Không đặt cận dưới: lần chạy 01/11 thấy lỗi thứ 2 và thứ 3 chỉ cách nhau 2 s (KEDA hỏi cả theo HPA lẫn
-  # theo vòng polling của nó), nên 3 lần lỗi có thể đến sớm hơn 3 chu kỳ sync HPA.
-  if [[ $up =~ ^[0-9]+$ && $rec =~ ^[0-9]+$ ]] && (( up <= 30 && ${f:-0} >= 3 )); then
-    result "T4 ĐẠT: fallback lên $FALLBACK sau $up s, numberOfFailures=$f; gỡ policy thì hết lỗi sau $rec s (tiêu chí ≤ 30 s, ≥ 3 lỗi)"
+  # KEDA bật fallback khi số lỗi liên tiếp > FT (pkg/fallback/fallback.go v2.21.0), tức thường thấy
+  # numberOfFailures ≥ FT + 1. Không đặt cận dưới cho thời gian: lần chạy 01/11 thấy lỗi thứ 2 và thứ 3 chỉ
+  # cách nhau 2 s (KEDA hỏi cả theo HPA lẫn theo vòng polling của nó), nên lỗi có thể đến dày hơn chu kỳ sync.
+  if [[ $up =~ ^[0-9]+$ && $rec =~ ^[0-9]+$ ]] && (( up <= N6 )) && [ "$fb" = True ]; then
+    result "T4 ĐẠT: fallback lên $FALLBACK sau $up s (Fallback=True, numberOfFailures=$f); gỡ policy thì hết lỗi sau $rec s (tiêu chí ≤ $N6 s)"
   else
-    result "T4 TRƯỢT: lên $FALLBACK sau $up s, numberOfFailures=${f:-?}, hết lỗi sau $rec s (tiêu chí ≤ 30 s, ≥ 3 lỗi)"
+    result "T4 TRƯỢT: lên $FALLBACK sau $up s, Fallback=${fb:-?}, numberOfFailures=${f:-?}, hết lỗi sau $rec s (tiêu chí ≤ $N6 s, Fallback=True)"
   fi
 }
 
@@ -247,9 +266,14 @@ for c in kubectl jq curl hey; do command -v "$c" >/dev/null || { echo "thiếu $
 # Thông số lấy từ chính ScaledObject (overlay sim), không viết cứng, để sửa overlay thì bài thử đổi theo.
 MAX=$(so '{.spec.maxReplicaCount}')
 FALLBACK=$(so '{.spec.fallback.replicas}')
+FT=$(so '{.spec.fallback.failureThreshold}')
 THRESHOLD=$(so '{.spec.triggers[0].metadata.threshold}')
-[[ $MAX =~ ^[0-9]+$ && $FALLBACK =~ ^[0-9]+$ && $THRESHOLD =~ ^[0-9]+$ ]] \
-  || { echo "ScaledObject $SO thiếu maxReplicaCount, fallback.replicas hoặc threshold nguyên"; exit 1; }
+[[ $MAX =~ ^[0-9]+$ && $FALLBACK =~ ^[0-9]+$ && $FT =~ ^[0-9]+$ && $THRESHOLD =~ ^[0-9]+$ ]] \
+  || { echo "ScaledObject $SO thiếu maxReplicaCount, fallback.replicas, fallback.failureThreshold hoặc threshold nguyên"; exit 1; }
+TIMEOUT=$(so '{.spec.triggers[0].metadata.timeout}')   # ms; rỗng = mặc định của KEDA (3000 ms)
+# Tiêu chí T4 = N6 ở docs/chi-tiet/00-thong-so.md §4 (mất Prometheus → fallback trong ≤ 30 s). Đây là
+# số duy nhất không đọc được từ ScaledObject: nhóm đổi N6 thì sửa ở đây, hoặc truyền N6=<giây> khi chạy.
+N6=${N6:-30}
 (( MAX >= 3 )) || { echo "T1–T5 cần maxReplicaCount ≥ 3 (đang là $MAX)"; exit 1; }
 # Thông số §9.3: fallback.replicas = maxReplicaCount. Overlay đổi max mà quên đổi fallback thì HPA kẹp
 # desired ở max, T4 chờ FALLBACK mãi không tới và trượt oan; dừng ngay để báo đúng chỗ sai.
@@ -270,7 +294,8 @@ PROM=$(so '{.spec.triggers[0].metadata.serverAddress}' \
   || { echo "Không chạy được câu PromQL của $SO qua $PROM (Prometheus chưa sẵn sàng?)"; exit 1; }
 
 mkdir -p "$(dirname "$LOG")"
-say "cấu hình: max=$MAX fallback=$FALLBACK threshold=$THRESHOLD → C=$C, T2 mong đợi desired=$UP"
+# Ghi đủ thông số vào log để sau này biết mỗi số đo T4 ứng với timeout nào
+say "cấu hình: max=$MAX fallback=$FALLBACK failureThreshold=$FT threshold=$THRESHOLD timeout=${TIMEOUT:-mặc định 3000} ms, N6=$N6 s → C=$C, T2 mong đợi desired=$UP"
 watch_loop &
 # Dọn dẹp cả khi dừng giữa chừng (Ctrl-C, lỗi): dừng các tiến trình nền (vòng ghi, load-sim.sh tự tắt hey và
 # port-forward của nó), gỡ NetworkPolicy, gỡ annotation tạm dừng. `|| true`: thứ đã gỡ rồi thì bỏ qua.

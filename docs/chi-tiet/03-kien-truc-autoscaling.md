@@ -530,9 +530,12 @@ spec:
           (sum(vllm:num_requests_running{namespace="llm-serving"}) or vector(0))
           + (sum(vllm:num_requests_waiting{namespace="llm-serving"}) or vector(0))
         threshold: "24"                      # = 0,8 × B*, lấy từ ADR-003
+        timeout: "1000"                      # ms; mặc định 3000 làm fallback có lúc vượt N6 (Thông số §9.3)
 ```
 
 ### 13.3. A1, A3, A4 chỉ khác phần `triggers`
+
+Chỉ thay `query` và `threshold`; mọi trigger giữ `serverAddress`, `metricType: AverageValue` và `timeout: "1000"` như A2, để fallback của mọi cấu hình đều kịp N6.
 
 ```yaml
 # A1: GPU utilization.
@@ -584,7 +587,7 @@ Làm trên simulator (`llm-d-inference-sim` trên kind) và trên GPU nhà **tr�
 | T1 | A2, tải bằng 0 | Giữ 1 replica | Simulator, nhà |
 | T2 | A2, tạo khoảng 2,5 × threshold request đồng thời | desired = 3 trong vòng khoảng 10 s; `status.currentMetrics` đúng giá trị | Simulator |
 | T3 | Tắt tải | Giữ 3 replica trong 300 s, rồi giảm 1 pod mỗi 60 s | Simulator |
-| T4 | Chặn KEDA → Prometheus bằng NetworkPolicy ([ADR-005](../adr/005-sua-thiet-ke-sau-review.md) T6) | Sau 3 lần lỗi, fallback lên max replica | Simulator, nhà |
+| T4 | Chặn KEDA → Prometheus bằng NetworkPolicy ([ADR-005](../adr/005-sua-thiet-ke-sau-review.md) T6) | Sau 4 lần lỗi liên tiếp (số lỗi > `failureThreshold: 3`), fallback lên max replica trong N6 (≤ 30 s) | Simulator, nhà |
 | T5 | Annotation `paused-replicas: "1"` | Giữ đúng 1 replica bất kể tải | Simulator |
 | T6 | Chuyển từ A2 sang A1 | Chỉ còn một HPA; không có dao động ngoài ý muốn | Nhà |
 | T7 | A4 (chỉ hàng đợi), tải ổn định ở mức cao | Thấy số replica dao động như Hình 14; ghi lại làm minh hoạ cho luận văn | Simulator |
@@ -605,7 +608,7 @@ Ghi kết quả vào nhật ký. Đây cũng là tư liệu cho chương "Triể
 | scaleUp | Mặc định (không chờ) | Cold start đã chậm, không nên chờ thêm |
 | scaleDown | Cửa sổ 300 s, giảm 1 pod mỗi 60 s | Tránh scale-down rồi lại phải chịu cold start |
 | Chu kỳ scrape / sync HPA | 5 s / 5 s | Độ trễ phát hiện khoảng 10 s |
-| `fallback` | 3 lần lỗi → số replica tối đa | Mất metric thì ưu tiên chất lượng |
+| `fallback` | Quá 3 lần lỗi liên tiếp → số replica tối đa; timeout mỗi lần hỏi 1 s | Mất metric thì ưu tiên chất lượng; timeout ngắn để kịp N6 ([Thông số §9.3](00-thong-so.md#93-keda-và-hpa)) |
 | Graceful shutdown | preStop + `--shutdown-timeout` + grace period theo ràng buộc ở §8.2 | Thiếu `--shutdown-timeout` thì mọi lần scale-down đều cắt request |
 | Cảnh báo đi kèm | `LLMAtMaxReplicas`, `KedaScalerErrors`, `LLMSLOBurnFast` | Biết khi autoscaling đã hết dư địa hoặc bị "mù" ([Vận hành §3](04-van-hanh.md#3-cảnh-báo)) |
 

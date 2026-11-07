@@ -3,7 +3,7 @@
 
 **Mức:** page · **Quy tắc:** [observability/alerts/llm.yaml](../../observability/alerts/llm.yaml)
 
-**Ý nghĩa.** KEDA gặp ít nhất 3 lỗi trong 2 phút khi chạy PromQL của ScaledObject (`keda_scaler_detail_errors_total` tăng), kéo dài ít nhất 1 phút. Sau 3 lỗi liên tiếp, ScaledObject vào chế độ **fallback**: giữ số replica cố định (`fallback.replicas`, hiện là 4) thay vì scale theo tải.
+**Ý nghĩa.** KEDA gặp ít nhất 3 lỗi trong 2 phút khi chạy PromQL của ScaledObject (`keda_scaler_detail_errors_total` tăng), kéo dài ít nhất 1 phút. Khi lỗi quá 3 lần liên tiếp (lần thứ 4, khoảng 20 s), ScaledObject vào chế độ **fallback**: giữ số replica cố định (`fallback.replicas`, hiện là 4) thay vì scale theo tải.
 
 **Ảnh hưởng.** Autoscaling bị "mù". Người dùng thường chưa bị ảnh hưởng vì fallback giữ nhiều replica, nhưng hệ thống tốn GPU và không phản ứng nếu tải vượt mức fallback.
 

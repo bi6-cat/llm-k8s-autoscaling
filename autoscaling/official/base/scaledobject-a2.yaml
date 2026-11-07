@@ -25,8 +25,10 @@ spec:
   # minReplicaCount = 0, có idleReplicaCount hoặc bật useCachedMetrics (đồ án không dùng), nhưng vẫn quyết
   # định bao lâu KEDA làm mới điều kiện trong status (Fallback, Paused) và event. 5 s theo Thông số §9.3.
   pollingInterval: 5
-  # Hỏi Prometheus lỗi 3 lần liên tiếp → HPA nhận giá trị giả để lên đúng 4 replica (tối đa). Mất tín
-  # hiệu thì thà thừa GPU còn hơn thiếu: thiếu thì người dùng chịu trễ, thừa chỉ tốn tiền (bài T4, VH4).
+  # Hỏi Prometheus lỗi QUÁ 3 lần liên tiếp, tức lần thứ 4 (KEDA so `số lỗi > failureThreshold`,
+  # pkg/fallback/fallback.go v2.21.0) → HPA nhận giá trị giả để lên đúng 4 replica (tối đa). Mất tín hiệu
+  # thì thà thừa GPU còn hơn thiếu: thiếu thì người dùng chịu trễ, thừa chỉ tốn tiền (bài T4, VH4).
+  # Mỗi lần hỏi cách nhau khoảng 5 s, nên fallback sau khoảng 20 s, trong N6 (≤ 30 s). Đo trên kind 07/11.
   # Lưu ý: fallback chỉ chạy với metricType AverageValue.
   fallback: {failureThreshold: 3, replicas: 4}
   advanced:
@@ -54,3 +56,10 @@ spec:
           + (sum(vllm:num_requests_waiting{namespace="llm-serving"}) or vector(0))
         # Số request đồng thời mục tiêu mỗi pod. Giá trị tạm; chốt từ đo năng lực (B*) ở ADR-003.
         threshold: "24"
+        # Timeout HTTP cho mỗi lần hỏi Prometheus, đơn vị ms (số không kèm đơn vị = ms). Mặc định 3000 ms
+        # (KEDA_HTTP_DEFAULT_TIMEOUT) là dư cho Prometheus trong cluster: trên kind (07/11), 459 query
+        # /api/v1/query trong khoảng 40 phút đều < 0,1 s, trung bình 0,6 ms (nhà, V2 chưa đo). Khi mạng bị
+        # chặn (gói tin bị bỏ, không bị từ chối), mỗi lần hỏi phải chờ hết timeout mới thành một lần lỗi:
+        # với 3000 ms, T4 mất 24–38 s, 3/7 lần vượt N6 ≤ 30 s (01/11 và 07/11); với 1000 ms: 17–23 s,
+        # 8/8 lần đạt (07/11). Thông số §9.3.
+        timeout: "1000"

@@ -207,7 +207,8 @@ B\* và KV\* là số request đồng thời trung bình và mức KV-cache trê
 | scaleUp | Mặc định của HPA: cửa sổ 0; tăng 100% hoặc thêm 4 pod mỗi 15 s |
 | scaleDown | `stabilizationWindowSeconds: 300`; 1 pod mỗi 60 s |
 | tolerance | 10% (mặc định) |
-| `fallback` | `failureThreshold: 3`, `replicas` = max |
+| `fallback` | `failureThreshold: 3`, `replicas` = max. KEDA bật fallback khi số lỗi liên tiếp **lớn hơn** ngưỡng, tức ở lần lỗi thứ 4 |
+| Timeout trigger Prometheus | `timeout: "1000"` (ms; mặc định KEDA 3000 ms). Với 3000 ms, T4 trên kind mất 24–38 s, 3/7 lần vượt N6; với 1000 ms: 17–23 s, 8/8 lần đạt (07/11) |
 | Target | Theo [§8.1](#81-các-cấu-hình) |
 
 ### 9.4. Giám sát

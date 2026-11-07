@@ -127,11 +127,11 @@ spec:
             description: "Xem log lần chạy trước: kubectl -n llm-serving logs {{ $labels.pod }} --previous."
             runbook_url: "https://github.com/bi6-cat/llm-k8s-autoscaling/blob/main/docs/runbooks/LLMPodCrashLooping.md"
 
-        # KEDA không lấy được metric từ Prometheus: autoscaling bị "mù". Sau 3 lỗi liên tiếp (~15 s),
-        # ScaledObject chuyển sang fallback giữ 4 replica (autoscaling/official/base/scaledobject-a2.yaml).
+        # KEDA không lấy được metric từ Prometheus: autoscaling bị "mù". Khi lỗi quá 3 lần liên tiếp (lần thứ
+        # 4, ~20 s), ScaledObject chuyển sang fallback giữ 4 replica (autoscaling/official/base/scaledobject-a2.yaml).
         # keda_scaler_detail_errors_total: bộ đếm lỗi theo từng trigger, tên đúng cho KEDA 2.21
         # (pkg/metricscollector/prommetrics.go). Thiết kế ghi keda_scaler_errors_total là tên cũ.
-        # increase(...[2m]) >= 3: ít nhất 3 lỗi trong 2 phút, tức là đủ để vào fallback; một lỗi lẻ do
+        # increase(...[2m]) >= 3: ít nhất 3 lỗi trong 2 phút, tức sắp hoặc đã vào fallback; một lỗi lẻ do
         # mạng chập chờn thì không page. KEDA hỏi mỗi 5 s, nên khi Prometheus hỏng thật có ~24 lỗi/2 phút.
         # Cái bẫy: chỉ lọc theo scaledObject, KHÔNG lọc theo namespace. Metric của KEDA có sẵn nhãn
         # `namespace` (namespace của ScaledObject), trùng với nhãn namespace Prometheus gắn theo pod KEDA,
@@ -147,5 +147,5 @@ spec:
           labels: {severity: page}
           annotations:
             summary: "KEDA không lấy được metric cho ScaledObject {{ $labels.scaledObject }}"
-            description: "Autoscaling đang chạy chế độ fallback (giữ số replica cố định). Kiểm tra Prometheus và đường mạng KEDA → Prometheus."
+            description: "KEDA lỗi liên tục khi hỏi Prometheus: autoscaling không thấy tải, và từ lần lỗi liên tiếp thứ 4 thì vào fallback (giữ số replica tối đa). Kiểm tra Prometheus và đường mạng KEDA → Prometheus."
             runbook_url: "https://github.com/bi6-cat/llm-k8s-autoscaling/blob/main/docs/runbooks/KedaScalerErrors.md"
