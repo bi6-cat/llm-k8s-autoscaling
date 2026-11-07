@@ -6,6 +6,9 @@
 #            nhãn `finish_reason`, còn vLLM v0.31.0 dùng `finished_reason` (vllm/v1/metrics/loggers.py;
 #            đọc /metrics của simulator trên kind ngày 07/11). Đổi tên ngay lúc scrape để dashboard, cảnh
 #            báo và runner chỉ cần biết tên của vLLM thật, đúng mục đích của overlay sim.
+# Lưu ý:     `op: add` vào một trường đã có thì THAY cả danh sách. Base (serving/base/podmonitor.yaml) hiện
+#            chưa có metricRelabelings; nếu sau này base thêm, đổi patch này thành từng phần tử với path
+#            …/metricRelabelings/- (nối vào cuối) để không âm thầm bỏ luật của base trên kind.
 # Tham khảo: observability/dashboards/README.md; Kiến trúc §17.1
 # ──────────────────────────────────────────────────────────────────────────────
 - op: add

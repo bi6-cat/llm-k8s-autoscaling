@@ -428,8 +428,8 @@
           "editorMode": "code",
           "expr": "kube_deployment_status_replicas_ready{namespace=\"llm-serving\", deployment=\"vllm\"}",
           "legendFormat": "Ready",
-          "range": true,
-          "instant": false
+          "range": false,
+          "instant": true
         },
         {
           "refId": "B",
@@ -440,8 +440,8 @@
           "editorMode": "code",
           "expr": "kube_horizontalpodautoscaler_status_desired_replicas{namespace=\"llm-serving\", horizontalpodautoscaler=~\"$hpa\"}",
           "legendFormat": "desired",
-          "range": true,
-          "instant": false
+          "range": false,
+          "instant": true
         },
         {
           "refId": "C",
@@ -452,8 +452,8 @@
           "editorMode": "code",
           "expr": "kube_horizontalpodautoscaler_spec_max_replicas{namespace=\"llm-serving\", horizontalpodautoscaler=~\"$hpa\"}",
           "legendFormat": "max",
-          "range": true,
-          "instant": false
+          "range": false,
+          "instant": true
         }
       ],
       "fieldConfig": {
@@ -959,7 +959,7 @@
     {
       "type": "table",
       "title": "Cold start từng pod (tạo → Ready)",
-      "description": "Thời gian từ lúc pod được tạo tới lần Ready gần nhất, tính tại cuối khoảng thời gian đang xem (kube_pod_status_ready_time − kube_pod_created). Chỉ có pod còn tồn tại lúc đó. Số nghiệm thu N2a, ĐG3 lấy từ runner, không lấy ở đây.",
+      "description": "Thời gian từ lúc pod được tạo tới khi Ready (kube_pod_status_ready_time − kube_pod_created), cho mọi pod có mặt trong khoảng thời gian đang xem, kể cả pod đã bị scale-down: max_over_time trên subquery mỗi 15 s giữ lại giá trị của pod đã biến mất. Số nghiệm thu N2a, ĐG3 lấy từ runner, không lấy ở đây.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -972,7 +972,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "kube_pod_status_ready_time{namespace=\"llm-serving\", pod=~\"vllm-.*\"} - on (namespace, pod) kube_pod_created{namespace=\"llm-serving\", pod=~\"vllm-.*\"}",
+          "expr": "max_over_time((kube_pod_status_ready_time{namespace=\"llm-serving\", pod=~\"vllm-.*\"} - on (namespace, pod) kube_pod_created{namespace=\"llm-serving\", pod=~\"vllm-.*\"})[$__range:15s])",
           "legendFormat": "{{pod}}",
           "range": false,
           "instant": true,

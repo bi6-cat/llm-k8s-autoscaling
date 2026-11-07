@@ -102,7 +102,7 @@
         "name": "gpu_price",
         "label": "Đơn giá GPU-giờ (USD)",
         "type": "textbox",
-        "description": "Giá thuê một GPU trong một giờ của máy đang chạy. Mặc định 0,5 là giá trần khi chọn máy Vast (Thông số §10.2); ở nhà đặt 0.",
+        "description": "Giá thuê một GPU trong một giờ của máy đang chạy, nhập bằng dấu chấm thập phân (0.45, không viết 0,45): giá trị được chép thẳng vào PromQL. Mặc định 0.5 là giá trần khi chọn máy Vast (Thông số §10.2); ở nhà đặt 0.",
         "query": "0.5",
         "current": {
           "text": "0.5",
@@ -894,7 +894,7 @@
     {
       "type": "stat",
       "title": "GPU-giờ",
-      "description": "Tổng số pod vLLM theo thời gian, lấy mẫu mỗi phút, chia 60 (Vận hành §9). Tính cả pod đang cold start, vì pod đã giữ GPU. Ở nhà mỗi pod là một GPU replica của time-slicing, nên đây là GPU-replica-giờ.",
+      "description": "Số pod vLLM đang giữ GPU, lấy mẫu mỗi phút, cộng lại rồi chia 60. Pod giữ GPU = pod đã được xếp lên node: tính cả pod đang cold start và pod đang tắt, không tính pod Pending chưa có node. Khác ví dụ ở Vận hành §9 (kube_deployment_status_replicas), vốn đếm cả pod chưa có GPU và bỏ sót pod đang tắt. Ở nhà mỗi pod là một GPU replica của time-slicing, nên đây là GPU-replica-giờ.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -907,7 +907,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(sum_over_time(kube_deployment_status_replicas{namespace=\"llm-serving\", deployment=\"vllm\"}[$__range:1m])) / 60",
+          "expr": "sum_over_time((count(kube_pod_status_scheduled{namespace=\"llm-serving\", pod=~\"vllm-.*\", condition=\"true\"} == 1))[$__range:1m]) / 60",
           "legendFormat": "GPU-giờ",
           "range": false,
           "instant": true
@@ -1039,7 +1039,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(sum_over_time(kube_deployment_status_replicas{namespace=\"llm-serving\", deployment=\"vllm\"}[$__range:1m])) / 60 * $gpu_price",
+          "expr": "sum_over_time((count(kube_pod_status_scheduled{namespace=\"llm-serving\", pod=~\"vllm-.*\", condition=\"true\"} == 1))[$__range:1m]) / 60 * $gpu_price",
           "legendFormat": "USD",
           "range": false,
           "instant": true
@@ -1105,7 +1105,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "(sum(sum_over_time(kube_deployment_status_replicas{namespace=\"llm-serving\", deployment=\"vllm\"}[$__range:1m])) / 60 * $gpu_price) / (sum(increase(vllm:generation_tokens_total{namespace=\"llm-serving\"}[$__range])) / 1e6)",
+          "expr": "(sum_over_time((count(kube_pod_status_scheduled{namespace=\"llm-serving\", pod=~\"vllm-.*\", condition=\"true\"} == 1))[$__range:1m]) / 60 * $gpu_price) / (sum(increase(vllm:generation_tokens_total{namespace=\"llm-serving\"}[$__range])) / 1e6)",
           "legendFormat": "USD / 1M token",
           "range": false,
           "instant": true
@@ -1290,7 +1290,7 @@
     {
       "type": "timeseries",
       "title": "GPU-giờ theo ngày (7 ngày gần nhất)",
-      "description": "Mỗi cột là GPU-giờ của một ngày, tính theo ngày UTC (bắt đầu lúc 07:00 giờ Việt Nam); cột cuối là ngày hôm nay, chưa trọn. `offset -1d` = lấy 24 giờ SAU mốc của cột thay vì 24 giờ trước, để cột đặt ở đầu ngày nào thì tính đúng ngày đó. Chỉ có dữ liệu trong thời gian Prometheus còn giữ (retention: sim 1 ngày, nhà 3 ngày, cloud 15 ngày). Panel luôn xem 7 ngày tới hiện tại; khi dashboard đặt khoảng thời gian tuyệt đối (xem lại một lượt cũ), Grafana bỏ qua thiết lập này và panel báo Data outside time range.",
+      "description": "Mỗi cột là GPU-giờ của một ngày theo giờ của trình duyệt (Grafana căn bước 1 ngày theo múi giờ của dashboard; ảnh chụp trên kind 07/11 cho cột đặt ở 00:00 giờ Việt Nam); cột cuối là ngày hôm nay, chưa trọn. Cách tính pod giữ GPU như ô GPU-giờ. `offset -1d` = lấy 24 giờ SAU mốc của cột thay vì 24 giờ trước, để cột đặt ở đầu ngày nào thì tính đúng ngày đó. Chỉ có dữ liệu trong thời gian Prometheus còn giữ (retention: sim 1 ngày, nhà 3 ngày, cloud 15 ngày). Panel luôn xem 7 ngày tới hiện tại; khi dashboard đặt khoảng thời gian tuyệt đối (xem lại một lượt cũ), Grafana bỏ qua thiết lập này và panel báo Data outside time range.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1303,7 +1303,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(sum_over_time(kube_deployment_status_replicas{namespace=\"llm-serving\", deployment=\"vllm\"}[1d:1m] offset -1d)) / 60",
+          "expr": "sum_over_time((count(kube_pod_status_scheduled{namespace=\"llm-serving\", pod=~\"vllm-.*\", condition=\"true\"} == 1))[1d:1m] offset -1d) / 60",
           "legendFormat": "GPU-giờ",
           "range": true,
           "instant": false,
