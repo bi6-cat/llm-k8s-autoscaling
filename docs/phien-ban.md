@@ -17,6 +17,8 @@ Tra ngày 09/10/2026; các dòng của CI tra ngày 01/11/2026. Đổi phiên b�
 | vLLM | `vllm/vllm-openai:v0.31.0@sha256:c1c9f6fd…c3` (CUDA 13.0, cần driver ≥ 580). Không dùng `-cu129`: hỏng lúc khởi động, xem [ADR-004 §7](adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md#7-cập-nhật-sau-ngày-08102026) | `serving/base/kustomization.yaml` |
 | Model nhà | `Qwen/Qwen2.5-0.5B-Instruct@7ae557604adf67be50417f59c2c2f167def9a775` (tra 06/11). Trước 06/11: `Qwen2.5-1.5B-Instruct@989aa798…06`, dùng cho LT1–LT3 và `capacity-home.json` | `serving/overlays/home` |
 | Model cloud | `Qwen/Qwen2.5-7B-Instruct@a09a35458c702b33eeacc393d103063234e8bc28` | `serving/overlays/cloud` |
+| Model cloud (thử) | `Qwen/Qwen2.5-3B-Instruct@aa8e72537993ba99e69dfaafa59ed015b17504d1` (tra 06/11) | `serving/overlays/cloud-3b` |
+| vastai (CLI) | `vastai@1.11.0`, chạy qua `uvx --python 3.12` (Python 3.14 không build được pillow, 06/11) | `infra/provision/vast.sh` |
 | llm-d-inference-sim | `ghcr.io/llm-d/llm-d-inference-sim:v0.12.0@sha256:c6838d86…60` (linux/amd64, tra 04/11) | `serving/overlays/sim/kustomization.yaml` |
 | kind / node image | `v0.33.0` / `kindest/node:v1.37.0` | laptop; image ở `infra/kind/kind-config.yaml` |
 | kubeconform (CI) | `v0.8.0` | `.github/workflows/ci.yaml` |
