@@ -119,6 +119,7 @@ def run_one(ctx: Context, spec: RunSpec, attempt_dir: Path) -> str:
         "run_id": spec.run_id,
         "attempt_dir": attempt_dir.name,
         "spec": asdict(spec),
+        "shuffle_seed": m.shuffle_seed,  # seed xáo thứ tự lượt (Thông số §8.2); None = theo thứ tự file
         "timing": asdict(m.timing),
         "target": asdict(t),
         "git": git_state(ctx.repo_root),

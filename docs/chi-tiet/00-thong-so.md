@@ -148,7 +148,7 @@ B\* và KV\* là số request đồng thời trung bình và mức KV-cache trê
 | **Cộng** | 5 | 7 | 5 | **17** |
 
 - Bỏ S1 × KB1: ở 0,5C, S1 và A2 cùng chạy 1 replica, nên S1 không thêm thông tin.
-- Thứ tự lượt được xáo trộn bằng seed ghi lại. Mọi lượt chạy ở mức cold start L2. Mỗi lượt khoảng 35 phút, kể cả reset, warm-up và cooldown.
+- Thứ tự lượt được xáo trộn bằng seed ghi lại, **trong từng khối lần lặp**: 11 lượt lặp-1 (mỗi ô một lượt) chạy trước, rồi 5 lượt lặp-2, rồi 1 lượt lặp-3. Phiên bị cắt ngang thì chỉ mất lần lặp, không mất ô nào; các lượt cùng lần lặp dùng chung lịch gửi và chạy gần nhau về thời gian. Mọi lượt chạy ở mức cold start L2. Mỗi lượt khoảng 35 phút, kể cả reset, warm-up và cooldown.
 - Could: thêm A3 × KB1–KB3, mỗi ô 2 lượt.
 
 ### 8.3. ĐG1 và ĐG3

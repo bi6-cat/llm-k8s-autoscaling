@@ -60,6 +60,57 @@ def test_matrix_const_rates_get_distinct_ids():
         ({"runs": [{"config": "S1", "scenario": "KB1"}]}, "cần `capacity`"),
         ({"runs": [{"config": "S1", "scenario": "CONST", "rate": 1, "duration": 1}] * 2}, "trùng run_id"),
         ({"env": "prod"}, "env"),
+        # Giá trị chưa điền (`null`) hoặc vô nghĩa bị chặn ngay khi đọc file
+        ({"runs": [{"config": "S1", "scenario": "KB1", "capacity": None}]}, "`capacity` phải là số dương"),
+        ({"runs": [{"config": "S1", "scenario": "CONST", "rate": 0, "duration": 1}]}, "`rate` phải"),
+        (
+            {"runs": [{"config": "S1", "scenario": "KB3", "capacity": 1, "kb3_replicas": True}]},
+            "kb3_replicas",
+        ),
+        ({"runs": [{"config": "S1", "scenario": "KB1", "capacity": 1, "repeats": 0}]}, "`repeats` phải"),
+        (
+            {"configs": {"A2": {"type": "scaledobject", "file": "a", "overrides": {"threshold": None}}}},
+            "threshold",
+        ),
+        (
+            {"configs": {"A2": {"type": "scaledobject", "file": "a", "overrides": {"max_replicas": 2.5}}}},
+            "max_",
+        ),
+        ({"configs": {"S4": {"type": "static", "replicas": "4"}}}, "`replicas` phải"),
+        ({"shuffle_seed": "7"}, "shuffle_seed"),
+        # Số không hữu hạn (`.nan`, `.inf` của YAML), số viết trong ngoặc kép, min lớn hơn max
+        ({"runs": [{"config": "S1", "scenario": "KB1", "capacity": float("nan")}]}, "hữu hạn"),
+        (
+            {"runs": [{"config": "S1", "scenario": "CONST", "rate": float("inf"), "duration": 1}]},
+            "`rate` phải",
+        ),
+        (
+            {"configs": {"A2": {"type": "scaledobject", "file": "a", "overrides": {"threshold": "24"}}}},
+            "ngoặc kép",
+        ),
+        (
+            {
+                "configs": {
+                    "A2": {
+                        "type": "scaledobject",
+                        "file": "a",
+                        "overrides": {"min_replicas": 3, "max_replicas": 2},
+                    }
+                }
+            },
+            "lớn hơn",
+        ),
+        # Khoá gõ nhầm bị từ chối ở mọi cấp, thay vì lặng lẽ bị bỏ qua (bỏ xáo, bỏ lặp…)
+        ({"shufle_seed": 7}, r"gốc: khoá không hợp lệ \['shufle_seed'\]"),
+        ({"runs": [{"config": "S1", "scenario": "KB1", "capacity": 1, "repeat": 2}]}, r"runs\[0\]: khoá"),
+        ({"defaults": {"capasity": 1}}, "defaults: khoá"),
+        ({"configs": {"S1": {"type": "static", "replica": 2}}}, "configs.S1: khoá"),
+        (
+            {"configs": {"A2": {"type": "scaledobject", "file": "a", "overrides": {"max_replica": 2}}}},
+            "overrides: khoá",
+        ),
+        ({"timing": {"warmup": 60}}, "timing: khoá"),
+        ({"target": {**BASE["target"], "namspace": "x"}}, "target: khoá"),
     ],
 )
 def test_matrix_errors(bad, msg):
@@ -67,10 +118,64 @@ def test_matrix_errors(bad, msg):
         matrix.parse({**BASE, **bad})
 
 
+def test_matrix_root_x_keys_are_ignored():
+    # Khoá gốc `x-…` là chỗ đặt YAML anchor (x-adr003 trong matrix-v2.yaml), không phải khoá gõ nhầm
+    assert len(matrix.parse({**BASE, "x-adr003": {"C": 5}}).runs) == 3
+
+
+def test_matrix_shuffle_seed_is_deterministic_and_ignores_row_order():
+    rows = [{"config": "S1", "scenario": s, "capacity": 1, "repeats": 2} for s in ("KB1", "KB2", "KB3")]
+    grouped = matrix.parse({**BASE, "runs": rows})
+    a = matrix.parse({**BASE, "runs": rows, "shuffle_seed": 7})
+    b = matrix.parse({**BASE, "runs": rows[::-1], "shuffle_seed": 7})
+    ids = [r.run_id for r in a.runs]
+    assert sorted(ids) == sorted(r.run_id for r in grouped.runs)
+    assert ids == [r.run_id for r in b.runs]
+    # Ghim thứ tự của seed 7: CI chạy Python 3.11 và 3.15, nên test này đỏ nếu thứ tự đổi theo phiên bản.
+    # Xáo trong từng khối lần lặp: mọi lượt lặp-1 đứng trước mọi lượt lặp-2.
+    assert ids == ["S1-KB2-1", "S1-KB1-1", "S1-KB3-1", "S1-KB2-2", "S1-KB1-2", "S1-KB3-2"]
+    assert a.shuffle_seed == 7 and grouped.shuffle_seed is None
+    # Mỗi lượt giữ đúng số thứ tự lặp của nó (= --run-index của loadgen), xáo không làm đổi lịch gửi
+    assert all(r.run_id.endswith(f"-{r.repeat}") for r in a.runs)
+
+
 def test_matrix_sim_file_is_valid():
     m = matrix.load(REPO / "experiments" / "matrix-sim.yaml")
     assert {r.config.id for r in m.runs} == {"S1", "A2"}
     assert (REPO / m.runs[1].config.file).exists()
+
+
+def test_matrix_v2_draft_refuses_unfilled_values_then_matches_design():
+    path = REPO / "experiments" / "matrix-v2.yaml"
+    # Bản nháp còn `null` (chờ ADR-003): runner phải từ chối, kể cả --dry-run
+    with pytest.raises(matrix.MatrixError, match="số dương"):
+        matrix.load(path)
+    # Điền thử như ở V2 rồi kiểm cấu trúc theo Thông số §8.2
+    text = path.read_text(encoding="utf-8")
+    filled = text.replace("&C null", "&C 5").replace("&A2_THRESHOLD null", "&A2_THRESHOLD 24")
+    assert filled.count("null") == text.count("null") - 2
+    m = matrix.parse(yaml.safe_load(filled))
+    cells: dict[tuple[str, str], int] = {}
+    for r in m.runs:
+        cells[(r.config.id, r.scenario)] = cells.get((r.config.id, r.scenario), 0) + 1
+    assert cells == {
+        ("S1", "KB2"): 1, ("S1", "KB3"): 1,
+        ("S4", "KB1"): 1, ("S4", "KB2"): 1, ("S4", "KB3"): 1,
+        ("A1", "KB1"): 2, ("A1", "KB2"): 2, ("A1", "KB3"): 1,
+        ("A2", "KB1"): 2, ("A2", "KB2"): 3, ("A2", "KB3"): 2,
+    }  # fmt: skip
+    assert len(m.runs) == 17 and m.env == "cloud" and m.shuffle_seed is not None
+    # Xáo theo khối lần lặp: 11 lượt đầu là lặp-1 và phủ đủ 11 ô, nên phiên bị cắt ngang không mất ô nào
+    assert [r.repeat for r in m.runs] == sorted(r.repeat for r in m.runs)
+    assert {(r.config.id, r.scenario) for r in m.runs[:11]} == set(cells)
+    n = m.runs[0].replicas_for_kb3
+    by_id = {r.config.id: r.config for r in m.runs}
+    assert by_id["S4"].replicas == n
+    for cid in ("A1", "A2"):
+        assert by_id[cid].overrides["max_replicas"] == n
+        assert (REPO / by_id[cid].file).exists()
+    assert by_id["A2"].overrides["threshold"] == 24 and "threshold" not in by_id["A1"].overrides
+    assert all(r.capacity == 5 and r.replicas_for_kb3 == n for r in m.runs)
 
 
 def test_render_scaledobject_overrides_and_pause():
