@@ -43,7 +43,7 @@
   - KEDA v2.21.0 in cảnh báo khi áp A2: `pollingInterval` không ảnh hưởng scale khi `minReplicaCount ≥ 1`, nhưng vẫn quyết định KEDA làm mới điều kiện trong status và event bao lâu một lần. Comment của A2 đã ghi theo cảnh báo này.
 - **Incidents:**
   - T4 trượt N6 (38 s) → fallback cần 4 lỗi, và mỗi lần hỏi bị chặn mất 3 s timeout, nên thời gian phụ thuộc hai luồng hỏi (HPA, vòng polling của KEDA) lệch pha nhau thế nào → đặt `timeout: "1000"`.
-  - T3 trượt (292 s, lần 3) → đồng hồ của VM WSL2 chạy nhanh 1,6 % so với giờ thật. HPA giữ đúng 300 s theo đồng hồ của nó, tức khoảng 295 s giờ thật; script đo bằng `date` (giờ thật) nên thấy 292–304 s tuỳ độ rung của scrape và sync → script đo mọi khoảng bằng đồng hồ đơn điệu (`/proc/uptime`). Lúc đầu tôi tưởng ngược lại (đồng hồ thực bị kéo lùi, làm số đo hụt); phép đo 64 s cho thấy chính đồng hồ của VM chạy nhanh, còn đồng hồ thực chỉ bị kéo về theo Windows.
+  - T3 trượt (292 s, lần 3) → đồng hồ của VM WSL2 chạy nhanh 1,6 % so với giờ thật. HPA giữ đúng 300 s theo đồng hồ của nó, tức khoảng 295 s giờ thật; script đo bằng `date` (giờ thật) nên thấy 292–304 s tuỳ độ rung của scrape và sync → script đo mọi khoảng bằng đồng hồ đơn điệu (`/proc/uptime`). Giả thuyết ban đầu là ngược lại (đồng hồ thực bị kéo lùi, làm số đo hụt); phép đo 64 s cho thấy chính đồng hồ của VM chạy nhanh, còn đồng hồ thực chỉ bị kéo về theo Windows.
   - Lần 4 khởi chạy đầu tiên (12:35) không chạy: lệnh `nohup … &` gọi qua `wsl.exe --exec` báo "started", nhưng 2,5 giờ sau không có tiến trình `make` và không có file log. Nhiều khả năng tiến trình nền bị tắt theo phiên `wsl.exe` (chưa kiểm nguyên nhân) → chạy lại `make sim-test` thành tác vụ nền của Claude Code, chờ xong ở tiền cảnh của lệnh `wsl.exe`.
   - Cảnh báo `KedaScalerErrors` hiện không kêu được (phát hiện khi soát, chưa sửa) → comment của rule ghi cần bật metric của KEDA operator (`prometheus.operator.enabled`, `podMonitor.enabled`), nhưng `platform/keda/values.yaml` chưa bật → bật ở PR sau (TR3/TR4).
 - **Deviations:**
@@ -194,3 +194,20 @@
 - **Thesis:**
   - §5.1 (điều kiện hợp lệ của lượt, cách bảo đảm so sánh được): KEDA không báo lỗi khi mất tín hiệu, nên phải kiểm bên ngoài. Dùng bảng 4 ca trên kind.
   - §5.3 "vì sao không chọn GPU utilization": thêm một điểm yếu vận hành của A1. Exporter không có label pod, và mất exporter thì A1 đứng yên mà không có lỗi nào.
+
+## 2026-11-07 – TR2: merge chuỗi PR #16–#19 vào `main`
+
+- **Task:** TR2 · **Environment:** none (GitHub). Cluster nhà chịu ảnh hưởng gián tiếp qua Argo CD.
+- **Done:**
+  1. Trình bàn với Quang rồi cho phép tự merge (07/11). Kiểm trước khi merge:
+     - cả 4 PR ở trạng thái `MERGEABLE`/`CLEAN`, CI 6/6 xanh, 0 review, 0 bình luận;
+     - `main` không có commit mới;
+     - mỗi nhánh chứa bản mới nhất của nhánh nằm dưới (`git merge-base --is-ancestor`).
+  2. Merge theo thứ tự #16 → #17 → #18 → #19. Sau mỗi lần merge, đổi base PR kế tiếp sang `main` (`gh pr edit <n> --base main`) và kiểm diff chỉ còn phần của PR đó. Các nhánh vẫn giữ trên remote, như các PR trước.
+  3. Sửa một câu viết ở ngôi thứ nhất trong mục 07/11 (T3, đồng hồ WSL2).
+- **Decision:** merge bằng merge commit như các PR trước, không squash. PR sau chứa commit gốc của PR trước; nếu squash thì PR sau sẽ lặp lại diff của PR trước và dễ xung đột khi đổi base.
+- **Results:**
+  - Merge commit: #16 `f28c1a8`, #17 `1eb4eb6`, #18 `2321eee`, #19 `a7d2b7c`. CI trên `main` (push) đạt ở cả 4 commit.
+  - `git diff origin/feat/tr2-signal-check origin/main` rỗng: cây của `main` trùng với bản CI đã kiểm ở #19.
+  - Chưa kiểm: ở nhà, Argo CD tự sync `keda` (pod khởi động lại với `KEDA_HTTP_DISABLE_KEEP_ALIVE=true`, không còn limit CPU) và `monitoring` (`values.yaml`). Các app khác ở nhà không đọc file nào trong 4 PR này, và nhà chưa có app cho `autoscaling/` hay `observability/`. Trình chưa vào được cluster nhà, nên Quang theo dõi hai app trên.
+- **Links:** PR #16, #17, #18, #19.
