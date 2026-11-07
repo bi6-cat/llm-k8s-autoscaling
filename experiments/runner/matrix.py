@@ -4,14 +4,19 @@ Khái niệm: File ma trận mô tả một phiên: cluster nào (namespace, Dep
     các cấu hình scale (`configs`), và danh sách lượt (`runs`: cấu hình × kịch bản × số lần lặp).
     Mỗi lượt có một `run_id` cố định, sinh từ nội dung lượt, nên chạy lại phiên thì runner nhận ra
     lượt nào đã xong (progress.json) mà không cần đánh số tay.
+    `shuffle_seed` (tuỳ chọn) xáo thứ tự lượt theo seed (Thông số §8.2), để thứ tự chạy không trùng với
+    thứ tự cấu hình: nếu không, thứ gì trôi theo thời gian (nhiệt GPU, trạng thái node) bị tính nhầm
+    thành khác biệt giữa các cấu hình.
 Mục đích: Kiểm tra file ngay khi bắt đầu, báo lỗi rõ ràng, để không phát hiện lỗi chính tả ở lượt
-    thứ 10 lúc 3 giờ sáng. Không gọi cluster: hàm thuần, có unit test.
+    thứ 10 lúc 3 giờ sáng. Không gọi cluster: hàm thuần, có unit test. Số phải dương (bắt cả giá trị
+    `null` chưa điền trong file nháp, như matrix-v2.yaml trước ADR-003).
 
 Ví dụ một file: experiments/matrix-sim.yaml.
 """
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -88,13 +93,36 @@ class Matrix:
     env: str  # home | sim | cloud (CONTRIBUTING §1)
     target: Target
     timing: Timing
-    runs: list[RunSpec]
+    runs: list[RunSpec]  # theo thứ tự sẽ chạy (đã xáo nếu có shuffle_seed)
+    shuffle_seed: int | None = None
 
 
 def _require(d: dict[str, Any], key: str, where: str) -> Any:
     if key not in d:
         raise MatrixError(f"{where}: thiếu trường `{key}`")
     return d[key]
+
+
+def _positive(value: Any, where: str, key: str, integer: bool = False) -> Any:
+    """Trả lại `value` nếu là số dương (số nguyên khi integer=True), nếu không thì báo lỗi.
+
+    bool bị loại riêng vì trong Python `True` cũng là int (bằng 1).
+    """
+    is_num = isinstance(value, int) if integer else isinstance(value, (int, float))
+    if not is_num or isinstance(value, bool) or value <= 0:
+        kind = "số nguyên dương" if integer else "số dương"
+        raise MatrixError(f"{where}: `{key}` phải là {kind}, gặp {value!r}")
+    return value
+
+
+def _shuffle_key(seed: int, run_id: str) -> str:
+    """Khoá sắp xếp khi xáo: sha256 của "<seed>:<run_id>".
+
+    Không dùng random.shuffle: Python chỉ cam kết giữ nguyên dãy của random() qua các phiên bản, không cam
+    kết với shuffle. Với khoá băm, thứ tự chỉ phụ thuộc seed và tập run_id (không phụ thuộc thứ tự dòng
+    trong file hay bản Python), và thêm một lượt mới không đảo thứ tự tương đối của các lượt cũ.
+    """
+    return hashlib.sha256(f"{seed}:{run_id}".encode()).hexdigest()
 
 
 def parse(data: dict[str, Any]) -> Matrix:
@@ -126,12 +154,20 @@ def parse(data: dict[str, Any]) -> Matrix:
             raise MatrixError(f"{where}: type `{ctype}` không hợp lệ ({' | '.join(CONFIG_TYPES)})")
         if ctype == "scaledobject" and "file" not in c:
             raise MatrixError(f"{where}: cấu hình scaledobject cần `file`")
+        overrides = dict(c.get("overrides", {}))
+        # Kiểm ngay ở đây: threshold sai (ví dụ `null` chưa điền) chỉ lộ ra khi KEDA từ chối ScaledObject,
+        # tức sau khi lượt đã reset xong.
+        if "threshold" in overrides:
+            _positive(overrides["threshold"], f"{where}.overrides", "threshold")
+        for key in ("max_replicas", "min_replicas"):
+            if key in overrides:
+                _positive(overrides[key], f"{where}.overrides", key, integer=True)
         configs[cid] = Config(
             id=cid,
             type=ctype,
-            replicas=int(c.get("replicas", 1)),
+            replicas=_positive(c.get("replicas", 1), where, "replicas", integer=True),
             file=c.get("file"),
-            overrides=dict(c.get("overrides", {})),
+            overrides=overrides,
         )
 
     runs: list[RunSpec] = []
@@ -149,9 +185,15 @@ def parse(data: dict[str, Any]) -> Matrix:
             raise MatrixError(f"{where}: CONST cần `rate` và `duration`")
         if scenario != "CONST" and "capacity" not in r:
             raise MatrixError(f"{where}: {scenario} cần `capacity` (C, req/s)")
+        if scenario == "CONST":
+            _positive(r["rate"], where, "rate")
+            _positive(r["duration"], where, "duration")
+        else:
+            _positive(r["capacity"], where, "capacity")
+        _positive(r.get("kb3_replicas", 4), where, "kb3_replicas", integer=True)
         # CONST ghi kèm tốc độ vào tên, để một phiên quét nhiều mức λ (ĐG1) không trùng run_id
         label = f"CONST{float(r['rate']):g}" if scenario == "CONST" else scenario
-        for rep in range(1, int(r.get("repeats", 1)) + 1):
+        for rep in range(1, _positive(r.get("repeats", 1), where, "repeats", integer=True) + 1):
             runs.append(
                 RunSpec(
                     run_id=f"{cid}-{label}-{rep}",
@@ -168,7 +210,12 @@ def parse(data: dict[str, Any]) -> Matrix:
     dup = sorted({x for x in ids if ids.count(x) > 1})
     if dup:
         raise MatrixError(f"runs: trùng run_id {dup}; đổi `repeats` hoặc gộp các dòng trùng")
-    return Matrix(session=session, env=env, target=target, timing=timing, runs=runs)
+    seed = data.get("shuffle_seed")
+    if seed is not None:
+        if not isinstance(seed, int) or isinstance(seed, bool):
+            raise MatrixError(f"gốc: `shuffle_seed` phải là số nguyên, gặp {seed!r}")
+        runs.sort(key=lambda x: _shuffle_key(seed, x.run_id))
+    return Matrix(session=session, env=env, target=target, timing=timing, runs=runs, shuffle_seed=seed)
 
 
 def load(path: Path) -> Matrix:
