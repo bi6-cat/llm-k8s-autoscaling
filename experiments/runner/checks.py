@@ -1,7 +1,8 @@
 """Kiểm điều kiện hợp lệ của một lượt (Môi trường §17). Hàm thuần, có unit test.
 
 Khái niệm: Lượt "không hợp lệ" = số đo có thể sai vì lý do ngoài cấu hình đang so sánh (máy tạo tải bị
-    nghẽn, pod vLLM bị thay giữa chừng, Prometheus mất mẫu). Lượt đó vẫn giữ dữ liệu nhưng phải chạy lại.
+    nghẽn, pod vLLM bị thay giữa chừng, Prometheus mất mẫu, KEDA mất tín hiệu scale). Lượt đó vẫn giữ dữ
+    liệu nhưng phải chạy lại.
 Mục đích: Gom mọi tiêu chí thành checks.json `{valid, reasons, details}`, để ai đọc cũng biết vì sao một
     lượt bị loại. Phần tự kiểm của máy tạo tải (lệch lịch, CPU, throttle) đã có trong loadgen.json;
     ở đây chỉ đọc kết quả `valid` của nó, không kiểm lại.
@@ -23,7 +24,10 @@ def evaluate(
     pods_start: list[dict[str, Any]],
     pods_end: list[dict[str, Any]],
     scrape_gaps: dict[str, float | None],
+    signal: dict[str, Any] | None,
 ) -> dict[str, Any]:
+    """`signal`: kết quả collect.signal_gap của cấu hình có trường `signal` trong ma trận; None nếu không có
+    (cấu hình tĩnh, hoặc ma trận không khai báo)."""
     reasons: list[str] = []
 
     # 1) Máy tạo tải chạy xong và tự kiểm đạt
@@ -58,6 +62,22 @@ def evaluate(
         if gap is not None and gap > SCRAPE_GAP_MAX_S:
             reasons.append(f"khoảng trống scrape {gap:.0f} s ở {target} (> {SCRAPE_GAP_MAX_S:.0f} s)")
 
+    # 5) Tín hiệu scale có mẫu suốt pha chính. KEDA coi truy vấn rỗng là 0 mà không báo lỗi (Kiến trúc
+    #    §13.4): exporter GPU chết thì A1 đứng ở 1 replica, số đo vẫn trông như một kết quả bình thường.
+    #    Cùng ngưỡng 15 s với khoảng trống scrape (Môi trường §17), tức mất khoảng 3 lần scrape liền ở chu kỳ
+    #    5 s; trong lúc đó KEDA không đọc được tải thật.
+    if signal is not None:
+        sig_gap = signal["max_gap_s"]
+        if signal.get("error"):
+            reasons.append(f"không kiểm được tín hiệu scale `{signal['selector']}`: {signal['error']}")
+        elif signal["samples"] == 0:
+            reasons.append(f"tín hiệu scale `{signal['selector']}` không có mẫu nào trong pha chính")
+        elif sig_gap is not None and sig_gap > SCRAPE_GAP_MAX_S:
+            reasons.append(
+                f"tín hiệu scale `{signal['selector']}` mất mẫu {sig_gap:.0f} s trong pha chính "
+                f"(> {SCRAPE_GAP_MAX_S:.0f} s)"
+            )
+
     return {
         "valid": not reasons,
         "reasons": reasons,
@@ -67,6 +87,7 @@ def evaluate(
             "initial_ok": initial_ok,
             "initial_note": initial_note,
             "scrape_gap_max_s": scrape_gaps,
+            "signal": signal,
             "pods_start": [p["name"] for p in pods_start],
             "pods_end": [p["name"] for p in pods_end],
         },

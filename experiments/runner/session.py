@@ -216,6 +216,8 @@ def run_one(ctx: Context, spec: RunSpec, attempt_dir: Path) -> str:
         ctx.kube, t.namespace, [p["name"] for p in pods_end], int(t_end - t_begin) + 60, attempt_dir / "logs"
     )
     gaps = collect.scrape_gaps(ctx.prom, t.namespace, t_main0, t_main1)
+    sig = spec.config.signal
+    signal = collect.signal_gap(ctx.prom, sig, t_main0, t_main1) if sig else None
 
     # 7) Kiểm hợp lệ
     lg = attempt_dir / "loadgen.json"
@@ -228,6 +230,7 @@ def run_one(ctx: Context, spec: RunSpec, attempt_dir: Path) -> str:
         pods_start=pods_start,
         pods_end=pods_end,
         scrape_gaps=gaps,
+        signal=signal,
     )
     write_json(attempt_dir / "checks.json", result)
     meta.update(
@@ -249,6 +252,34 @@ def run_one(ctx: Context, spec: RunSpec, attempt_dir: Path) -> str:
     return status
 
 
+def check_signals(ctx: Context, specs: list[RunSpec]) -> None:
+    """Hỏi thử Prometheus tín hiệu scale của các lượt sắp chạy, một lần trước lượt đầu tiên.
+
+    Selector sai cú pháp thì Prometheus trả lỗi (KubeError), phiên dừng ngay, không đợi hết lượt đầu
+    (khoảng 35 phút) mới lộ. Không có chuỗi nào (sai label, exporter chưa chạy, simulator không có GPU) thì
+    chỉ cảnh báo: lượt đó sẽ bị đánh dấu invalid (checks.py), còn chạy hay dừng do người vận hành quyết.
+    Đo luôn độ lệch đồng hồ giữa runner và Prometheus: kiểm tín hiệu tính mép cửa sổ theo đồng hồ runner
+    (collect.signal_gap), nên lệch quá khoảng 10 s thì mọi lượt bị loại nhầm. Ngưỡng cảnh báo 5 s để còn dư.
+    """
+    sels = sorted({s.config.signal for s in specs if s.config.signal})
+    if not sels:
+        return
+    # time() = giờ của Prometheus lúc tính truy vấn; bọc vector() vì prom.scalar đọc kết quả dạng series
+    t0 = time.time()
+    prom_now = ctx.prom.scalar("vector(time())")
+    t1 = time.time()
+    skew = None if prom_now is None else prom_now - (t0 + t1) / 2  # so với giữa hai mốc: trừ thời gian gọi
+    log(f"đồng hồ Prometheus lệch runner: {'không đọc được' if skew is None else f'{skew:+.1f} s'}")
+    if skew is not None and abs(skew) > 5:
+        log("CẢNH BÁO: lệch quá 5 s; kiểm tín hiệu scale có thể loại nhầm lượt (đồng bộ NTP hai máy)")
+    for sel in sels:
+        n = ctx.prom.scalar(f"count({sel})")
+        if n:
+            log(f"tín hiệu scale {sel}: {n:g} chuỗi")
+        else:
+            log(f"CẢNH BÁO: tín hiệu scale {sel} hiện không có chuỗi nào; lượt dùng nó sẽ invalid")
+
+
 def run_session(ctx: Context, only: set[str] | None, max_attempts: int) -> dict[str, str]:
     """Chạy mọi lượt chưa xong. Trả {run_id: trạng thái cuối}."""
     sdir = ctx.runs_dir / ctx.matrix.session
@@ -260,12 +291,18 @@ def run_session(ctx: Context, only: set[str] | None, max_attempts: int) -> dict[
         raise RuntimeError(f"đang có runner khác chạy phiên {ctx.matrix.session} ({sdir / '.lock'})") from e
 
     prog = Progress(sdir / "progress.json")
+    # Lọc trước một lần (mỗi run_id chỉ có một dòng, progress chỉ đổi cho chính lượt vừa chạy, nên lọc
+    # trước hay lọc trong vòng lặp là như nhau), để check_signals chỉ hỏi tín hiệu của lượt sẽ chạy thật.
+    pending: list[RunSpec] = []
     for spec in ctx.matrix.runs:
         if only and spec.run_id not in only:
             continue
         if not prog.should_run(spec.run_id, max_attempts):
             log(f"[{spec.run_id}] bỏ qua: {prog.status(spec.run_id)} ({prog.attempts(spec.run_id)} lần thử)")
             continue
+        pending.append(spec)
+    check_signals(ctx, pending)
+    for spec in pending:
         attempt_dir = sdir / spec.run_id / f"attempt-{prog.attempts(spec.run_id) + 1}"
         try:
             status, note = run_one(ctx, spec, attempt_dir), ""

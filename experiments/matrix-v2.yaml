@@ -66,11 +66,16 @@ configs:
     file: autoscaling/eval/A1.yaml
     # threshold giữ 70 % như trong file: cố ý không suy từ đo năng lực (Kiến trúc §11)
     overrides: {max_replicas: *N}
+    # Chuỗi mà trigger A1 đọc. Mất mẫu > 15 s trong pha chính thì lượt invalid (Môi trường §17): KEDA coi
+    # truy vấn rỗng là 0, nên mất exporter GPU thì A1 đứng ở 1 replica mà không có lỗi nào (Kiến trúc §13.4)
+    signal: nvidia_smi_utilization_gpu_ratio
   A2:
     type: scaledobject
     # Dùng thẳng file base chính thức, để lượt A2 đo đúng cấu hình mà Argo CD vận hành
     file: autoscaling/official/base/scaledobject-a2.yaml
     overrides: {threshold: *A2_THRESHOLD, max_replicas: *N}
+    # running và waiting cùng một lần scrape pod vLLM, nên kiểm một chuỗi là đủ
+    signal: 'vllm:num_requests_running{namespace="llm-serving"}'
 
 # Mỗi lượt khoảng 35 phút kể cả reset, warm-up, cooldown (Thông số §8.2): 17 lượt ≈ 10 giờ.
 # Lần lặp thứ k của mọi cấu hình dùng cùng lịch gửi (loadgen --run-index k), nên A1-KB1-1, A2-KB1-1 và

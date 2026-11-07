@@ -45,9 +45,10 @@ spec:
         #   KEDA v2.21.0 coi rỗng là 0, KHÔNG báo lỗi, nên fallback không bật (`ignoreNullValues` mặc định
         #   true, pkg/scalers/prometheus_scaler.go). `or vector(0)` chỉ ghi rõ hành vi đó, và giữ nó kể cả
         #   khi đặt `ignoreNullValues: "false"` (Kiến trúc §13.4). Hệ quả: mất exporter thì A1 đứng ở
-        #   1 replica mà không có lỗi nào; lượt đó không hợp lệ, phải xem chuỗi `gpu_util` trong
-        #   metrics.csv.gz của lượt. Trên simulator, A1 vì vậy luôn ở 1 replica: chỉ dùng để kiểm đường đi
-        #   (áp, đổi cấu hình, T6), không để đo.
+        #   1 replica mà không có lỗi nào. Runner bắt ca này: chuỗi khai báo ở `signal` của A1 trong file ma
+        #   trận mất mẫu > 15 s trong pha chính thì lượt bị đánh dấu invalid (Môi trường §17). Trên
+        #   simulator, A1 vì vậy luôn ở 1 replica: chỉ dùng để kiểm đường đi (áp, đổi cấu hình, T6), không
+        #   để đo.
         # Nếu chạy được DCGM (có label pod) thì thay bằng
         # sum(DCGM_FI_DEV_GPU_UTIL{exported_namespace="llm-serving"}) or vector(0) (Thông số §8.1).
         query: (sum(nvidia_smi_utilization_gpu_ratio) * 100) or vector(0)
