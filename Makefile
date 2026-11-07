@@ -85,7 +85,9 @@ sim-test-load: ## Tải đồng thời cho T2 (C=25, DUR=120s); cần port-forwa
 
 # ── Máy thuê trên Vast.ai ───────────────────────────────────────────────────────
 # Mọi thao tác với Vast nằm trong infra/provision/vast.sh; ở đây chỉ đặt tên ngắn cho chúng.
-find: ## Tìm offer Vast: make find MODE=v0|v2
+# Biến đặt trên dòng lệnh make (GPU=…, NGPU=…, MAX_DPH=…) được make đưa vào môi trường của lệnh con,
+# nên vast.sh đọc được trực tiếp, không cần khai báo ở đây. Mặc định: RTX_4090, 4 GPU, ≤ 2 USD/giờ.
+find: ## Tìm offer Vast: make find MODE=v0|v2 [GPU=RTX_5060_Ti NGPU=2 MAX_DPH=1]
 	infra/provision/vast.sh find $(MODE)
 
 # Thuê rồi chờ tới khi SSH vào được. Tiền bắt đầu tính từ lệnh này: nhớ `make release` khi xong.
