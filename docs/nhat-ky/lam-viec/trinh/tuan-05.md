@@ -190,7 +190,7 @@
   - Chưa chạy: một lượt runner đầy đủ trên kind với trường mới (để đến 10/11); kubeconform (`A1.yaml` chỉ đổi comment).
 - **Incidents:** Bước soát chỉ ra một lỗ hổng có sẵn từ trước. `scrape_gaps` tìm khoảng trống trong mẫu `up`, nhưng Prometheus ghi `up = 0` cả khi scrape thất bại, nên một pod vLLM bị scrape lỗi liên tục không bị phát hiện. `signal_gap` gộp chuỗi nên cũng không bắt được ca này. PR này chưa sửa vì sửa sẽ đổi nghĩa một tiêu chí đang có. Việc sau: chỉ tính các mẫu `up == 1`.
 - **Deviations:** Môi trường §17 thêm một điều kiện hợp lệ (tín hiệu scale), dùng cùng ngưỡng 15 s với khoảng trống scrape. Thay đổi này được nêu trong mục "Điểm cần review" của PR.
-- **Links:** PR #16; PR #17 (`feat/tr2-a1-a4`, mở 07/11); PR #18 (`feat/tr2-matrix-v2`, mở 07/11); PR của nhánh `feat/tr2-signal-check` (chưa mở). File chính: `experiments/runner/matrix.py`, `collect.py`, `checks.py`, `session.py`; `experiments/matrix-v2.yaml`, `experiments/matrix-sim.yaml`, `autoscaling/eval/A1.yaml`; Môi trường §17; Kiến trúc §13.4.
+- **Links:** PR #16; PR #17 (`feat/tr2-a1-a4`, mở 07/11); PR #18 (`feat/tr2-matrix-v2`, mở 07/11); PR #19 (`feat/tr2-signal-check` → `feat/tr2-matrix-v2`, mở 07/11). File chính: `experiments/runner/matrix.py`, `collect.py`, `checks.py`, `session.py`; `experiments/matrix-v2.yaml`, `experiments/matrix-sim.yaml`, `autoscaling/eval/A1.yaml`; Môi trường §17; Kiến trúc §13.4.
 - **Thesis:**
   - §5.1 (điều kiện hợp lệ của lượt, cách bảo đảm so sánh được): KEDA không báo lỗi khi mất tín hiệu, nên phải kiểm bên ngoài. Dùng bảng 4 ca trên kind.
   - §5.3 "vì sao không chọn GPU utilization": thêm một điểm yếu vận hành của A1. Exporter không có label pod, và mất exporter thì A1 đứng yên mà không có lỗi nào.
