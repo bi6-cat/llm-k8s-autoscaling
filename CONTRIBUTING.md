@@ -16,7 +16,7 @@ llm-k8s-autoscaling/
 ├── platform/                     # thành phần nền (Helm values, kustomize) do Argo CD quản lý
 │   ├── argocd/                   # root-app-<env>.yaml, apps/<env>/<thành phần>.yaml
 │   └── <thành phần>/             # gpu/, keda/, kube-prometheus-stack/, sealed-secrets/ (W4) …
-├── serving/{base, overlays/{home,cloud,sim}}/     # vLLM
+├── serving/{base, overlays/{home,cloud,cloud-3b,sim}}/   # vLLM; cloud-3b = cloud với model 3B (đang thử)
 ├── autoscaling/
 │   ├── official/{base, overlays/<env>}/           # A2 chính thức (Argo CD quản lý)
 │   ├── eval/<ID>.yaml                             # cấu hình đánh giá A1…A4 (runner áp)
@@ -45,6 +45,7 @@ llm-k8s-autoscaling/
 | Hình cho luận văn | `analysis/figures/` (sinh từ code), `docs/images/` (sơ đồ) |
 
 Môi trường (`<env>`) chỉ có ba giá trị: `home` (PC + laptop), `cloud` (VM thuê), `sim` (kind + simulator).
+Ngoại lệ: `serving/overlays/cloud-3b` là biến thể model của `cloud` (cùng VM thuê, model Qwen2.5-3B), đặt ngang hàng vì kustomize không cho overlay con nằm trong thư mục overlay cha.
 Tên file và thư mục: chữ thường, nối bằng `-`, không dấu (`scaledobject-a2.yaml`). Ngoại lệ: runbook đặt đúng tên cảnh báo; module Python dùng `_`.
 
 ## 2. Quy tắc chung

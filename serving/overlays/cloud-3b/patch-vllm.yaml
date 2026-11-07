@@ -1,0 +1,49 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# serving/overlays/cloud-3b/patch-vllm.yaml                         (DEMO – chốt sau phiên thử 3B)
+# Khái niệm: JSON patch (cách đọc: serving/overlays/home/patch-vllm.yaml) áp SAU patch của overlay
+#            `cloud`, đổi model 7B thành 3B và hạ CPU/RAM cho vừa VM có GPU nhỏ.
+# Mục đích:  Chỉ đổi những gì phụ thuộc model. max-model-len 8192, max-num-seqs 64 và
+#            gpu-memory-utilization 0,90 giữ như 7B để kết quả hai model so được với nhau.
+# Tham khảo: Thông số §9.1–§9.2; Kiến thức nền §1.3 (công thức KV-cache)
+# ──────────────────────────────────────────────────────────────────────────────
+# Danh sách args sau base + cloud (base 0–2, cloud nối thêm 3–8):
+#   0 --port  1 --no-enable-prefix-caching  2 --shutdown-timeout
+#   3 --model  4 --revision  5 --served-model-name  6 --max-model-len  7 --max-num-seqs  8 --gpu-memory-utilization
+# Mỗi lần thay theo chỉ số đều có `op: test` đi trước: nếu ai đó đổi thứ tự args ở base hoặc cloud,
+# test không khớp → `kubectl kustomize` báo lỗi ngay, thay vì âm thầm thay nhầm tham số khác.
+
+# Qwen2.5-3B-Instruct ở BF16: 2 file safetensors tổng ~6,2 GB (3,97 + 2,20 GB, tra HF 06/11).
+# KV-cache: 2 (K và V) × 36 lớp × 2 KV head × 128 head_dim × 2 byte ≈ 36 KiB/token (7B: 56 KiB).
+# GPU 16 GB × 0,90 ≈ 14,4 GB − 6,2 GB weights − ~1–1,5 GB activation/CUDA graph ≈ 6,5–7 GB KV
+# ≈ 180–200 nghìn token, đủ cho > 64 request ở độ dài đánh giá (≤ 1024 + 256 token)
+# → giới hạn đồng thời là --max-num-seqs 64, không phải KV-cache [ước lượng, kiểm bằng log khởi động
+# "Maximum concurrency…"].
+- op: test
+  path: /spec/template/spec/containers/0/args/3
+  value: --model=Qwen/Qwen2.5-7B-Instruct
+- op: replace
+  path: /spec/template/spec/containers/0/args/3
+  value: --model=Qwen/Qwen2.5-3B-Instruct
+# Revision = mã commit trên Hugging Face, ghim để mọi lần tải ra đúng một bộ weights (N8). Tra 06/11/2026.
+- op: test
+  path: /spec/template/spec/containers/0/args/4
+  value: --revision=a09a35458c702b33eeacc393d103063234e8bc28
+- op: replace
+  path: /spec/template/spec/containers/0/args/4
+  value: --revision=aa8e72537993ba99e69dfaafa59ed015b17504d1
+# Tên model mà client gửi trong trường "model"; file ma trận của runner phải ghi đúng tên này.
+- op: test
+  path: /spec/template/spec/containers/0/args/5
+  value: --served-model-name=qwen2.5-7b
+- op: replace
+  path: /spec/template/spec/containers/0/args/5
+  value: --served-model-name=qwen2.5-3b
+# CPU/RAM: VM 4 × A4000 rẻ nhất (06/11) chỉ có 16 vCPU và 126 GB RAM. 4 pod × 6 lõi như 7B là 24 lõi,
+# không vừa; 4 × 3 = 12 lõi, chừa 4 lõi cho k3s, Prometheus và máy tạo tải. Vẫn giữ QoS Guaranteed
+# (requests = limits, CPU nguyên) để CPU manager static giữ lõi riêng cho từng pod.
+# RAM 16Gi: tiến trình vLLM 3B cộng /dev/shm (sizeLimit 8Gi, tính vào giới hạn RAM của pod).
+- op: replace
+  path: /spec/template/spec/containers/0/resources
+  value:
+    requests: {cpu: "3", memory: 16Gi, nvidia.com/gpu: 1}
+    limits: {cpu: "3", memory: 16Gi, nvidia.com/gpu: 1}
