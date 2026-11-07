@@ -154,3 +154,43 @@
 - **Deviations:** Thông số §8.2 đổi cách xáo thành xáo trong từng khối lần lặp; đưa vào mục "Điểm cần review" của PR.
 - **Links:** `experiments/runner/matrix.py`, `experiments/runner/session.py`, `experiments/matrix-v2.yaml`, `experiments/tests/test_runner.py`, `docs/chi-tiet/00-thong-so.md` §8.2.
 - **Thesis:** chương "Đánh giá", phần phương pháp: xáo theo khối lần lặp (randomized block design, mỗi khối là một lần lặp có chung lịch gửi). Lý do: chống trôi theo thời gian và giữ đủ ô khi phiên bị cắt ngang.
+
+## 2026-11-07 – TR2: runner kiểm tín hiệu scale của A1, A2 (trường `signal` trong ma trận)
+
+- **Task:** TR2 · **Environment:** sim (chỉ đọc Prometheus của kind)
+- **Done:**
+  1. Tạo nhánh `feat/tr2-signal-check` từ `feat/tr2-matrix-v2` (PR #18, xếp trên #17 và #16), vì việc này cần `matrix.py` chưa merge.
+  2. `matrix.py`: thêm trường tuỳ chọn `signal` cho cấu hình `scaledobject`, là selector của chuỗi mà trigger đọc. Từ chối `signal` ở cấu hình tĩnh, và từ chối biểu thức (`sum(…)`, `x[5m]`), vì runner phải đặt `[Ns]` ngay sau selector.
+  3. `collect.py`: thêm `signal_gap`. Hàm đọc mẫu gốc bằng range selector `<signal>[Ns]`, gộp mẫu của mọi chuỗi khớp selector, rồi tìm khoảng trống lớn nhất, tính cả hai mép của pha chính. `max_scrape_gap` thêm tham số `window`. Truy vấn lỗi thì trả `error`, không raise.
+  4. `checks.py`: thêm tiêu chí 5. Lượt invalid nếu tín hiệu không có mẫu nào, mất mẫu quá 15 s, hoặc không truy vấn được.
+  5. `session.py`: gọi `signal_gap` sau mỗi lượt. `check_signals` chạy một lần đầu phiên: hỏi `count(<signal>)` (selector sai cú pháp thì phiên dừng ngay; không có chuỗi nào thì cảnh báo), và đo độ lệch đồng hồ giữa runner và Prometheus (cảnh báo nếu quá 5 s). Lọc các lượt sẽ chạy một lần (`pending`) rồi dùng chung cho cả hai việc.
+  6. Ma trận: `matrix-v2.yaml` khai báo `signal` cho A1 (`nvidia_smi_utilization_gpu_ratio`) và A2 (`vllm:num_requests_running{namespace="llm-serving"}`); `matrix-sim.yaml` khai báo cho A2.
+  7. Tài liệu: Môi trường §17 thêm dòng "tín hiệu scale"; Kiến trúc §13.4 dẫn tới §17; comment của A1 bỏ câu "phải xem `gpu_util` trong metrics.csv.gz".
+  8. `/code-review high` cho 10 phát hiện:
+     - Sửa 6: đo lệch đồng hồ; lỗi truy vấn không làm mất `checks.json`; test so khớp nguyên selector, có ranh giới, thay cho so chuỗi con; chỉ đếm mẫu trong pha chính; `window` thay cho hai tham số `start`/`end` rời; lọc lượt một lần.
+     - Bỏ 1: suy selector từ `query`.
+     - Ghi thành việc sau 1 (xem Incidents).
+- **Decision:**
+  - Gộp mẫu của mọi chuỗi rồi mới tìm khoảng trống, không xét từng chuỗi, vì pod mới do scale-up có chuỗi bắt đầu giữa lượt. Đổi lại, check chỉ bắt được khi cả tín hiệu biến mất, cũng là ca KEDA đọc rỗng thành 0.
+  - Tính cả hai mép cửa sổ: exporter chết rồi không quay lại thì giữa các mẫu còn lại không có khoảng trống nào.
+  - Trình đã chọn kiểm tín hiệu cho A1 (07/11). Phiên này mở rộng sang A2 vì A2 hỏng theo cùng kiểu: truy vấn có `or vector(0)`, nên mất metric vLLM thì A2 đứng ở 1 replica. Mở rộng như vậy cũng giúp lượt A2 trên kind ngày 10/11 chạy thật được đường kiểm này.
+  - Không suy selector từ `query` của ScaledObject, vì phải phân tích PromQL trong Python, dễ sai. Thay vào đó, một test quét mọi `experiments/matrix-*.yaml` và kiểm rằng `signal` nằm nguyên trong query, gồm cả label và có ranh giới hai đầu.
+- **Results:**
+  - pytest `experiments`: 76 passed, 1 skipped, trên cả Python 3.15 và 3.11. Test bị bỏ qua cần `fcntl`, không có trên Windows. Thân của test đó chạy bằng `python3` 3.12 trong WSL: đạt. ruff check, ruff format, yamllint và lychee (0 lỗi) đều đạt.
+  - `signal_gap` trên Prometheus của kind (chỉ đọc, 07/11 khoảng 19:31):
+
+    | Ca | Chuỗi | Mẫu | Khoảng trống lớn nhất | Kết quả |
+    |---|---|---|---|---|
+    | A2, 300 s vừa qua | 1 | 60 | 5,0 s | hợp lệ |
+    | A2, mép cuối đặt 30 s sau hiện tại (giả tín hiệu tắt cuối pha) | 1 | 60 | 33,1 s | invalid, "mất mẫu 33 s" |
+    | `nvidia_smi_utilization_gpu_ratio` (kind không có GPU) | 0 | 0 | 300 s | invalid, "không có mẫu nào" |
+    | `foo{a=b}` (sai cú pháp) | – | – | – | invalid, "không kiểm được" (HTTP 400) |
+
+  - `check_signals` trên kind: đồng hồ lệch +0,1 s; cảnh báo chuỗi GPU không có; A2 có 1 chuỗi.
+  - Chưa chạy: một lượt runner đầy đủ trên kind với trường mới (để đến 10/11); kubeconform (`A1.yaml` chỉ đổi comment).
+- **Incidents:** Bước soát chỉ ra một lỗ hổng có sẵn từ trước. `scrape_gaps` tìm khoảng trống trong mẫu `up`, nhưng Prometheus ghi `up = 0` cả khi scrape thất bại, nên một pod vLLM bị scrape lỗi liên tục không bị phát hiện. `signal_gap` gộp chuỗi nên cũng không bắt được ca này. PR này chưa sửa vì sửa sẽ đổi nghĩa một tiêu chí đang có. Việc sau: chỉ tính các mẫu `up == 1`.
+- **Deviations:** Môi trường §17 thêm một điều kiện hợp lệ (tín hiệu scale), dùng cùng ngưỡng 15 s với khoảng trống scrape. Thay đổi này được nêu trong mục "Điểm cần review" của PR.
+- **Links:** PR #16; PR #17 (`feat/tr2-a1-a4`, mở 07/11); PR #18 (`feat/tr2-matrix-v2`, mở 07/11); PR của nhánh `feat/tr2-signal-check` (chưa mở). File chính: `experiments/runner/matrix.py`, `collect.py`, `checks.py`, `session.py`; `experiments/matrix-v2.yaml`, `experiments/matrix-sim.yaml`, `autoscaling/eval/A1.yaml`; Môi trường §17; Kiến trúc §13.4.
+- **Thesis:**
+  - §5.1 (điều kiện hợp lệ của lượt, cách bảo đảm so sánh được): KEDA không báo lỗi khi mất tín hiệu, nên phải kiểm bên ngoài. Dùng bảng 4 ca trên kind.
+  - §5.3 "vì sao không chọn GPU utilization": thêm một điểm yếu vận hành của A1. Exporter không có label pod, và mất exporter thì A1 đứng yên mà không có lỗi nào.

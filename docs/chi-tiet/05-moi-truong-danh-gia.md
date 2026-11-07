@@ -588,6 +588,7 @@ Yêu cầu không đạt **không bị giấu đi**. Luận văn phân tích ngu
 | CPU máy tạo tải (tối đa) | < 70%, không bị throttle |
 | Độ trễ event loop của máy tạo tải | Không có khoảng nghẽn bất thường |
 | Khoảng trống scrape của Prometheus | ≤ 15 s |
+| Tín hiệu scale của cấu hình autoscaling (trường `signal` trong file ma trận; A1: `nvidia_smi_utilization_gpu_ratio`, A2: `vllm:num_requests_running`) | Có mẫu suốt pha chính, không mất mẫu quá 15 s. KEDA coi truy vấn rỗng là 0 mà không báo lỗi ([Kiến trúc §13.4](03-kien-truc-autoscaling.md#134-promql-chống-lỗi)), nên mất tín hiệu chỉ lộ ra ở kiểm tra này |
 | Node có sự cố, pod bị OOMKilled ngoài dự kiến | Không có |
 | Trạng thái đầu đúng (1 replica, hàng đợi trống; S4: 4 replica) | Đúng |
 

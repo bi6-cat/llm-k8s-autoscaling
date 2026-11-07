@@ -39,6 +39,8 @@ configs:
     # Mỗi request của simulator kéo dài ~13 s (TTFT 200 ms + 256 token × 50 ms), nên 2 req/s ≈ 26 request
     # đồng thời → ⌈26 ÷ 10⌉ = 3 replica (giống bài T2). max 3 = số node của kind.
     overrides: {threshold: 10, max_replicas: 3}
+    # Chuỗi mà trigger A2 đọc; mất mẫu > 15 s trong pha chính thì lượt invalid (Môi trường §17)
+    signal: 'vllm:num_requests_running{namespace="llm-serving"}'
 
 runs:
   - {config: S1, scenario: CONST, rate: 2, duration: 120}

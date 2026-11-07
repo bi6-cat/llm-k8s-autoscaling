@@ -17,6 +17,7 @@ from __future__ import annotations
 import csv
 import gzip
 import json
+import math
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -73,9 +74,18 @@ def write_metrics(prom: Prometheus, queries: dict[str, str], start: float, end: 
     return n
 
 
-def max_scrape_gap(samples: list[list[Any]]) -> float | None:
-    """Khoảng trống lớn nhất (giây) giữa hai mẫu liên tiếp. samples = [[ts, "v"], …]. Hàm thuần."""
+def max_scrape_gap(samples: list[list[Any]], window: tuple[float, float] | None = None) -> float | None:
+    """Khoảng trống lớn nhất (giây) giữa hai mẫu liên tiếp. samples = [[ts, "v"], …]. Hàm thuần.
+
+    Có `window` = (start, end): chỉ xét mẫu trong [start, end] và tính cả hai mép (start → mẫu đầu, mẫu
+    cuối → end). Nhờ vậy chuỗi tắt giữa chừng rồi không quay lại cũng lộ ra, và không có mẫu nào thì kết
+    quả là cả cửa sổ (end − start). Không có mép thì hai trường hợp đó không có khoảng trống nào giữa hai
+    mẫu.
+    """
     ts = sorted(float(t) for t, _ in samples)
+    if window is not None:
+        start, end = window
+        ts = [start, *(t for t in ts if start <= t <= end), end]
     if len(ts) < 2:
         return None
     return max(b - a for a, b in zip(ts, ts[1:], strict=False))
@@ -91,6 +101,38 @@ def scrape_gaps(prom: Prometheus, ns: str, start: float, end: float) -> dict[str
     res = prom.query(f'up{{namespace="{ns}"}}[{window}s]', at=end)
     return {
         s["metric"].get("pod", s["metric"].get("instance", "?")): max_scrape_gap(s["values"]) for s in res
+    }
+
+
+def signal_gap(prom: Prometheus, selector: str, start: float, end: float) -> dict[str, Any]:
+    """Tín hiệu scale có mẫu suốt [start, end] không (Môi trường §17: mất mẫu ≤ 15 s).
+
+    Khác scrape_gaps ở hai điểm:
+    - Gộp mẫu của MỌI chuỗi khớp selector (A1: mỗi GPU một chuỗi; A2: mỗi pod vLLM một chuỗi) rồi mới tìm
+      khoảng trống, vì pod mới do scale-up có chuỗi bắt đầu giữa lượt, đó không phải mất mẫu. Vì gộp nên
+      chỉ bắt được khi CẢ tín hiệu biến mất (exporter chết, chưa được scrape, sai label). Đó đúng là ca KEDA
+      đọc rỗng thành 0 (Kiến trúc §13.4). Mất một chuỗi trong nhiều chuỗi thì không bắt được: với A1 khó
+      xảy ra, vì exporter đọc mọi GPU trong một lần gọi nvidia-smi.
+    - Tính cả hai mép cửa sổ (max_scrape_gap có `window`), vì exporter chết rồi không quay lại thì giữa
+      các mẫu còn lại không có khoảng trống nào. Mép lấy theo đồng hồ của runner, nên runner và Prometheus
+      lệch giờ quá khoảng 10 s (15 s trừ chu kỳ scrape 5 s) thì lượt bị loại nhầm. Trên VM thuê và kind,
+      runner chạy cùng máy với Prometheus; ở nhà thì không, nên session.check_signals đo độ lệch đầu phiên.
+    Truy vấn lỗi (Prometheus tạm mất, kubectl quá giờ) thì trả `error` thay vì raise, để lượt đã chạy xong
+    vẫn ghi đủ checks.json và metadata.json; checks.py coi lượt đó là invalid vì không kiểm được.
+    """
+    rng = max(math.ceil(end - start), 1)  # làm tròn lên để range selector phủ hết [start, end]
+    out: dict[str, Any] = {"selector": selector}
+    try:
+        res = prom.query(f"{selector}[{rng}s]", at=end)
+    except KubeError as e:
+        return {**out, "series": None, "samples": None, "max_gap_s": None, "error": str(e)[:300]}
+    # Chỉ đếm mẫu trong pha chính: range làm tròn lên có thể lấy dư một mẫu ngay trước start
+    inside = [v for s in res for v in s["values"] if start <= float(v[0]) <= end]
+    return {
+        **out,
+        "series": len(res),
+        "samples": len(inside),
+        "max_gap_s": max_scrape_gap(inside, (start, end)),
     }
 
 

@@ -16,6 +16,7 @@ Mục đích: Kiểm tra file ngay khi bắt đầu, báo lỗi rõ ràng, để
     - Khoá lạ bị từ chối: gõ nhầm `shufle_seed` hay `repeat` thì báo lỗi, thay vì lặng lẽ bỏ xáo hay bỏ
       lặp. Riêng khoá gốc bắt đầu bằng `x-` được bỏ qua: chỗ đặt YAML anchor (`x-adr003` trong
       matrix-v2.yaml).
+    - `signal` của cấu hình phải là selector của một chuỗi, không phải biểu thức (xem SELECTOR_RE).
 
 Ví dụ một file: experiments/matrix-sim.yaml.
 """
@@ -24,6 +25,7 @@ from __future__ import annotations
 
 import hashlib
 import math
+import re
 from dataclasses import dataclass, field, fields
 from pathlib import Path
 from typing import Any
@@ -35,6 +37,11 @@ SCENARIOS = ("KB1", "KB2", "KB3", "CONST")
 # Hai loại cấu hình: static = cố định N replica, không có ScaledObject (S1, S4);
 # scaledobject = KEDA tự scale theo file ScaledObject (A1, A2, A3, A4).
 CONFIG_TYPES = ("static", "scaledobject")
+# Selector PromQL của một chuỗi: tên metric, tuỳ chọn kèm `{label…}`, ví dụ
+# `vllm:num_requests_running{namespace="llm-serving"}`. Không nhận biểu thức (`sum(…)`, `rate(…)`): runner
+# đọc mẫu gốc bằng range selector `<signal>[Ns]` (collect.signal_gap), mà Prometheus chỉ cho đặt `[Ns]`
+# ngay sau một selector.
+SELECTOR_RE = re.compile(r"[A-Za-z_:][A-Za-z0-9_:]*(\{[^{}]*\})?")
 
 
 class MatrixError(ValueError):
@@ -67,6 +74,10 @@ class Config:
     # scaledobject: giá trị ghi đè lúc áp (threshold, max_replicas), vì cùng một file A2 dùng cho kind,
     # nhà và VM với threshold khác nhau (threshold = 0,8 × B*, Thông số §9.3).
     overrides: dict[str, Any] = field(default_factory=dict)
+    # scaledobject, tuỳ chọn: selector của chuỗi mà trigger đọc (A1: `nvidia_smi_utilization_gpu_ratio`).
+    # Chuỗi này mất mẫu quá 15 s trong pha chính thì lượt bị đánh dấu invalid (Môi trường §17), vì KEDA coi
+    # truy vấn rỗng là 0 mà không báo lỗi: mất exporter thì cấu hình đứng ở 1 replica (Kiến trúc §13.4).
+    signal: str | None = None
 
 
 @dataclass(frozen=True)
@@ -108,7 +119,7 @@ class Matrix:
 ROOT_KEYS = {"session", "env", "shuffle_seed", "target", "timing", "configs", "defaults", "runs"}
 TARGET_KEYS = {f.name for f in fields(Target)}
 TIMING_KEYS = {f.name for f in fields(Timing)}
-CONFIG_KEYS = {"type", "replicas", "file", "overrides"}
+CONFIG_KEYS = {"type", "replicas", "file", "overrides", "signal"}
 OVERRIDE_KEYS = {"threshold", "max_replicas", "min_replicas"}
 RUN_KEYS = {"config", "scenario", "capacity", "rate", "duration", "kb3_replicas", "repeats"}
 
@@ -196,12 +207,23 @@ def parse(data: dict[str, Any]) -> Matrix:
                 _positive(overrides[key], f"{where}.overrides", key, integer=True)
         if overrides.get("min_replicas", 1) > overrides.get("max_replicas", math.inf):
             raise MatrixError(f"{where}.overrides: `min_replicas` lớn hơn `max_replicas`")
+        signal = c.get("signal")
+        if signal is not None:
+            # Cấu hình tĩnh không có tín hiệu nào để kiểm: khoá này ở đó là đặt nhầm chỗ
+            if ctype != "scaledobject":
+                raise MatrixError(f"{where}: `signal` chỉ dùng cho cấu hình scaledobject")
+            if not isinstance(signal, str) or not SELECTOR_RE.fullmatch(signal):
+                raise MatrixError(
+                    f"{where}: `signal` phải là selector của một chuỗi (tên metric, tuỳ chọn kèm "
+                    f"{{label…}}), không phải biểu thức; gặp {signal!r}"
+                )
         configs[cid] = Config(
             id=cid,
             type=ctype,
             replicas=_positive(c.get("replicas", 1), where, "replicas", integer=True),
             file=c.get("file"),
             overrides=overrides,
+            signal=signal,
         )
 
     runs: list[RunSpec] = []
