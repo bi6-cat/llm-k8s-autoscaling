@@ -79,6 +79,20 @@ def summarize_run(
         lo, hi = t0_unix + ws, t0_unix + we
         return [v for ts, n, v in metrics if n == name and lo <= ts <= hi and not math.isnan(v)]
 
+    def busiest_per_scrape(name: str) -> list[float]:
+        """Mỗi lần scrape giữ giá trị lớn nhất trong các chuỗi cùng tên.
+
+        Dùng cho GPU util: metrics không giữ nhãn GPU, nên trên node nhiều GPU mỗi mốc thời gian có một mẫu
+        cho mỗi GPU. ĐG1 chỉ có 1 replica nên các GPU còn lại rảnh (0); lấy trung bình mọi mẫu sẽ chia util
+        thật cho số GPU (08/11, node 4 GPU: UTIL* ra 0,25 thay vì ~1). Lấy max theo mốc = GPU của pod vLLM.
+        """
+        lo, hi = t0_unix + ws, t0_unix + we
+        best: dict[float, float] = {}
+        for ts, n, v in metrics:
+            if n == name and lo <= ts <= hi and not math.isnan(v):
+                best[ts] = max(v, best.get(ts, v))
+        return list(best.values())
+
     running, waiting = _mean(series("vllm_running")), _mean(series("vllm_waiting"))
     b_server = running + waiting
     e2e_mean = _mean(e2e)
@@ -98,7 +112,7 @@ def summarize_run(
         "little_ok": abs(b_server - little) <= LITTLE_TOL * max(little, 1e-9),
         "waiting_mean": waiting,
         "kv_cache_usage": _mean(series("vllm_kv_cache")),
-        "gpu_util": _mean(series("gpu_util")),
+        "gpu_util": _mean(busiest_per_scrape("gpu_util")),
         "slo_attainment": good / len(meas) if meas else float("nan"),
     }
 

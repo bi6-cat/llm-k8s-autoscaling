@@ -71,7 +71,7 @@ Việc gắn với máy: các bước cài đặt trên PC (driver, k3s server) 
 
 ## 3. Checklist các mốc
 
-> Tình trạng cập nhật ngày **04/11/2026**. Chỉ tích khi mục đạt trọn vẹn; mục mới làm một phần có ghi chú *(04/11: …)*.
+> Tình trạng cập nhật ngày **08/11/2026** (lần trước 04/11). Chỉ tích khi mục đạt trọn vẹn; mục mới làm một phần có ghi chú *(ngày: …)*.
 
 ### M1 (18/10): nền tảng tối thiểu
 - [x] vLLM chạy trên GPU nhà (5060 hoặc 4050); đã ghim digest và revision model. *(04/11: RTX 5060, `v0.31.0@sha256:…`, Qwen2.5-1.5B ghim revision; xem [phiên bản](../phien-ban.md).)*
@@ -79,18 +79,18 @@ Việc gắn với máy: các bước cài đặt trên PC (driver, k3s server) 
 - [x] Prometheus có metric vLLM, GPU, Traefik (5 s). *(06/11: kube-prometheus-stack trên PC; target `llm-serving/vllm`, `gpu/nvidia-gpu-exporter`, `monitoring/traefik` đều `up`, chu kỳ 5 s; request qua Ingress được Traefik đếm đúng.)*
 - [x] Simulator chạy trên kind; A2 scale 1 → 3 trên simulator. *(06/11: ScaledObject A2 lên `main` qua PR #11 (bản nháp, Trình review và thay bằng bản chính ở `feat/tr2-sim`). Trên kind: quyết định 3 replica ở 17 s, 3 pod Ready ở 27 s, scale-down đúng window 300 s rồi 1 pod/60 s.)*
 - [x] Repo có CI chạy xanh. *(04/11: PR #5; 6 job xanh trên `main` ngày 02/11.)*
-- [ ] V0 đạt: k3s có GPU trong VM Vast, vLLM 7B trả lời, đã đo `fio` và TPOT.
-- [ ] Đã chốt cloud (ADR-004 K6). *(06/11: GCP từ chối quota GPU ngày 05/11 nên thực tế chỉ còn Vast; chưa sửa ADR-004 K6.)*
+- [x] V0 đạt: k3s có GPU trong VM Vast, vLLM 7B trả lời, đã đo `fio` và TPOT. *(08/11: VM 4 × A4000, model 3B (chốt thay 7B cùng ngày); ghi tuần tự 599 MB/s, TPOT 17,2 ms ở 1 request. Xem [van-hanh.md](../nhat-ky/van-hanh.md) 08/11.)*
+- [x] Đã chốt cloud (ADR-004 K6). *(08/11: Vast VM; ADR-004 §7 ghi GCP bị từ chối quota (PR #15). Loại máy V2 chốt ở ADR-003.)*
 
 ### M2 (01/11): vận hành thử đạt
-- [ ] A1, A2 qua bài kiểm thử T1–T7 (trên simulator và GPU nhà).
+- [ ] A1, A2 qua bài kiểm thử T1–T7 (trên simulator và GPU nhà). *(08/11: T1–T5 tự động trên kind; A1, A2 scale 1 → 4 trên GPU thật ở V1; A1 không tự về 1 replica sau tải (Kiến trúc §13); chưa có T6, T7.)*
 - [ ] Graceful shutdown: 0 lỗi trong 3 lần thử, ca đối chứng có lỗi. *(06/11: 0 lỗi trong 3 lần (144/144 stream); đối chứng không preStop, timeout 0 nhưng grace 180 s cũng 0 lỗi, chỉ đối chứng grace 5 s mới cắt 48/48. vLLM 0.31.0 không dừng khi nhận SIGTERM, nên request an toàn là nhờ grace period, drain chưa hoạt động như thiết kế; pod giữ GPU đủ 180 s. Xem [van-hanh.md](../nhat-ky/van-hanh.md) 06/11.)*
-- [ ] Đủ 3 dashboard; 6 cảnh báo có unit test, tới được Telegram; **mỗi cảnh báo có runbook**. *(04/11: đã có 7 quy tắc cho 6 cảnh báo, 8 unit test `promtool` và 7 runbook (PR #3); chưa có dashboard, Telegram, chưa áp lên cluster.)*
+- [ ] Đủ 3 dashboard; 6 cảnh báo có unit test, tới được Telegram; **mỗi cảnh báo có runbook**. *(08/11: 3 dashboard và `make dashboards-check` (PR #23), kiểm trên kind. 04/11: 7 quy tắc cho 6 cảnh báo, 8 unit test `promtool`, 7 runbook (PR #3). Chưa có Telegram, chưa áp cảnh báo lên cluster.)*
 - [ ] Bảo mật tối thiểu đạt checklist ([Vận hành §8](04-van-hanh.md#8-bảo-mật-tối-thiểu)).
 - [ ] VH1, VH2 (gồm ca 1 replica), VH6 đạt ở nhà.
 - [x] ĐG1-mini xong; có `capacity-home.json`. *(06/11: đo lại với 0,5B bằng runner, 10 mức λ đều hợp lệ: C = 12,5 req/s, B\* = 28,4, threshold A2 tạm 23; chưa đối chiếu với `vllm bench serve` (bước 7). Bản 1,5B giữ ở `capacity-home-1.5b.json`.)* *(05/11: có bản tạm `experiments/capacity-home.json`: C = 6 req/s, B\* ≈ 27, threshold A2 tạm 21. Còn thiếu: quét bước 0,25 quanh λ = 6; lượt λ = 6 bị máy tạo tải đánh dấu không hợp lệ vì 1 chu kỳ CPU throttle.)*
 - [ ] LT1–LT8 có kết quả (dự đoán, số đo, giải thích) trong `docs/nhat-ky/van-hanh.md` ([Môi trường §19](05-moi-truong-danh-gia.md#19-kiểm-chứng-lý-thuyết-lt1lt8)). *(05/11: LT1 (5060), LT2, LT3 có kết quả trong `van-hanh.md`; dữ liệu ĐG1-mini đã có cho LT5, LT6 của Trình; LT1 trên 4050, LT4, LT7, LT8 chưa làm.)*
-- [ ] Máy tạo tải đạt tiêu chí tự kiểm tra; runner chạy 2 lượt **không cần can thiệp** trên V1; `make bootstrap` dựng xong VM dưới 30 phút. *(04/11: máy tạo tải v1 có tự kiểm tra (PR #4) nhưng mới thử với server giả; chưa có runner, chưa có V1.)*
+- [x] Máy tạo tải đạt tiêu chí tự kiểm tra; runner chạy 2 lượt **không cần can thiệp** trên V1; `make bootstrap` dựng xong VM dưới 30 phút. *(08/11: runner chạy A1 × KB3, A2 × KB2 liền nhau không can thiệp; tự kiểm đánh dấu cả 2 invalid vì máy tạo tải 2 lõi vượt ngưỡng CPU, Quang chấp nhận sau xem xét (nhật ký tuần 05). Ansible dựng VM 164 s, tới vLLM phục vụ 12,5 phút; cài nền vẫn bằng script tay.)*
 
 ### M3 (15/11, muộn nhất 22/11): xong đánh giá
 - [ ] `capacity.json` đã chốt (C, B\*, SLO, threshold), có ADR-003 đi kèm.
