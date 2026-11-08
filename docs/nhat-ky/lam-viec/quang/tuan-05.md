@@ -411,3 +411,14 @@
 - **Deviations:** máy thuê qua web UI là unverified, ngoài bộ lọc của `vast.sh`. KB2 21 → 24 phút so với bản sửa sáng cùng ngày.
 - **Links:** nhánh `feat/v2-prep`; `infra/ansible/roles/common/tasks/main.yml`, `infra/ansible/roles/k3s-server/tasks/main.yml`, `infra/ansible/inventory/group_vars/cloud.yaml`, `loadgen/scenarios.py`.
 - **Thesis:** §4 (dựng VM bằng cùng Ansible với nhà; mirror; tắt tự động nâng cấp), §5 cold start (bảng 8 lần đo: nạp weights chỉ 12 s, phần lớn là CUDA graph capture; đánh đổi cold start với TPOT), Hạn chế (băng thông máy thuê, CPU yếu).
+
+## 2026-11-08 – Dựng VM 4 × A4000: bootstrap, cài nền, cold start, benchmark
+
+- **Task:** Q2 · **Environment:** V0
+- **Done:** kiểm nhanh 2 VM ứng viên, giữ máy 4 × A4000 (Séc); tải model song song bootstrap; chạy Ansible (sửa lỗi task chờ unattended-upgrade, chạy lại); kéo image ngay khi k3s lên; cài device plugin, kube-prometheus-stack, KEDA, GPU exporter bằng helm trên VM; deploy 3B với 2 CPU/pod; đo cold start 3 lần và benchmark 4 mức đồng thời.
+- **Decision:** hạ CPU vLLM xuống 2 lõi trên máy 15 vCPU (overlay tạm, chưa commit) thay vì đổi `reserved-cpus`; giữ cấu hình vLLM gốc.
+- **Results:** bootstrap 164 s; model 27 s; image 413 s; nền 236 s; pod đầu Ready sau ~12,5 phút từ đầu bootstrap. Cold start 152 s (lần đầu), 108 s (có cache), 117–122 s (3 pod đồng thời). TPOT 17,2 / 21,3 / 25,1 / 36,2 ms ở đồng thời 1 / 16 / 32 / 64. Số liệu đầy đủ: `docs/nhat-ky/van-hanh.md`.
+- **Incidents:** `pgrep -f` khớp chính shell của task → task chờ 15 phút vô ích; sửa mẫu `[/]usr/…`. Namespace `gpu` thiếu khi cài exporter ngoài Argo CD.
+- **Deviations:** kịch bản đã chỉnh `spike` KB2 về 10 phút dựa trên cold start ~6 phút của máy trước; máy này cold start ~2 phút, chưa quyết định có rút lại không.
+- **Links:** `infra/ansible/roles/common/tasks/main.yml`; log thô ở `runs/vast-v2b-20261108/` (không commit).
+- **Thesis:** §5 cold start (so 2 máy, phân rã các pha), §4 dựng môi trường (N6).

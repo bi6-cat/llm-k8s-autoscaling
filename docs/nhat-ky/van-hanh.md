@@ -166,3 +166,42 @@ Theo mẫu ở [Môi trường §19](../chi-tiet/05-moi-truong-danh-gia.md#19-ki
   Lượt PIECEWISE ở đồng thời 1 không làm nóng trước (một request đầu TTFT 82 s), các mức còn lại có làm nóng ở lượt gốc. Kết luận: **giữ cấu hình gốc**; PIECEWISE nhanh hơn ~2 phút lúc khởi động nhưng chậm hơn 20–45%. Nghi CPU đơn luồng yếu (E5 đời 2016) làm chậm cả capture lẫn chế độ PIECEWISE.
 - **API:** gọi được `/v1/chat/completions` với khoá, không khoá → 401. KV cache 208.000 token, Maximum concurrency 25,4 × ở 8192 token.
 - **Chưa làm:** Prometheus, KEDA, runner, `make bootstrap` trọn bằng `vast.sh`; chưa đo chi phí thực tế của phiên (xem trên console Vast).
+
+## 2026-11-08 – VM Vast thứ hai (4 × RTX A4000): bootstrap trọn, cold start 3B, scale 1 → 4
+
+- **Chọn máy:** 2 VM ứng viên, chạy cùng một script kiểm tra nhanh (GPU, PCIe, CPU, RAM, ổ, tải HF thật, Docker Hub). Máy thứ nhất mở cổng SSH nhưng timeout lúc banner exchange cả 2 lần → huỷ. Giữ máy thứ hai.
+- **Máy:** Vast VM 4 × RTX A4000 16 GB, PCIe Gen3 x16 cả 4 GPU, driver 580.95.05 (CUDA 13.0); Xeon E5-2620 v4 2,1 GHz, 15 vCPU, 98 GB RAM, ổ 126 GB (ghi 599 MB/s); đặt ở Séc. Docker Hub thông trực tiếp; tải từ Hugging Face 1 kết nối **93,9 MB/s**.
+- **Thời gian dựng (UTC, từ lúc VM boot ~12:34):**
+
+  | Bước | Thời gian | Máy 08/11 trước (2 × 5060 Ti) |
+  |---|---|---|
+  | Tải model 3B (5,8 GB, `HF_HUB_DISABLE_XET=1`), chạy song song bootstrap | 27 s | 690 s |
+  | `ansible-playbook site.yml` (ok=30, changed=12, failed=0) | 164 s | 239 s |
+  | Kéo image vLLM 9,04 GB qua `mirror.gcr.io`, bắt đầu ngay khi k3s lên | 413 s | 24 min 22 s |
+  | Cài nền trên VM bằng helm: device plugin, kube-prometheus-stack, KEDA, GPU exporter (song song kéo image) | 236 s | cài tay |
+
+  Từ lúc bắt đầu bootstrap tới pod vLLM đầu tiên Ready: 12:40:56 → 12:53:17 ≈ **12,5 phút** (N6 ≤ 30 phút: đạt trên máy này, chưa tính thời gian thuê và chờ VM boot).
+- **Sự cố 1 – task Ansible "Chờ lượt nâng cấp" kẹt:** `pgrep -f '/usr/bin/unattended-upgrade'` khớp chính dòng lệnh của shell đang chạy task, nên luôn thấy "đang chạy". Thực tế `unattended-upgrade` đã tự dừng lúc 12:36:54 (lỗi 404 khi tải gói, 0 gói được nâng, driver nguyên). Sửa mẫu thành `'[/]usr/bin/unattended-upgrade'`, chạy lại playbook.
+- **Sự cố 2 – GPU exporter lỗi `namespaces "gpu" not found`:** ở nhà Argo CD tạo namespace; khi cài tay phải tạo trước.
+- **CPU:** 15 vCPU − `reserved-cpus=0-3` = 11 lõi allocatable < 4 pod × 3 lõi. Dùng overlay tạm (không commit) hạ request/limit vLLM xuống **2 lõi**/pod.
+- **Cold start vLLM 0.31.0, Qwen2.5-3B, 1 GPU, 2 CPU** (image và model có sẵn; từ lúc tạo pod tới Ready):
+
+  | Lần | Điều kiện | Ready | Chi tiết |
+  |---|---|---|---|
+  | 1 | chưa có compile cache | 152 s | import Python ~39 s, init ~31 s, nạp weights 11 s, compile 27,4 s, CUDA graph capture 4 + 4 s |
+  | 2 | có compile cache | 108 s | compile 2,0 s, capture 4 + 4 s |
+  | 3 | scale 1 → 4, 3 pod khởi động đồng thời | 117 / 121 / 122 s | |
+
+  Capture CUDA graph ở máy trước mất 127 + 121 s, ở máy này 4 + 4 s, dù cả hai đều là Xeon E5 v4 đời 2016. Giả thuyết "CPU yếu làm chậm capture" (ghi ở mục trước) **không đúng** cho máy này; nguyên nhân ở máy trước chưa rõ.
+  KV cache 7,28 GiB = 211.936 token (Maximum concurrency 25,87× ở 8192 token); VRAM mỗi GPU khi chạy 14.416 MiB.
+- **Benchmark** (`vllm bench serve`, cùng tham số mục trước, thêm mức 64; trong 1 pod, 2 CPU):
+
+  | Đồng thời | TPOT TB | P99 TPOT | TTFT TB | P99 TTFT | Throughput |
+  |---|---|---|---|---|---|
+  | 1 | 17,2 ms | 17,3 ms | 97 ms | 104 ms | 57 tok/s |
+  | 16 | 21,3 ms | 23,2 ms | 632 ms | 1014 ms | 675 tok/s |
+  | 32 | 25,1 ms | 27,9 ms | 892 ms | 1977 ms | 1121 tok/s |
+  | 64 | 36,2 ms | 40,4 ms | 1243 ms | 3980 ms | 1562 tok/s |
+
+  Chậm hơn máy 5060 Ti 6–13 % (cùng ~448 GB/s). Chưa tách được do kiến trúc GPU hay do 2 CPU thay vì 3.
+- **Chưa làm:** ĐG1 (đo C), runner, A1–A3; so 2 CPU với 3 CPU; chi phí thực tế của phiên.
