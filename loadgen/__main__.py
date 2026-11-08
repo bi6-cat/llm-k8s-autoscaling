@@ -36,7 +36,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(prog="python -m loadgen", description="Máy tạo tải open-loop cho vLLM")
     p.add_argument("--scenario", choices=scenarios.SCENARIOS, required=True)
     p.add_argument("--capacity", type=float, help="C: năng lực một replica, req/s (KB1–KB3)")
-    p.add_argument("--replicas", type=int, default=4, help="N cho KB3: đỉnh = 0,75 × N × C (mặc định 4)")
+    p.add_argument("--replicas", type=int, default=4, help="N cho KB2, KB3: đỉnh = 0,75 × N × C (mặc định 4)")
     p.add_argument("--rate", type=float, help="Tốc độ cố định, req/s (CONST, dùng cho ĐG1)")
     p.add_argument("--duration", type=float, help="Thời lượng, giây (CONST)")
     p.add_argument(
@@ -75,7 +75,7 @@ def make_scenario(args: argparse.Namespace) -> scenarios.Scenario:
     if args.scenario == "KB1":
         return scenarios.kb1(args.capacity)
     if args.scenario == "KB2":
-        return scenarios.kb2(args.capacity)
+        return scenarios.kb2(args.capacity, args.replicas)
     if args.scenario == "KB3":
         return scenarios.kb3(args.capacity, args.replicas)
     return scenarios.constant(args.rate, args.duration)
@@ -140,7 +140,7 @@ def main(argv: list[str] | None = None) -> int:
     meta = {
         "scenario": scenario.name,
         "capacity_rps": args.capacity,
-        "replicas": args.replicas if scenario.name == "KB3" else None,
+        "replicas": args.replicas if scenario.name in ("KB2", "KB3") else None,
         "rate_rps": args.rate,
         "run_index": args.run_index,
         "seeds": {s: derive_seed(scenario.name, args.run_index, s) for s in ("time", "prompt", "text")},

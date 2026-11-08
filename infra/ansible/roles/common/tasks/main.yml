@@ -8,6 +8,43 @@
 # Tham khảo: docs/huong-dan/w2.md §3.3
 # ──────────────────────────────────────────────────────────────────────────────
 
+# Tắt tự động nâng cấp gói TRƯỚC mọi việc khác (chỉ VM thuê, biến disable_auto_upgrades).
+# Sự cố 08/11/2026 trên máy Vast đầu tiên: VM vừa bật thì unattended-upgrades nâng cả hệ thống, gồm thư
+# viện driver NVIDIA 580.95 → 580.178, trong khi module kernel đang nạp vẫn là 580.95. Từ đó mọi container
+# GPU lỗi "failed to initialize NVML: Driver/library version mismatch" cho tới khi reboot. Trên V2 điều này
+# làm hỏng cả phiên đo. Đồng thời apt bị khoá suốt lúc nâng cấp nên task apt bên dưới phải chờ.
+#  - Dừng và tắt timer apt-daily (tải danh sách gói), apt-daily-upgrade (chạy nâng cấp) và service.
+#  - Giữ (hold) các gói driver NVIDIA: apt sẽ không đổi phiên bản kể cả khi ai đó chạy `apt upgrade`.
+- name: Tắt tự động nâng cấp gói (VM thuê)
+  ansible.builtin.systemd_service: {name: "{{ item }}", state: stopped, enabled: false}
+  loop: [apt-daily.timer, apt-daily-upgrade.timer, unattended-upgrades.service]
+  when: disable_auto_upgrades | bool
+  failed_when: false                # máy không có service này (image khác) thì bỏ qua
+
+# Nếu một lượt nâng cấp đang chạy dở thì chờ nó xong, không giết giữa chừng (dễ hỏng dpkg).
+# Mẫu '[/]usr/…' thay vì '/usr/…': `pgrep -f` so với cả dòng lệnh, mà dòng lệnh của chính shell này chứa
+# mẫu tìm, nên mẫu thường luôn khớp chính nó và task chờ đủ 15 phút rồi lỗi (gặp 08/11 trên máy thứ hai).
+# '[/]' khớp ký tự '/' trong tên tiến trình thật, nhưng chuỗi "[/]usr" trong dòng lệnh shell thì không.
+- name: Chờ lượt nâng cấp đang chạy (nếu có) kết thúc
+  ansible.builtin.shell: |
+    for i in $(seq 1 180); do pgrep -f '[/]usr/bin/unattended-upgrade' >/dev/null || exit 0; sleep 5; done
+    echo "unattended-upgrade vẫn chạy sau 15 phút" >&2; exit 1
+  when: disable_auto_upgrades | bool
+  changed_when: false
+
+- name: Giữ phiên bản các gói driver NVIDIA
+  ansible.builtin.shell: |
+    # Chỉ lấy gói ĐÃ CÀI (trạng thái "ii"): mẫu 'nvidia-*' còn khớp cả gói ảo chưa cài, và apt-mark hold
+    # báo lỗi với gói đó (gặp 08/11). Bỏ toolkit: role nvidia cần cài/nâng nó bên dưới.
+    pk=$(dpkg-query -W -f='${db:Status-Abbrev} ${Package}\n' 'nvidia-*' 'libnvidia-*' 2>/dev/null \
+         | awk '$1 == "ii" {print $2}' | grep -v toolkit)
+    [ -z "$pk" ] && exit 0
+    before=$(apt-mark showhold | sort); apt-mark hold $pk >/dev/null; after=$(apt-mark showhold | sort)
+    [ "$before" = "$after" ] || echo changed
+  register: nvidia_hold
+  changed_when: "'changed' in nvidia_hold.stdout"
+  when: disable_auto_upgrades | bool
+
 # curl, jq, gnupg: script cài đặt cần. chrony: đồng bộ giờ, để mốc thời gian giữa các node (log, metric)
 # so được với nhau. fio: đo tốc độ đọc ổ đĩa (cold start, V0).
 - name: Gói cơ bản

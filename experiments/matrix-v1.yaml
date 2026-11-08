@@ -1,0 +1,85 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# experiments/matrix-v1.yaml
+# Khái niệm: Phiên V1 (Môi trường §15): runner chạy 2 lượt ĐG2 liền nhau không cần can thiệp, trên GPU
+#            thuê thật, với KEDA thật. Cùng cấu trúc matrix-v2.yaml, chỉ giữ 2 lượt.
+# Mục đích:  Kiểm toàn bộ đường đo trước V2: áp ScaledObject, scale 1 → 4 GPU, cooldown, thu dữ liệu.
+#            Số liệu V1 KHÔNG dùng trong chương đánh giá. C và ngưỡng A2 lấy từ ĐG1 thử ngày 08/11
+#            (matrix-dg1-v1.yaml, VM 4 × RTX A4000, Qwen2.5-3B): C = 4,5 req/s, B* = 52,5 → 0,8 × B* = 42.
+#            A2 × KB2 kiểm scale-up khi spike và scale-down sau drop; A1 × KB3 kiểm ScaledObject còn lại.
+# Chạy:      KUBECONFIG=~/.kube/llm-cloud.yaml uv run --project experiments python -m experiments.runner \
+#              --matrix experiments/matrix-v1.yaml
+# Tham khảo: matrix-v2.yaml; Thông số §7, §8; Môi trường §15
+# ──────────────────────────────────────────────────────────────────────────────
+x-adr003:
+  C: &C 4.5                           # req/s; capacity.json → "C"
+  A2_threshold: &A2_THRESHOLD 42     # 0,8 × B*; capacity.json → threshold.A2_concurrency
+  # N = số GPU = max replica của A1, A2 = số replica của S4 = N trong đỉnh 0,75 × N × C của KB2, KB3.
+  # 4 theo thiết kế; 08/11 nghiêng về máy 2 GPU (chốt ở ADR-003 sau V0): khi đó đổi thành 2 và viết lại
+  # N3 theo N (ADR-005 T12). Kịch bản không cần sửa gì thêm, vì đỉnh KB2, KB3 tự tính theo N.
+  N: &N 4
+  # --served-model-name của overlay serving đã áp: cloud = qwen2.5-7b, cloud-3b = qwen2.5-3b.
+  # 08/11: chốt 3B (cold start ngắn, vừa GPU 16 GB, rẻ hơn; trọng tâm là vận hành, ADR-002).
+  model: &MODEL qwen2.5-3b
+
+session: v1-a4000
+env: cloud
+# Xáo thứ tự 17 lượt theo seed, trong từng khối lần lặp (Thông số §8.2): 11 lượt lặp-1 (mỗi ô một lượt)
+# chạy trước, rồi 5 lượt lặp-2, rồi 1 lượt lặp-3; phiên bị cắt ngang thì chỉ mất lần lặp, không mất ô nào.
+# Seed nằm trong Git (và trong metadata.json của mỗi lượt) nên thứ tự tái lập được; chỉ đổi seed trước khi
+# chạy lượt đầu tiên. 20261114 = ngày bắt đầu V2.
+shuffle_seed: 20261114
+
+target:
+  namespace: llm-serving
+  deployment: vllm
+  # Thông số §7 ghi máy tạo tải đi qua route Traefik riêng; serving/ chưa có route đó, nên tạm gọi thẳng
+  # Service như matrix-home.yaml.
+  service_url: http://vllm.llm-serving.svc:8000
+  model: *MODEL
+  prometheus_service: monitoring/kps-prometheus:9090
+  api_key_secret: vllm-api-key         # Secret có khoá `key`, cùng Secret mà Deployment vLLM đọc
+  # Đỉnh KB3 = 0,75 × N × C req/s. Mỗi lõi một tiến trình gửi tải (loadgen --workers). Đo trên kind 07/11:
+  # một tiến trình ở 10 req/s tốn 53–58 % một lõi, ở 20 req/s lên 87–88 %; 3 tiến trình ở 30 req/s: 55–56 %
+  # mỗi tiến trình, không throttle. Ước tính một tiến trình chạm 70 % ở ~12–14 req/s, nên 3 lõi chịu
+  # ~36–42 req/s, gấp đôi đỉnh ước tính 12–18 req/s (C = 4–6, chưa đo), và vừa cả máy 32 lẫn 48 vCPU
+  # (Môi trường §3.5). Xem `cpu_ok`, `throttle_ok` trong checks.json sau lượt KB3 đầu tiên.
+  loadgen_cpu: "2"                     # V1 trên máy 11 lõi allocatable: 4 × 2 (vLLM) + 0,33 + 2 ≤ 11
+
+# Giá trị mặc định của Môi trường §14.1, ghi ra để thấy được trong file
+timing:
+  settle_s: 60                         # reset: chờ thêm sau khi hệ thống đã yên
+  warmup_s: 120                        # warm-up 0,3 C trong 2 phút, không tính vào kết quả
+  warmup_fraction: 0.3
+  # Từ 4 về 1 replica: chờ hết cửa sổ 300 s rồi bớt 1 pod mỗi 60 s (4→3 ở 300 s, 3→2 ở 360 s, 2→1 ở 420 s),
+  # cộng độ trễ scrape và sync khoảng 10 s, dưới 600 s. Quá 600 s thì runner ghi cooldown = null rồi vẫn
+  # pause ScaledObject (ép về 1 replica), nên lượt sau vẫn bắt đầu từ 1 replica.
+  cooldown_max_s: 600
+  reset_timeout_s: 900                 # S4: 3 pod mới cold start (L2 dự kiến 0,5–1,5 phút), dư nhiều
+
+configs:
+  S1: {type: static, replicas: 1}
+  S4: {type: static, replicas: *N}
+  A1:
+    type: scaledobject
+    file: autoscaling/eval/A1.yaml
+    # threshold giữ 70 % như trong file: cố ý không suy từ đo năng lực (Kiến trúc §11)
+    overrides: {max_replicas: *N}
+    # Chuỗi mà trigger A1 đọc. Mất mẫu > 15 s trong pha chính thì lượt invalid (Môi trường §17): KEDA coi
+    # truy vấn rỗng là 0, nên mất exporter GPU thì A1 đứng ở 1 replica mà không có lỗi nào (Kiến trúc §13.4)
+    signal: nvidia_smi_utilization_gpu_ratio
+  A2:
+    type: scaledobject
+    # Dùng thẳng file base chính thức, để lượt A2 đo đúng cấu hình mà Argo CD vận hành
+    file: autoscaling/official/base/scaledobject-a2.yaml
+    overrides: {threshold: *A2_THRESHOLD, max_replicas: *N}
+    # running và waiting cùng một lần scrape pod vLLM, nên kiểm một chuỗi là đủ
+    signal: 'vllm:num_requests_running{namespace="llm-serving"}'
+
+# Kịch bản dài 12 / 24 / 17 phút (KB1 / KB2 / KB3, rút từ 20 / 25 / 25 ngày 08/11), cộng reset, warm-up,
+# cooldown khoảng 10 phút mỗi lượt: 17 lượt ≈ 313 phút tải + ~170 phút phụ ≈ 8 giờ (trước là ~10 giờ).
+# Lần lặp thứ k của mọi cấu hình dùng cùng lịch gửi (loadgen --run-index k), nên A1-KB1-1, A2-KB1-1 và
+# S4-KB1-1 nhận đúng cùng một chuỗi request.
+defaults: {capacity: *C, kb3_replicas: *N}
+runs:
+  - {config: A2, scenario: KB2}
+  - {config: A1, scenario: KB3}

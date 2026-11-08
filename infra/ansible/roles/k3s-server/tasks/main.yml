@@ -19,6 +19,22 @@
     mode: "0600"                   # chỉ root đọc được
   register: k3s_config
 
+# registries.yaml: containerd của k3s đọc file này lúc khởi động để biết kéo image qua mirror nào.
+# Phải ghi TRƯỚC khi cài (như config.yaml); đổi file thì cần restart k3s (task "Áp cấu hình mới").
+- name: Registry mirror cho containerd
+  ansible.builtin.copy:
+    dest: /etc/rancher/k3s/registries.yaml
+    mode: "0644"
+    content: |
+      # Quản lý bởi Ansible (k3s_registry_mirrors). Mirror không có image thì thử endpoint gốc.
+      mirrors:
+      {% for reg, eps in k3s_registry_mirrors.items() %}
+        {{ reg }}:
+          endpoint: {{ eps | to_json }}
+      {% endfor %}
+  when: k3s_registry_mirrors | length > 0
+  register: k3s_registries
+
 - name: Thư mục drop-in systemd cho k3s
   ansible.builtin.file: {path: /etc/systemd/system/k3s.service.d, state: directory, mode: "0755"}
   when: flannel_iface | length > 0
@@ -68,13 +84,13 @@
   when: k3s_installed.rc != 0 or k3s_version not in k3s_installed.stdout
   changed_when: true
 
-# Trường hợp còn lại: k3s đã đúng phiên bản nhưng config.yaml hoặc drop-in vừa đổi → restart để đọc lại.
+# Trường hợp còn lại: k3s đã đúng phiên bản nhưng config.yaml, registries.yaml hoặc drop-in vừa đổi → restart để đọc lại.
 # daemon_reload: systemd đọc lại các file unit (cần khi drop-in đổi). Task bị bỏ qua (when sai) vẫn
 # có biến register với changed = false, nên k3s_dropin.changed luôn dùng được.
 # (Nếu vừa cài/nâng cấp ở task trên thì script đã khởi động k3s với cấu hình mới rồi.)
 - name: Áp cấu hình mới nếu file cấu hình đổi
   ansible.builtin.systemd_service: {name: k3s, state: restarted, daemon_reload: true}
-  when: (k3s_config.changed or k3s_dropin.changed) and k3s_installed.rc == 0 and k3s_version in k3s_installed.stdout
+  when: (k3s_config.changed or k3s_dropin.changed or k3s_registries.changed) and k3s_installed.rc == 0 and k3s_version in k3s_installed.stdout
 
 # `k3s kubectl` = kubectl đi kèm k3s, tự dùng kubeconfig của server: chạy được ngay trên PC.
 # Ngay sau khi cài, kubelet chưa kịp đăng ký node nên `wait --all` thấy danh sách rỗng và lỗi ngay

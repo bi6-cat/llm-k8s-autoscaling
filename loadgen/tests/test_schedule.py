@@ -58,23 +58,23 @@ def test_times_sorted_within_duration_and_ids_sequential():
 
 
 def test_kb1_count_matches_rate():
-    plan = build_plan(scenarios.kb1(2.0), 0)  # 1 req/s × 1200 s
-    _assert_poisson_count(len(plan), 1200)
+    plan = build_plan(scenarios.kb1(2.0), 0)  # 1 req/s × 720 s
+    _assert_poisson_count(len(plan), 720)
 
 
 def test_kb2_shape_low_then_spike_then_low():
     c = 1.0
     plan = build_plan(scenarios.kb2(c), 0)
-    _assert_poisson_count(_count(plan, 0, 5 * M), 0.5 * c * 300)
-    _assert_poisson_count(_count(plan, 5.5 * M, 15 * M), 3.0 * c * 570)
-    _assert_poisson_count(_count(plan, 15.5 * M, 25 * M), 0.5 * c * 570)
+    _assert_poisson_count(_count(plan, 0, 4 * M), 0.5 * c * 240)
+    _assert_poisson_count(_count(plan, 4.5 * M, 14 * M), 3.0 * c * 570)
+    _assert_poisson_count(_count(plan, 14.5 * M, 24 * M), 0.5 * c * 570)
 
 
 def test_prompt_lengths_uniform_in_range():
     plan = build_plan(scenarios.kb1(2.0), 0)
     lengths = [r.n_in_target for r in plan]
     assert min(lengths) >= PROMPT_MIN and max(lengths) <= PROMPT_MAX
-    # ~1200 mẫu đều trên [256, 1024]: phải chạm gần cả hai đầu và trung bình gần 640
+    # ~720 mẫu đều trên [256, 1024]: phải chạm gần cả hai đầu và trung bình gần 640
     assert min(lengths) < PROMPT_MIN + 20 and max(lengths) > PROMPT_MAX - 20
     assert abs(sum(lengths) / len(lengths) - 640) < 20
 

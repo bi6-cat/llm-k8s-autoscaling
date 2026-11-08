@@ -25,6 +25,12 @@ is_laptop: false
 k3s_kubelet_args: []
 # Tên/IP thêm vào chứng chỉ API server; chỉ nhà dùng (group_vars/home.yaml)
 k3s_tls_sans: []
+# Tắt unattended-upgrades và giữ phiên bản driver NVIDIA (role common). Chỉ cloud bật: ở nhà PC là máy
+# cá nhân, nâng cấp do người dùng tự quyết.
+disable_auto_upgrades: false
+# Registry mirror cho containerd của k3s (ghi ra /etc/rancher/k3s/registries.yaml). Rỗng = kéo thẳng.
+# Dạng: {docker.io: ["https://mirror…"]}. Chỉ cloud dùng (group_vars/cloud.yaml).
+k3s_registry_mirrors: {}
 # Mặc định không cài Argo CD; nhóm home bật
 argocd_enabled: false
 
