@@ -9,8 +9,10 @@ Mục đích: Kiểm các mẫu regex và cách chia pha cold start trên log m�
 
 from __future__ import annotations
 
+import io
 import json
 import re
+import sys
 from datetime import UTC, datetime
 
 import pytest
@@ -395,10 +397,59 @@ def test_other_version_warns():
 
 
 def test_kubelet_timestamp_keeps_microseconds():
-    m = vllm_log._KUBELET_TS.match("2026-11-08T10:02:58.123456789Z rest")
-    assert m is not None
+    line = (
+        "2026-11-08T10:02:58.123456789Z (EngineCore pid=150) INFO 11-08 10:02:58 [x.py:1] "
+        "Loading weights took 1.00 seconds"
+    )
+    r = parse_vllm_log(line)
     expected = datetime(2026, 11, 8, 10, 2, 58, 123456, tzinfo=UTC).timestamp()
-    assert vllm_log._kubelet_ts(m) == pytest.approx(expected, abs=1e-6)
+    assert r["marks"]["weights_load_end"] == pytest.approx(expected, abs=1e-6)
+
+
+def test_uvicorn_lines_with_process_prefix_from_older_versions():
+    """Các bản vLLM cũ bọc cả stdout nên dòng uvicorn cũng có "(APIServer pid=1) ". v0.31.0 thì không."""
+    prefixed = L0.replace(" INFO:     ", " (APIServer pid=1) INFO:     ")
+    r = parse_vllm_log(prefixed)
+    assert r["marks"]["port_open"] == pytest.approx(ts("10:04:17.7"))
+    assert r["marks"]["first_health_ok"] == pytest.approx(ts("10:04:20"))
+
+
+def test_record_after_carriage_return_keeps_kubelet_time():
+    """Bản ghi vLLM nằm sau "\\r" trên cùng một dòng kubelet vẫn dùng mốc kubelet (nano giây) của dòng đó."""
+    line = (
+        f"{kubelet('10:02:58.75')} shards: 25%|██▌       | 1/4\r"
+        "(EngineCore pid=150) INFO 11-08 10:02:58 [x.py:1] Loading weights took 11.20 seconds"
+    )
+    r = parse_vllm_log(line)
+    assert r["marks"]["weights_load_end"] == pytest.approx(ts("10:02:58.75"))
+    assert r["time_source"] == "kubelet"
+
+
+def test_invalid_vllm_date_does_not_raise():
+    line = "(EngineCore pid=150) INFO 02-29 10:00:00 [x.py:1] Loading weights took 1.00 seconds"
+    assert parse_vllm_log(line, year=2027)["marks"]["weights_load_end"] is None  # 2027 không nhuận
+    assert parse_vllm_log(line, year=2028)["marks"]["weights_load_end"] is not None
+
+
+def test_graph_rounding_does_not_make_p7b_negative():
+    """vLLM in 7c làm tròn tới giây ("22 secs" cho 21,6 s), nên 7b tính ra có thể âm một chút."""
+    lines = [line.replace("finished in 21 secs", "finished in 23 secs") for line in L2_LINES]
+    r = parse_vllm_log("\n".join(lines))
+    assert r["phases_s"]["p7b_kv_cache"] == 0.0  # 22,8 − 23 = −0,2: trong sai số làm tròn
+    assert r["warnings"] == []
+    far = parse_vllm_log(
+        "\n".join(line.replace("finished in 21 secs", "finished in 25 secs") for line in L2_LINES)
+    )
+    assert far["phases_s"]["p7b_kv_cache"] == pytest.approx(-2.2)  # ngoài sai số: giữ số âm và cảnh báo
+    assert any("p7b_kv_cache" in w for w in far["warnings"])
+
+
+def test_other_loader_without_loading_weights_line():
+    """Loader khác (runai_streamer, tensorizer…) không in "Loading weights took": pha 5 = 0, pha 6 là cả
+    lần nạp."""
+    lines = [line for line in L2_LINES if "Loading weights took" not in line]
+    p = parse_vllm_log("\n".join(lines))["phases_s"]
+    assert p["p5_download"] == 0.0 and p["p6_load_weights"] == pytest.approx(5.5)
 
 
 def test_cli_prints_json_per_file(tmp_path, capsysbinary):
@@ -408,3 +459,12 @@ def test_cli_prints_json_per_file(tmp_path, capsysbinary):
     out = json.loads(capsysbinary.readouterr().out.decode("utf-8"))
     assert out[str(log)]["complete"] is True
     assert out[str(log)]["phases_s"]["p7c_graph_capture"] == 21.0
+
+
+def test_cli_reads_stdin_as_utf8(monkeypatch, capsysbinary):
+    """`kubectl logs … | python -m experiments.runner.vllm_log -`: stdin đọc bằng UTF-8 dù máy dùng cp1252."""
+    stdin = io.TextIOWrapper(io.BytesIO(L0.encode("utf-8")), encoding="cp1252")
+    monkeypatch.setattr(sys, "stdin", stdin)
+    assert vllm_log.main(["-"]) == 0
+    out = json.loads(capsysbinary.readouterr().out.decode("utf-8"))
+    assert out["-"]["complete"] is True and out["-"]["marks"]["api_server_start"] is not None

@@ -174,33 +174,29 @@ REQUIRED = (
 _ANSI = re.compile(r"\x1b\[[0-9;]*m")  # mã màu terminal; vLLM chỉ tô màu khi chạy trong tty, bỏ cho chắc
 # Tiền tố kubelet của `kubectl logs --timestamps`: RFC 3339 tới nano giây, theo UTC ("Z"). Đây là lúc
 # container runtime nhận dòng log, chính xác hơn giờ vLLM tự in (chỉ tới giây, không có năm).
-_KUBELET_TS = re.compile(
-    r"^(?P<base>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?P<frac>\.\d+)?(?P<tz>Z|[+-]\d{2}:\d{2}) "
-)
+_KUBELET_TS = re.compile(r"^(?P<ts>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})) ")
+# Tiền tố tên tiến trình "(EngineCore pid=150) ". Ở v0.31.0 chỉ dòng log của vLLM có nó; các bản cũ bọc
+# cả stdout nên dòng uvicorn cũng có, vì vậy cả hai regex dưới đều cho phép.
+_PROC = r"(?:\([^()\s]+ pid=\d+\) )?"
 # Dòng log của vLLM (vllm/logger.py:27):
 #   "[tiền tố VLLM_LOGGING_PREFIX](<tiến trình> pid=<số>) <MỨC> <MM-DD HH:MM:SS> [file:dòng] <nội dung>"
 # Dùng search thay vì match để chịu được tiền tố tuỳ chọn ở đầu dòng.
 _VLLM_LINE = re.compile(
-    r"(?:\((?P<proc>[^()\s]+) pid=\d+\) )?(?:DEBUG|INFO|WARNING|ERROR|CRITICAL) "
+    _PROC + r"(?:DEBUG|INFO|WARNING|ERROR|CRITICAL) "
     r"(?P<ts>\d{2}-\d{2} \d{2}:\d{2}:\d{2})(?:\.\d+)? \[[^\]]*\] ?(?P<msg>.*)$"
 )
 # Dòng log của uvicorn: "INFO:     Application startup complete." (mức + ":" + dấu cách cho thẳng cột)
-_UVICORN_LINE = re.compile(r"^(?:DEBUG|INFO|WARNING|ERROR|CRITICAL):\s+(?P<msg>.*)$")
+_UVICORN_LINE = re.compile("^" + _PROC + r"(?:DEBUG|INFO|WARNING|ERROR|CRITICAL):\s+(?P<msg>.*)$")
 
 
-def _kubelet_ts(m: re.Match[str]) -> float:
-    """Đổi mốc RFC 3339 sang giây UNIX. Cắt phần lẻ còn 6 chữ số vì datetime của Python 3.11 chỉ nhận tới
-    micro giây; nano giây vượt độ chính xác cần dùng ở đây."""
-    frac = (m["frac"] or "")[:7]  # ".123456"
-    tz = "+00:00" if m["tz"] == "Z" else m["tz"]
-    return datetime.fromisoformat(f"{m['base']}{frac}{tz}").timestamp()
-
-
-def _vllm_ts(text: str, year: int) -> float:
+def _vllm_ts(text: str, year: int) -> float | None:
     """Giờ vLLM tự in ("11-08 10:02:58") không có năm và theo giờ địa phương của container. Image vLLM
     không đặt TZ nên là UTC. Năm lấy từ tham số; log vắt qua giao thừa thì lệch một năm (không gặp trong
-    đồ án)."""
-    return datetime.strptime(f"{year}-{text}", "%Y-%m-%d %H:%M:%S").replace(tzinfo=UTC).timestamp()
+    đồ án). Ngày không hợp lệ với năm đó (29/02 năm không nhuận) thì trả None thay vì lỗi."""
+    try:
+        return datetime.strptime(f"{year}-{text}", "%Y-%m-%d %H:%M:%S").replace(tzinfo=UTC).timestamp()
+    except ValueError:
+        return None
 
 
 def _num(s: str | None) -> float | None:
@@ -217,29 +213,37 @@ def parse_vllm_log(text: str, *, year: int | None = None) -> dict[str, Any]:
     if year is None:
         year = datetime.now(UTC).year
     result = _empty_result()
-    hits: list[tuple[int, str, float | None, dict[str, str | None]]] = []  # (số dòng, tên mẫu, mốc, nhóm)
+    hits: list[tuple[int, str, float | None, dict[str, str | None]]] = []  # (số mảnh, tên mẫu, mốc, nhóm)
     sources: set[str] = set()
+    by_source: dict[str, list[tuple[str, re.Pattern[str]]]] = {"vllm": [], "uvicorn": []}
+    for name, (source, rx) in PATTERNS.items():
+        by_source[source].append((name, rx))
 
-    # splitlines tách cả "\r" đứng riêng: thanh tiến trình tqdm (vẽ lại bằng "\r") thành mảnh vụn, tự bị bỏ.
-    for i, raw in enumerate(text.splitlines()):
-        line = _ANSI.sub("", raw)
-        ts: float | None = None
+    i = 0  # số thứ tự mảnh, để biết dòng nào đứng trước dòng nào
+    for physical in text.split("\n"):
+        line = _ANSI.sub("", physical)
+        kubelet_ts: float | None = None
         if k := _KUBELET_TS.match(line):
-            ts = _kubelet_ts(k)
+            kubelet_ts = datetime.fromisoformat(k["ts"]).timestamp()  # Python ≥ 3.11 nhận "Z" và nano giây
             line = line[k.end() :]
             sources.add("kubelet")
-        if v := _VLLM_LINE.search(line):
-            source, msg = "vllm", v["msg"]
-            if ts is None:
-                ts = _vllm_ts(v["ts"], year)
-                sources.add("vllm")
-        elif u := _UVICORN_LINE.match(line):
-            source, msg = "uvicorn", u["msg"]  # uvicorn không tự in giờ: chỉ có mốc khi có tiền tố kubelet
-        else:
-            continue
-        for name, (want, rx) in PATTERNS.items():
-            if want == source and (m := rx.search(msg)):
-                hits.append((i, name, ts, m.groupdict()))
+        # Một dòng vật lý có thể gồm nhiều mảnh ngăn bởi "\r": tqdm vẽ lại thanh tiến trình bằng "\r", vLLM
+        # xuống dòng trong một bản ghi bằng "\r\n". Mọi mảnh dùng chung mốc kubelet của dòng chứa nó.
+        for frag in line.split("\r"):
+            i += 1
+            if v := _VLLM_LINE.search(frag):
+                source, msg = "vllm", v["msg"]
+            elif u := _UVICORN_LINE.match(frag):
+                source, msg = "uvicorn", u["msg"]  # uvicorn không tự in giờ: chỉ có mốc nhờ tiền tố kubelet
+            else:
+                continue  # tqdm, NCCL, log của simulator…
+            for name, rx in by_source[source]:
+                if m := rx.search(msg):
+                    ts = kubelet_ts
+                    if ts is None and v is not None:  # không có tiền tố kubelet: dùng giờ vLLM tự in
+                        ts = _vllm_ts(v["ts"], year)
+                        sources.add("vllm")
+                    hits.append((i, name, ts, m.groupdict()))
 
     result["time_source"] = "kubelet" if "kubelet" in sources else ("vllm" if sources else None)
 
@@ -259,8 +263,10 @@ def parse_vllm_log(text: str, *, year: int | None = None) -> dict[str, Any]:
         return by_name[name][0] if name in by_name else None
 
     marks, reported, info = result["marks"], result["reported"], result["info"]
+    # Mốc = dòng đầu tiên khớp mẫu cùng tên. Riêng graph_capture_end tính ở dưới, first_health_ok lấy từ
+    # mẫu health_ok.
     for name in MARKS:
-        if (h := first(name)) is not None:
+        if name != "graph_capture_end" and (h := first(name)) is not None:
             marks[name] = h[1]
     if (h := first("health_ok")) is not None:
         marks["first_health_ok"] = h[1]
@@ -269,7 +275,6 @@ def parse_vllm_log(text: str, *, year: int | None = None) -> dict[str, Any]:
     # profiling, dòng sau là chụp thật. Không thấy dòng KV-cache thì không phân biệt được, nên bỏ trống.
     graphs = by_name.get("graph_capture_end", [])
     kv = first("kv_cache_ready")
-    marks["graph_capture_end"] = None
     if kv is not None:
         before = [g for g in graphs if g[0] < kv[0]]
         after = [g for g in graphs if g[0] > kv[0]]
@@ -371,9 +376,10 @@ def phases(
         return None if a is None or b is None else round(b - a, 3)
 
     # Pha 5 không có mốc bắt đầu riêng trong log, nên lấy số vLLM tự báo. Không có dòng đó mà vẫn nạp
-    # weights xong thì coi là 0: tải dưới 0,5 s (đã có cache) hoặc model là đường dẫn cục bộ.
+    # model xong thì coi là 0: tải dưới 0,5 s (đã có cache), model là đường dẫn cục bộ, hoặc loader khác
+    # (runai_streamer, tensorizer…) gộp tải và nạp, khi đó cả hai tính vào pha 6.
     p5 = r["weights_download_s"]
-    if p5 is None and m["weights_load_end"] is not None:
+    if p5 is None and m["model_load_end"] is not None:
         p5 = 0.0
     load = span(m["model_load_start"], m["model_load_end"])  # pha 5 + pha 6, theo đồng hồ
     # Pha 7c theo số tự báo (làm tròn tới giây). --enforce-eager: không chụp graph nên là 0.
@@ -381,6 +387,9 @@ def phases(
     if p7c is None and parsed["info"]["enforce_eager"] is True:
         p7c = 0.0
     kv_to_end = span(m["kv_cache_ready"], m["engine_init_end"])  # 7b + 7c
+    p7b = None if kv_to_end is None or p7c is None else round(kv_to_end - p7c, 3)
+    if p7b is not None and -0.5 <= p7b < 0:
+        p7b = 0.0  # 7c làm tròn tới giây nên 7b sai số ±0,5 s; âm trong khoảng đó chỉ do làm tròn
     return {
         # Pha 4: container chạy → bắt đầu nạp model (import torch/vllm, đọc cấu hình, tạo EngineCore, CUDA)
         "p4_process_start": span(container_started, m["model_load_start"]),
@@ -392,8 +401,8 @@ def phases(
         # 7a: compile hoặc nạp compile cache, lượt chạy profiling, chụp graph thử để đo bộ nhớ
         "p7a_profile_compile": span(m["model_load_end"], m["kv_cache_ready"]),
         # 7b: cấp phát KV-cache và warm-up kernel, tức phần còn lại sau khi trừ 7c (sai số ±0,5 s vì 7c
-        # làm tròn tới giây)
-        "p7b_kv_cache": None if kv_to_end is None or p7c is None else round(kv_to_end - p7c, 3),
+        # làm tròn tới giây, nên 7a + 7b + 7c có thể lệch pha 7 tới 0,5 s)
+        "p7b_kv_cache": p7b,
         "p7c_graph_capture": p7c,
         # Pha 8: engine xong → pod Ready. Tách: dựng API server tới lúc mở cổng; rồi chờ probe kế tiếp đạt
         # (periodSeconds 5) và kubelet cập nhật condition Ready.
@@ -454,8 +463,10 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
     out = {}
     for path in args.logs:
-        text = sys.stdin.read() if path == "-" else Path(path).read_text(encoding="utf-8", errors="replace")
-        out[path] = parse_vllm_log(text, year=args.year)
+        # Đọc bytes rồi tự giải mã UTF-8: stdin trên Windows mặc định giải mã theo cp1252, làm hỏng ký tự
+        # logo (█▄▀) và thanh tqdm. errors="replace": byte lỗi thành "�" thay vì dừng cả lần đọc.
+        data = sys.stdin.buffer.read() if path == "-" else Path(path).read_bytes()
+        out[path] = parse_vllm_log(data.decode("utf-8", errors="replace"), year=args.year)
     # Ghi bytes UTF-8: console Windows mặc định không phải UTF-8, in chữ có dấu sẽ lỗi
     sys.stdout.buffer.write((json.dumps(out, ensure_ascii=False, indent=2) + "\n").encode("utf-8"))
     return 0
