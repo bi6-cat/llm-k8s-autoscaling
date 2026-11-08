@@ -414,3 +414,42 @@
 - **Deviations:** Vận hành §9: GPU-giờ đếm pod đã xếp lên node thay cho `kube_deployment_status_replicas`. Kiến trúc §17.3: chưa vẽ "độ lệch lịch gửi của máy tạo tải", vì `loadgen` không xuất metric Prometheus và lệch lịch đã được chấm trong `checks.json`. Annotation pha đã có phía dashboard, runner chưa gửi. Vận hành §9: GPU-giờ và chi phí tính trên khoảng đang xem thay cho cố định 24 giờ, và có thêm panel theo ngày. Hàng KEDA trống cho tới khi có việc thu metric KEDA operator.
 - **Links:** nhánh `feat/tr3-dashboards`. File chính: `observability/dashboards/*.json`, `observability/dashboards/README.md`, `observability/kustomization.yaml`, `Makefile` (`dashboards-check`), `.github/workflows/ci.yaml`, `serving/overlays/sim/patch-podmonitor-sim.yaml`.
 - **Thesis:** §4 (giám sát): ba dashboard, cách nạp bằng sidecar, kiểm PromQL trong CI. Ảnh chụp ba dashboard trên kind (máy Trình, `.work/tr3/screens/`) dùng làm hình minh hoạ chuỗi tín hiệu → HPA → pod → Ready; bản cuối nên chụp lại trên V2. Phần hạn chế: TTFT của simulator không gồm thời gian chờ.
+
+## 2026-11-07 – TR3: merge PR #23 (3 dashboard Grafana)
+
+- **Task:** TR3 · **Environment:** none (GitHub)
+- **Done:** Trình merge PR #23 lúc 23:53 bằng merge commit. Trước khi merge: CI 6/6 xanh, `MERGEABLE`/`CLEAN`, 0 review.
+- **Results:** merge commit `0b97acd`, base `6905cfe`; CI trên `main` (push) đạt. PR không đổi cluster nhà, vì chưa có Application Argo CD cho `observability/`.
+- **Links:** PR #23.
+
+## 2026-11-08 – TR5: bộ đọc log khởi động vLLM (`parse_vllm_log`)
+
+- **Task:** TR5 · **Environment:** none (mã nguồn upstream, test cục bộ)
+- **Done:**
+  1. Đọc Kiến trúc §7 (cold start 8 pha), Môi trường §12 (ĐG3) và §14.2, Kế hoạch §6 (giao diện `parse_vllm_log(text) → dict`), việc Q4 trong bàn giao của Quang.
+  2. Tải mã nguồn vLLM tag v0.31.0 (commit `db9527a`, đúng tag ghim ở `serving/base/kustomization.yaml`) và uvicorn 0.54.0. Đối chiếu từng dòng log mức INFO của pha 4–8: câu chữ, mức log, tiến trình in ra, thứ tự xuất hiện.
+  3. Viết `experiments/runner/vllm_log.py`. `parse_vllm_log(text)` trả về mốc tuyệt đối, số giây vLLM tự báo, độ dài pha 4–8 lấy được từ log và vài thông số khởi động (KV-cache, dung lượng checkpoint, compile cache ấm hay lạnh). `phases()` nhận thêm `startedAt` của container và lúc pod Ready để tính đủ pha 4 và 8. Có CLI đọc file hoặc stdin. 20 test chạy trên log mẫu dựng từ câu chữ trong mã nguồn (không phải log thật, số trong đó là số bịa).
+  4. Sửa câu chữ log ở Kiến trúc §7.2 (pha 5–8) cho đúng v0.31.0.
+- **Decision:**
+  - Mốc thời gian lấy từ tiền tố kubelet (`kubectl logs --timestamps`, tới nano giây) thay cho giờ vLLM tự in (chỉ tới giây, không có năm). Log không có tiền tố thì dùng giờ vLLM và ghi rõ trong `time_source`.
+  - Pha 5 lấy số vLLM tự báo (log không có mốc bắt đầu tải); pha 6 = đồng hồ nạp model trừ pha 5. Nhờ vậy các pha nối tiếp và cộng lại đúng bằng tổng.
+  - PR này chưa làm pha 1–3 và phần Kubernetes của pha 4, 8. Ảnh chụp pod của runner (`pods_*.json`) chưa có `startedAt` và conditions; việc đó để một PR nhỏ sau.
+  - Mẫu regex gom trong một bảng `PATTERNS` (Kiến trúc §7.2 yêu cầu dễ chỉnh). Log của bản vLLM khác 0.31.0 vẫn đọc, kèm cảnh báo.
+- **Results:**
+  - Phát hiện trong mã nguồn v0.31.0 (mỗi điểm đều có test):
+    - Trên CUDA, V2 model runner là mặc định (`vllm/config/vllm.py`, `use_v2_model_runner`). Dòng bắt đầu nạp model là `Loading model from scratch...`; `Starting to load model …` chỉ có ở V1.
+    - `Graph capturing finished` được in hai lần. Lần đầu là chụp thử để đo bộ nhớ CUDA graph trong lúc profiling (`v1/worker/gpu/cudagraph_utils.py:928`, `capture_model(profile_only=True)`), trước dòng `GPU KV cache size`; lần sau là chụp thật. Khớp với hai số Quang ghi ở nhật ký tuần 03 (42 s + 38 s trên Docker, 44 s + 40 s trên k3s): lần chụp thử chiếm khoảng 40 s mỗi lần khởi động ở máy nhà.
+    - Thời gian tải từ Hugging Face không nằm trong `Loading weights took`, vì vLLM tải xong file rồi mới bấm giờ. Dòng `Time spent downloading weights` chỉ in khi tải mất hơn 0,5 s.
+    - Với torch 2.13, AOT compile bật mặc định. Khi cache đã ấm, log có `Directly load AOT compilation from path` và không có dòng `torch.compile took`.
+    - Cổng 8000 được `bind` từ sớm nhưng chỉ `listen` sau khi uvicorn in `Application startup complete.` Khi nhận socket từ vLLM, uvicorn không in `Uvicorn running on`. Trước lúc `listen`, probe bị từ chối kết nối, khớp với pha 8 ở Kiến trúc §7.2.
+    - `VLLM_ENABLE_STARTUP_PLAN=1` (mặc định tắt) lưu kết quả profiling vào `$VLLM_CACHE_ROOT/startup_plan/`. Các lần khởi động sau bỏ qua bước đo bộ nhớ và lần chụp graph thử, với điều kiện bộ nhớ GPU còn trống không ít hơn lúc ghi. Chưa thử trên GPU.
+  - `uv run --project experiments pytest experiments`: 116 đạt, 1 bỏ qua, trên cả Python 3.15 và 3.11. `ruff check` và `ruff format --check` đạt; lychee cho Kiến trúc 03 đạt.
+  - Chạy trên 3 file log simulator thật từ kind (`runs/sim/mp-probe-w1/S3-CONST20-1/attempt-1/logs/`): không lỗi, `complete = false`, thiếu đủ 6 mốc bắt buộc, đúng như dự kiến. Một log 100.037 dòng đọc hết trong 0,36 s.
+  - Chưa chạy trên log vLLM thật từ GPU: cluster nhà chưa vào được và chưa thuê máy.
+  - Hạn chế đã thấy ở runner: `collect.write_logs` chỉ thu log của pod còn sống lúc thu, nên pod scale-down giữa lượt KB2 mất log khởi động.
+- **Incidents:**
+  - Tarball mã nguồn tải từ codeload bị cụt (gzip "unexpected end of file") → chuyển sang `git clone --depth 1 --sparse`. Checkout lỗi "Filename too long" ở các file JSON cấu hình kernel → chỉ checkout `*.py`, bật `core.longpaths`.
+- **Review:** `/code-review high` trên nhánh báo 10 điểm, 9 điểm sửa trong code: tách dòng vật lý theo `\n` trước để mảnh sau `\r` giữ mốc kubelet; ngày không hợp lệ (29/02 năm không nhuận) không còn làm lỗi; stdin đọc bằng UTF-8 (trên Windows mặc định là cp1252); pha 5 = 0 khi đã nạp model xong mà không có dòng tải về (gồm cả loader khác); pha 7b âm trong ±0,5 s (sai số do vLLM làm tròn 7c tới giây) thì đặt bằng 0; đọc RFC 3339 trực tiếp bằng `fromisoformat` (Python 3.11 nhận nano giây); gom mẫu theo nguồn; bỏ trạng thái thừa; regex uvicorn chấp nhận tiền tố `(APIServer pid=N)`. Riêng điểm tiền tố này không đúng với v0.31.0, vì `decorate_logs` chỉ gắn tên tiến trình vào bản ghi log chứ không bọc stdout, nhưng đúng với các bản cũ nên vẫn sửa. Điểm thứ 10 (thiếu nhật ký) được giải quyết bằng chính mục này.
+- **Deviations:** Kiến trúc §7.2: sửa câu chữ log của pha 5–8 theo v0.31.0 (hai dòng chụp graph, `took … s`, dòng tải về, dòng mở cổng). Pha 1–3 chưa có bộ đọc.
+- **Links:** nhánh `feat/tr5-parse-vllm-log`, commit `3088a2b`, `9d50bbd`. File chính: `experiments/runner/vllm_log.py`, `experiments/tests/test_vllm_log.py`, `docs/chi-tiet/03-kien-truc-autoscaling.md`.
+- **Thesis:** §5 cold start (ĐG3, N5, LT4): bảng đối chiếu mốc log với pha; hai lần chụp CUDA graph giải thích một phần độ dài pha 7; startup plan là một phương án L2 (nếu thử). Hình nên có: dòng thời gian các mốc log của một lần khởi động thật, vẽ khi có log từ V0 hoặc V2.
