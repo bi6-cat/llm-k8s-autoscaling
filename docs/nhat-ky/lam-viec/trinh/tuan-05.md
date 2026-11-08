@@ -502,3 +502,16 @@
 - **Deviations:** Môi trường §14.2 (giao diện dữ liệu, Kế hoạch §6) có thêm file `pods_timeline.json` và các trường mới trong `pods_*.json`.
 - **Links:** nhánh `feat/tr5-pod-timeline` (xếp chồng trên PR #24). File chính: `experiments/runner/collect.py`, `session.py`, `experiments/tests/test_pod_watcher.py`, `docs/chi-tiet/05-moi-truong-danh-gia.md`.
 - **Thesis:** §4.11 (công cụ đánh giá: vì sao phải thu dữ liệu pod trong lúc lượt chạy, mốc đầu tiên so với lần đổi gần nhất); §5 cold start (pha 1, 2, 4, 8 từ `marks`); §5 GPU-giờ (khoảng giữ GPU từ `scheduled` tới lúc pod biến mất). Hình nên có: dòng thời gian 3 pod của lượt A2 (tạo → Ready → lệnh xoá → biến mất), vẽ từ `pods_timeline.json`.
+
+## 2026-11-08 – TR5: merge PR #24, khôi phục PR #25 sau khi base bị xoá
+
+- **Task:** TR5 · **Environment:** none (GitHub)
+- **Done:**
+  1. Job `alerts` của #24 (run 42464836553) vẫn đỏ: `curl: (22) … error: 503` lúc 10:44 UTC khi tải công cụ từ GitHub Releases, trong sự cố GitHub "timeouts for some unauthenticated users" mở 10:36 UTC. Trình chạy lại job lỗi (`gh run rerun --failed`) lúc khoảng 23:50; cả 6/6 check xanh.
+  2. Trình merge #24 lúc 23:54 bằng merge commit (`gh pr merge 24 --merge --delete-branch`), sau khi đối chiếu đủ 5 điều kiện tự merge: CI xanh; đã `/code-review high`; `MERGEABLE`, 0 review đòi sửa; chỉ đổi `experiments/` và `docs/`, không đụng thứ Argo CD quản lý; base là `main`.
+  3. GitHub **đóng** #25 (xếp chồng trên `feat/tr5-parse-vllm-log`) ngay khi nhánh base bị xoá, không tự đổi base về `main`. Trình khôi phục: push lại nhánh base đúng commit cũ `85d13a3` (đã nằm trên `main`), `gh pr reopen 25`, `gh pr edit 25 --base main`, rồi xoá lại nhánh tạm khi không còn PR nào dùng làm base.
+  4. CI chạy lúc mở lại PR xanh 6/6, nhưng merge ref của #25 vẫn là `85d13a3 + bd5b9d1`, tức là chưa kiểm trên `main` mới. `main` có thêm 13 commit của Quang (PR #26 `feat/v2-prep`, merge 16:44 UTC). Trình gộp `origin/main` vào nhánh (`e87a02c`). File duy nhất cả hai cùng sửa là `experiments/runner/session.py`: #26 chỉ đổi `SCENARIO_S`, Git tự gộp không xung đột.
+- **Results:** trên tổ hợp đã gộp: pytest `loadgen` 55 passed, `experiments` 124 passed, 1 skipped (test cần `fcntl`, không có trên Windows; CI Ubuntu vẫn chạy test này); `ruff check`, `ruff format --check`, `yamllint -s .` sạch; `lychee` 0 lỗi. Merge commit #24: `4c8db8d`. #25 chưa merge, chờ CI trên `main` mới.
+- **Incidents:** PR xếp chồng bị đóng khi xoá nhánh base. Nguyên nhân chưa xác minh: GitHub chỉ tự đổi base trong một số trường hợp, và lần này nhánh bị `gh` xoá qua API. Cách tránh từ nay: trước khi merge PR dưới, đổi base của PR trên sang `main` (`gh pr edit <số> --base main`), sau đó mới merge và xoá nhánh.
+- **Deviations:** quyết định xếp chồng #25 lên #24 ghi rằng GitHub sẽ tự đổi base; thực tế không như vậy (Incidents).
+- **Links:** PR #24 (merge commit `4c8db8d`), PR #25, PR #26 (Quang).
