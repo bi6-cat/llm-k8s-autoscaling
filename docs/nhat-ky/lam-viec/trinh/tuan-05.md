@@ -481,6 +481,7 @@
     - `delete_requested` trùng tới giây với event `Killing` của cả hai pod (10:05:52, 10:06:49). Dùng thẳng `deletionTimestamp` thì lệch 60 s (grace của overlay sim).
     - Simulator: `container_started` → `ready` = 5 s (bằng chu kỳ readiness probe); `created` = `scheduled` (không xin GPU).
     - `parse_vllm_log` + `phases()` chạy trên 3 log thu được với mốc từ `marks`: không lỗi, nhận đúng mốc kubelet (`time_source: kubelet`), `complete = false` vì log simulator không phải log vLLM. Chưa có log vLLM thật.
+  - Chạy lại sau khi sửa theo soát (phiên `podwatch-a2-final`, cùng cấu hình): hợp lệ; 119 lần hỏi, 0 lỗi; 3 pod, cả 3 có log. Hai pod do scale-up tạo ra đều có log thu lúc đang tắt; pod `npvzg` có lệnh xoá lúc 10:22:56 và biến mất trước 10:23:18; pod `99l4q` vẫn đang tắt khi lượt dừng, như lượt đầu.
   - `uv run --project experiments pytest experiments`: 122 đạt, 1 bỏ qua (Python 3.15 và 3.11); 6 test mới ở `test_pod_watcher.py`. `ruff check`, `ruff format --check`, lychee đạt.
 - **Incidents:**
   - Lần chạy kind đầu tiên thất bại: API server từ chối kết nối suốt 3 phút. Nguyên nhân: WSL tắt distro khi không còn tiến trình nào (systemd tắt Docker) nhưng giữ VM. Lệnh `wsl.exe` sau làm distro khởi động lại, Docker khởi động lại các node kind, và systemd báo `unable to start unit docker-<id>.scope … got failed` cho control-plane và một worker (cgroup cũ của VM còn đó). Cách sửa: giữ distro sống bằng một `wsl.exe … sleep 7200` chạy nền, `docker start` lại các node, rồi chạy lại lượt.
