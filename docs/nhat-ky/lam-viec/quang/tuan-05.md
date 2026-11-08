@@ -422,3 +422,14 @@
 - **Deviations:** kịch bản đã chỉnh `spike` KB2 về 10 phút dựa trên cold start ~6 phút của máy trước; máy này cold start ~2 phút, chưa quyết định có rút lại không.
 - **Links:** `infra/ansible/roles/common/tasks/main.yml`; log thô ở `runs/vast-v2b-20261108/` (không commit).
 - **Thesis:** §5 cold start (so 2 máy, phân rã các pha), §4 dựng môi trường (N6).
+
+## 2026-11-08 – ĐG1 thử và V1 (runner 2 lượt có KEDA) trên VM 4 × A4000
+
+- **Task:** Q2, Q4 · **Environment:** V1
+- **Done:** ĐG1 thử với ma trận mới `matrix-dg1-v1.yaml` (quét thô rồi dày, dừng sớm khi điểm gãy đã rõ); tạo `matrix-v1.yaml` từ cấu trúc `matrix-v2.yaml` với C và ngưỡng A2 vừa đo; chạy runner A1 × KB3 và A2 × KB2 không can thiệp; phân tích SLO theo pha, timeline replica, hàng đợi theo pod.
+- **Decision:** máy tạo tải 2 lõi cho V1 (máy chỉ có 11 lõi allocatable) dù biết có thể vượt ngưỡng CPU; chấp nhận lượt invalid vì mục tiêu V1 là kiểm đường đo.
+- **Results:** C = 4,5 req/s, B\* = 52,5, A2 = 42. A1 × KB3 SLO `sustain` 99,9 %; A2 × KB2 SLO `spike` 62,7 %. Số liệu đầy đủ: [phien-2026-11-08-a4000.md](phien-2026-11-08-a4000.md) §12–13.
+- **Incidents:** cả 2 lượt invalid (`cpu_ok`); A1 kẹt ở 2 replica sau tải (mẫu GPU util của pod đang tắt); Claude lại dùng `pgrep -f` tự khớp shell khi dừng runner (exit 144), sau đó kill theo PID.
+- **Deviations:** vLLM 2 CPU/pod và máy tạo tải 2 CPU thay vì 3/3 (máy 15 vCPU).
+- **Links:** `experiments/matrix-dg1-v1.yaml`, `experiments/matrix-v1.yaml`; log thô `runs/dg1-v1-a4000/`, `runs/v1-a4000/`.
+- **Thesis:** §5 đánh giá: hàng đợi ghim vào pod cũ khi spike (N2a/N2b, hướng phát triển: load shedding, router theo tải); điểm yếu của A1 (LT6); cách đo C.

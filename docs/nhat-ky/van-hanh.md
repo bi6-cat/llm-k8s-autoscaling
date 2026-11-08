@@ -205,3 +205,11 @@ Theo mẫu ở [Môi trường §19](../chi-tiet/05-moi-truong-danh-gia.md#19-ki
 
   Chậm hơn máy 5060 Ti 6–13 % (cùng ~448 GB/s). Chưa tách được do kiến trúc GPU hay do 2 CPU thay vì 3.
 - **Chưa làm:** ĐG1 (đo C), runner, A1–A3; so 2 CPU với 3 CPU; chi phí thực tế của phiên.
+
+## 2026-11-08 – ĐG1 thử và V1 trên VM 4 × RTX A4000
+
+- **Runner** chạy từ laptop qua SSH tunnel tới API server (tunnel máy này chịu được 7 MB OpenAPI). Chi tiết từng bước: [phien-2026-11-08-a4000.md](lam-viec/quang/phien-2026-11-08-a4000.md).
+- **ĐG1 thử** (`experiments/matrix-dg1-v1.yaml`, S1, CONST, mỗi mức 300 s, đo 240 s): λ = 2 / 4 / 4,5 / 5 / 6 → SLO 100 / 100 / 99,1 / 6,3 / 0 %. **C = 4,5 req/s, B\* = 52,5, ngưỡng A2 = 42**, KV\* 18,5 %. Giới hạn là hàng đợi (`max-num-seqs` 64), TPOT p95 ~53 ms. Little khớp trong 1 % ở các mức ổn định. Dừng sớm 2 lần (bỏ 8, 10, 5,5), tiết kiệm ~22 phút. Lỗi đo: `UTIL_star` = 0,25 do `capacity.py` lấy trung bình trên cả 4 GPU của node.
+- **V1** (`experiments/matrix-v1.yaml`: A1 × KB3, A2 × KB2, C = 4,5, N = 4): runner chạy 2 lượt liền, không can thiệp, 60 phút. Cả hai `invalid` vì máy tạo tải 2 lõi vượt ngưỡng CPU 70 % (72,8 % và 74,9 %); lịch gửi vẫn chính xác.
+  - A1 × KB3: SLO `ramp` 88,6 %, `sustain` 99,9 %; scale 1→2→3→4 mỗi 120 s; sau tải **kẹt ở 2 replica**: một mẫu GPU util 100 % của pod đang tắt + truy vấn `sum` mọi GPU của node + cửa sổ 300 s → runner phải ép về 1.
+  - A2 × KB2: SLO `pre` 100 %, `spike` **62,7 %** (855 timeout), `drop` 100 %; desired lên 4 sau 43 s, đủ 4 Ready sau ~2 phút 43 giây; scale-down 4→3→2→1 đúng 300 s + 60 s/pod. Hàng đợi 1.028 request **ghim ở pod cũ**, 3 pod mới không có request chờ; xả hết sau ~9 phút.
