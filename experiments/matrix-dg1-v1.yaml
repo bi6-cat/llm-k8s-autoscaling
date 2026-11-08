@@ -1,0 +1,52 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# experiments/matrix-dg1-v1.yaml
+# Khái niệm: ĐG1 (Môi trường §8, Thông số §8.3) = đo năng lực C của MỘT replica: cố định 1 replica (S1),
+#            quét tải CONST ở các mức λ tăng dần; C = λ lớn nhất còn ≥ 95 % request đạt SLO.
+# Mục đích:  ĐG1 thử ở V1 (Môi trường §15: "ĐG1 thử, không dùng làm số liệu chính") trên VM Vast
+#            4 × RTX A4000, Qwen2.5-3B, cấu hình như V2 (max-num-seqs 64, max-model-len 8192). Kiểm runner
+#            trên GPU thuê và lấy C sơ bộ để ước lượng đỉnh KB2/KB3 (0,75 × N × C).
+#            Mỗi mức 300 s như spec: capacity.py bỏ 60 s đầu (làm ấm) → đo 240 s.
+# Chạy:      KUBECONFIG=~/.kube/llm-cloud.yaml uv run --project experiments python -m experiments.runner \
+#              --matrix experiments/matrix-dg1-v1.yaml
+#            uv run --project experiments python -m experiments.runner.capacity runs/dg1-v1-a4000 \
+#              --out runs/dg1-v1-a4000/capacity.json
+# Tham khảo: Thông số §6 (SLO), §8.3; matrix-dg1-home.yaml (cùng cấu trúc)
+# ──────────────────────────────────────────────────────────────────────────────
+session: dg1-v1-a4000
+env: cloud
+
+target:
+  namespace: llm-serving
+  deployment: vllm
+  service_url: http://vllm.llm-serving.svc:8000
+  model: qwen2.5-3b
+  prometheus_service: monitoring/kps-prometheus:9090
+  api_key_secret: vllm-api-key
+  # Cùng mức dự kiến của V2 (matrix-v2.yaml): 3 tiến trình gửi tải, dư nhiều so với λ ≤ 12 ở đây.
+  loadgen_cpu: "3"
+
+timing:
+  settle_s: 30
+  warmup_s: 30                         # warm-up ở 0,3 λ; cửa sổ đo còn bỏ thêm 60 s đầu phase chính
+  warmup_fraction: 0.3
+  cooldown_max_s: 600
+  reset_timeout_s: 900
+
+configs:
+  S1:
+    type: static
+    replicas: 1
+
+# Ước tính trước khi đo: prompt 256–1024 token (TB 640), output 256; benchmark 08/11 ở 64 đồng thời có
+# TPOT 36 ms → E2E ≈ 9–10 s; giới hạn max-num-seqs 64 → λ ≈ 64 / 9,5 ≈ 6–7 req/s. Quét thô bước 2 rồi
+# thêm mức dày quanh điểm gãy.
+defaults: {config: S1, scenario: CONST, duration: 300}
+runs:
+  - {rate: 2}
+  - {rate: 4}
+  - {rate: 6}
+  # 08/11, sau 3 mức thô: λ = 4 đạt SLO 100 % (B = 39,7), λ = 6 sập (SLO 0 %, waiting 179, TTFT p95 62 s).
+  # Bỏ 8 và 10 (chắc chắn trượt), quét dày bước 0,5 giữa 4 và 6.
+  - {rate: 4.5}
+  - {rate: 5}
+  # λ = 5: SLO 6,3 %, waiting 30 → C = 4,5. Bỏ 5,5 (dừng runner trước khi gửi tải).

@@ -134,3 +134,83 @@ Theo mẫu ở [Môi trường §19](../chi-tiet/05-moi-truong-danh-gia.md#19-ki
 - **Định luật Little (dữ liệu cho LT5 của Trình):** B đo phía client so với λ\_thực × E2E trung bình, với λ\_thực = số request gửi trong cửa sổ ÷ 120 s: lệch **≤ 2 %** ở λ = 1–7. Phải dùng λ\_thực, không dùng λ danh định: ở λ = 1 chỉ có 102 request trong 120 s (0,85 req/s, dao động Poisson), dùng λ danh định thì lệch 16 %. Ở λ = 8 lệch 11 % (124 so với 140) vì hàng đợi tăng liên tục, hệ thống không ở trạng thái dừng nên định luật không áp được cho cửa sổ ngắn.
 - **GPU util (dữ liệu cho LT6 của Trình):** 89 % ở λ = 1, 100 % từ λ = 2 tới 8, trong khi `waiting` đi từ 0 lên 92. GPU util không phân biệt được tải vừa với quá tải, đúng dự đoán của LT6.
 
+
+## 2026-11-08 – Phiên thử VM Vast đầu tiên (2 × RTX 5060 Ti): bootstrap, mạng, cold start 3B
+
+- **Máy:** Vast VM 2 × RTX 5060 Ti 16 GB, **unverified**, host đặt ở Trung Quốc (thuê qua web UI, không qua `vast.sh`); Xeon E5-2683 v4, VM nhận 30 vCPU, 61 GB RAM (quảng cáo 80 GB), ổ 130 GB; driver ban đầu 580.95, Max CUDA 13.0.
+- **Bootstrap:** inventory viết tay theo mẫu `vast.sh inventory`; `ansible-playbook site.yml` xong trong **239 s**, 0 lỗi. Device plugin 0.20.1 (helm) → node `nvidia.com/gpu: 2`; pod `nvidia-smi` chạy được. `fio` đọc tuần tự 2918 MiB/s (có thể nhờ cache của host).
+- **Mạng:** `registry-1.docker.io` bị reset kết nối; `ghcr.io`, `quay.io`, `registry.k8s.io`, Hugging Face, GitHub thông. Sửa bằng registry mirror `mirror.gcr.io` (có đúng digest vLLM đã ghim). Trần băng thông thực **~8 MB/s** dù quảng cáo 885 Mbps: HF 1 kết nối 5 MB/s, 16 kết nối 8 MB/s, ModelScope 7 MB/s, `mirror.gcr.io` 8 MB/s; DaoCloud lỗi xác thực. Kéo image vLLM 9,04 GB mất **24 phút 22 giây**; tải model 3B (5,75 GiB) mất **690 s**.
+- **Sự cố 1 – SSH tunnel tới API server đứt khi nhận phản hồi lớn** (tải OpenAPI ~2,8 MB) → dùng `helm --disable-openapi-validation`, `kubectl --validate=false`, và chạy lệnh dài ngay trên VM (`k3s kubectl`), mỗi lần kiểm là một phiên SSH ngắn.
+- **Sự cố 2 – NVML mismatch:** `unattended-upgrades` nâng cả hệ thống (~260 gói, ~55 phút), gồm thư viện driver 580.95 → 580.178 khi module kernel 580.95 vẫn nạp → mọi container GPU lỗi `failed to initialize NVML: Driver/library version mismatch` (pod vLLM `StartError`). Chờ nâng cấp xong rồi reboot (VM lên lại sau ~35 s, driver 580.178), tắt `unattended-upgrades` và timer apt, `apt-mark hold` 21 gói driver. Lỗi của Claude: reboot khi `unattended-upgrade` còn giữ khoá dpkg (mẫu `pgrep` sai); sau reboot `dpkg --audit` sạch.
+- **Sự cố 3 – `hf_xet` treo** ở 1,71 / 3,97 GB khi kết nối đứt, không tự nối lại → tải lại bằng HTTP (`HF_HUB_DISABLE_XET=1`), phần đã tải bằng xet không dùng lại được.
+- **Cold start vLLM 0.31.0, Qwen2.5-3B, 1 GPU, 3 CPU** (image, model đã có trên ổ; tính từ lúc tạo pod tới Ready):
+
+  | Lần | Cấu hình | Ready | Ghi chú |
+  |---|---|---|---|
+  | 1 | gốc, compile lần đầu | 412 s | nạp weights 12 s, compile 32 s, CUDA graph capture 127 + 121 s |
+  | 2 | gốc, có compile cache | 363 s | compile 1,6 s, capture 131 + 120 s |
+  | 3 | gốc, 8 CPU | 360 s | CPU nhiều hơn không giúp |
+  | 4–5 | `cudagraph_mode: PIECEWISE`, capture [1, 2, 4, 8, 16, 32, 64] | 262 s / 231 s | capture 55 + 2 s; còn ~70 s không có log sau capture đầu |
+  | 6 | thêm `--no-enable-flashinfer-autotune` | 231 s | không đổi |
+  | 7 | thêm `VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS=0` | 272 s | mất compile cache, không giúp |
+  | 8 | gốc (đo lại trước benchmark) | 377 s | |
+
+- **Benchmark** (`vllm bench serve`, input 512, output 256, `--ignore-eos`, seed 1; trong pod):
+
+  | Đồng thời | TPOT TB gốc | TPOT TB PIECEWISE | Throughput gốc | Throughput PIECEWISE |
+  |---|---|---|---|---|
+  | 1 | 15,9 ms | 23,0 ms | 62 tok/s | 26 tok/s |
+  | 16 | 18,8 ms | 24,8 ms | 747 tok/s | 584 tok/s |
+  | 32 | 22,2 ms | 29,4 ms | 1195 tok/s | 953 tok/s |
+
+  Lượt PIECEWISE ở đồng thời 1 không làm nóng trước (một request đầu TTFT 82 s), các mức còn lại có làm nóng ở lượt gốc. Kết luận: **giữ cấu hình gốc**; PIECEWISE nhanh hơn ~2 phút lúc khởi động nhưng chậm hơn 20–45%. Nghi CPU đơn luồng yếu (E5 đời 2016) làm chậm cả capture lẫn chế độ PIECEWISE.
+- **API:** gọi được `/v1/chat/completions` với khoá, không khoá → 401. KV cache 208.000 token, Maximum concurrency 25,4 × ở 8192 token.
+- **Chưa làm:** Prometheus, KEDA, runner, `make bootstrap` trọn bằng `vast.sh`; chưa đo chi phí thực tế của phiên (xem trên console Vast).
+
+## 2026-11-08 – VM Vast thứ hai (4 × RTX A4000): bootstrap trọn, cold start 3B, scale 1 → 4
+
+- **Chọn máy:** 2 VM ứng viên, chạy cùng một script kiểm tra nhanh (GPU, PCIe, CPU, RAM, ổ, tải HF thật, Docker Hub). Máy thứ nhất mở cổng SSH nhưng timeout lúc banner exchange cả 2 lần → huỷ. Giữ máy thứ hai.
+- **Máy:** Vast VM 4 × RTX A4000 16 GB, PCIe Gen3 x16 cả 4 GPU, driver 580.95.05 (CUDA 13.0); Xeon E5-2620 v4 2,1 GHz, 15 vCPU, 98 GB RAM, ổ 126 GB (ghi 599 MB/s); đặt ở Séc. Docker Hub thông trực tiếp; tải từ Hugging Face 1 kết nối **93,9 MB/s**.
+- **Thời gian dựng (UTC, từ lúc VM boot ~12:34):**
+
+  | Bước | Thời gian | Máy 08/11 trước (2 × 5060 Ti) |
+  |---|---|---|
+  | Tải model 3B (5,8 GB, `HF_HUB_DISABLE_XET=1`), chạy song song bootstrap | 27 s | 690 s |
+  | `ansible-playbook site.yml` (ok=30, changed=12, failed=0) | 164 s | 239 s |
+  | Kéo image vLLM 9,04 GB qua `mirror.gcr.io`, bắt đầu ngay khi k3s lên | 413 s | 24 min 22 s |
+  | Cài nền trên VM bằng helm: device plugin, kube-prometheus-stack, KEDA, GPU exporter (song song kéo image) | 236 s | cài tay |
+
+  Từ lúc bắt đầu bootstrap tới pod vLLM đầu tiên Ready: 12:40:56 → 12:53:17 ≈ **12,5 phút** (N6 ≤ 30 phút: đạt trên máy này, chưa tính thời gian thuê và chờ VM boot).
+- **Sự cố 1 – task Ansible "Chờ lượt nâng cấp" kẹt:** `pgrep -f '/usr/bin/unattended-upgrade'` khớp chính dòng lệnh của shell đang chạy task, nên luôn thấy "đang chạy". Thực tế `unattended-upgrade` đã tự dừng lúc 12:36:54 (lỗi 404 khi tải gói, 0 gói được nâng, driver nguyên). Sửa mẫu thành `'[/]usr/bin/unattended-upgrade'`, chạy lại playbook.
+- **Sự cố 2 – GPU exporter lỗi `namespaces "gpu" not found`:** ở nhà Argo CD tạo namespace; khi cài tay phải tạo trước.
+- **CPU:** 15 vCPU − `reserved-cpus=0-3` = 11 lõi allocatable < 4 pod × 3 lõi. Dùng overlay tạm (không commit) hạ request/limit vLLM xuống **2 lõi**/pod.
+- **Cold start vLLM 0.31.0, Qwen2.5-3B, 1 GPU, 2 CPU** (image và model có sẵn; từ lúc tạo pod tới Ready):
+
+  | Lần | Điều kiện | Ready | Chi tiết |
+  |---|---|---|---|
+  | 1 | chưa có compile cache | 152 s | import Python ~39 s, init ~31 s, nạp weights 11 s, compile 27,4 s, CUDA graph capture 4 + 4 s |
+  | 2 | có compile cache | 108 s | compile 2,0 s, capture 4 + 4 s |
+  | 3 | scale 1 → 4, 3 pod khởi động đồng thời | 117 / 121 / 122 s | |
+
+  Capture CUDA graph ở máy trước mất 127 + 121 s, ở máy này 4 + 4 s, dù cả hai đều là Xeon E5 v4 đời 2016. Giả thuyết "CPU yếu làm chậm capture" (ghi ở mục trước) **không đúng** cho máy này; nguyên nhân ở máy trước chưa rõ.
+  KV cache 7,28 GiB = 211.936 token (Maximum concurrency 25,87× ở 8192 token); VRAM mỗi GPU khi chạy 14.416 MiB.
+- **Benchmark** (`vllm bench serve`, cùng tham số mục trước, thêm mức 64; trong 1 pod, 2 CPU):
+
+  | Đồng thời | TPOT TB | P99 TPOT | TTFT TB | P99 TTFT | Throughput |
+  |---|---|---|---|---|---|
+  | 1 | 17,2 ms | 17,3 ms | 97 ms | 104 ms | 57 tok/s |
+  | 16 | 21,3 ms | 23,2 ms | 632 ms | 1014 ms | 675 tok/s |
+  | 32 | 25,1 ms | 27,9 ms | 892 ms | 1977 ms | 1121 tok/s |
+  | 64 | 36,2 ms | 40,4 ms | 1243 ms | 3980 ms | 1562 tok/s |
+
+  Chậm hơn máy 5060 Ti 6–13 % (cùng ~448 GB/s). Chưa tách được do kiến trúc GPU hay do 2 CPU thay vì 3.
+- **Chưa làm:** ĐG1 (đo C), runner, A1–A3; so 2 CPU với 3 CPU; chi phí thực tế của phiên.
+
+## 2026-11-08 – ĐG1 thử và V1 trên VM 4 × RTX A4000
+
+- **Runner** chạy từ laptop qua SSH tunnel tới API server (tunnel máy này chịu được 7 MB OpenAPI). Chi tiết từng bước: [phien-2026-11-08-a4000.md](lam-viec/quang/phien-2026-11-08-a4000.md).
+- **ĐG1 thử** (`experiments/matrix-dg1-v1.yaml`, S1, CONST, mỗi mức 300 s, đo 240 s): λ = 2 / 4 / 4,5 / 5 / 6 → SLO 100 / 100 / 99,1 / 6,3 / 0 %. **C = 4,5 req/s, B\* = 52,5, ngưỡng A2 = 42**, KV\* 18,5 %. Giới hạn là hàng đợi (`max-num-seqs` 64), TPOT p95 ~53 ms. Little khớp trong 1 % ở các mức ổn định. Dừng sớm 2 lần (bỏ 8, 10, 5,5), tiết kiệm ~22 phút. Lỗi đo: `UTIL_star` = 0,25 do `capacity.py` lấy trung bình trên cả 4 GPU của node.
+- **V1** (`experiments/matrix-v1.yaml`: A1 × KB3, A2 × KB2, C = 4,5, N = 4): runner chạy 2 lượt liền, không can thiệp, 60 phút. Cả hai `invalid` vì máy tạo tải 2 lõi vượt ngưỡng CPU 70 % (72,8 % và 74,9 %); lịch gửi vẫn chính xác.
+  - A1 × KB3: SLO `ramp` 88,6 %, `sustain` 99,9 %; scale 1→2→3→4 mỗi 120 s; sau tải **kẹt ở 2 replica**: một mẫu GPU util 100 % của pod đang tắt + truy vấn `sum` mọi GPU của node + cửa sổ 300 s → runner phải ép về 1.
+  - A2 × KB2: SLO `pre` 100 %, `spike` **62,7 %** (855 timeout), `drop` 100 %; desired lên 4 sau 43 s, đủ 4 Ready sau ~2 phút 43 giây; scale-down 4→3→2→1 đúng 300 s + 60 s/pod. Hàng đợi 1.028 request **ghim ở pod cũ**, 3 pod mới không có request chờ; xả hết sau ~9 phút.
+- **Chi phí:** giá máy (Vast, Price Breakdown) **$0,611/giờ** = GPU on-demand $0,587 + ổ 130 GB $0,025 ($14,66/ngày). Thời gian thuê ~12:30 → ~15:00 UTC ≈ 2,5 giờ → **≈ $1,5** (ước tính theo giờ, chưa đối chiếu hoá đơn). Nếu V2 (~20–22 giờ) chạy trên máy cùng giá: ≈ $12–13,5; nhưng máy này chỉ 15 vCPU, không đủ cho máy tạo tải 3 lõi (lượt invalid).

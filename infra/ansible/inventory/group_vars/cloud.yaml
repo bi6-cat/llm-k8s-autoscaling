@@ -17,3 +17,14 @@ kubeconfig_server: https://127.0.0.1:16443
 k3s_kubelet_args:
   - cpu-manager-policy=static
   - reserved-cpus=0-3
+
+# Template VM của Vast bật unattended-upgrades; ngày 08/11 nó nâng driver NVIDIA giữa chừng (role common).
+disable_auto_upgrades: true
+
+# Registry mirror: máy Vast đầu tiên (08/11/2026) bị reset kết nối tới registry-1.docker.io, trong khi
+# ghcr.io, quay.io, registry.k8s.io vẫn thông. mirror.gcr.io là bản sao Docker Hub của Google, có đúng
+# image vllm/vllm-openai theo digest đã ghim. Kéo qua mirror vẫn an toàn: image ghim bằng digest (sha256
+# của nội dung), containerd kiểm digest nên mirror không thể trả image khác. Mirror không có image thì
+# containerd tự thử tiếp endpoint gốc registry-1.docker.io.
+k3s_registry_mirrors:
+  docker.io: ["https://mirror.gcr.io"]

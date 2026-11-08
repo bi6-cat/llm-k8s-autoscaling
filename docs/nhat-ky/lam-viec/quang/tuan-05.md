@@ -371,3 +371,65 @@
 - **Deviations:** Kiến trúc §8.2 giả định vLLM tự thoát sau drain, nên pod chỉ chiếm GPU tới khi request xong; thực tế chiếm đủ 180 s. Ảnh hưởng rolling update (`maxSurge: 0`), GPU-giờ khi scale-down, và VH1/VH2 trên cloud. Cần cân nhắc: rút grace period (đánh đổi request dài bị cắt) hoặc sửa nguyên nhân.
 - **Links:** `experiments/ops/graceful_shutdown.py`, `experiments/tests/test_graceful_shutdown.py`, `docs/nhat-ky/van-hanh.md`; dữ liệu `runs/graceful-20261106-2006`, `-control`, `-control-grace5` (PC, gitignore).
 - **Thesis:** §4 (graceful shutdown: thiết kế so với thực tế), §5 N4 (bảng 3 ca), Hạn chế (vLLM không tự thoát, GPU bị giữ 180 s). Nên vẽ timeline một lần thử: xoá → SIGTERM (+20 s) → stream cuối (+23 s) → SIGKILL (+180 s).
+
+## 2026-11-08 – Rà tiến độ cả nhóm; chốt 3B, rút thời lượng KB1–KB3, đỉnh KB2 theo N
+
+- **Task:** chung (chuẩn bị V2), TR5 (đụng `loadgen`), Q6 (runner) · **Environment:** none
+- **Done:**
+  1. Rà tiến độ từ Kế hoạch §3, §5.1, nhật ký của Quang và Trình, git log, PR #1–#23; dựng trang tiến độ chung (link trong `viec-sap-lam.md`).
+  2. Họp nhanh với AI, chốt các điểm treo trước V2 (xem Decision).
+  3. Nhánh `feat/shorter-scenarios`: `loadgen/scenarios.py` (KB1 12 phút, KB2 21 phút, KB3 17 phút; đỉnh KB2 = 0,75 × N × C), `loadgen/__main__.py` và `experiments/runner/loadjob.py` truyền `--replicas` cho cả KB2, `SCENARIO_S` trong `session.py`, test; `matrix-v2.yaml` đổi model sang `qwen2.5-3b`, cập nhật ước tính thời gian; Thông số §7, §8.2 và câu "12–21 phút" ở Kiến thức nền, Vận hành.
+- **Decision:**
+  - **Model V2: Qwen2.5-3B** (overlay `cloud-3b`), bỏ 7B. Lý do: trọng tâm là vận hành (ADR-002); mọi chỉ tiêu tính theo C nên kết luận về autoscaling không phụ thuộc model; vừa GPU 16 GB nên chọn được máy 2 GPU rẻ, verified; cold start ngắn hơn. Cái giá: số cold start trông tốt hơn so với 7B (ghi Hạn chế, có thể ngoại suy theo kích thước weights).
+  - **N: nghiêng về 2 GPU**, không bắt buộc 4: N3 là Should, ADR-005 T12 cho phép viết lại theo N; các Must về vận hành không đổi. Loại máy (2 × 3090 / 5060 Ti / A4000) chốt sau khi chạy `vast.sh find`, ghi ADR-003. Code giữ chạy được cả N = 4 (chỉ đổi `N` trong `matrix-v2.yaml`).
+  - **Rút thời lượng kịch bản** 20 / 25 / 25 → 12 / 21 / 17 phút. Giữ: pha xem flapping ≥ 10 phút (hai cửa sổ 300 s); `drop` của KB2 giữ 10 phút vì với N = 4 pod cuối bị xoá khoảng 8 phút sau khi tải giảm (300 s + 3 × 60 s), cộng grace 180 s. Thời gian dư dùng cho lần lặp.
+  - **Đỉnh KB2 = 0,75 × N × C** (trước cố định 3,0 C): N = 4 vẫn 3,0 C, N = 2 là 1,5 C (3 C cần 4 replica, máy 2 GPU bão hoà ngay). Khoá ma trận vẫn tên `kb3_replicas` để khỏi đổi file ma trận; comment ghi rõ dùng cho cả KB2.
+  - **vLLM không thoát khi nhận SIGTERM:** tạm chấp nhận grace 180 s, ghi Hạn chế, tối ưu sau nếu cần; không gỡ lỗi trước V2.
+  - **Lịch:** Quang thuê VM 1 GPU thử bootstrap ngày 10/11, V0+V1 ngày 11–12/11.
+  - 800.000 VND trong ghi chú cũ là tiền nạp GCP, bỏ khỏi danh sách việc.
+- **Results:** `pytest` loadgen 55 passed, experiments 97 passed; `ruff check`, `ruff format --check` đạt; `yamllint -s experiments/matrix-v2.yaml` đạt. Ước tính ma trận 17 lượt: 400 → 292 phút tải, tổng khoảng 7,5–8 giờ thay vì ~10 giờ (ước tính, chưa đo).
+- **Deviations:** Thông số §7 (thời lượng, đỉnh KB2) và model 7B ở Thông số, Môi trường §6 → 3B; N = 4 có thể thành 2 (chốt ở ADR-003). `spike` 7 phút giả định cold start 3B trên VM ≤ 2,5 phút, chưa đo.
+- **Links:** nhánh `feat/shorter-scenarios`; `loadgen/scenarios.py`, `experiments/matrix-v2.yaml`, `docs/chi-tiet/00-thong-so.md`.
+- **Thesis:** §5 thiết kế thí nghiệm (vì sao thời lượng mỗi pha như vậy: cửa sổ scale-down, flapping, số mẫu p95); Hạn chế (3B thay 7B, N = 2, grace 180 s).
+
+## 2026-11-08 – Thử VM Vast 2 × 5060 Ti: bootstrap 239 s, Docker Hub bị chặn, cold start 3B ~6 phút
+
+- **Task:** Q2 (cloud), Q4 (cold start), chung (chuẩn bị V2) · **Environment:** cloud (VM thử, không phải V0 chính thức)
+- **Done:**
+  1. Tạo khoá SSH riêng cho máy thuê (`~/.ssh/vast_ed25519`, thêm vào `~/.ssh/config`), Quang gắn vào VM.
+  2. Kiểm phần cứng, mạng; chạy `site.yml` với inventory viết tay; cài device plugin; pod thử GPU; `fio`.
+  3. Thêm registry mirror vào role `k3s-server`, tắt tự động nâng cấp và giữ phiên bản driver trong role `common` (chỉ cloud).
+  4. Triển khai overlay `cloud-3b`; tải sẵn model vào `/mnt/nvme/cache/hf`; đo cold start 8 lần, benchmark 2 cấu hình.
+  5. Trả pha `spike` của KB2 về 10 phút (KB2 24 phút).
+- **Decision:**
+  - Giữ cấu hình vLLM gốc (bỏ PIECEWISE + giới hạn capture size): nhanh hơn 2 phút lúc khởi động nhưng TPOT chậm hơn 32–45%, throughput thấp hơn 20–22%.
+  - `spike` của KB2 trở lại 10 phút (điều kiện đặt sáng 08/11: cold start > 2,5 phút thì nới). Cold start ở V0 vẫn > 5 phút thì cân nhắc 12 phút.
+  - Máy V2 nên có CPU đời mới (EPYC / Xeon mới) và băng thông thực đo được, không tin cột `inet_down`; tránh host ở Trung Quốc.
+  - Đề xuất (chưa làm): `vast.sh speedtest` loại máy < 30 MB/s; role Ansible tải sẵn image và model ngay đầu bootstrap, tắt xet.
+- **Results:** xem [nhật ký vận hành 08/11](../../van-hanh.md). Then chốt: bootstrap 239 s; kéo image 9 GB 24 phút 22 giây; model 690 s; cold start gốc 363–377 s; TPOT gốc 15,9 / 18,8 / 22,2 ms ở đồng thời 1 / 16 / 32.
+- **Incidents:** Docker Hub bị chặn; tunnel đứt với phản hồi lớn; `unattended-upgrades` nâng driver giữa chừng → NVML mismatch, phải reboot; `hf_xet` treo. Chi tiết và cách sửa ở nhật ký vận hành.
+- **Deviations:** máy thuê qua web UI là unverified, ngoài bộ lọc của `vast.sh`. KB2 21 → 24 phút so với bản sửa sáng cùng ngày.
+- **Links:** nhánh `feat/v2-prep`; `infra/ansible/roles/common/tasks/main.yml`, `infra/ansible/roles/k3s-server/tasks/main.yml`, `infra/ansible/inventory/group_vars/cloud.yaml`, `loadgen/scenarios.py`.
+- **Thesis:** §4 (dựng VM bằng cùng Ansible với nhà; mirror; tắt tự động nâng cấp), §5 cold start (bảng 8 lần đo: nạp weights chỉ 12 s, phần lớn là CUDA graph capture; đánh đổi cold start với TPOT), Hạn chế (băng thông máy thuê, CPU yếu).
+
+## 2026-11-08 – Dựng VM 4 × A4000: bootstrap, cài nền, cold start, benchmark
+
+- **Task:** Q2 · **Environment:** V0
+- **Done:** kiểm nhanh 2 VM ứng viên, giữ máy 4 × A4000 (Séc); tải model song song bootstrap; chạy Ansible (sửa lỗi task chờ unattended-upgrade, chạy lại); kéo image ngay khi k3s lên; cài device plugin, kube-prometheus-stack, KEDA, GPU exporter bằng helm trên VM; deploy 3B với 2 CPU/pod; đo cold start 3 lần và benchmark 4 mức đồng thời.
+- **Decision:** hạ CPU vLLM xuống 2 lõi trên máy 15 vCPU (overlay tạm, chưa commit) thay vì đổi `reserved-cpus`; giữ cấu hình vLLM gốc.
+- **Results:** bootstrap 164 s; model 27 s; image 413 s; nền 236 s; pod đầu Ready sau ~12,5 phút từ đầu bootstrap. Cold start 152 s (lần đầu), 108 s (có cache), 117–122 s (3 pod đồng thời). TPOT 17,2 / 21,3 / 25,1 / 36,2 ms ở đồng thời 1 / 16 / 32 / 64. Số liệu đầy đủ: `docs/nhat-ky/van-hanh.md`.
+- **Incidents:** `pgrep -f` khớp chính shell của task → task chờ 15 phút vô ích; sửa mẫu `[/]usr/…`. Namespace `gpu` thiếu khi cài exporter ngoài Argo CD.
+- **Deviations:** kịch bản đã chỉnh `spike` KB2 về 10 phút dựa trên cold start ~6 phút của máy trước; máy này cold start ~2 phút, chưa quyết định có rút lại không.
+- **Links:** `infra/ansible/roles/common/tasks/main.yml`; log thô ở `runs/vast-v2b-20261108/` (không commit).
+- **Thesis:** §5 cold start (so 2 máy, phân rã các pha), §4 dựng môi trường (N6).
+
+## 2026-11-08 – ĐG1 thử và V1 (runner 2 lượt có KEDA) trên VM 4 × A4000
+
+- **Task:** Q2, Q4 · **Environment:** V1
+- **Done:** ĐG1 thử với ma trận mới `matrix-dg1-v1.yaml` (quét thô rồi dày, dừng sớm khi điểm gãy đã rõ); tạo `matrix-v1.yaml` từ cấu trúc `matrix-v2.yaml` với C và ngưỡng A2 vừa đo; chạy runner A1 × KB3 và A2 × KB2 không can thiệp; phân tích SLO theo pha, timeline replica, hàng đợi theo pod.
+- **Decision:** máy tạo tải 2 lõi cho V1 (máy chỉ có 11 lõi allocatable) dù biết có thể vượt ngưỡng CPU; chấp nhận lượt invalid vì mục tiêu V1 là kiểm đường đo.
+- **Results:** C = 4,5 req/s, B\* = 52,5, A2 = 42. A1 × KB3 SLO `sustain` 99,9 %; A2 × KB2 SLO `spike` 62,7 %. Số liệu đầy đủ: [phien-2026-11-08-a4000.md](phien-2026-11-08-a4000.md) §12–13.
+- **Incidents:** cả 2 lượt invalid (`cpu_ok`); A1 kẹt ở 2 replica sau tải (mẫu GPU util của pod đang tắt); Claude lại dùng `pgrep -f` tự khớp shell khi dừng runner (exit 144), sau đó kill theo PID.
+- **Deviations:** vLLM 2 CPU/pod và máy tạo tải 2 CPU thay vì 3/3 (máy 15 vCPU).
+- **Links:** `experiments/matrix-dg1-v1.yaml`, `experiments/matrix-v1.yaml`; log thô `runs/dg1-v1-a4000/`, `runs/v1-a4000/`.
+- **Thesis:** §5 đánh giá: hàng đợi ghim vào pod cũ khi spike (N2a/N2b, hướng phát triển: load shedding, router theo tải); điểm yếu của A1 (LT6); cách đo C.
