@@ -9,7 +9,8 @@ Mục đích: Ghi các file:
     events.jsonl     event Kubernetes trong namespace từ lúc bắt đầu lượt (pod, HPA, ScaledObject)
     alerts.jsonl     cảnh báo firing trong cửa sổ lượt (chuỗi ALERTS), dữ liệu cho VH6
     pods_start.json, pods_end.json   ảnh chụp pod vLLM đầu và cuối lượt (cho kiểm hợp lệ)
-    logs/<pod>.log   log vLLM (cho đọc log 8 pha cold start, TR5)
+    logs/<pod>.log   log vLLM có mốc kubelet (--timestamps), đọc bằng vllm_log.parse_vllm_log (pha cold
+                     start, TR5). Chỉ có pod còn sống lúc thu: pod đã scale-down giữa lượt thì mất log.
 """
 
 from __future__ import annotations
