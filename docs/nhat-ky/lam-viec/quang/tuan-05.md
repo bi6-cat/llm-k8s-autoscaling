@@ -433,3 +433,10 @@
 - **Deviations:** vLLM 2 CPU/pod và máy tạo tải 2 CPU thay vì 3/3 (máy 15 vCPU).
 - **Links:** `experiments/matrix-dg1-v1.yaml`, `experiments/matrix-v1.yaml`; log thô `runs/dg1-v1-a4000/`, `runs/v1-a4000/`.
 - **Thesis:** §5 đánh giá: hàng đợi ghim vào pod cũ khi spike (N2a/N2b, hướng phát triển: load shedding, router theo tải); điểm yếu của A1 (LT6); cách đo C.
+
+## 2026-11-08 – Chấp nhận 2 lượt V1 là hợp lệ sau khi xem xét
+
+- **Task:** Q6 · **Environment:** V1
+- **Decision:** Quang quyết định tính `A1-KB3-1` và `A2-KB2-1` (phiên `v1-a4000`) là **hợp lệ (chấp nhận sau xem xét)**, dù runner đánh dấu `invalid` vì `cpu_ok`. `checks.json` gốc giữ nguyên, không sửa.
+- **Lý do:** chỉ vượt ngưỡng an toàn 70 % một chút (CPU máy tạo tải tối đa 72,8 % và 74,9 %); lịch gửi vẫn chính xác (trễ gửi p99 13,6 / 14,8 ms, tối đa 60 / 38 ms, throttle 0); Prometheus không mất mẫu > 5 s. Các phát hiện chính (hàng đợi ghim ở pod cũ, A1 kẹt ở 2 replica) đo từ metric phía server, không phụ thuộc máy tạo tải.
+- **Giới hạn khi dùng:** cấu hình V1 khác V2 (vLLM 2 lõi/pod, máy tạo tải 2 lõi, C và ngưỡng A2 từ ĐG1 thử), nên 2 lượt này **không gộp** vào ma trận 17 lượt của V2; trong luận văn ghi là "V1, chấp nhận sau xem xét", kèm lý do trên.
