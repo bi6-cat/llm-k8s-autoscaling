@@ -14,6 +14,7 @@ Các module:
     configs   áp cấu hình tĩnh hoặc ScaledObject, pause/unpause KEDA
     loadjob   chạy máy tạo tải (loadgen) thành Job trong cluster, lấy kết quả về
     collect   thu metric Prometheus, event, log vLLM, cảnh báo
+    vllm_log  đọc log khởi động vLLM: mốc và độ dài các pha cold start (parse_vllm_log)
     checks    kiểm điều kiện hợp lệ của một lượt
     progress  checkpoint progress.json
     session   điều phối một lượt và cả phiên
