@@ -73,30 +73,31 @@ def kb1(c: float) -> Scenario:
 
 
 def kb2(c: float, n_replicas: int = 4) -> Scenario:
-    """KB2 – tăng đột ngột rồi giảm: 0,5 C → 0,75 × N × C trong 30 s ở phút 4, giữ tới phút 11, về 0,5 C
-    trong 30 s, giữ tới phút 21.
+    """KB2 – tăng đột ngột rồi giảm: 0,5 C → 0,75 × N × C trong 30 s ở phút 4, giữ tới phút 14, về 0,5 C
+    trong 30 s, giữ tới phút 24.
 
     Đỉnh 0,75 × N × C cùng quy tắc với KB3: HPA cần đúng N replica (= 3 C khi N = 4, như bản cũ; = 1,5 C khi
     N = 2). Giảm trở lại ở phút 11 để cùng một lượt kiểm được cả scale-up (pha spike) lẫn scale-down an toàn
     (pha drop, N4).
     Thời lượng (trước 08/11 là 25 phút, pre [2, 5], spike [5, 15], drop [15, 25]):
       - pre 2 phút: chỉ cần mức nền trước khi tăng.
-      - spike 7 phút: dài hơn cold start + thời gian hồi phục (N2a, N2b). Nếu cold start trên VM > 2,5 phút
-        thì nới lại (đo ở V0).
+      - spike 10 phút (như bản cũ): cold start vLLM 3B đo trên VM 2 × 5060 Ti ngày 08/11 là 363–377 s (đã
+        có image, model, compile cache), nên replica mới Ready ở khoảng phút 6,5 của pha; còn ~3 phút để đo
+        hồi phục (N2b). Bản 7 phút (sửa sáng 08/11) giả định cold start ≤ 2,5 phút, không đạt.
       - drop giữ 10 phút: với N = 4, cửa sổ 300 s rồi bớt 1 pod mỗi 60 s, pod cuối bị xoá ở ~8 phút sau
         khi tải giảm; cần thấy trọn các lần xoá này trong pha drop.
     """
     peak = 0.75 * n_replicas
-    points = _minutes([(0, 0.5), (4, 0.5), (4.5, peak), (11, peak), (11.5, 0.5), (21, 0.5)], c)
+    points = _minutes([(0, 0.5), (4, 0.5), (4.5, peak), (14, peak), (14.5, 0.5), (24, 0.5)], c)
     return Scenario(
         name="KB2",
-        duration_s=21 * MINUTE,
+        duration_s=24 * MINUTE,
         rate=piecewise_linear(points),
         rate_max=max(0.5, peak) * c,
         phases={
             "pre": (2 * MINUTE, 4 * MINUTE),
-            "spike": (4 * MINUTE, 11 * MINUTE),
-            "drop": (11 * MINUTE, 21 * MINUTE),
+            "spike": (4 * MINUTE, 14 * MINUTE),
+            "drop": (14 * MINUTE, 24 * MINUTE),
         },
     )
 

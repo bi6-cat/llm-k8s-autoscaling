@@ -39,9 +39,9 @@ def test_kb1_is_constant_half_c():
         (3.9, 0.5),
         (4.25, 1.75),  # giữa đoạn tăng 30 s: (0,5 + 3,0) / 2
         (4.5, 3.0),
-        (8, 3.0),  # spike
-        (11.25, 1.75),  # giữa đoạn giảm
-        (16, 0.5),  # drop
+        (10, 3.0),  # spike
+        (14.25, 1.75),  # giữa đoạn giảm
+        (19, 0.5),  # drop
     ],
 )
 def test_kb2_rate_matches_spec(t_min, k):
@@ -51,9 +51,9 @@ def test_kb2_rate_matches_spec(t_min, k):
 
 def test_kb2_duration_and_phases():
     sc = scenarios.kb2(1.0)
-    assert sc.duration_s == 21 * M
+    assert sc.duration_s == 24 * M
     assert sc.rate_max == 3.0
-    assert sc.phases == {"pre": (2 * M, 4 * M), "spike": (4 * M, 11 * M), "drop": (11 * M, 21 * M)}
+    assert sc.phases == {"pre": (2 * M, 4 * M), "spike": (4 * M, 14 * M), "drop": (14 * M, 24 * M)}
 
 
 def test_kb2_peak_follows_n():

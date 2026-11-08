@@ -81,8 +81,8 @@ configs:
     # running và waiting cùng một lần scrape pod vLLM, nên kiểm một chuỗi là đủ
     signal: 'vllm:num_requests_running{namespace="llm-serving"}'
 
-# Kịch bản dài 12 / 21 / 17 phút (KB1 / KB2 / KB3, rút từ 20 / 25 / 25 ngày 08/11), cộng reset, warm-up,
-# cooldown khoảng 10 phút mỗi lượt: 17 lượt ≈ 292 phút tải + ~170 phút phụ ≈ 7,5–8 giờ (trước là ~10 giờ).
+# Kịch bản dài 12 / 24 / 17 phút (KB1 / KB2 / KB3, rút từ 20 / 25 / 25 ngày 08/11), cộng reset, warm-up,
+# cooldown khoảng 10 phút mỗi lượt: 17 lượt ≈ 313 phút tải + ~170 phút phụ ≈ 8 giờ (trước là ~10 giờ).
 # Lần lặp thứ k của mọi cấu hình dùng cùng lịch gửi (loadgen --run-index k), nên A1-KB1-1, A2-KB1-1 và
 # S4-KB1-1 nhận đúng cùng một chuỗi request.
 defaults: {capacity: *C, kb3_replicas: *N}

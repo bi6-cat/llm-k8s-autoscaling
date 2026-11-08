@@ -32,7 +32,7 @@ from experiments.runner.matrix import Matrix, RunSpec
 from experiments.runner.progress import Progress
 
 # Thời lượng kịch bản (giây), theo Thông số §8 và loadgen/scenarios.py. CONST lấy từ `duration` của lượt.
-SCENARIO_S = {"KB1": 12 * 60, "KB2": 21 * 60, "KB3": 17 * 60}
+SCENARIO_S = {"KB1": 12 * 60, "KB2": 24 * 60, "KB3": 17 * 60}
 
 
 def log(msg: str) -> None:

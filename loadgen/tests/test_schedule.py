@@ -66,8 +66,8 @@ def test_kb2_shape_low_then_spike_then_low():
     c = 1.0
     plan = build_plan(scenarios.kb2(c), 0)
     _assert_poisson_count(_count(plan, 0, 4 * M), 0.5 * c * 240)
-    _assert_poisson_count(_count(plan, 4.5 * M, 11 * M), 3.0 * c * 390)
-    _assert_poisson_count(_count(plan, 11.5 * M, 21 * M), 0.5 * c * 570)
+    _assert_poisson_count(_count(plan, 4.5 * M, 14 * M), 3.0 * c * 570)
+    _assert_poisson_count(_count(plan, 14.5 * M, 24 * M), 0.5 * c * 570)
 
 
 def test_prompt_lengths_uniform_in_range():
