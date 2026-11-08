@@ -1,5 +1,5 @@
 # ──────────────────────────────────────────────────────────────────────────────
-# serving/overlays/cloud-3b/patch-vllm.yaml                         (DEMO – chốt sau phiên thử 3B)
+# serving/overlays/cloud-3b/patch-vllm.yaml
 # Khái niệm: JSON patch (cách đọc: serving/overlays/home/patch-vllm.yaml) áp SAU patch của overlay
 #            `cloud`, đổi model 7B thành 3B và hạ CPU/RAM cho vừa VM có GPU nhỏ.
 # Mục đích:  Chỉ đổi những gì phụ thuộc model. max-model-len 8192, max-num-seqs 64 và
@@ -39,8 +39,12 @@
   path: /spec/template/spec/containers/0/args/5
   value: --served-model-name=qwen2.5-3b
 # CPU/RAM: VM 4 × A4000 rẻ nhất (06/11) chỉ có 16 vCPU và 126 GB RAM. 4 pod × 6 lõi như 7B là 24 lõi,
-# không vừa; 4 × 3 = 12 lõi, chừa 4 lõi cho k3s, Prometheus và máy tạo tải. Vẫn giữ QoS Guaranteed
-# (requests = limits, CPU nguyên) để CPU manager static giữ lõi riêng cho từng pod.
+# không vừa; hạ xuống 3 lõi/pod. Vẫn giữ QoS Guaranteed (requests = limits, CPU nguyên) để CPU manager
+# static giữ lõi riêng cho từng pod.
+# Sửa 08/11 (đo ở V1): lõi `reserved-cpus=0-3` (group_vars cloud) KHÔNG tính vào allocatable, nên máy tạo
+# tải (3 lõi) và các pod khác (~0,4 lõi) phải nằm trong phần còn lại. Cần allocatable ≥ 4 × 3 + 3 + 0,4
+# ≈ 16, tức máy ≥ 20 vCPU. Máy V1 có 15 vCPU (11 allocatable) phải hạ vLLM và máy tạo tải xuống 2 lõi
+# bằng overlay tạm, và máy tạo tải vượt ngưỡng CPU (nhật ký Quang tuần 05, 08/11).
 # RAM 16Gi: tiến trình vLLM 3B cộng /dev/shm (sizeLimit 8Gi, tính vào giới hạn RAM của pod).
 - op: replace
   path: /spec/template/spec/containers/0/resources

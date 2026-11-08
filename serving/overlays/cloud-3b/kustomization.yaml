@@ -1,13 +1,13 @@
 # ──────────────────────────────────────────────────────────────────────────────
-# serving/overlays/cloud-3b/kustomization.yaml                      (DEMO – chốt sau phiên thử 3B)
+# serving/overlays/cloud-3b/kustomization.yaml
 # Khái niệm: Overlay chồng lên overlay: lấy NGUYÊN overlay `cloud` (model 7B) làm đầu vào, rồi chỉ đổi
 #            phần phụ thuộc model. Vẫn là môi trường `cloud` (VM thuê), chỉ khác biến thể model.
-# Mục đích:  Thử Qwen2.5-3B trên VM thuê có GPU 16 GB (ví dụ 4 × RTX A4000), rẻ hơn 4 × 4090 khoảng
-#            3 lần, trước khi nhóm quyết định 3B hay 7B cho V2. Overlay `cloud` giữ nguyên, nên quay
-#            về 7B chỉ cần apply lại `serving/overlays/cloud`.
+# Mục đích:  Overlay của V2: Qwen2.5-3B trên VM thuê có GPU 16 GB (V0+V1 ngày 08/11 chạy trên 4 × RTX
+#            A4000). Chốt 3B thay 7B ngày 08/11: cold start ngắn hơn, vừa GPU 16 GB, rẻ hơn 4 × 4090
+#            khoảng 3 lần. Overlay `cloud` giữ nguyên, nên quay về 7B chỉ cần apply `serving/overlays/cloud`.
 # Dùng:      kubectl kustomize serving/overlays/cloud-3b     (xem kết quả)
-#            kubectl apply -k serving/overlays/cloud-3b      (áp tay trên VM thử)
-# Tham khảo: Thông số §9.1; docs/nhat-ky/lam-viec/quang/tuan-05.md (khảo sát giá 06/11)
+#            kubectl apply -k serving/overlays/cloud-3b      (áp tay trên VM)
+# Tham khảo: Thông số §9.1; docs/nhat-ky/lam-viec/quang/tuan-05.md (khảo sát giá 06/11, quyết định 08/11)
 # ──────────────────────────────────────────────────────────────────────────────
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
