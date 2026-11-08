@@ -19,11 +19,13 @@
 x-adr003:
   C: &C null                           # req/s; capacity.json → "C"
   A2_threshold: &A2_THRESHOLD null     # 0,8 × B*; capacity.json → threshold.A2_concurrency
-  # N = số GPU = max replica của A1, A2 = số replica của S4 = N trong đỉnh 0,75 × N × C của KB3.
-  # 4 theo thiết kế (4 × RTX 4090); nếu ADR-003 chọn máy 2 GPU thì đổi thành 2 (Thông số §4 N3).
+  # N = số GPU = max replica của A1, A2 = số replica của S4 = N trong đỉnh 0,75 × N × C của KB2, KB3.
+  # 4 theo thiết kế; 08/11 nghiêng về máy 2 GPU (chốt ở ADR-003 sau V0): khi đó đổi thành 2 và viết lại
+  # N3 theo N (ADR-005 T12). Kịch bản không cần sửa gì thêm, vì đỉnh KB2, KB3 tự tính theo N.
   N: &N 4
-  # --served-model-name của overlay serving đã áp: cloud = qwen2.5-7b, cloud-3b = qwen2.5-3b
-  model: &MODEL qwen2.5-7b
+  # --served-model-name của overlay serving đã áp: cloud = qwen2.5-7b, cloud-3b = qwen2.5-3b.
+  # 08/11: chốt 3B (cold start ngắn, vừa GPU 16 GB, rẻ hơn; trọng tâm là vận hành, ADR-002).
+  model: &MODEL qwen2.5-3b
 
 session: v2-dg2
 env: cloud
@@ -79,7 +81,8 @@ configs:
     # running và waiting cùng một lần scrape pod vLLM, nên kiểm một chuỗi là đủ
     signal: 'vllm:num_requests_running{namespace="llm-serving"}'
 
-# Mỗi lượt khoảng 35 phút kể cả reset, warm-up, cooldown (Thông số §8.2): 17 lượt ≈ 10 giờ.
+# Kịch bản dài 12 / 21 / 17 phút (KB1 / KB2 / KB3, rút từ 20 / 25 / 25 ngày 08/11), cộng reset, warm-up,
+# cooldown khoảng 10 phút mỗi lượt: 17 lượt ≈ 292 phút tải + ~170 phút phụ ≈ 7,5–8 giờ (trước là ~10 giờ).
 # Lần lặp thứ k của mọi cấu hình dùng cùng lịch gửi (loadgen --run-index k), nên A1-KB1-1, A2-KB1-1 và
 # S4-KB1-1 nhận đúng cùng một chuỗi request.
 defaults: {capacity: *C, kb3_replicas: *N}
