@@ -111,7 +111,7 @@ class RunSpec:
     capacity: float | None  # C (req/s) cho KB1–KB3
     rate: float | None  # CONST: req/s
     duration: float | None  # CONST: giây
-    replicas_for_kb3: int  # N trong đỉnh 0,75 × N × C của KB3
+    replicas_for_kb3: int  # N trong đỉnh 0,75 × N × C của KB2 và KB3 (tên giữ từ khi chỉ KB3 dùng)
 
 
 @dataclass(frozen=True)

@@ -58,49 +58,63 @@ def _minutes(points: Sequence[tuple[float, float]], c: float) -> list[tuple[floa
 
 
 def kb1(c: float) -> Scenario:
-    """KB1 – thấp, ổn định: 0,5 C trong 20 phút. Hai phút đầu để ổn định, không tính."""
+    """KB1 – thấp, ổn định: 0,5 C trong 12 phút. Hai phút đầu để ổn định, không tính.
+
+    12 phút (trước 08/11 là 20): pha steady còn 10 phút = hai cửa sổ scale-down 300 s, đủ thấy flapping
+    (đổi chiều trong 5 phút); ở 0,5 C vẫn có hàng nghìn request cho p95, p99.
+    """
     return Scenario(
         name="KB1",
-        duration_s=20 * MINUTE,
+        duration_s=12 * MINUTE,
         rate=lambda _t: 0.5 * c,
         rate_max=0.5 * c,
-        phases={"steady": (2 * MINUTE, 20 * MINUTE)},
+        phases={"steady": (2 * MINUTE, 12 * MINUTE)},
     )
 
 
-def kb2(c: float) -> Scenario:
-    """KB2 – tăng đột ngột rồi giảm: 0,5 C → 3 C trong 30 s ở phút 5, giữ tới phút 15, về 0,5 C trong 30 s.
+def kb2(c: float, n_replicas: int = 4) -> Scenario:
+    """KB2 – tăng đột ngột rồi giảm: 0,5 C → 0,75 × N × C trong 30 s ở phút 4, giữ tới phút 11, về 0,5 C
+    trong 30 s, giữ tới phút 21.
 
-    Giảm trở lại ở phút 15 để cùng một lượt kiểm được cả scale-up (pha spike) lẫn scale-down an toàn
+    Đỉnh 0,75 × N × C cùng quy tắc với KB3: HPA cần đúng N replica (= 3 C khi N = 4, như bản cũ; = 1,5 C khi
+    N = 2). Giảm trở lại ở phút 11 để cùng một lượt kiểm được cả scale-up (pha spike) lẫn scale-down an toàn
     (pha drop, N4).
+    Thời lượng (trước 08/11 là 25 phút, pre [2, 5], spike [5, 15], drop [15, 25]):
+      - pre 2 phút: chỉ cần mức nền trước khi tăng.
+      - spike 7 phút: dài hơn cold start + thời gian hồi phục (N2a, N2b). Nếu cold start trên VM > 2,5 phút
+        thì nới lại (đo ở V0).
+      - drop giữ 10 phút: với N = 4, cửa sổ 300 s rồi bớt 1 pod mỗi 60 s, pod cuối bị xoá ở ~8 phút sau
+        khi tải giảm; cần thấy trọn các lần xoá này trong pha drop.
     """
-    points = _minutes([(0, 0.5), (5, 0.5), (5.5, 3.0), (15, 3.0), (15.5, 0.5), (25, 0.5)], c)
+    peak = 0.75 * n_replicas
+    points = _minutes([(0, 0.5), (4, 0.5), (4.5, peak), (11, peak), (11.5, 0.5), (21, 0.5)], c)
     return Scenario(
         name="KB2",
-        duration_s=25 * MINUTE,
+        duration_s=21 * MINUTE,
         rate=piecewise_linear(points),
-        rate_max=3.0 * c,
+        rate_max=max(0.5, peak) * c,
         phases={
-            "pre": (2 * MINUTE, 5 * MINUTE),
-            "spike": (5 * MINUTE, 15 * MINUTE),
-            "drop": (15 * MINUTE, 25 * MINUTE),
+            "pre": (2 * MINUTE, 4 * MINUTE),
+            "spike": (4 * MINUTE, 11 * MINUTE),
+            "drop": (11 * MINUTE, 21 * MINUTE),
         },
     )
 
 
 def kb3(c: float, n_replicas: int = 4) -> Scenario:
-    """KB3 – cao, kéo dài: tăng từ 0,5 C lên 0,75 × N × C trong 5 phút đầu, giữ tới phút 25.
+    """KB3 – cao, kéo dài: tăng từ 0,5 C lên 0,75 × N × C trong 5 phút đầu, giữ tới phút 17.
 
     Dừng ở 0,75 × N (không phải N) để HPA cần đúng N replica, không vượt số GPU (Môi trường §10).
+    17 phút (trước 08/11 là 25): pha sustain còn 12 phút, vẫn hơn hai cửa sổ 300 s để thấy flapping.
     """
     peak = 0.75 * n_replicas
-    points = _minutes([(0, 0.5), (5, peak), (25, peak)], c)
+    points = _minutes([(0, 0.5), (5, peak), (17, peak)], c)
     return Scenario(
         name="KB3",
-        duration_s=25 * MINUTE,
+        duration_s=17 * MINUTE,
         rate=piecewise_linear(points),
         rate_max=max(0.5, peak) * c,
-        phases={"ramp": (0.0, 5 * MINUTE), "sustain": (5 * MINUTE, 25 * MINUTE)},
+        phases={"ramp": (0.0, 5 * MINUTE), "sustain": (5 * MINUTE, 17 * MINUTE)},
     )
 
 

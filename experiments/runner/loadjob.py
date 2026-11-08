@@ -82,7 +82,7 @@ def loadgen_args(
         args += ["--rate", f"{rate:g}", "--duration", f"{duration:g}"]
     else:
         args += ["--capacity", f"{capacity:g}"]
-        if scenario == "KB3":
+        if scenario in ("KB2", "KB3"):  # đỉnh 0,75 × N × C
             args += ["--replicas", str(kb3_replicas)]
     return args
 
