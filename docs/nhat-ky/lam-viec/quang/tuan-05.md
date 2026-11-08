@@ -371,3 +371,23 @@
 - **Deviations:** Kiến trúc §8.2 giả định vLLM tự thoát sau drain, nên pod chỉ chiếm GPU tới khi request xong; thực tế chiếm đủ 180 s. Ảnh hưởng rolling update (`maxSurge: 0`), GPU-giờ khi scale-down, và VH1/VH2 trên cloud. Cần cân nhắc: rút grace period (đánh đổi request dài bị cắt) hoặc sửa nguyên nhân.
 - **Links:** `experiments/ops/graceful_shutdown.py`, `experiments/tests/test_graceful_shutdown.py`, `docs/nhat-ky/van-hanh.md`; dữ liệu `runs/graceful-20261106-2006`, `-control`, `-control-grace5` (PC, gitignore).
 - **Thesis:** §4 (graceful shutdown: thiết kế so với thực tế), §5 N4 (bảng 3 ca), Hạn chế (vLLM không tự thoát, GPU bị giữ 180 s). Nên vẽ timeline một lần thử: xoá → SIGTERM (+20 s) → stream cuối (+23 s) → SIGKILL (+180 s).
+
+## 2026-11-08 – Rà tiến độ cả nhóm; chốt 3B, rút thời lượng KB1–KB3, đỉnh KB2 theo N
+
+- **Task:** chung (chuẩn bị V2), TR5 (đụng `loadgen`), Q6 (runner) · **Environment:** none
+- **Done:**
+  1. Rà tiến độ từ Kế hoạch §3, §5.1, nhật ký của Quang và Trình, git log, PR #1–#23; dựng trang tiến độ chung (link trong `viec-sap-lam.md`).
+  2. Họp nhanh với AI, chốt các điểm treo trước V2 (xem Decision).
+  3. Nhánh `feat/shorter-scenarios`: `loadgen/scenarios.py` (KB1 12 phút, KB2 21 phút, KB3 17 phút; đỉnh KB2 = 0,75 × N × C), `loadgen/__main__.py` và `experiments/runner/loadjob.py` truyền `--replicas` cho cả KB2, `SCENARIO_S` trong `session.py`, test; `matrix-v2.yaml` đổi model sang `qwen2.5-3b`, cập nhật ước tính thời gian; Thông số §7, §8.2 và câu "12–21 phút" ở Kiến thức nền, Vận hành.
+- **Decision:**
+  - **Model V2: Qwen2.5-3B** (overlay `cloud-3b`), bỏ 7B. Lý do: trọng tâm là vận hành (ADR-002); mọi chỉ tiêu tính theo C nên kết luận về autoscaling không phụ thuộc model; vừa GPU 16 GB nên chọn được máy 2 GPU rẻ, verified; cold start ngắn hơn. Cái giá: số cold start trông tốt hơn so với 7B (ghi Hạn chế, có thể ngoại suy theo kích thước weights).
+  - **N: nghiêng về 2 GPU**, không bắt buộc 4: N3 là Should, ADR-005 T12 cho phép viết lại theo N; các Must về vận hành không đổi. Loại máy (2 × 3090 / 5060 Ti / A4000) chốt sau khi chạy `vast.sh find`, ghi ADR-003. Code giữ chạy được cả N = 4 (chỉ đổi `N` trong `matrix-v2.yaml`).
+  - **Rút thời lượng kịch bản** 20 / 25 / 25 → 12 / 21 / 17 phút. Giữ: pha xem flapping ≥ 10 phút (hai cửa sổ 300 s); `drop` của KB2 giữ 10 phút vì với N = 4 pod cuối bị xoá khoảng 8 phút sau khi tải giảm (300 s + 3 × 60 s), cộng grace 180 s. Thời gian dư dùng cho lần lặp.
+  - **Đỉnh KB2 = 0,75 × N × C** (trước cố định 3,0 C): N = 4 vẫn 3,0 C, N = 2 là 1,5 C (3 C cần 4 replica, máy 2 GPU bão hoà ngay). Khoá ma trận vẫn tên `kb3_replicas` để khỏi đổi file ma trận; comment ghi rõ dùng cho cả KB2.
+  - **vLLM không thoát khi nhận SIGTERM:** tạm chấp nhận grace 180 s, ghi Hạn chế, tối ưu sau nếu cần; không gỡ lỗi trước V2.
+  - **Lịch:** Quang thuê VM 1 GPU thử bootstrap ngày 10/11, V0+V1 ngày 11–12/11.
+  - 800.000 VND trong ghi chú cũ là tiền nạp GCP, bỏ khỏi danh sách việc.
+- **Results:** `pytest` loadgen 55 passed, experiments 97 passed; `ruff check`, `ruff format --check` đạt; `yamllint -s experiments/matrix-v2.yaml` đạt. Ước tính ma trận 17 lượt: 400 → 292 phút tải, tổng khoảng 7,5–8 giờ thay vì ~10 giờ (ước tính, chưa đo).
+- **Deviations:** Thông số §7 (thời lượng, đỉnh KB2) và model 7B ở Thông số, Môi trường §6 → 3B; N = 4 có thể thành 2 (chốt ở ADR-003). `spike` 7 phút giả định cold start 3B trên VM ≤ 2,5 phút, chưa đo.
+- **Links:** nhánh `feat/shorter-scenarios`; `loadgen/scenarios.py`, `experiments/matrix-v2.yaml`, `docs/chi-tiet/00-thong-so.md`.
+- **Thesis:** §5 thiết kế thí nghiệm (vì sao thời lượng mỗi pha như vậy: cửa sổ scale-down, flapping, số mẫu p95); Hạn chế (3B thay 7B, N = 2, grace 180 s).

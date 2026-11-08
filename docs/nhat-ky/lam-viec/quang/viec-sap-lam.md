@@ -4,7 +4,7 @@
 
 ## 1. Tình trạng hiện tại
 
-Trang tiến độ có giải thích quy trình (môi trường, chặng, runner, Git, từ điển mã): <https://claude.ai/artifact/9hQJicovMS6rjxdLuNJf5a> (chỉ chủ tài khoản xem được, muốn chia sẻ thì bấm Share trên trang).
+Trang tiến độ có giải thích quy trình (môi trường, chặng, runner, Git, từ điển mã): <https://claude.ai/artifact/9hQJicovMS6rjxdLuNJf5a> (chỉ chủ tài khoản xem được, muốn chia sẻ thì bấm Share trên trang). Trang tiến độ chung của Quang và Trình (08/11): <https://claude.ai/code/artifact/84c8ef49-e9d2-4f5e-8ffd-b0598601982d>.
 
 **Cả dự án:** M1 đạt 2/7, M2 đạt 0/8 ([Kế hoạch §3](../../../chi-tiet/06-ke-hoach-quan-ly.md#3-checklist-các-mốc)). Lịch đã dời ([Kế hoạch §1.1](../../../chi-tiet/06-ke-hoach-quan-ly.md#11-điều-chỉnh-ngày-04112026)): V0+V1 khoảng 11–12/11, **V2 14–15/11**, đóng băng dữ liệu 22/11, không còn phiên dự phòng. Điểm dừng: 07/11 vòng autoscaling chạy trên kind (**đã đạt 04/11**, bằng file nháp của scaffold); **10/11 runner chạy 2 lượt liền không cần can thiệp** (chưa có runner).
 
@@ -37,7 +37,9 @@ Phần trăm là ước lượng theo đầu việc, không phải giờ đã d�
 - [x] ~~Mở 3 PR còn lại~~ (PR #7–#14 đã merge, 06/11).
 - [x] (06/11, PR #12) **Q6 runner v1 trên simulator** (đường găng, hạn 10/11): áp cấu hình A1/A2, reset, chạy `loadgen` trong pod (gọi Service, **không** dùng `port-forward`), thu metric Prometheus, checkpoint, phát hiện pod vLLM đổi tên giữa lượt thì đánh dấu lượt không hợp lệ. Thay script tạm `runs/dg1-mini-home-20261105/dg1_mini.py` (chỉ có trên máy dev, gitignore).
 - [x] (06/11) Khảo sát máy Vast và sửa ADR-004 K6: xem mục Cloud ở trên.
-- [ ] **Q2 chốt máy cùng Trình** (ADR-003: N, model, KB2 theo N); làm rõ 800.000 VND đã nạp vào đâu, nạp thêm nếu cần.
+- [x] (08/11) Chốt model **3B** cho V2, rút kịch bản còn 12 / 21 / 17 phút, đỉnh KB2 theo N (nhánh `feat/shorter-scenarios`). N nghiêng về 2; 800.000 VND là tiền nạp GCP, bỏ qua.
+- [ ] **Q2 chốt loại máy 2 GPU** (3090 / 5060 Ti / A4000): chạy `GPU=… NGPU=2 MAX_DPH=1.5 infra/provision/vast.sh find v2`, cần driver ≥ 580 (CUDA 13), máy verified; ghi ADR-003; nạp tiền Vast trước 13/11.
+- [ ] **10/11** Quang thuê VM 1 GPU thử `rent → bootstrap → release`; **11–12/11** V0+V1 (đo cold start 3B: > 2,5 phút thì nới `spike` của KB2 về 10 phút).
 - [ ] **Họp ngắn với Trình:** ngưỡng `throttle_ok` (đề xuất theo `throttled_usec`); lọc lỗi theo cột `error` chứ không theo `status` trong `requests.csv`; sửa comment `pollingInterval` của A2; `for: 1m` của `LLMErrorRateHigh`; cột `id`, `n_in_target`. Nhắc Trình push `feat/tr2-sim`.
 - [x] (06/11, runner phiên `dg1-home-05b`: C = 12,5 req/s, B\* = 28,4) **Q6 đo lại ĐG1-mini với cấu hình nhà mới** (0,5B, 1 pod, `gpu-memory-utilization` 0,40): `capacity-home.json` hiện là của 1,5B nên ngưỡng A2 ở nhà phải tính lại. Luồng lấy mẫu ra ngoài pod máy tạo tải (hoặc pod 2 lõi) để hết throttle.
 - [x] (06/11, `feat/cloud-prep`) **Q2:** `vast.sh` (lọc verified, bỏ `is_vm_deverified`, tham số GPU/NGPU/MAX_DPH), Ansible syntax-check với inventory cloud.
@@ -49,7 +51,7 @@ Phần trăm là ước lượng theo đầu việc, không phải giờ đã d�
 
 - [x] ~~**Q1/Q3 áp time-slicing lên PC**~~ (06/11): chạy được 1 pod; 2 pod vừa VRAM nhưng hết RAM, xem `van-hanh.md`. Còn: giải quyết RAM (tắt desktop/zram) rồi thử lại 2 pod. Ghi chú cũ: `helm upgrade` device plugin với `-f device-plugin-values.yaml -f device-plugin-values-home.yaml`, kiểm node báo `nvidia.com/gpu: 3`; áp overlay `home` (0,5B), scale lên 2 rồi 3 pod: cả ba Ready? khởi động cùng lúc có lỗi VRAM không? Đo VRAM (`nvidia-smi`) và RAM (`kubectl top pod`) thực rồi chỉnh `gpu-memory-utilization`, `resources`.
 - [x] (06/11) **Q5:** test graceful shutdown với vLLM thật: 144/144 stream ok trong 3 lần; đối chứng grace 5 s cắt 48/48. Nhưng request an toàn là nhờ grace 180 s, vLLM không dừng khi nhận SIGTERM (xem `van-hanh.md` 06/11).
-- [ ] **Q5 tìm nguyên nhân:** vLLM 0.31.0 không dừng engine và không thoát khi nhận SIGTERM, ở mọi trạng thái (khởi tạo, nhàn rỗi, đang phục vụ; drain lẫn abort). Thử `kill -TERM` tay, xem tiến trình con, thử bản vLLM khác; kiểm lại trên VM ở V0. Hệ quả nếu không sửa: mỗi lần tắt pod giữ GPU 180 s.
+- [ ] (08/11: **tạm chấp nhận** grace 180 s, ghi vào Hạn chế; tối ưu sau nếu cần) **Q5 tìm nguyên nhân:** vLLM 0.31.0 không dừng engine và không thoát khi nhận SIGTERM, ở mọi trạng thái (khởi tạo, nhàn rỗi, đang phục vụ; drain lẫn abort). Thử `kill -TERM` tay, xem tiến trình con, thử bản vLLM khác; kiểm lại trên VM ở V0. Hệ quả nếu không sửa: mỗi lần tắt pod giữ GPU 180 s.
 - [ ] **Q4:** manifest pre-pull (giới hạn ghi vì ổ SATA); L2 và đo 8 pha (cần `parse_vllm_log` của TR5); LT4.
 - [ ] Dọn 5 pod vLLM cũ (`Unknown`/`Completed`) và pod `loadgen` trong `llm-serving`.
 - [ ] TTFT trên k3s cao hơn Docker (p50 +18 %): đo lại gọi thẳng Service, bỏ Ingress.
