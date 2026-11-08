@@ -134,3 +134,35 @@ Theo mẫu ở [Môi trường §19](../chi-tiet/05-moi-truong-danh-gia.md#19-ki
 - **Định luật Little (dữ liệu cho LT5 của Trình):** B đo phía client so với λ\_thực × E2E trung bình, với λ\_thực = số request gửi trong cửa sổ ÷ 120 s: lệch **≤ 2 %** ở λ = 1–7. Phải dùng λ\_thực, không dùng λ danh định: ở λ = 1 chỉ có 102 request trong 120 s (0,85 req/s, dao động Poisson), dùng λ danh định thì lệch 16 %. Ở λ = 8 lệch 11 % (124 so với 140) vì hàng đợi tăng liên tục, hệ thống không ở trạng thái dừng nên định luật không áp được cho cửa sổ ngắn.
 - **GPU util (dữ liệu cho LT6 của Trình):** 89 % ở λ = 1, 100 % từ λ = 2 tới 8, trong khi `waiting` đi từ 0 lên 92. GPU util không phân biệt được tải vừa với quá tải, đúng dự đoán của LT6.
 
+
+## 2026-11-08 – Phiên thử VM Vast đầu tiên (2 × RTX 5060 Ti): bootstrap, mạng, cold start 3B
+
+- **Máy:** Vast VM 2 × RTX 5060 Ti 16 GB, **unverified**, host đặt ở Trung Quốc (thuê qua web UI, không qua `vast.sh`); Xeon E5-2683 v4, VM nhận 30 vCPU, 61 GB RAM (quảng cáo 80 GB), ổ 130 GB; driver ban đầu 580.95, Max CUDA 13.0.
+- **Bootstrap:** inventory viết tay theo mẫu `vast.sh inventory`; `ansible-playbook site.yml` xong trong **239 s**, 0 lỗi. Device plugin 0.20.1 (helm) → node `nvidia.com/gpu: 2`; pod `nvidia-smi` chạy được. `fio` đọc tuần tự 2918 MiB/s (có thể nhờ cache của host).
+- **Mạng:** `registry-1.docker.io` bị reset kết nối; `ghcr.io`, `quay.io`, `registry.k8s.io`, Hugging Face, GitHub thông. Sửa bằng registry mirror `mirror.gcr.io` (có đúng digest vLLM đã ghim). Trần băng thông thực **~8 MB/s** dù quảng cáo 885 Mbps: HF 1 kết nối 5 MB/s, 16 kết nối 8 MB/s, ModelScope 7 MB/s, `mirror.gcr.io` 8 MB/s; DaoCloud lỗi xác thực. Kéo image vLLM 9,04 GB mất **24 phút 22 giây**; tải model 3B (5,75 GiB) mất **690 s**.
+- **Sự cố 1 – SSH tunnel tới API server đứt khi nhận phản hồi lớn** (tải OpenAPI ~2,8 MB) → dùng `helm --disable-openapi-validation`, `kubectl --validate=false`, và chạy lệnh dài ngay trên VM (`k3s kubectl`), mỗi lần kiểm là một phiên SSH ngắn.
+- **Sự cố 2 – NVML mismatch:** `unattended-upgrades` nâng cả hệ thống (~260 gói, ~55 phút), gồm thư viện driver 580.95 → 580.178 khi module kernel 580.95 vẫn nạp → mọi container GPU lỗi `failed to initialize NVML: Driver/library version mismatch` (pod vLLM `StartError`). Chờ nâng cấp xong rồi reboot (VM lên lại sau ~35 s, driver 580.178), tắt `unattended-upgrades` và timer apt, `apt-mark hold` 21 gói driver. Lỗi của Claude: reboot khi `unattended-upgrade` còn giữ khoá dpkg (mẫu `pgrep` sai); sau reboot `dpkg --audit` sạch.
+- **Sự cố 3 – `hf_xet` treo** ở 1,71 / 3,97 GB khi kết nối đứt, không tự nối lại → tải lại bằng HTTP (`HF_HUB_DISABLE_XET=1`), phần đã tải bằng xet không dùng lại được.
+- **Cold start vLLM 0.31.0, Qwen2.5-3B, 1 GPU, 3 CPU** (image, model đã có trên ổ; tính từ lúc tạo pod tới Ready):
+
+  | Lần | Cấu hình | Ready | Ghi chú |
+  |---|---|---|---|
+  | 1 | gốc, compile lần đầu | 412 s | nạp weights 12 s, compile 32 s, CUDA graph capture 127 + 121 s |
+  | 2 | gốc, có compile cache | 363 s | compile 1,6 s, capture 131 + 120 s |
+  | 3 | gốc, 8 CPU | 360 s | CPU nhiều hơn không giúp |
+  | 4–5 | `cudagraph_mode: PIECEWISE`, capture [1, 2, 4, 8, 16, 32, 64] | 262 s / 231 s | capture 55 + 2 s; còn ~70 s không có log sau capture đầu |
+  | 6 | thêm `--no-enable-flashinfer-autotune` | 231 s | không đổi |
+  | 7 | thêm `VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS=0` | 272 s | mất compile cache, không giúp |
+  | 8 | gốc (đo lại trước benchmark) | 377 s | |
+
+- **Benchmark** (`vllm bench serve`, input 512, output 256, `--ignore-eos`, seed 1; trong pod):
+
+  | Đồng thời | TPOT TB gốc | TPOT TB PIECEWISE | Throughput gốc | Throughput PIECEWISE |
+  |---|---|---|---|---|
+  | 1 | 15,9 ms | 23,0 ms | 62 tok/s | 26 tok/s |
+  | 16 | 18,8 ms | 24,8 ms | 747 tok/s | 584 tok/s |
+  | 32 | 22,2 ms | 29,4 ms | 1195 tok/s | 953 tok/s |
+
+  Lượt PIECEWISE ở đồng thời 1 không làm nóng trước (một request đầu TTFT 82 s), các mức còn lại có làm nóng ở lượt gốc. Kết luận: **giữ cấu hình gốc**; PIECEWISE nhanh hơn ~2 phút lúc khởi động nhưng chậm hơn 20–45%. Nghi CPU đơn luồng yếu (E5 đời 2016) làm chậm cả capture lẫn chế độ PIECEWISE.
+- **API:** gọi được `/v1/chat/completions` với khoá, không khoá → 401. KV cache 208.000 token, Maximum concurrency 25,4 × ở 8192 token.
+- **Chưa làm:** Prometheus, KEDA, runner, `make bootstrap` trọn bằng `vast.sh`; chưa đo chi phí thực tế của phiên (xem trên console Vast).

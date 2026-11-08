@@ -391,3 +391,23 @@
 - **Deviations:** Thông số §7 (thời lượng, đỉnh KB2) và model 7B ở Thông số, Môi trường §6 → 3B; N = 4 có thể thành 2 (chốt ở ADR-003). `spike` 7 phút giả định cold start 3B trên VM ≤ 2,5 phút, chưa đo.
 - **Links:** nhánh `feat/shorter-scenarios`; `loadgen/scenarios.py`, `experiments/matrix-v2.yaml`, `docs/chi-tiet/00-thong-so.md`.
 - **Thesis:** §5 thiết kế thí nghiệm (vì sao thời lượng mỗi pha như vậy: cửa sổ scale-down, flapping, số mẫu p95); Hạn chế (3B thay 7B, N = 2, grace 180 s).
+
+## 2026-11-08 – Thử VM Vast 2 × 5060 Ti: bootstrap 239 s, Docker Hub bị chặn, cold start 3B ~6 phút
+
+- **Task:** Q2 (cloud), Q4 (cold start), chung (chuẩn bị V2) · **Environment:** cloud (VM thử, không phải V0 chính thức)
+- **Done:**
+  1. Tạo khoá SSH riêng cho máy thuê (`~/.ssh/vast_ed25519`, thêm vào `~/.ssh/config`), Quang gắn vào VM.
+  2. Kiểm phần cứng, mạng; chạy `site.yml` với inventory viết tay; cài device plugin; pod thử GPU; `fio`.
+  3. Thêm registry mirror vào role `k3s-server`, tắt tự động nâng cấp và giữ phiên bản driver trong role `common` (chỉ cloud).
+  4. Triển khai overlay `cloud-3b`; tải sẵn model vào `/mnt/nvme/cache/hf`; đo cold start 8 lần, benchmark 2 cấu hình.
+  5. Trả pha `spike` của KB2 về 10 phút (KB2 24 phút).
+- **Decision:**
+  - Giữ cấu hình vLLM gốc (bỏ PIECEWISE + giới hạn capture size): nhanh hơn 2 phút lúc khởi động nhưng TPOT chậm hơn 32–45%, throughput thấp hơn 20–22%.
+  - `spike` của KB2 trở lại 10 phút (điều kiện đặt sáng 08/11: cold start > 2,5 phút thì nới). Cold start ở V0 vẫn > 5 phút thì cân nhắc 12 phút.
+  - Máy V2 nên có CPU đời mới (EPYC / Xeon mới) và băng thông thực đo được, không tin cột `inet_down`; tránh host ở Trung Quốc.
+  - Đề xuất (chưa làm): `vast.sh speedtest` loại máy < 30 MB/s; role Ansible tải sẵn image và model ngay đầu bootstrap, tắt xet.
+- **Results:** xem [nhật ký vận hành 08/11](../../van-hanh.md). Then chốt: bootstrap 239 s; kéo image 9 GB 24 phút 22 giây; model 690 s; cold start gốc 363–377 s; TPOT gốc 15,9 / 18,8 / 22,2 ms ở đồng thời 1 / 16 / 32.
+- **Incidents:** Docker Hub bị chặn; tunnel đứt với phản hồi lớn; `unattended-upgrades` nâng driver giữa chừng → NVML mismatch, phải reboot; `hf_xet` treo. Chi tiết và cách sửa ở nhật ký vận hành.
+- **Deviations:** máy thuê qua web UI là unverified, ngoài bộ lọc của `vast.sh`. KB2 21 → 24 phút so với bản sửa sáng cùng ngày.
+- **Links:** nhánh `feat/v2-prep`; `infra/ansible/roles/common/tasks/main.yml`, `infra/ansible/roles/k3s-server/tasks/main.yml`, `infra/ansible/inventory/group_vars/cloud.yaml`, `loadgen/scenarios.py`.
+- **Thesis:** §4 (dựng VM bằng cùng Ansible với nhà; mirror; tắt tự động nâng cấp), §5 cold start (bảng 8 lần đo: nạp weights chỉ 12 s, phần lớn là CUDA graph capture; đánh đổi cold start với TPOT), Hạn chế (băng thông máy thuê, CPU yếu).
