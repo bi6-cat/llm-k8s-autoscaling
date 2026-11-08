@@ -6,7 +6,7 @@ Khái niệm: Cold start = thời gian từ lúc có pod mới tới lúc pod nh
     vLLM cho biết: khi nào bắt đầu nạp model, tải và nạp weights mất bao lâu, compile, cấp phát KV-cache,
     chụp CUDA graph (ghi sẵn chuỗi lệnh GPU cho từng cỡ batch để lúc chạy khỏi phải phát lại từng lệnh).
 Mục đích: `parse_vllm_log(text) → dict` là hook phân tích log của runner (Kế hoạch §6). Đầu vào là file
-    `logs/<pod>.log` runner thu bằng `kubectl logs --timestamps` (collect.write_logs). Đầu ra gồm mốc tuyệt
+    `logs/<pod>.log` runner thu bằng `kubectl logs --timestamps` (collect.PodWatcher). Đầu ra gồm mốc tuyệt
     đối (giây UNIX), số giây vLLM tự báo trong log, độ dài các pha 4–8 lấy được từ log, và vài thông số
     khởi động (KV-cache, dung lượng checkpoint). `phases()` nhận thêm hai mốc phía Kubernetes (container
     bắt đầu chạy, pod Ready) để tính đủ pha 4 và pha 8.
@@ -368,6 +368,8 @@ def phases(
         container_started  containerStatuses[].state.running.startedAt: container bắt đầu chạy = đầu pha 4
         pod_ready          lastTransitionTime của condition Ready: hết pha 8
     Không truyền thì các pha cần chúng là None. Hai mốc này chỉ chính xác tới giây (định dạng của API).
+    Lấy sẵn ở pods_timeline.json của lượt: `marks["container_started"]`, `marks["ready"]` (collect.pod_marks,
+    Ready lần đầu chứ không phải lần đổi cuối).
     Pha 1–3 lấy hoàn toàn từ phía Kubernetes (PodScheduled, event Pulling/Pulled), không nằm ở đây.
     """
     m, r = parsed["marks"], parsed["reported"]

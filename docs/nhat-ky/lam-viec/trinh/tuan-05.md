@@ -453,3 +453,51 @@
 - **Deviations:** Kiến trúc §7.2: sửa câu chữ log của pha 5–8 theo v0.31.0 (hai dòng chụp graph, `took … s`, dòng tải về, dòng mở cổng). Pha 1–3 chưa có bộ đọc.
 - **Links:** nhánh `feat/tr5-parse-vllm-log`, commit `3088a2b`, `9d50bbd`. File chính: `experiments/runner/vllm_log.py`, `experiments/tests/test_vllm_log.py`, `docs/chi-tiet/03-kien-truc-autoscaling.md`.
 - **Thesis:** §5 cold start (ĐG3, N5, LT4): bảng đối chiếu mốc log với pha; hai lần chụp CUDA graph giải thích một phần độ dài pha 7; startup plan là một phương án L2 (nếu thử). Hình nên có: dòng thời gian các mốc log của một lần khởi động thật, vẽ khi có log từ V0 hoặc V2.
+
+## 2026-11-08 – TR5: dòng thời gian pod và log pod bị scale-down (`PodWatcher`)
+
+- **Task:** TR5 · **Environment:** sim (kind `llm-sim`, Kubernetes v1.37.0)
+- **Done:**
+  1. Đọc Kiến trúc §7.2, §7.4, §8; Môi trường §12, §14.1, §14.2, §15, §17; Kế hoạch §6 (giao diện "Dữ liệu"); Thông số §9.2 (preStop 20 s, grace 180 s). Đọc JSON của một pod simulator thật trên kind để đối chiếu tên trường.
+  2. `collect.snapshot_pods` thêm `node`, `created`, `deletion_timestamp`, `deletion_grace_s`, `conditions`, `containers`, `init_containers`; các trường cũ mà `checks.py` dùng giữ nguyên.
+  3. Thêm `collect.pod_marks` (hàm thuần): đổi ảnh chụp sang mốc giây UNIX gắn với 8 pha (`created`, `scheduled`, `sandbox_ready`, `initialized`, `container_started`, `ready`, `delete_requested`, `container_finished`). `container_started` và `ready` dùng thẳng cho `vllm_log.phases()`.
+  4. Thêm `collect.PodWatcher`: luồng nền hỏi pod mỗi 5 s từ sau reset tới hết cooldown, ghi `pods_timeline.json`, thu log pod đang tắt ở mỗi lần hỏi. Bỏ `collect.write_logs`.
+  5. `session.run_one` bọc warm-up, pha chính, cooldown trong `try/finally` để luồng nền luôn dừng và timeline luôn được ghi, kể cả khi lượt lỗi. `metadata.counts` thêm `pods_seen`, `pods_without_log`, `pod_poll_errors`.
+  6. Môi trường §14.1, §14.2: thêm `pods_*.json`, `pods_timeline.json`, `logs/` vào cấu trúc thư mục lượt, bảng trường của `pods_timeline.json`; sửa mô tả `events.jsonl` (chỉ có event Kubernetes, không có pod conditions).
+- **Decision:**
+  - Hỏi định kỳ 5 s thay cho `kubectl get --watch`: watch phải tự nối lại khi đứt và tự ghép bản cập nhật, còn condition đã có sẵn `lastTransitionTime`. Chỉ thời điểm pod biến mất có sai số tới một chu kỳ.
+  - Giữ mốc **đầu tiên** của mỗi loại, riêng `container_finished` lấy theo ảnh chụp mới nhất. Lý do: API chỉ giữ lần đổi gần nhất của condition, mà pod đang tắt chuyển `Ready=False`.
+  - Log pod đang tắt được tải lại trọn ở mỗi lần hỏi, ghi đè qua file tạm, nên giữ được cả log drain. Không chọn tải tăng dần (`--since-time`) hay `kubectl logs -f`: log vLLM một lượt ước khoảng 1 MB mỗi pod (chưa đo), tải lại dưới 1 s, nên không đáng thêm độ phức tạp.
+  - Thiếu log không làm lượt invalid (Môi trường §17 không có tiêu chí này); chỉ ghi vào `metadata.counts` và in cảnh báo. Pod chưa từng chạy container (Pending vì hết GPU) không bị tính là thiếu log.
+  - `delete_requested` = `deletionTimestamp` − `deletionGracePeriodSeconds`, vì API đặt `deletionTimestamp` là hạn chót trước SIGKILL.
+  - Nhánh tạo từ `feat/tr5-parse-vllm-log` (PR #24) vì cả hai cùng sửa `collect.py`; CI #24 chưa chạy lại được (xem Incidents).
+- **Results:**
+  - Lỗi tìm ra khi đọc code: `write_logs` chạy sau cooldown cho các pod có tên trong `pods_end`. Lúc đó pod do scale-up tạo ra đã bị scale-down và xoá, nên mọi lượt autoscaling đều mất log khởi động của pod mới, tức đúng số liệu ĐG3 cần.
+  - Đọc JSON pod thật trên kind: sau khi container restart (WSL khởi động lại), `Ready` và `PodReadyToStartContainers` mang mốc của lần đổi mới nhất (09:43:01), còn `PodScheduled`, `Initialized` giữ mốc tạo pod (14:29:47 hôm trước).
+  - Lượt `A2-CONST2-1` trên kind (phiên `podwatch-a2`, 2 req/s × 180 s, threshold 10, max 3): hợp lệ. Watcher hỏi 117 lần trong 09:57:26–10:06:53 UTC, 0 lỗi; `pods_timeline.json` 6,7 KB.
+    - 3 pod: 1 pod có sẵn và 2 pod do scale-up tạo ra lúc 09:58:25 và 09:58:30. Cả 3 đều có log (`pods_without_log` rỗng).
+    - Pod `4vwft`: `delete_requested` 10:05:52, thấy lần cuối 10:06:10, biến mất trước 10:06:15; log thu lúc đang tắt (`source: terminating`). Với code cũ, log này đã mất.
+    - Pod `46tg2`: lệnh xoá lúc 10:06:49, cooldown xong lúc 10:06:53 vì Deployment đã còn 1 replica sẵn sàng. Pod này vẫn đang tắt khi lượt dừng, nên log chỉ tới lúc dừng (`gone_at` rỗng). Đã ghi giới hạn này ở Môi trường §14.2 và docstring.
+    - `delete_requested` trùng tới giây với event `Killing` của cả hai pod (10:05:52, 10:06:49). Dùng thẳng `deletionTimestamp` thì lệch 60 s (grace của overlay sim).
+    - Simulator: `container_started` → `ready` = 5 s (bằng chu kỳ readiness probe); `created` = `scheduled` (không xin GPU).
+    - `parse_vllm_log` + `phases()` chạy trên 3 log thu được với mốc từ `marks`: không lỗi, nhận đúng mốc kubelet (`time_source: kubelet`), `complete = false` vì log simulator không phải log vLLM. Chưa có log vLLM thật.
+  - `uv run --project experiments pytest experiments`: 122 đạt, 1 bỏ qua (Python 3.15 và 3.11); 6 test mới ở `test_pod_watcher.py`. `ruff check`, `ruff format --check`, lychee đạt.
+- **Incidents:**
+  - Lần chạy kind đầu tiên thất bại: API server từ chối kết nối suốt 3 phút. Nguyên nhân: WSL tắt distro khi không còn tiến trình nào (systemd tắt Docker) nhưng giữ VM. Lệnh `wsl.exe` sau làm distro khởi động lại, Docker khởi động lại các node kind, và systemd báo `unable to start unit docker-<id>.scope … got failed` cho control-plane và một worker (cgroup cũ của VM còn đó). Cách sửa: giữ distro sống bằng một `wsl.exe … sleep 7200` chạy nền, `docker start` lại các node, rồi chạy lại lượt.
+  - GitHub Releases trả 504 suốt phiên (thử lúc 09:28 và 09:52 UTC, cả từ máy này), API vẫn 200, githubstatus không báo sự cố. CI #24 vẫn đỏ ở 3 job tải công cụ, chưa chạy lại.
+- **Review:** `/code-review high` trên diff báo 10 điểm. Sửa 8 điểm:
+  - `fetch_log` bắt thêm `UnicodeError`/`OSError`; `poll()` và `stop()` không raise, để `pods_timeline.json` luôn được ghi;
+  - đếm lỗi dưới lock;
+  - `container_finished` theo ảnh chụp mới nhất;
+  - thêm `restarts_at_first_seen`, và ghi rõ không dùng pod có restart để tính pha;
+  - kiểm luồng nền đã dừng sau `join`;
+  - không báo thiếu log cho pod chưa từng chạy container;
+  - `pods_*.json` ghi bằng `write_json`;
+  - thêm mục "Khái niệm" vào docstring test.
+
+  Không sửa 2 điểm, kèm lý do:
+  - tải log tăng dần thay cho tải lại trọn: xem Decision;
+  - `stop()` chờ lâu khi Ctrl-C lúc API treo: ca hiếm, và runner chạy bằng systemd thì SIGTERM không chạy `finally`.
+- **Deviations:** Môi trường §14.2 (giao diện dữ liệu, Kế hoạch §6) có thêm file `pods_timeline.json` và các trường mới trong `pods_*.json`.
+- **Links:** nhánh `feat/tr5-pod-timeline` (xếp chồng trên PR #24). File chính: `experiments/runner/collect.py`, `session.py`, `experiments/tests/test_pod_watcher.py`, `docs/chi-tiet/05-moi-truong-danh-gia.md`.
+- **Thesis:** §4.11 (công cụ đánh giá: vì sao phải thu dữ liệu pod trong lúc lượt chạy, mốc đầu tiên so với lần đổi gần nhất); §5 cold start (pha 1, 2, 4, 8 từ `marks`); §5 GPU-giờ (khoảng giữ GPU từ `scheduled` tới lúc pod biến mất). Hình nên có: dòng thời gian 3 pod của lượt A2 (tạo → Ready → lệnh xoá → biến mất), vẽ từ `pods_timeline.json`.

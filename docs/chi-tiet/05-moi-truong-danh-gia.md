@@ -490,7 +490,7 @@ Mỗi kịch bản có một mục trong `docs/nhat-ky/van-hanh.md`: ngày, môi
 | **Reset** | Chờ hệ thống yên | 1 pod Ready (S4: 4 pod Ready); hàng đợi trống; chờ thêm 60 s |
 | **Warm-up** | Làm ấm | 0,3C trong 2 phút, không tính |
 | **Chạy** | Bỏ tạm dừng, chạy kịch bản | Bỏ annotation; máy tạo tải chạy lịch; runner gửi annotation lên Grafana ở đầu mỗi pha |
-| **Thu thập** | Lấy dữ liệu | CSV của máy tạo tải; chuỗi Prometheus trong cửa sổ lượt; sự kiện pod (thu ngay sau lượt, vì event của Kubernetes chỉ giữ khoảng 1 giờ); log vLLM; cảnh báo qua truy vấn `ALERTS{alertstate="firing"}` |
+| **Thu thập** | Lấy dữ liệu | CSV của máy tạo tải; chuỗi Prometheus trong cửa sổ lượt; sự kiện pod (thu ngay sau lượt, vì event của Kubernetes chỉ giữ khoảng 1 giờ); log vLLM và mốc thời gian của từng pod (thu **trong lúc** lượt chạy, vì pod bị scale-down thì mất log, §14.2); cảnh báo qua truy vấn `ALERTS{alertstate="firing"}` |
 | **Cooldown** | Về trạng thái đầu | Chờ còn 1 replica (tối đa 10 phút) |
 | **Kiểm tra, sao lưu** | | Ghi `checks.json` (§17); đẩy thư mục lượt lên R2; cập nhật `progress.json` |
 
@@ -504,10 +504,22 @@ runs/<run-id>/
 ├── requests.csv      # một dòng cho mỗi request: id, t_sched, t_send, t_first, t_last, n_in_target, n_in, n_out, status, error
 ├── loadgen.json      # tham số và seed của máy tạo tải, số tiến trình, mốc t0_unix, các pha, tự kiểm tra (§9)
 ├── metrics.parquet   # chuỗi Prometheus trong cửa sổ lượt (replicas, hàng đợi, KV-cache, GPU, CPU/RAM pod…)
-├── events.jsonl      # pod conditions, sự kiện HPA, sự kiện Kubernetes
+├── events.jsonl      # sự kiện Kubernetes trong namespace: Scheduled, Pulling/Pulled (pha 3), Killing, HPA
 ├── alerts.jsonl      # cảnh báo firing trong cửa sổ lượt (từ chuỗi ALERTS, cho VH6)
+├── pods_start.json   # ảnh chụp pod vLLM sau reset; pods_end.json: cuối pha chính (kiểm hợp lệ, §17)
+├── pods_timeline.json  # mọi pod vLLM từ reset tới hết cooldown, kèm mốc thời gian (bảng dưới)
+├── logs/<pod>.log    # log vLLM có mốc kubelet, cả pod đã scale-down giữa lượt (pha 4–8, parse_vllm_log)
 └── checks.json       # kết quả tự kiểm tra
 ```
+
+`pods_timeline.json` do runner ghi: một luồng nền hỏi API mỗi 5 s suốt warm-up, pha chính và cooldown. Pod do scale-up tạo ra thường bị xoá trước khi lượt kết thúc, nên phải thu trong lúc chạy. Mỗi pod một mục:
+
+| Trường | Ý nghĩa |
+|---|---|
+| `marks` | Mốc phía Kubernetes, giây UNIX theo đồng hồ API server, **chỉ tới giây**: `created` (đầu pha 1), `scheduled` (hết pha 1, từ đây pod giữ GPU), `sandbox_ready`, `initialized`, `container_started` (đầu pha 4), `ready` (hết pha 8), `delete_requested`, `container_finished`. Mỗi mốc là giá trị **đầu tiên** thấy được: API chỉ giữ lần đổi gần nhất của condition, mà pod đang tắt đã chuyển `Ready` sang False |
+| `first_seen`, `last_seen`, `gone_at` | Lần đầu, lần cuối thấy pod, lần đầu thấy pod đã biến mất (đồng hồ runner). Pod giữ GPU từ `scheduled` tới một thời điểm trong khoảng (`last_seen`, `gone_at`]: dùng cho GPU-giờ (§15). Pod còn đang tắt lúc lượt kết thúc (cooldown xong khi chỉ còn 1 replica sẵn sàng) có `gone_at` rỗng, và log của nó chỉ tới lúc đó |
+| `log`, `log_error` | File log đã thu (`source`: `terminating` nếu thu lúc pod đang tắt, `end` nếu pod còn sống ở cuối lượt), hoặc lý do không thu được |
+| `last` | Ảnh chụp cuối cùng của pod, cùng cấu trúc với `pods_start.json` |
 
 Các cột của `requests.csv`. Thời gian tính bằng giây kể từ `t0_unix` (ghi trong `loadgen.json`), đo bằng đồng hồ đơn điệu:
 
