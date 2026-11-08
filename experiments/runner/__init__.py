@@ -13,7 +13,7 @@ Các module:
     kube      wrapper `kubectl` và truy vấn Prometheus qua API server proxy
     configs   áp cấu hình tĩnh hoặc ScaledObject, pause/unpause KEDA
     loadjob   chạy máy tạo tải (loadgen) thành Job trong cluster, lấy kết quả về
-    collect   thu metric Prometheus, event, log vLLM, cảnh báo
+    collect   thu metric Prometheus, event, cảnh báo; theo dõi pod suốt lượt (mốc thời gian, log vLLM)
     vllm_log  đọc log khởi động vLLM: mốc và độ dài các pha cold start (parse_vllm_log)
     checks    kiểm điều kiện hợp lệ của một lượt
     progress  checkpoint progress.json
