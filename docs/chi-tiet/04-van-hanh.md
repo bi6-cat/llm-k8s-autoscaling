@@ -46,7 +46,7 @@ Giá trị SLO nằm ở [Thông số §6](00-thong-so.md#6-slo). **Ba điểm c
 
 ### 2.2. SLO và ngân sách lỗi
 
-Với SLO 95%, ngân sách lỗi là 5% request; với SLO lỗi 99%, ngân sách là 1% request. Với một dịch vụ thật, SLO tính trên 30 ngày. Trong đồ án, mỗi lượt đánh giá chỉ dài 20–25 phút, nên các cửa sổ cảnh báo được rút ngắn (§3.3). Nguyên tắc vẫn giữ nguyên.
+Với SLO 95%, ngân sách lỗi là 5% request; với SLO lỗi 99%, ngân sách là 1% request. Với một dịch vụ thật, SLO tính trên 30 ngày. Trong đồ án, mỗi lượt đánh giá chỉ dài 12–21 phút, nên các cửa sổ cảnh báo được rút ngắn (§3.3). Nguyên tắc vẫn giữ nguyên.
 
 ### 2.3. Recording rule
 
@@ -124,7 +124,7 @@ Viết `tổng − tốt` chứ không viết `1 − tốt/tổng` là có chủ
     runbook_url: "https://github.com/<org>/llm-k8s-autoscaling/blob/main/docs/runbooks/LLMAtMaxReplicas.md"
 ```
 
-**Về các cửa sổ rút ngắn.** Với dịch vụ thật và SLO 99,9%, SRE Workbook [23] gợi ý page khi burn rate 14,4 trên cửa sổ 1 giờ và 5 phút. Ở đây SLO là 95%, nên burn rate tối đa có thể là 20 (khi 100% request xấu). Burn rate 4 tương đương 20% request xấu. Cửa sổ được rút xuống 5 phút và 1 phút để cảnh báo kịp kêu trong một lượt đánh giá 20–25 phút. Ước tính thời gian phát hiện: cửa sổ 5 phút vượt 20% sau khoảng 1–2 phút vi phạm, cộng `for: 1m` và `group_wait: 30s`, tổng khoảng 3–4 phút. Khi vận hành thật, chỉ cần đổi cửa sổ; công thức giữ nguyên.
+**Về các cửa sổ rút ngắn.** Với dịch vụ thật và SLO 99,9%, SRE Workbook [23] gợi ý page khi burn rate 14,4 trên cửa sổ 1 giờ và 5 phút. Ở đây SLO là 95%, nên burn rate tối đa có thể là 20 (khi 100% request xấu). Burn rate 4 tương đương 20% request xấu. Cửa sổ được rút xuống 5 phút và 1 phút để cảnh báo kịp kêu trong một lượt đánh giá 12–21 phút. Ước tính thời gian phát hiện: cửa sổ 5 phút vượt 20% sau khoảng 1–2 phút vi phạm, cộng `for: 1m` và `group_wait: 30s`, tổng khoảng 3–4 phút. Khi vận hành thật, chỉ cần đổi cửa sổ; công thức giữ nguyên.
 
 ### 3.4. Alertmanager: định tuyến
 

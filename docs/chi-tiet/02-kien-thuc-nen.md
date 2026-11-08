@@ -306,7 +306,7 @@ Burn rate bằng 1 nghĩa là ngân sách vừa đủ dùng hết vào cuối k�
 - **page** (gọi người trực ngay): burn rate cao trên cửa sổ ngắn, ví dụ 1 giờ và 5 phút.
 - **ticket** (xử lý trong giờ làm việc): burn rate thấp hơn trên cửa sổ dài hơn.
 
-Trong đồ án, mỗi lượt đánh giá chỉ dài 20–25 phút, nên các cửa sổ được **rút ngắn** cho phù hợp ([Vận hành §3.3](04-van-hanh.md#33-quy-tắc-mẫu)).
+Trong đồ án, mỗi lượt đánh giá chỉ dài 12–21 phút, nên các cửa sổ được **rút ngắn** cho phù hợp ([Vận hành §3.3](04-van-hanh.md#33-quy-tắc-mẫu)).
 
 ### 5.3. GitOps và Argo CD
 

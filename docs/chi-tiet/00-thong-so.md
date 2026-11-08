@@ -103,11 +103,17 @@ Nếu chậm tiến độ thì cắt từ dưới lên theo thứ tự trên ([K
 
 | KB | λ(t) / C | Thời lượng | Các pha khi phân tích | Kiểm chứng chủ yếu |
 |---|---|---|---|---|
-| **KB1** Thấp, ổn định | 0,5 | 20 phút | `steady` [2, 20] | N1, N3 |
-| **KB2** Tăng đột ngột rồi giảm | 0,5 khi t < 5; lên 3,0 trong [5; 5,5]; giữ tới 15; về 0,5 trong [15; 15,5]; giữ tới 25 | 25 phút | `pre` [2, 5] · `spike` [5, 15] · `drop` [15, 25] | N2a, N2b (pha `spike`); N4 (pha `drop`); N3 |
-| **KB3** Cao, kéo dài | tăng từ 0,5 lên **0,75 × N** (= 3,0 khi N = 4) trong [0, 5]; giữ tới 25 | 25 phút | `ramp` [0, 5] · `sustain` [5, 25] | N1 (pha `sustain`); không flapping; N7 |
+| **KB1** Thấp, ổn định | 0,5 | 12 phút | `steady` [2, 12] | N1, N3 |
+| **KB2** Tăng đột ngột rồi giảm | 0,5 khi t < 4; lên **0,75 × N** (= 3,0 khi N = 4) trong [4; 4,5]; giữ tới 11; về 0,5 trong [11; 11,5]; giữ tới 21 | 21 phút | `pre` [2, 4] · `spike` [4, 11] · `drop` [11, 21] | N2a, N2b (pha `spike`); N4 (pha `drop`); N3 |
+| **KB3** Cao, kéo dài | tăng từ 0,5 lên **0,75 × N** (= 3,0 khi N = 4) trong [0, 5]; giữ tới 17 | 17 phút | `ramp` [0, 5] · `sustain` [5, 17] | N1 (pha `sustain`); không flapping; N7 |
 
 Hai phút đầu của KB1 và KB2 là thời gian ổn định, không tính.
+
+**Sửa ngày 08/11/2026** (trước đó: 20 / 25 / 25 phút, đỉnh KB2 cố định 3,0). Rút thời lượng để V2 còn thời gian cho lần lặp (kết luận "khác nhau" cần mọi lượt cùng chiều, §6), và cho đỉnh KB2 theo N để chạy được cả máy 2 GPU. Giới hạn khi rút:
+- Pha cần xem flapping (`steady` của KB1, `sustain` của KB3) dài ít nhất 10 phút = hai cửa sổ scale-down 300 s.
+- `drop` của KB2 giữ 10 phút: với N = 4, chờ 300 s rồi bớt 1 pod mỗi 60 s, pod cuối bị xoá khoảng 8 phút sau khi tải giảm; vLLM 0.31.0 còn giữ pod tới hết grace 180 s ([nhật ký vận hành 06/11](../nhat-ky/van-hanh.md)).
+- `spike` 7 phút giả định cold start trên VM ≤ 2,5 phút (model 3B, mức L2; chưa đo). Đo ở V0; vượt thì nới `spike` lại 10 phút.
+- Ở 0,5 C, pha 10 phút vẫn có hàng nghìn request, quá mức 200 mẫu để báo p95, p99.
 
 **Request**
 
@@ -148,7 +154,7 @@ B\* và KV\* là số request đồng thời trung bình và mức KV-cache trê
 | **Cộng** | 5 | 7 | 5 | **17** |
 
 - Bỏ S1 × KB1: ở 0,5C, S1 và A2 cùng chạy 1 replica, nên S1 không thêm thông tin.
-- Thứ tự lượt được xáo trộn bằng seed ghi lại, **trong từng khối lần lặp**: 11 lượt lặp-1 (mỗi ô một lượt) chạy trước, rồi 5 lượt lặp-2, rồi 1 lượt lặp-3. Phiên bị cắt ngang thì chỉ mất lần lặp, không mất ô nào; các lượt cùng lần lặp dùng chung lịch gửi và chạy gần nhau về thời gian. Mọi lượt chạy ở mức cold start L2. Mỗi lượt khoảng 35 phút, kể cả reset, warm-up và cooldown.
+- Thứ tự lượt được xáo trộn bằng seed ghi lại, **trong từng khối lần lặp**: 11 lượt lặp-1 (mỗi ô một lượt) chạy trước, rồi 5 lượt lặp-2, rồi 1 lượt lặp-3. Phiên bị cắt ngang thì chỉ mất lần lặp, không mất ô nào; các lượt cùng lần lặp dùng chung lịch gửi và chạy gần nhau về thời gian. Mọi lượt chạy ở mức cold start L2. Mỗi lượt khoảng 27 phút (kịch bản 12–21 phút, cộng khoảng 10 phút reset, warm-up và cooldown); 17 lượt khoảng 7,5–8 giờ.
 - Could: thêm A3 × KB1–KB3, mỗi ô 2 lượt.
 
 ### 8.3. ĐG1 và ĐG3
