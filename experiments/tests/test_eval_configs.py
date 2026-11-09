@@ -75,3 +75,11 @@ def test_eval_config_differs_from_a2_only_in_signal(path: Path):
 def test_eval_kustomization_lists_every_file():
     kust = _load(EVAL_DIR / "kustomization.yaml")
     assert sorted(kust["resources"]) == [p.name for p in EVAL_FILES]
+
+
+def test_a1_smooths_single_gpu_samples():
+    # V1 (08/11): một mẫu 100 % của GPU pod đang tắt giữ A1 ở 2 replica suốt cửa sổ ổn định 300 s
+    # (Kiến trúc §13). Trung bình trên từng GPU phải đứng TRONG sum(), nếu không mẫu đơn lẻ vẫn lọt.
+    doc = yaml.safe_load((REPO / "autoscaling" / "eval" / "A1.yaml").read_text(encoding="utf-8"))
+    query = doc["spec"]["triggers"][0]["metadata"]["query"]
+    assert "sum(avg_over_time(nvidia_smi_utilization_gpu_ratio[15s]))" in query

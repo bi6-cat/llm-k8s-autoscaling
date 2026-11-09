@@ -49,9 +49,15 @@ spec:
         #   trận mất mẫu > 15 s trong pha chính thì lượt bị đánh dấu invalid (Môi trường §17). Trên
         #   simulator, A1 vì vậy luôn ở 1 replica: chỉ dùng để kiểm đường đi (áp, đổi cấu hình, T6), không
         #   để đo.
+        # - avg_over_time(…[15s]): trung bình mỗi GPU trong 15 s (3 mẫu, scrape 5 s) rồi mới cộng. Lý do: ở V1
+        #   (08/11), GPU của pod đang tắt báo 100 % trong đúng một mẫu lúc vLLM thoát → tổng 100 → desired 2,
+        #   và cửa sổ ổn định 300 s giữ con số đó, nên A1 kẹt ở 2 replica. Trung bình hạ mẫu đơn lẻ còn 33 %.
+        #   Không lọc được theo "pod Ready" vì exporter không có label pod (xem trên). Chạy lại trên dữ liệu
+        #   V1: hết mẫu kẹt, các mốc desired 2, 3, 4 trễ thêm 5–20 s. Giới hạn: tải thật cộng thêm mẫu đơn lẻ
+        #   vẫn có thể vượt 70. Cửa sổ dài hơn làm A1 chậm thêm mà không cần cho ca này (60 s: trễ tới 40 s).
         # Nếu chạy được DCGM (có label pod) thì thay bằng
         # sum(DCGM_FI_DEV_GPU_UTIL{exported_namespace="llm-serving"}) or vector(0) (Thông số §8.1).
-        query: (sum(nvidia_smi_utilization_gpu_ratio) * 100) or vector(0)
+        query: (sum(avg_over_time(nvidia_smi_utilization_gpu_ratio[15s])) * 100) or vector(0)
         # 70 % là ngưỡng hay gặp trong hướng dẫn, giữ nguyên để thấy hành vi thật của cách làm này, không
         # suy từ đo năng lực như A2 (Kiến trúc §11). Hành vi dự đoán: 1 pod có tải đã ~95 % → ⌈95 ÷ 70⌉ = 2;
         # 2 pod ~190 % → 3…, tức leo lên max ngay khi có tải, dù tải nhẹ (Kiến trúc §10.1). ĐG1-mini ở nhà
