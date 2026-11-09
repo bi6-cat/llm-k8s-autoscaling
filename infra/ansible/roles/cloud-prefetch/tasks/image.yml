@@ -1,0 +1,15 @@
+---
+# ──────────────────────────────────────────────────────────────────────────────
+# infra/ansible/roles/cloud-prefetch/tasks/image.yml
+# Khái niệm: `crictl` = CLI của containerd (trình chạy container trong k3s). Kéo qua crictl thì image vào
+#            đúng kho kubelet dùng và đi qua registries.yaml (mirror), nên pod không phải kéo lại.
+# Mục đích:  Image 9 GB là bước dài nhất; kéo nền ngay khi k3s lên, song song với cài phần nền.
+# Tham khảo: log phiên 08/11 §6, §14; group_vars/cloud.yaml
+# ──────────────────────────────────────────────────────────────────────────────
+- name: Bắt đầu kéo image vLLM (chạy nền)
+  ansible.builtin.command:
+    cmd: k3s crictl pull {{ cloud_vllm_image }}
+  async: 3600                  # giới hạn 1 giờ; máy chậm nhất 08/11 tốn 24 phút 22 giây
+  poll: 0
+  changed_when: false          # image đã có thì crictl không tải lại (ghim digest)
+  register: prefetch_image_job

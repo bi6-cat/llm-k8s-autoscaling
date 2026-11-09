@@ -1,0 +1,28 @@
+---
+# ──────────────────────────────────────────────────────────────────────────────
+# infra/ansible/roles/cloud-prefetch/tasks/model.yml
+# Khái niệm: Prefetch = tải sẵn model trước khi pod cần (mức cold start L2). `async` + `poll: 0` = Ansible
+#            khởi động lệnh rồi đi tiếp, không chờ; roles/cloud-prefetch/tasks/wait.yml chờ kết quả.
+# Mục đích:  Tải model không phụ thuộc k3s nên chạy song song với bootstrap, tiết kiệm trọn thời gian tải.
+# Tham khảo: log phiên 08/11 §4, §14; group_vars/cloud.yaml (model và revision ghim)
+# ──────────────────────────────────────────────────────────────────────────────
+- name: Thư mục model trên VM thuê
+  ansible.builtin.file:
+    path: /mnt/nvme/cache/hf
+    state: directory
+    mode: "0755"
+
+# Chép overlay: pod đặt HF_HOME=/cache/hf và mount /mnt/nvme/cache vào /cache, nên pod thấy model đã có.
+# HF_HUB_DISABLE_XET=1: 08/11 giao thức xet treo ở 1,71 GB khi mạng đứt và không tự nối lại.
+- name: Bắt đầu tải model (chạy nền)
+  ansible.builtin.shell: |
+    set -euo pipefail
+    command -v uv >/dev/null || curl -LsSf https://astral.sh/uv/{{ cloud_uv_version }}/install.sh | env UV_INSTALL_DIR=/usr/local/bin sh
+    HF_HUB_DISABLE_XET=1 HF_HOME=/mnt/nvme/cache/hf \
+      uvx --from "huggingface_hub=={{ cloud_hf_hub_version }}" hf download \
+      "{{ cloud_model_repo }}" --revision "{{ cloud_model_revision }}"
+  args: {executable: /bin/bash}
+  async: 3600                  # giới hạn 1 giờ; máy chậm nhất 08/11 tốn 690 s
+  poll: 0
+  changed_when: false          # tải lại không đổi gì: hf bỏ qua file đã có
+  register: prefetch_model_job

@@ -5,10 +5,11 @@
 #            tìm offer → thuê → chờ → sinh inventory Ansible → SSH/tunnel → huỷ.
 # Mục đích:  Cô lập phần phụ thuộc nhà cung cấp vào MỘT file; đổi nhà cung cấp chỉ phải viết lại file này.
 #            Ghi trạng thái vào .vast/ để không bao giờ quên một máy đang tính tiền.
-# Dùng:      vast.sh find v0|v2 | rent <offer_id> v0|v2 | wait | inventory | ssh | tunnel | status | release
+# Dùng:      vast.sh find v0|v2 | rent <offer_id> v0|v2 | wait | probe | inventory | platform | ssh | tunnel
+#            | status | release
 #            (thường gọi qua Makefile: make find / rent / bootstrap / release)
 #            Loại GPU, số GPU, trần giá đổi bằng biến môi trường, ví dụ:
-#              GPU=RTX_5060_Ti NGPU=2 MAX_DPH=0.6 infra/provision/vast.sh find v2
+#              GPU=RTX_4090 NGPU=4 MAX_DPH=3 infra/provision/vast.sh find v2
 # Cần:       uv (chạy vastai bản ghim, không cần cài), jq, bc, ssh; VAST_VM_TEMPLATE trong .env;
 #            API key cho rent/status/release: `uvx --python 3.12 vastai@1.11.0 set api-key <key>`
 #            (find không cần key).
@@ -36,19 +37,23 @@ vastai() { uvx -q --python 3.12 vastai@1.11.0 "$@"; }
 
 # Tiêu chí lọc offer theo cú pháp của `vastai search offers` (Thông số §10.2).
 #   v0: 1 GPU để thử và gỡ lỗi bootstrap.
-#   v2: NGPU GPU (mặc định 4) cho đợt đánh giá; CPU/RAM tăng theo số GPU; thêm disk_bw ≥ 1000 MB/s
-#       vì cold start L2 đọc model từ ổ.
+#   v2: NGPU GPU (mặc định 4) cho đợt đánh giá; thêm disk_bw ≥ 1000 MB/s vì cold start L2 đọc model từ ổ.
+#       CPU ≥ 8 + 3N: 4 lõi dự trữ (reserved-cpus) + 3 lõi/pod vLLM + 3 lõi máy tạo tải + ~1 lõi pod khác;
+#       N = 4 → 20. Máy V1 có 15 vCPU nên máy tạo tải vượt ngưỡng (log phiên 08/11 §14). RAM ≥ 24 GB/GPU:
+#       pod 3B 16 GiB + phần nền. Mặc định A4000 16 GB theo V1. Lưu ý (09/11): hôm đó Vast không có offer VM
+#       4 × A4000 nào; chỉ có 4 × 4090 và 4 × 5090 từ 2,4 USD/giờ, phải nâng MAX_DPH và đổi GPU.
 # GPU: tên GPU theo cú pháp vastai, dấu cách thay bằng `_` (RTX_4090, RTX_3090, RTX_5060_Ti…).
 # vms_enabled=true: máy cho thuê chế độ VM (có systemd, chạy được k3s), không phải container.
 # verified=true: chỉ máy Vast đã xác minh, khớp với giao diện web. Lưu ý (06/11): thiếu điều kiện này
 #   thì kết quả có cả máy unverified/deverified, nhìn rẻ nhưng giao diện không hiện.
 # reliability>0.98: tỷ lệ máy chạy ổn định theo thống kê của Vast.
+# Bỏ inet_down: cột này không phản ánh mạng thật (08/11); đo thật bằng `vast.sh probe` ngay sau khi thuê.
 query() {
-  local gpu=${GPU:-RTX_4090} n=${NGPU:-4} max=${MAX_DPH:-2.0}
-  local common="gpu_name=$gpu vms_enabled=true verified=true rentable=true reliability>0.98 inet_down>=500"
+  local gpu=${GPU:-RTX_A4000} n=${NGPU:-4} max=${MAX_DPH:-2.0}
+  local common="gpu_name=$gpu vms_enabled=true verified=true rentable=true reliability>0.98"
   case "$1" in
     v0) echo "num_gpus=1 $common cpu_cores_effective>=8 cpu_ram>=32 disk_space>=150" ;;
-    v2) echo "num_gpus=$n $common cpu_cores_effective>=$((8 * n)) cpu_ram>=$((32 * n)) disk_space>=300" \
+    v2) echo "num_gpus=$n $common cpu_cores_effective>=$((8 + 3 * n)) cpu_ram>=$((24 * n)) disk_space>=300" \
              "disk_bw>=1000 dph_total<=$max" ;;
     *) echo "MODE phải là v0 hoặc v2" >&2; exit 2 ;;
   esac
@@ -136,6 +141,29 @@ EOF
   echo "Đã ghi infra/ansible/inventory/cloud.yaml"
 }
 
+# Kiểm máy vừa thuê trước khi bootstrap: đẩy probe.sh qua SSH và chạy trên VM (bash -s = đọc script từ stdin).
+cmd_probe() {
+  local host port; read -r host port < <(ssh_target)
+  ssh -p "$port" "root@$host" bash -s < infra/provision/probe.sh
+}
+
+# Cài phần nền và vLLM. Render manifest trên máy dev (có repo), chép sang VM, chạy install-platform.sh tại đó.
+# OVERLAY: overlay serving, mặc định cloud-3b (model V2).
+cmd_platform() {
+  local host port dir overlay=${OVERLAY:-cloud-3b}; read -r host port < <(ssh_target)
+  dir=$(mktemp -d); trap 'rm -rf "$dir"' RETURN      # thư mục tạm tự xoá khi hàm kết thúc
+  cp infra/provision/install-platform.sh "$dir/"
+  cp platform/gpu/device-plugin-values.yaml "$dir/"
+  cp platform/kube-prometheus-stack/values.yaml "$dir/kps-values.yaml"
+  cp platform/keda/values.yaml "$dir/keda-values.yaml"
+  kubectl kustomize platform/kube-prometheus-stack/extras > "$dir/kps-extras.yaml"
+  kubectl kustomize platform/gpu/exporter > "$dir/gpu-exporter.yaml"
+  kubectl kustomize "serving/overlays/$overlay" > "$dir/serving.yaml"
+  # tar qua ssh: chép cả thư mục bằng một kết nối, không cần rsync trên VM
+  tar -C "$dir" -cf - . | ssh -p "$port" "root@$host" 'mkdir -p /root/platform && tar -C /root/platform -xf -'
+  ssh -p "$port" "root@$host" bash /root/platform/install-platform.sh
+}
+
 # Mở shell trên VM. `exec` thay tiến trình script bằng ssh (Ctrl-D là thoát luôn).
 cmd_ssh() { local host port; read -r host port < <(ssh_target); exec ssh -p "$port" "root@$host"; }
 
@@ -169,4 +197,4 @@ cmd_release() {
 
 # Gọi hàm theo lệnh: `vast.sh rent 123 v0` → cmd_rent 123 v0. "${@:2}" = mọi tham số từ thứ 2 trở đi.
 # `${1:?…}` = báo lỗi kèm danh sách lệnh nếu không truyền tham số nào.
-"cmd_${1:?lệnh: find|rent|wait|inventory|ssh|tunnel|status|release}" "${@:2}"
+"cmd_${1:?lệnh: find|rent|wait|probe|inventory|platform|ssh|tunnel|status|release}" "${@:2}"

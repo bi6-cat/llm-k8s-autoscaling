@@ -30,7 +30,7 @@ PROMTOOL ?= promtool
 YQ ?= yq
 
 # .PHONY: các target này không phải tên file, make luôn chạy chúng (kể cả khi có file trùng tên)
-.PHONY: help home-up sim-up sim-down sim-test-load sim-test find rent bootstrap release lint alerts-test alerts-coverage dashboards-check
+.PHONY: help home-up sim-up sim-down sim-test-load sim-test find rent probe bootstrap prefetch cloud-platform release lint alerts-test alerts-coverage dashboards-check
 
 # In mọi target có comment `## mô tả` cùng dòng. Thêm target mới thì nhớ viết `## …` để nó hiện ở đây.
 help: ## In danh sách lệnh
@@ -92,7 +92,7 @@ sim-test: ## Chạy T1–T5 trên simulator, chấm đạt/trượt (T=t1|t2|t4|
 # ── Máy thuê trên Vast.ai ───────────────────────────────────────────────────────
 # Mọi thao tác với Vast nằm trong infra/provision/vast.sh; ở đây chỉ đặt tên ngắn cho chúng.
 # Biến đặt trên dòng lệnh make (GPU=…, NGPU=…, MAX_DPH=…) được make đưa vào môi trường của lệnh con,
-# nên vast.sh đọc được trực tiếp, không cần khai báo ở đây. Mặc định: RTX_4090, 4 GPU, ≤ 2 USD/giờ.
+# nên vast.sh đọc được trực tiếp, không cần khai báo ở đây. Mặc định: RTX_A4000, 4 GPU, ≤ 2 USD/giờ.
 find: ## Tìm offer Vast: make find MODE=v0|v2 [GPU=RTX_5060_Ti NGPU=2 MAX_DPH=1]
 	infra/provision/vast.sh find $(MODE)
 
@@ -101,11 +101,24 @@ rent: ## Thuê offer: make rent OFFER=<id> MODE=v0|v2
 	infra/provision/vast.sh rent $(OFFER) $(MODE)
 	infra/provision/vast.sh wait
 
+# Kiểm máy thật trước khi bootstrap: giữ hay trả máy (cột mạng của Vast không tin được, log phiên 08/11 §1).
+probe: ## Đo phần cứng và mạng thật của VM vừa thuê
+	infra/provision/vast.sh probe
+
 # Sinh inventory/cloud.yaml từ instance đang thuê, rồi chạy CÙNG playbook như ở nhà. `time` in tổng
 # thời gian: đây là số đo cho VH5 (dựng lại từ máy trắng).
 bootstrap: ## Dựng k3s trên VM thuê (Ansible), in thời gian
 	infra/provision/vast.sh inventory
 	cd $(ANSIBLE_DIR) && time ansible-playbook -i inventory/cloud.yaml site.yml
+
+# Chạy lại riêng phần tải model và image nếu bootstrap lỗi ở đó (tag `prefetch` trong site.yml).
+prefetch: ## Tải model, kéo image trên VM thuê (bootstrap đã gồm bước này)
+	infra/provision/vast.sh inventory
+	cd $(ANSIBLE_DIR) && ansible-playbook -i inventory/cloud.yaml site.yml --tags prefetch
+
+# Trên cloud chưa dùng Argo CD (group_vars/cloud.yaml). OVERLAY mặc định cloud-3b.
+cloud-platform: ## Cài device plugin, Prometheus, KEDA, GPU exporter, vLLM lên VM thuê
+	infra/provision/vast.sh platform
 
 release: ## Huỷ instance Vast đang thuê
 	infra/provision/vast.sh release
@@ -209,7 +222,7 @@ dashboards-check: ## Kiểm JSON dashboard: uid, datasource, kích thước, Pro
 
 # ── Lệnh đã đặt tên nhưng chưa làm ──────────────────────────────────────────────
 # Tên lấy từ Môi trường §3.7. Gọi bây giờ thì báo "chưa làm" và trả mã lỗi 1, để script gọi nó dừng lại.
-NOT_YET := burnin prefetch capacity run ops-tests backup analysis test
+NOT_YET := burnin capacity run ops-tests backup analysis test
 .PHONY: $(NOT_YET)
 $(NOT_YET):
 	@echo "make $@: chưa làm (xem kế hoạch W3–W5)"; exit 1
