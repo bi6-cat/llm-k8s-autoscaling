@@ -1,0 +1,36 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# infra/provision/llm-runner.service
+# Khái niệm: Unit systemd = khai báo một dịch vụ chạy nền do hệ điều hành quản lý: tự chạy lại khi lỗi và
+#            không phụ thuộc phiên SSH. `vast.sh runner-start` chép file này vào /etc/systemd/system/.
+# Mục đích:  Chạy ma trận trên chính VM, nên mất SSH hay tắt laptop thì runner vẫn tiếp tục (Môi trường §6.2).
+#            Bị ngắt thì chạy lại đúng lệnh này: progress.json bỏ qua lượt đã xong, flock chặn chạy trùng.
+# Xem log:   journalctl -u llm-runner -f
+# Tham khảo: Môi trường §6.2; experiments/runner/session.py
+# ──────────────────────────────────────────────────────────────────────────────
+[Unit]
+Description=Runner danh gia autoscaling
+After=k3s.service network-online.target
+Wants=network-online.target
+# Tối đa 3 lần khởi động trong 30 phút để lỗi cố định (sai file ma trận) không lặp vô hạn.
+StartLimitIntervalSec=1800
+StartLimitBurst=3
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/llm-runner
+# .env: khoá R2, token Telegram; runner.env: MATRIX và KUBECONFIG do vast.sh ghi. `-` = thiếu file vẫn chạy.
+EnvironmentFile=-/opt/llm-runner/.env
+EnvironmentFile=/opt/llm-runner/runner.env
+ExecStart=/usr/local/bin/uv run --project experiments python -m experiments.runner --matrix ${MATRIX}
+# Runner trả 1 khi còn lượt chưa `done`. Chạy lại ngay sẽ chỉ thử tiếp các lượt còn lượt thử, rồi tự dừng.
+Restart=on-failure
+RestartSec=60
+# SIGINT thay cho SIGTERM mặc định: Python đổi SIGINT thành KeyboardInterrupt nên khối `finally` của lượt
+# chạy, dữ liệu dở được ghi và đẩy lên R2. Với SIGTERM thì `finally` không chạy.
+KillSignal=SIGINT
+TimeoutStopSec=300
+# Dữ liệu cục bộ giữ nguyên qua các lần chạy lại; in không đệm để journalctl thấy log ngay
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

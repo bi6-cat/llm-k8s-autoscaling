@@ -22,7 +22,7 @@ Tra ngày 09/10/2026; các dòng của CI tra ngày 01/11/2026. Đổi phiên b�
 | llm-d-inference-sim | `ghcr.io/llm-d/llm-d-inference-sim:v0.12.0@sha256:c6838d86…60` (linux/amd64, tra 04/11) | `serving/overlays/sim/kustomization.yaml` |
 | kind / node image | `v0.33.0` / `kindest/node:v1.37.0@sha256:a1ed56cf…0ae5` | máy simulator; image ở `infra/kind/kind-config.yaml` |
 | Helm, kubectl (máy simulator) | `v4.3.1`, `v1.36.5` (= kubectl của CI) | `make sim-up` |
-| Helm, uv, huggingface_hub (VM thuê) | `v3.19.0`, `0.13.7`, `2.4.0` | `infra/provision/install-platform.sh`, `group_vars/cloud.yaml` |
+| Helm, uv, huggingface_hub, rclone (VM thuê) | `v3.19.0`, `0.13.7`, `2.4.0`, `v1.71.2` | `infra/provision/install-platform.sh`, `group_vars/cloud.yaml`, `vast.sh` |
 | kubeconform (CI) | `v0.8.0` | `.github/workflows/ci.yaml` |
 | kubectl (CI) | `v1.36.5`, trùng k3s | `.github/workflows/ci.yaml` |
 | Schema CRD cho kubeconform | `datreeio/CRDs-catalog` commit `5a706a68…` (01/11/2026) | `.github/workflows/ci.yaml` |
