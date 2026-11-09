@@ -10,7 +10,8 @@ Mục đích: Chạy không người trực. Một lượt lỗi (exception) th�
 
 Cấu trúc một lần thử: runs/<session>/<run_id>/attempt-<n>/
     metadata.json  requests.csv  loadgen.json  metrics.csv.gz  events.jsonl  alerts.jsonl
-    pods_start.json  pods_end.json  checks.json  logs/  warmup/  loadgen-main/  (error.txt nếu lỗi)
+    pods_start.json  pods_end.json  pods_timeline.json  checks.json  logs/  warmup/  loadgen-main/
+    (error.txt nếu lỗi)
 """
 
 from __future__ import annotations
@@ -149,64 +150,73 @@ def run_one(ctx: Context, spec: RunSpec, attempt_dir: Path) -> str:
     if not initial_ok:
         log(f"  CẢNH BÁO: {initial_note}")
     pods_start = collect.snapshot_pods(ctx.kube, t.namespace, t.deployment)
-    (attempt_dir / "pods_start.json").write_text(json.dumps(pods_start, indent=2), encoding="utf-8")
+    write_json(attempt_dir / "pods_start.json", pods_start)
 
-    job = LoadJob(ctx.kube, t, ctx.repo_root)
-    job.sync_code()
+    # Theo dõi pod suốt warm-up, pha chính và cooldown: pod do scale-up tạo ra thường bị xoá trước bước 6,
+    # nên mốc thời gian và log của chúng phải thu trong lúc lượt đang chạy (collect.PodWatcher).
+    watcher = collect.PodWatcher(ctx.kube, t.namespace, t.deployment, attempt_dir / "logs", since=t_begin)
+    watcher.start()
+    try:
+        job = LoadJob(ctx.kube, t, ctx.repo_root)
+        job.sync_code()
 
-    # 3) Warm-up: CONST ở 0,3 C trong warmup_s, vẫn đang pause, không tính vào kết quả
-    t_warm = time.time()
-    if m.timing.warmup_s > 0:
-        base = spec.capacity if spec.scenario != "CONST" else spec.rate
-        rate = round(m.timing.warmup_fraction * float(base), 3)
-        log(f"[{spec.run_id}] warm-up {rate:g} req/s × {m.timing.warmup_s:g} s")
+        # 3) Warm-up: CONST ở 0,3 C trong warmup_s, vẫn đang pause, không tính vào kết quả
+        t_warm = time.time()
+        if m.timing.warmup_s > 0:
+            base = spec.capacity if spec.scenario != "CONST" else spec.rate
+            rate = round(m.timing.warmup_fraction * float(base), 3)
+            log(f"[{spec.run_id}] warm-up {rate:g} req/s × {m.timing.warmup_s:g} s")
+            args = loadgen_args(
+                "CONST",
+                capacity=None,
+                rate=rate,
+                duration=m.timing.warmup_s,
+                kb3_replicas=0,
+                run_index=spec.repeat,
+                url=t.service_url,
+                model=t.model,
+                out="/out/warmup",
+                workers=t.loadgen_workers,
+            )
+            job.run(spec.run_id, "warmup", args, m.timing.warmup_s, attempt_dir / "warmup")
+
+        # 4) Chạy kịch bản: bỏ pause ngay trước khi máy tạo tải bắt đầu
+        duration = SCENARIO_S.get(spec.scenario) or float(spec.duration or 0)
+        if so_name:
+            configs.set_paused(ctx.kube, t.namespace, so_name, paused=False)
+        log(f"[{spec.run_id}] chạy {spec.scenario} ({duration:g} s)")
         args = loadgen_args(
-            "CONST",
-            capacity=None,
-            rate=rate,
-            duration=m.timing.warmup_s,
-            kb3_replicas=0,
+            spec.scenario,
+            capacity=spec.capacity,
+            rate=spec.rate,
+            duration=spec.duration,
+            kb3_replicas=spec.replicas_for_kb3,
             run_index=spec.repeat,
             url=t.service_url,
             model=t.model,
-            out="/out/warmup",
+            out="/out/main",
             workers=t.loadgen_workers,
         )
-        job.run(spec.run_id, "warmup", args, m.timing.warmup_s, attempt_dir / "warmup")
+        res = job.run(spec.run_id, "main", args, duration, attempt_dir / "loadgen-main")
+        t_main0, t_main1 = res["started"], res["finished"]
+        pods_end = collect.snapshot_pods(ctx.kube, t.namespace, t.deployment)
+        write_json(attempt_dir / "pods_end.json", pods_end)
+        main_out = attempt_dir / "loadgen-main" / "main"
+        for f in ("requests.csv", "loadgen.json"):
+            if (main_out / f).exists():
+                shutil.copy2(main_out / f, attempt_dir / f)
 
-    # 4) Chạy kịch bản: bỏ pause ngay trước khi máy tạo tải bắt đầu
-    duration = SCENARIO_S.get(spec.scenario) or float(spec.duration or 0)
-    if so_name:
-        configs.set_paused(ctx.kube, t.namespace, so_name, paused=False)
-    log(f"[{spec.run_id}] chạy {spec.scenario} ({duration:g} s)")
-    args = loadgen_args(
-        spec.scenario,
-        capacity=spec.capacity,
-        rate=spec.rate,
-        duration=spec.duration,
-        kb3_replicas=spec.replicas_for_kb3,
-        run_index=spec.repeat,
-        url=t.service_url,
-        model=t.model,
-        out="/out/main",
-        workers=t.loadgen_workers,
-    )
-    res = job.run(spec.run_id, "main", args, duration, attempt_dir / "loadgen-main")
-    t_main0, t_main1 = res["started"], res["finished"]
-    pods_end = collect.snapshot_pods(ctx.kube, t.namespace, t.deployment)
-    (attempt_dir / "pods_end.json").write_text(json.dumps(pods_end, indent=2), encoding="utf-8")
-    main_out = attempt_dir / "loadgen-main" / "main"
-    for f in ("requests.csv", "loadgen.json"):
-        if (main_out / f).exists():
-            shutil.copy2(main_out / f, attempt_dir / f)
-
-    # 5) Cooldown: cấu hình autoscaling phải tự về 1 replica (scale-down chậm: 300 s rồi 1 pod/60 s)
-    cooldown_s = None
-    if so_name:
-        log(f"[{spec.run_id}] cooldown: chờ về 1 replica (tối đa {m.timing.cooldown_max_s:g} s)")
-        cooldown_s = wait_replicas(ctx, 1, m.timing.cooldown_max_s)
-        configs.set_paused(ctx.kube, t.namespace, so_name, paused=True)  # giữ yên cho lượt sau
-    t_end = time.time()
+        # 5) Cooldown: cấu hình autoscaling phải tự về 1 replica (scale-down chậm: 300 s rồi 1 pod/60 s)
+        cooldown_s = None
+        if so_name:
+            log(f"[{spec.run_id}] cooldown: chờ về 1 replica (tối đa {m.timing.cooldown_max_s:g} s)")
+            cooldown_s = wait_replicas(ctx, 1, m.timing.cooldown_max_s)
+            configs.set_paused(ctx.kube, t.namespace, so_name, paused=True)  # giữ yên cho lượt sau
+        t_end = time.time()
+    finally:
+        # Cả khi lượt lỗi giữa chừng: dừng luồng nền (không thì nó tiếp tục ghi vào lượt cũ), giữ dữ liệu
+        timeline = watcher.stop()
+        write_json(attempt_dir / "pods_timeline.json", timeline)
 
     # 6) Thu dữ liệu: từ trước warm-up 30 s tới hết cooldown
     log(f"[{spec.run_id}] thu dữ liệu")
@@ -214,9 +224,12 @@ def run_one(ctx: Context, spec: RunSpec, attempt_dir: Path) -> str:
     n_metric = collect.write_metrics(ctx.prom, queries, t_warm - 30, t_end, attempt_dir / "metrics.csv.gz")
     n_event = collect.write_events(ctx.kube, t.namespace, t_begin, attempt_dir / "events.jsonl")
     n_alert = collect.write_alerts(ctx.prom, t_main0, t_end, attempt_dir / "alerts.jsonl")
-    collect.write_logs(
-        ctx.kube, t.namespace, [p["name"] for p in pods_end], int(t_end - t_begin) + 60, attempt_dir / "logs"
-    )
+    # Log đã thu trong watcher.stop(). Thiếu log không loại lượt (Môi trường §17), nhưng mất số đo cold start.
+    # Pod chưa từng chạy container (Pending vì hết GPU rồi bị scale-down) không có log nào để mất.
+    no_log = [e["name"] for e in timeline["pods"] if e["log"] is None and e["marks"].get("container_started")]
+    n_err, last_err = timeline["errors"], timeline["last_error"]
+    if no_log or n_err:
+        log(f"  CẢNH BÁO: thiếu log {no_log}; {n_err} lần hỏi pod lỗi ({last_err})")
     gaps = collect.scrape_gaps(
         ctx.prom,
         t.namespace,
@@ -249,7 +262,14 @@ def run_one(ctx: Context, spec: RunSpec, attempt_dir: Path) -> str:
             "t_main_end": t_main1,
             "t_end": t_end,
             "cooldown_s": cooldown_s,
-            "counts": {"metric_rows": n_metric, "events": n_event, "alerts": n_alert},
+            "counts": {
+                "metric_rows": n_metric,
+                "events": n_event,
+                "alerts": n_alert,
+                "pods_seen": len(timeline["pods"]),
+                "pods_without_log": no_log,
+                "pod_poll_errors": timeline["errors"],
+            },
             "loadgen_summary": {k: lg_data.get(k) for k in ("n_planned", "n_done", "n_error")}
             if lg_data
             else None,

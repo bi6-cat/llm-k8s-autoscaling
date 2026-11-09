@@ -270,18 +270,18 @@ L2 là cấu hình vận hành; đồ án đo L0 và L2 để biết rút ngắn
 
 **Pha 4. Khởi động tiến trình (≈ 5–15 s).** Chạy `vllm serve`: import `torch`/`vllm` (nặng), đọc tham số, khởi tạo CUDA context, tạo tiến trình EngineCore.
 
-**Pha 5. Tải model (≈ 150 s, hoặc 0 s).** Chỉ xảy ra khi `--model` là tên repo trên Hugging Face và chưa có cache. Qwen2.5-7B gồm khoảng 15 GB file safetensors (4 shard); ở 100 MB/s mất khoảng 150 s.
+**Pha 5. Tải model (≈ 150 s, hoặc 0 s).** Chỉ xảy ra khi `--model` là tên repo trên Hugging Face và chưa có cache. Qwen2.5-7B gồm khoảng 15 GB file safetensors (4 shard); ở 100 MB/s mất khoảng 150 s. Log: `Time spent downloading weights for … seconds` (chỉ in khi tải mất hơn 0,5 s).
 
-**Pha 6. Nạp weights vào GPU (≈ 10–60 s).** Đọc file từ đĩa lên RAM, rồi copy qua PCIe vào VRAM. Tốc độ phụ thuộc chủ yếu vào ổ đĩa: NVMe cục bộ (2–3 GB/s) mất khoảng 10 s; NFS (100–300 MB/s) mất 50–150 s. Log có dòng `Loading weights took … seconds` và `Model loading took … GiB and … seconds`.
+**Pha 6. Nạp weights vào GPU (≈ 10–60 s).** Đọc file từ đĩa lên RAM, rồi copy qua PCIe vào VRAM. Tốc độ phụ thuộc chủ yếu vào ổ đĩa: NVMe cục bộ (2–3 GB/s) mất khoảng 10 s; NFS (100–300 MB/s) mất 50–150 s. Log có dòng `Loading weights took … seconds` (không gồm thời gian tải ở pha 5) và `Model loading took … GiB memory and … seconds` (gồm cả pha 5).
 
 **Pha 7. Compile, KV-cache, CUDA graph (≈ 20–60 s).** Gồm ba việc nối tiếp:
-- (a) Chạy thử một lượt forward để **đo bộ nhớ**. Trong lượt chạy thử đó, **torch.compile** biên dịch model; kết quả được lưu vào `$VLLM_CACHE_ROOT/torch_compile_cache`.
+- (a) Chạy thử một lượt forward để **đo bộ nhớ**. Trong lượt chạy thử đó, **torch.compile** biên dịch model; kết quả được lưu vào `$VLLM_CACHE_ROOT/torch_compile_cache`. Ở v0.31.0, vLLM còn **chụp thử CUDA graph một lần** để đo bộ nhớ graph, nên log có một dòng `Graph capturing finished` ngay trong bước này.
 - (b) **Cấp phát KV-cache** bằng phần VRAM còn lại. Log: `GPU KV cache size: … tokens`.
-- (c) **Capture CUDA graph** cho nhiều kích thước batch. Log: `Graph capturing finished in … secs`.
+- (c) **Capture CUDA graph** cho nhiều kích thước batch. Log: dòng `Graph capturing finished in … secs` **thứ hai**, sau dòng KV-cache.
 
-Cả pha có một dòng tổng: `init engine (profile, create kv cache, warmup model) took … seconds`. Câu chữ có thể khác theo phiên bản, nên runner cần có bộ phân tích log dễ chỉnh (`parse_vllm_log`).
+Cả pha có một dòng tổng: `init engine (profile, create kv cache, warmup model) took … s`. Câu chữ có thể khác theo phiên bản, nên runner có bộ phân tích log dễ chỉnh: `parse_vllm_log` trong `experiments/runner/vllm_log.py`, câu chữ đã đối chiếu với mã nguồn v0.31.0.
 
-**Pha 8. Probe → Ready → Endpoints (≈ 5–10 s).** API server chỉ mở cổng 8000 sau khi engine sẵn sàng; trước đó probe bị từ chối kết nối. Probe thành công thì condition `Ready=True`, EndpointSlice thêm IP của pod, và kube-proxy/Traefik cập nhật. Với `periodSeconds: 5`, có thể mất thêm tối đa 5 s chỉ để chờ lần probe kế tiếp.
+**Pha 8. Probe → Ready → Endpoints (≈ 5–10 s).** API server chỉ mở cổng 8000 sau khi engine sẵn sàng (uvicorn in `Application startup complete.` ngay trước khi mở); trước đó probe bị từ chối kết nối. Probe thành công thì condition `Ready=True`, EndpointSlice thêm IP của pod, và kube-proxy/Traefik cập nhật. Với `periodSeconds: 5`, có thể mất thêm tối đa 5 s chỉ để chờ lần probe kế tiếp.
 
 ### 7.3. Tối ưu theo pha
 
