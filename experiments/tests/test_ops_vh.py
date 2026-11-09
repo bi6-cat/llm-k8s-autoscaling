@@ -33,7 +33,13 @@ def test_kill_allows_errors_but_needs_restart():
 
 
 def test_vh4_enforces_the_30_second_limit():
-    ok = {"recovered": True, "fallback_s": 23.0, "unblocked_ok": True}
+    ok = {
+        "recovered": True,
+        "fallback_s": 23.0,
+        "unblocked_ok": True,
+        "replicas_before": 1,
+        "max_replicas": 3,
+    }
     assert not grade("vh4", CLEAN, ok)
     assert grade("vh4", CLEAN, {**ok, "fallback_s": 31.0})
     assert grade("vh4", CLEAN, {**ok, "fallback_s": None})
@@ -43,3 +49,20 @@ def test_vh4_enforces_the_30_second_limit():
 def test_vh2c_must_get_stuck():
     assert not grade("vh2c", DIRTY, {"recovered": True, "rollout_stuck": True})
     assert grade("vh2c", CLEAN, {"recovered": True, "rollout_stuck": False})
+
+
+def test_vh4_starting_at_max_proves_nothing():
+    # 09/11: tải đã đẩy lên max trước khi chặn, script báo fallback sau 0,09 s và "đạt" oan
+    facts = {
+        "recovered": True,
+        "fallback_s": 0.1,
+        "unblocked_ok": True,
+        "replicas_before": 3,
+        "max_replicas": 3,
+    }
+    assert grade("vh4", CLEAN, facts)
+
+
+def test_vh2a_must_start_from_one_replica():
+    assert not grade("vh2a", CLEAN, {"recovered": True, "replicas_before": 1})
+    assert grade("vh2a", CLEAN, {"recovered": True, "replicas_before": 3})

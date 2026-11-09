@@ -85,12 +85,16 @@ def grade(scenario: str, load: dict[str, Any], facts: dict[str, Any]) -> list[st
         why.append(f"có {load['errors']} request lỗi: {load['by_error']}")
     if not facts.get("recovered", False):
         why.append("hệ thống không trở lại đủ replica Ready")
+    if scenario == "vh2a" and facts.get("replicas_before") != 1:
+        why.append(f"ca 1 replica nhưng trước khi làm có {facts.get('replicas_before')} replica: giảm --rate")
     if scenario == "vh2c" and not facts.get("rollout_stuck"):
         why.append("rollout kiểu web không bị kẹt như phân tích")
     if scenario == "vh3-kill" and not facts.get("restarted"):
         why.append("container không restart: lệnh kill không có tác dụng trên cluster này")
     if scenario == "vh4":
         t = facts.get("fallback_s")
+        if facts.get("replicas_before", 0) >= facts.get("max_replicas", 0):
+            why.append("đã ở max replica trước khi chặn nên không đo được fallback: giảm --rate")
         if t is None:
             why.append("KEDA không fallback lên max")
         elif t > FALLBACK_LIMIT_S:
@@ -140,6 +144,16 @@ class Ops:
             time.sleep(POLL_S)
         return None
 
+    def spec_replicas(self) -> int:
+        return self.kube.get_json("deploy", self.target.deployment, "-n", self.ns)["spec"]["replicas"]
+
+    def fallback_active(self) -> bool:
+        """KEDA đang dùng fallback: condition Fallback của ScaledObject là True (Kiến trúc §13)."""
+        so = self.kube.get_json("scaledobject", SO_NAME, "-n", self.ns)
+        return any(
+            c["type"] == "Fallback" and c["status"] == "True" for c in so["status"].get("conditions", [])
+        )
+
     def scale_min(self, n: int) -> None:
         patch = {"spec": {"minReplicaCount": n}}
         self.kube.run(
@@ -175,6 +189,7 @@ class Ops:
 
 
 def vh2a(o: Ops) -> dict[str, Any]:
+    before = o.spec_replicas()  # phải là 1, nếu không thì đây không phải ca cần bước nâng min (grade kiểm)
     o.scale_min(2)
     o.mark("min_replicas_2")
     second = o.wait_ready(2, 900)
@@ -185,7 +200,7 @@ def vh2a(o: Ops) -> dict[str, Any]:
     o.mark("rollout_end", ok=ok, seconds=time.time() - t0)
     o.scale_min(1)
     o.mark("min_replicas_1")
-    return {"recovered": ok and second is not None, "rollout_s": time.time() - t0}
+    return {"recovered": ok and second is not None, "rollout_s": time.time() - t0, "replicas_before": before}
 
 
 def vh2b(o: Ops) -> dict[str, Any]:
@@ -263,35 +278,37 @@ def vh3_kill(o: Ops) -> dict[str, Any]:
     return {"recovered": bool(status and status.get("ready")), "restarted": restarted, "recover_s": secs}
 
 
-def vh3_drain(o: Ops) -> dict[str, Any]:
-    nodes = o.kube.get_json("nodes")["items"]
-    if len(nodes) < 2:
+def pick_drain_node(o: Ops) -> str:
+    """Node sẽ drain: node đang có pod vLLM. Cần ≥ 2 node, vì drain còn đuổi cả Prometheus và KEDA."""
+    if len(o.kube.get_json("nodes")["items"]) < 2:
         raise RuntimeError("chỉ có 1 node: drain sẽ tắt cả Prometheus và KEDA; chạy VH3 drain ở simulator")
-    pods = o.pods()
-    node = pods[0]["spec"]["nodeName"]
+    return o.pods()[0]["spec"]["nodeName"]
+
+
+def vh3_drain(o: Ops, node: str) -> dict[str, Any]:
     want = len(o.ready_names())
     t0 = o.mark("drain", node=node)
-    try:
-        # --ignore-daemonsets: DaemonSet (exporter) không chuyển đi được. --delete-emptydir-data: cho phép xoá
-        # pod có emptyDir. Timeout 600 s vì grace period của vLLM là 180 s.
-        o.kube.run(
-            "drain", node, "--ignore-daemonsets", "--delete-emptydir-data", "--timeout=600s", timeout_s=660
-        )
-        back = o.wait_ready(want, 900)
-        o.mark("drained", seconds=back)
-    finally:
-        o.kube.run("uncordon", node)  # luôn trả node về, kể cả khi drain lỗi
-    return {"recovered": back is not None, "recover_s": back, "t_action": t0}
+    # --ignore-daemonsets: DaemonSet (exporter) không chuyển đi được. --delete-emptydir-data: cho phép xoá
+    # pod có emptyDir. Timeout 600 s vì grace period của vLLM là 180 s.
+    o.kube.run(
+        "drain", node, "--ignore-daemonsets", "--delete-emptydir-data", "--timeout=600s", timeout_s=660
+    )
+    # `drain` chỉ trả về khi pod cũ đã đi hết; đo từ lúc bắt đầu drain tới khi đủ pod Ready lại
+    back = o.wait_ready(want, 900)
+    recover_s = time.time() - t0 if back is not None else None
+    o.mark("drained", seconds=recover_s)
+    return {"recovered": back is not None, "recover_s": recover_s, "t_action": t0}
 
 
 def vh4(o: Ops, block_s: float = 300) -> dict[str, Any]:
-    t0 = o.mark("block_prometheus")
+    before = o.spec_replicas()
+    t0 = o.mark("block_prometheus", replicas_before=before)
     fallback_s = None
     try:
         o.kube.run("apply", "-f", str(BLOCK_FILE))
         while time.time() - t0 < block_s:
-            hpa = o.kube.get_json("deploy", o.target.deployment, "-n", o.ns)["spec"]["replicas"]
-            if fallback_s is None and hpa >= o.max_replicas:
+            # Cần CẢ HAI: chỉ xem replica thì tải cao đã đẩy lên max cũng bị tính nhầm là fallback (09/11)
+            if fallback_s is None and o.fallback_active() and o.spec_replicas() >= o.max_replicas:
                 fallback_s = time.time() - t0
                 o.mark("fallback_reached", seconds=fallback_s)
             time.sleep(1)
@@ -302,15 +319,19 @@ def vh4(o: Ops, block_s: float = 300) -> dict[str, Any]:
     unblocked_ok = False
     end = time.time() + 120
     while time.time() < end:
-        so = o.kube.get_json("scaledobject", SO_NAME, "-n", o.ns)
-        conds = {c["type"]: c["status"] for c in so["status"].get("conditions", [])}
-        if conds.get("Fallback") != "True":
+        if not o.fallback_active():
             unblocked_ok = True
             break
         time.sleep(POLL_S)
     o.mark("signal_back", ok=unblocked_ok)
     back = o.wait_ready(1, 600)
-    return {"recovered": back is not None, "fallback_s": fallback_s, "unblocked_ok": unblocked_ok}
+    return {
+        "recovered": back is not None,
+        "fallback_s": fallback_s,
+        "unblocked_ok": unblocked_ok,
+        "replicas_before": before,
+        "max_replicas": o.max_replicas,
+    }
 
 
 SCENARIOS = {
@@ -319,7 +340,7 @@ SCENARIOS = {
     "vh2c": vh2c,
     "vh3-delete": vh3_delete,
     "vh3-kill": vh3_kill,
-    "vh3-drain": vh3_drain,
+    "vh3-drain": vh3_drain,  # gọi riêng trong main vì cần node đã cordon trước khi có tải
     "vh4": vh4,
 }
 
@@ -362,6 +383,24 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Không chuẩn bị được cluster: {e}", file=sys.stderr)
         return 2
 
+    # vh2a, vh4 cần bắt đầu từ 1 replica; lượt trước có thể còn nhiều replica vì cửa sổ scale-down 300 s.
+    if a.scenario in ("vh2a", "vh4"):
+        end = time.time() + 900
+        while ops.spec_replicas() > 1 and time.time() < end:
+            time.sleep(POLL_S)
+        ops.mark("settled", replicas=ops.spec_replicas())
+
+    # vh3-drain: cordon node sẽ drain TRƯỚC khi có tải, để pod máy tạo tải không xếp vào đó. Nếu không, drain
+    # đuổi luôn máy tạo tải và mất toàn bộ kết quả (gặp 09/11: lần đầu đạt chỉ vì tình cờ khác node).
+    drain_node = None
+    if a.scenario == "vh3-drain":
+        try:
+            drain_node = pick_drain_node(ops)
+        except RuntimeError as e:
+            print(f"Không chạy được: {e}", file=sys.stderr)
+            return 2
+        kube.run("cordon", drain_node)
+
     # Máy tạo tải chạy trong pod (đi qua Service như client thật), ở luồng nền vì LoadJob.run chờ tới khi xong
     job = LoadJob(kube, target, REPO)
     job.sync_code()
@@ -385,10 +424,18 @@ def main(argv: list[str] | None = None) -> int:
     facts: dict[str, Any] = {}
     error = None
     try:
-        facts = vh4(ops, a.block_s) if a.scenario == "vh4" else SCENARIOS[a.scenario](ops)
+        if a.scenario == "vh3-drain":
+            facts = vh3_drain(ops, drain_node)
+        elif a.scenario == "vh4":
+            facts = vh4(ops, a.block_s)
+        else:
+            facts = SCENARIOS[a.scenario](ops)
     except Exception as e:  # noqa: BLE001 - vẫn phải chờ tải xong để ghi kết quả
         error = f"{type(e).__name__}: {e}"[:500]
         ops.mark("scenario_error", error=error)
+    finally:
+        if drain_node:
+            kube.run("uncordon", drain_node, check=False)  # luôn trả node về, kể cả khi drain lỗi
 
     # Máy tạo tải chỉ ghi kết quả khi chạy xong lịch, nên phải chờ trọn --duration kể cả khi kịch bản xong
     # sớm. Vì vậy mặc định của --duration đặt riêng cho từng kịch bản (DEFAULT_DURATION_S).
