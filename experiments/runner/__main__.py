@@ -13,11 +13,13 @@ Ví dụ:
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
 from experiments.runner import matrix as matrix_mod
 from experiments.runner.kube import Kube, Prometheus
+from experiments.runner.notify import Notifier
 from experiments.runner.session import Context, log, run_session
 
 
@@ -31,6 +33,12 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--only", action="append", help="Chỉ chạy run_id này (lặp lại được)")
     p.add_argument("--max-attempts", type=int, default=2, help="Số lần thử tối đa mỗi lượt (mặc định 2)")
     p.add_argument("--dry-run", action="store_true", help="Chỉ in danh sách lượt")
+    p.add_argument(
+        "--backup-remote",
+        default=os.environ.get("R2_REMOTE"),
+        help="Gốc rclone để sao lưu sau mỗi lượt, ví dụ r2:llm-thesis/runs (mặc định: biến R2_REMOTE)",
+    )
+    p.add_argument("--no-backup", action="store_true", help="Cho phép chạy phiên cloud mà không sao lưu")
     args = p.parse_args(argv)
 
     try:
@@ -49,6 +57,14 @@ def main(argv: list[str] | None = None) -> int:
     if args.dry_run:
         return 0
 
+    # Dữ liệu trên VM thuê mất khi trả máy và V2 không có phiên dự phòng: phiên cloud phải tự chọn bỏ sao lưu.
+    if m.env == "cloud" and not args.backup_remote and not args.no_backup:
+        print("Phiên cloud cần --backup-remote hoặc R2_REMOTE (hoặc --no-backup nếu cố ý)", file=sys.stderr)
+        return 2
+    notifier = Notifier.from_env(log)
+    if not notifier.enabled:
+        log("không có TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID: sẽ không báo Telegram")
+
     kube = Kube(context=args.context)
     ctx = Context(
         matrix=m,
@@ -56,6 +72,8 @@ def main(argv: list[str] | None = None) -> int:
         prom=Prometheus(kube, m.target.prometheus_service),
         repo_root=Path.cwd(),
         runs_dir=args.runs_dir,
+        backup_remote=None if args.no_backup else args.backup_remote,
+        notifier=notifier,
     )
     final = run_session(ctx, set(args.only) if args.only else None, args.max_attempts)
     log("kết quả: " + ", ".join(f"{k}={v}" for k, v in final.items()))

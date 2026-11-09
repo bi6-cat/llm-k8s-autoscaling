@@ -26,10 +26,11 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-from experiments.runner import checks, collect, configs
+from experiments.runner import backup, checks, collect, configs
 from experiments.runner.kube import Kube, Prometheus
 from experiments.runner.loadjob import LoadJob, loadgen_args
 from experiments.runner.matrix import Matrix, RunSpec
+from experiments.runner.notify import Notifier
 from experiments.runner.progress import Progress
 
 # Thời lượng kịch bản (giây), theo Thông số §8 và loadgen/scenarios.py. CONST lấy từ `duration` của lượt.
@@ -62,6 +63,27 @@ class Context:
     prom: Prometheus
     repo_root: Path
     runs_dir: Path
+    backup_remote: str | None = None  # gốc trên R2, ví dụ r2:llm-thesis/runs; None = không sao lưu
+    notifier: Notifier | None = None
+
+    def notify(self, text: str) -> None:
+        if self.notifier:
+            self.notifier.send(f"[{self.matrix.session}] {text}")
+
+
+def after_run(ctx: Context, sdir: Path, run_id: str, status: str, note: str) -> None:
+    """Sau mỗi lượt: đẩy cả thư mục phiên (kèm progress.json) lên R2, báo khi có chuyện bất thường."""
+    if status != "done":
+        ctx.notify(f"{run_id}: {status}" + (f" ({note})" if note else ""))
+    if not ctx.backup_remote:
+        return
+    r = backup.push(sdir, f"{ctx.backup_remote.rstrip('/')}/{ctx.matrix.session}")
+    if r.ok:
+        log(f"[{run_id}] đã sao lưu lên {ctx.backup_remote}")
+    else:
+        # Không dừng phiên: lần sau đẩy lại cả thư mục nên tự bù, và `make release` vẫn chặn nếu còn thiếu.
+        log(f"[{run_id}] SAO LƯU LỖI: {r.detail}")
+        ctx.notify(f"{run_id}: sao lưu lỗi: {r.detail}")
 
 
 def wait_initial_state(ctx: Context, replicas: int) -> tuple[bool, str]:
@@ -331,12 +353,14 @@ def run_session(ctx: Context, only: set[str] | None, max_attempts: int) -> dict[
             continue
         pending.append(spec)
     check_signals(ctx, pending)
+    ctx.notify(f"bắt đầu: {len(pending)} lượt cần chạy")
     for spec in pending:
         attempt_dir = sdir / spec.run_id / f"attempt-{prog.attempts(spec.run_id) + 1}"
         try:
             status, note = run_one(ctx, spec, attempt_dir), ""
         except KeyboardInterrupt:
-            prog.record(spec.run_id, "error", attempt_dir.name, "bị ngắt bằng Ctrl+C")
+            prog.record(spec.run_id, "error", attempt_dir.name, "bị ngắt (Ctrl+C hoặc systemd stop)")
+            after_run(ctx, sdir, spec.run_id, "error", "bị ngắt (Ctrl+C hoặc systemd stop)")
             raise
         except Exception as e:  # noqa: BLE001 - chạy không người trực: ghi lỗi rồi sang lượt sau
             attempt_dir.mkdir(parents=True, exist_ok=True)
@@ -344,4 +368,8 @@ def run_session(ctx: Context, only: set[str] | None, max_attempts: int) -> dict[
             status, note = "error", f"{type(e).__name__}: {e}"[:300]
             log(f"[{spec.run_id}] LỖI: {note}")
         prog.record(spec.run_id, status, attempt_dir.name, note)
-    return {s.run_id: prog.status(s.run_id) or "-" for s in ctx.matrix.runs}
+        after_run(ctx, sdir, spec.run_id, status, note)
+    final = {s.run_id: prog.status(s.run_id) or "-" for s in ctx.matrix.runs}
+    counts = {st: sum(1 for v in final.values() if v == st) for st in sorted(set(final.values()))}
+    ctx.notify(f"kết thúc: {counts}")
+    return final
