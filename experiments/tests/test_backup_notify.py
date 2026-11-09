@@ -40,6 +40,11 @@ def test_push_uses_checksum_copy_and_never_sync(fake_rclone, tmp_path):
     assert "sync" not in line  # sync xoá file trên đích khi máy thiếu
 
 
+def test_secrets_never_leave_the_machine(fake_rclone, tmp_path):
+    backup.push(tmp_path, "r2:b/s")
+    assert "--exclude *.secret" in fake_rclone.read_text(encoding="utf-8")
+
+
 def test_check_is_one_way_and_reports_failure(fake_rclone, tmp_path, monkeypatch):
     monkeypatch.setenv("FAKE_RC", "1")
     r = backup.check(tmp_path, "r2:b/s")
