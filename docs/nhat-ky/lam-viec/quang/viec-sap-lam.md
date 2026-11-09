@@ -25,7 +25,7 @@ Trang tiến độ tổng quát (quy trình, chặng, từ điển mã): <https:
 
 Phần trăm là ước lượng theo đầu việc, không phải giờ đã dùng.
 
-**Nhánh và PR** (08/11 khuya): PR #26 `feat/v2-prep` (3B, kịch bản, Ansible cho VM, ma trận ĐG1/V1, nhật ký 2 phiên) chờ Trình review. Nhánh `chore/cleanup-0811` xếp chồng trên đó (đồng bộ docs, sửa UTIL, bỏ nhãn DEMO). Trình có PR #24 (`parse_vllm_log`), #25 (theo dõi pod) chờ Quang review.
+**Nhánh và PR** (09/11): PR #24, #25, #26 đã merge vào `main`. PR #27 merge nhầm vào `feat/v2-prep` (base không phải `main`), nên 7 commit dọn dẹp được đưa vào `main` bằng nhánh `chore/v2-prep-to-main`. Từ nay tách nhánh mới từ `main`; trước khi merge PR dưới của một chồng PR, đổi base PR trên về `main`.
 
 ## 2. Làm ngay (trước V2, hạn 13/11)
 
@@ -33,7 +33,7 @@ Phần trăm là ước lượng theo đầu việc, không phải giờ đã d�
 - [x] (08/11) **V0+V1** trên VM Vast: bootstrap, cold start, benchmark, ĐG1 thử, runner 2 lượt có KEDA.
 - [x] (08/11) Sửa UTIL trong `capacity.py` (lấy GPU bận nhất mỗi lần scrape).
 - [ ] **Họp với Trình:** chốt máy V2 (4 × A4000, ≥ 20 vCPU), nạp tiền Vast; đọc kết quả V1 (hàng đợi ghim vào pod cũ, A1 kẹt ở 2 replica); các điểm cũ: lọc lỗi theo cột `error`, comment `pollingInterval` của A2, `for: 1m` của `LLMErrorRateHigh`.
-- [ ] **Review PR #24, #25** của Trình (cần cho đo cold start và log pod bị scale-down ở V2).
+- [x] ~~Review PR #24, #25 của Trình~~: Trình đã tự merge (08–09/11), Quang chưa review. Hai phần này chưa chạy với log vLLM thật: kiểm bằng một lượt ngắn đầu V2.
 - [ ] **Q2 đưa phần làm tay 08/11 vào code:** tải model (`HF_HUB_DISABLE_XET=1`) và kéo image (`crictl pull`) chạy async trong Ansible; `make cloud-platform` từ `runs/vast-v2b-20261108/bundle/install-platform.sh` (helm device plugin, kube-prometheus-stack, KEDA, tạo namespace `gpu`, GPU exporter); `probe.sh` vào `infra/provision/`.
 - [ ] **Q2 `vast.sh`:** bộ lọc v2 đang đòi 8 lõi và 32 GB/GPU (32 vCPU với N = 4); cân nhắc nới xuống ~20 vCPU nếu không ra offer A4000.
 - [ ] **Q6 runner v2:** đẩy R2 sau mỗi lượt, unit systemd, báo Telegram (bot riêng, không đụng Alertmanager của Trình).
