@@ -30,7 +30,7 @@ PROMTOOL ?= promtool
 YQ ?= yq
 
 # .PHONY: các target này không phải tên file, make luôn chạy chúng (kể cả khi có file trùng tên)
-.PHONY: help home-up sim-up sim-down sim-test-load sim-test find rent probe bootstrap prefetch cloud-platform release lint alerts-test alerts-coverage dashboards-check
+.PHONY: help home-up sim-up sim-down sim-test-load sim-test find rent probe bootstrap prefetch cloud-platform run backup backup-check release lint alerts-test alerts-coverage dashboards-check
 
 # In mọi target có comment `## mô tả` cùng dòng. Thêm target mới thì nhớ viết `## …` để nó hiện ở đây.
 help: ## In danh sách lệnh
@@ -120,6 +120,18 @@ prefetch: ## Tải model, kéo image trên VM thuê (bootstrap đã gồm bướ
 cloud-platform: ## Cài device plugin, Prometheus, KEDA, GPU exporter, vLLM lên VM thuê
 	infra/provision/vast.sh platform
 
+# Chạy ma trận bằng systemd trên VM, không phụ thuộc SSH (commit đang đứng phải đã push).
+run: ## Chạy ma trận trên VM: make run MATRIX=experiments/matrix-v2.yaml
+	infra/provision/vast.sh runner-start $(MATRIX)
+
+# Đọc .env để có R2_REMOTE và khoá. `set -a` = biến gán sau đó tự export cho lệnh con.
+backup: ## Đẩy runs/ lên R2 rồi xác nhận checksum
+	set -a; . ./.env; set +a; uv run --project experiments python -m experiments.runner.backup push
+
+backup-check: ## Xác nhận mọi file trong runs/ đã có trên R2
+	set -a; . ./.env; set +a; uv run --project experiments python -m experiments.runner.backup check
+
+# Từ chối huỷ máy khi dữ liệu chưa có trên R2 (FORCE_RELEASE=1 để bỏ qua; xem vast.sh).
 release: ## Huỷ instance Vast đang thuê
 	infra/provision/vast.sh release
 
@@ -222,7 +234,7 @@ dashboards-check: ## Kiểm JSON dashboard: uid, datasource, kích thước, Pro
 
 # ── Lệnh đã đặt tên nhưng chưa làm ──────────────────────────────────────────────
 # Tên lấy từ Môi trường §3.7. Gọi bây giờ thì báo "chưa làm" và trả mã lỗi 1, để script gọi nó dừng lại.
-NOT_YET := burnin capacity run ops-tests backup analysis test
+NOT_YET := burnin capacity ops-tests analysis test
 .PHONY: $(NOT_YET)
 $(NOT_YET):
 	@echo "make $@: chưa làm (xem kế hoạch W3–W5)"; exit 1

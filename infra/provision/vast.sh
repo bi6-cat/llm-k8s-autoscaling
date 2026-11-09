@@ -6,7 +6,7 @@
 # Mục đích:  Cô lập phần phụ thuộc nhà cung cấp vào MỘT file; đổi nhà cung cấp chỉ phải viết lại file này.
 #            Ghi trạng thái vào .vast/ để không bao giờ quên một máy đang tính tiền.
 # Dùng:      vast.sh find v0|v2 | rent <offer_id> v0|v2 | wait | probe | inventory | platform | ssh | tunnel
-#            | status | release
+#            | runner-start <matrix> | status | release
 #            (thường gọi qua Makefile: make find / rent / bootstrap / release)
 #            Loại GPU, số GPU, trần giá đổi bằng biến môi trường, ví dụ:
 #              GPU=RTX_4090 NGPU=4 MAX_DPH=3 infra/provision/vast.sh find v2
@@ -164,6 +164,39 @@ cmd_platform() {
   ssh -p "$port" "root@$host" bash /root/platform/install-platform.sh
 }
 
+# Chạy ma trận bằng systemd trên VM. Lấy đúng commit đang đứng (phải đã push): metadata.json của mỗi lượt ghi
+# commit này (N8), nên từ chối nếu cây làm việc có thay đổi chưa commit.
+cmd_runner-start() {
+  local matrix=${1:?file ma trận, ví dụ experiments/matrix-v2.yaml} host port sha url
+  read -r host port < <(ssh_target)
+  if [ -n "$(git status --porcelain)" ]; then echo "Có thay đổi chưa commit; commit và push trước." >&2; exit 1; fi
+  sha=$(git rev-parse HEAD); url=$(git remote get-url origin)
+  git branch -r --contains "$sha" | grep -q . || { echo "Commit $sha chưa push." >&2; exit 1; }
+  # .env chứa khoá: chép qua stdin của ssh (không nằm trên dòng lệnh), quyền 600 trên VM
+  ssh -p "$port" "root@$host" bash -s -- "$url" "$sha" "$matrix" <<'REMOTE'
+set -euo pipefail
+url=$1 sha=$2 matrix=$3
+command -v git >/dev/null || apt-get install -y git
+command -v rclone >/dev/null || {
+  # Bản ghim (docs/phien-ban.md); unzip bằng Python vì image Ubuntu tối giản có thể không có unzip
+  curl -fsSL -o /tmp/rclone.zip https://downloads.rclone.org/v1.71.2/rclone-v1.71.2-linux-amd64.zip
+  python3 -m zipfile -e /tmp/rclone.zip /tmp/rclone-x
+  install /tmp/rclone-x/rclone-v1.71.2-linux-amd64/rclone /usr/local/bin/rclone
+}
+[ -d /opt/llm-runner/.git ] || git clone "$url" /opt/llm-runner
+git -C /opt/llm-runner fetch -q origin
+git -C /opt/llm-runner checkout -q "$sha"
+printf 'MATRIX=%s
+KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+' "$matrix" > /opt/llm-runner/runner.env
+cp /opt/llm-runner/infra/provision/llm-runner.service /etc/systemd/system/llm-runner.service
+systemctl daemon-reload
+REMOTE
+  ssh -p "$port" "root@$host" 'umask 077; cat > /opt/llm-runner/.env' < .env
+  ssh -p "$port" "root@$host" 'systemctl enable --now llm-runner && systemctl --no-pager status llm-runner | head -5'
+  echo "Xem log: make ssh rồi journalctl -u llm-runner -f"
+}
+
 # Mở shell trên VM. `exec` thay tiến trình script bằng ssh (Ctrl-D là thoát luôn).
 cmd_ssh() { local host port; read -r host port < <(ssh_target); exec ssh -p "$port" "root@$host"; }
 
@@ -184,7 +217,19 @@ cmd_status() {
 # Huỷ máy và ghi chi phí ước tính = số giờ × giá/giờ vào .vast/cost.log (dùng cho sổ chi phí).
 # Hỏi xác nhận vì mọi dữ liệu trên VM mất vĩnh viễn. bc = máy tính số thực (bash chỉ tính số nguyên).
 cmd_release() {
-  local id dph start hours ok; id=$(instance_id)
+  local id dph start hours ok host port; id=$(instance_id)
+  # Dữ liệu trên VM mất khi huỷ (Môi trường §3.8): đòi R2 có đủ cả dữ liệu trên VM lẫn trên máy dev.
+  # FORCE_RELEASE=1 để bỏ qua, ví dụ máy lỗi ngay sau khi thuê nên chưa có dữ liệu.
+  if [ "${FORCE_RELEASE:-0}" != 1 ]; then
+    read -r host port < <(ssh_target)
+    ssh -p "$port" "root@$host" \
+      'if [ -d /opt/llm-runner/runs ]; then cd /opt/llm-runner; set -a; . ./.env; set +a; uv run --project experiments python -m experiments.runner.backup check; fi' \
+      || { echo "Dữ liệu trên VM chưa sao lưu đủ (hoặc không kiểm được). Dừng; FORCE_RELEASE=1 để bỏ qua." >&2; exit 1; }
+    if [ -d runs ] && [ -n "${R2_REMOTE:-}" ]; then
+      uv run --project experiments python -m experiments.runner.backup check \
+        || { echo "runs/ trên máy này chưa sao lưu đủ. Dừng; FORCE_RELEASE=1 để bỏ qua." >&2; exit 1; }
+    fi
+  fi
   dph=$(vastai show instance "$id" --raw | jq -r '.dph_total')
   start=$(cat "$STATE/rented_at"); hours=$(echo "scale=2; ($(date -u +%s) - $start) / 3600" | bc)
   read -r -p "Huỷ instance $id? Dữ liệu trên VM sẽ mất. Gõ yes: " ok
@@ -197,4 +242,4 @@ cmd_release() {
 
 # Gọi hàm theo lệnh: `vast.sh rent 123 v0` → cmd_rent 123 v0. "${@:2}" = mọi tham số từ thứ 2 trở đi.
 # `${1:?…}` = báo lỗi kèm danh sách lệnh nếu không truyền tham số nào.
-"cmd_${1:?lệnh: find|rent|wait|probe|inventory|platform|ssh|tunnel|status|release}" "${@:2}"
+"cmd_${1:?lệnh: find|rent|wait|probe|inventory|platform|ssh|tunnel|runner-start|status|release}" "${@:2}"
