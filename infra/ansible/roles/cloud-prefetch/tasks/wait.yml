@@ -1,0 +1,23 @@
+---
+# ──────────────────────────────────────────────────────────────────────────────
+# infra/ansible/roles/cloud-prefetch/tasks/wait.yml
+# Khái niệm: `async_status` hỏi kết quả của lệnh đã khởi động bằng `async`, theo job id đã `register`.
+# Mục đích:  Bootstrap chỉ báo thành công khi model và image đã thật sự về máy; lỗi tải hiện ở đây, không
+#            phải về sau lúc pod Pending. Hỏi mỗi 15 s, tối đa 240 lần = 1 giờ (bằng giới hạn `async`).
+# Tham khảo: docs ansible.builtin.async_status
+# ──────────────────────────────────────────────────────────────────────────────
+- name: Chờ tải model xong
+  ansible.builtin.async_status:
+    jid: "{{ prefetch_model_job.ansible_job_id }}"
+  register: prefetch_model_result
+  until: prefetch_model_result.finished
+  retries: 240
+  delay: 15
+
+- name: Chờ kéo image xong
+  ansible.builtin.async_status:
+    jid: "{{ prefetch_image_job.ansible_job_id }}"
+  register: prefetch_image_result
+  until: prefetch_image_result.finished
+  retries: 240
+  delay: 15

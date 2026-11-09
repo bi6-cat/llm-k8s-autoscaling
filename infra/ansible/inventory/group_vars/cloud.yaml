@@ -28,3 +28,11 @@ disable_auto_upgrades: true
 # containerd tự thử tiếp endpoint gốc registry-1.docker.io.
 k3s_registry_mirrors:
   docker.io: ["https://mirror.gcr.io"]
+
+# Prefetch (roles/cloud-prefetch). Model và image PHẢI trùng serving/overlays/cloud-3b và serving/overlays/cloud;
+# experiments/tests/test_cloud_prefetch.py kiểm điều này, để pod không phải tải lại giữa lúc đo.
+cloud_model_repo: Qwen/Qwen2.5-3B-Instruct
+cloud_model_revision: aa8e72537993ba99e69dfaafa59ed015b17504d1
+cloud_vllm_image: docker.io/vllm/vllm-openai@sha256:c1c9f6fd5c109ba7f0546a59f5b2f15fb87f64c77782e90a27b648b42a8e67c3
+cloud_uv_version: "0.13.7"
+cloud_hf_hub_version: "2.4.0"
