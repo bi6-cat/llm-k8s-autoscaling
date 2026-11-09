@@ -387,7 +387,7 @@ vLLM/GPU exporter ──scrape 5 s──► Prometheus ◄──PromQL── KED
 - Ngược lại, khi tải rất thấp (KB1, có những khoảng không có request), GPU util dao động theo từng đợt request, nên có thể scale lên rồi xuống thất thường.
 - Dự đoán: A1 **gần như Static-4 cộng thêm độ trễ cold start**, tức là không tiết kiệm GPU-giờ. Tệ hơn, nó có thể dao động khi tải thấp. Ma trận đánh giá sẽ cho thấy dự đoán này đúng tới đâu.
 
-**Trên GPU GeForce** (RTX 4090 thuê, GPU nhà): exporter `nvidia_gpu_exporter` không có label pod. A1 vẫn dùng được nếu node chỉ chạy vLLM, vì GPU rảnh cộng thêm 0. **Ngoại lệ đo được ở V1 (08/11):** GPU của pod **đang tắt** (sau scale-down) báo util 100 % trong một mẫu; tổng tăng lên 100 → desired = 2, và cửa sổ ổn định 300 s giữ con số đó, A1 không về được 1 replica. Truy vấn A1 cần chỉ tính GPU của pod vLLM Ready (việc của TR2 trước V2; chi tiết: [log phiên 08/11 §13](../nhat-ky/lam-viec/quang/phien-2026-11-08-a4000.md#13-v1-runner-chạy-2-lượt-đg2-có-keda)). Ở nhà, RTX 5060 còn chạy màn hình nên số liệu bị nhiễu; vì vậy chạy Ubuntu không giao diện đồ hoạ ([ADR-005](../adr/005-sua-thiet-ke-sau-review.md) T9).
+**Trên GPU GeForce** (RTX 4090 thuê, GPU nhà): exporter `nvidia_gpu_exporter` không có label pod. A1 vẫn dùng được nếu node chỉ chạy vLLM, vì GPU rảnh cộng thêm 0. **Ngoại lệ đo được ở V1 (08/11):** GPU của pod **đang tắt** (sau scale-down) báo util 100 % trong một mẫu; tổng tăng lên 100 → desired = 2, và cửa sổ ổn định 300 s giữ con số đó, A1 không về được 1 replica. Exporter không có label pod nên không lọc được theo pod Ready; vì vậy từ 09/11 truy vấn A1 lấy trung bình 15 s trên từng GPU trước khi cộng, hạ mẫu đơn lẻ còn 33 %. Chạy lại trên dữ liệu V1: hết kẹt, các mốc scale-up trễ thêm 5–20 s (chưa kiểm trên cluster; chi tiết: [log phiên 08/11 §13](../nhat-ky/lam-viec/quang/phien-2026-11-08-a4000.md#13-v1-runner-chạy-2-lượt-đg2-có-keda)). Ở nhà, RTX 5060 còn chạy màn hình nên số liệu bị nhiễu; vì vậy chạy Ubuntu không giao diện đồ hoạ ([ADR-005](../adr/005-sua-thiet-ke-sau-review.md) T9).
 
 **Biến thể A1′ (không khả thi trên RTX 4090):** dùng `DCGM_FI_PROF_SM_ACTIVE` hoặc `DCGM_FI_PROF_DRAM_ACTIVE`, phản ánh mức làm việc thật tốt hơn. Chỉ làm được nếu phải chuyển sang GPU datacenter (ví dụ L4 ở phương án dự phòng GCP).
 
@@ -541,7 +541,7 @@ Chỉ thay `query` và `threshold`; mọi trigger giữ `serverAddress`, `metric
 ```yaml
 # A1: GPU utilization.
 # Trên GPU GeForce (nvidia_gpu_exporter, không có label pod): node chỉ chạy vLLM nên cộng cả node.
-query: (sum(nvidia_smi_utilization_gpu_ratio) * 100) or vector(0)
+query: (sum(avg_over_time(nvidia_smi_utilization_gpu_ratio[15s])) * 100) or vector(0)
 # Nếu dùng DCGM có label pod: sum(DCGM_FI_DEV_GPU_UTIL{exported_namespace="llm-serving"}) or vector(0)
 threshold: "70"
 

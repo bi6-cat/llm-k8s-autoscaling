@@ -136,7 +136,7 @@ Hai phút đầu của KB1 và KB2 là thời gian ổn định, không tính.
 |---|---|---|---|---|---|
 | **S1** | Static-1 | – (cố định 1 replica) | – | Cấp thiếu: chi phí thấp nhất | GPU thuê |
 | **S4** | Static-4 (S_N) | – (cố định N replica) | – | Cấp theo đỉnh: hiệu năng tốt nhất | GPU thuê |
-| **A1** | GPU utilization | `sum(DCGM_FI_DEV_GPU_UTIL{…})`, hoặc `sum(nvidia_smi_utilization_gpu_ratio) * 100` trên GPU GeForce | **70** (%) | Đối chứng: cách làm phổ biến | GPU thuê, nhà |
+| **A1** | GPU utilization | `sum(DCGM_FI_DEV_GPU_UTIL{…})`, hoặc `sum(avg_over_time(nvidia_smi_utilization_gpu_ratio[15s])) * 100` trên GPU GeForce | **70** (%) | Đối chứng: cách làm phổ biến | GPU thuê, nhà |
 | **A2** | Tải đồng thời | `sum(vllm:num_requests_running) + sum(vllm:num_requests_waiting)` | **0,8 × B\*** (*tạm*; minh hoạ: 24) | **Cấu hình vận hành chính thức** | GPU thuê, nhà, simulator |
 | A3 | KV-cache | `sum(vllm:kv_cache_usage_perc)` | 0,8 × KV\* | Could | – |
 | A4 | Chỉ hàng đợi | `sum(vllm:num_requests_waiting)` | 5 | Minh hoạ flapping | Simulator |
