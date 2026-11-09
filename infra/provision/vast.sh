@@ -197,6 +197,9 @@ REMOTE
   echo "Xem log: make ssh rồi journalctl -u llm-runner -f"
 }
 
+# In "host port" của máy đang thuê, cho script khác (vh5.sh) dùng.
+cmd_target() { ssh_target; }
+
 # Mở shell trên VM. `exec` thay tiến trình script bằng ssh (Ctrl-D là thoát luôn).
 cmd_ssh() { local host port; read -r host port < <(ssh_target); exec ssh -p "$port" "root@$host"; }
 
@@ -242,4 +245,4 @@ cmd_release() {
 
 # Gọi hàm theo lệnh: `vast.sh rent 123 v0` → cmd_rent 123 v0. "${@:2}" = mọi tham số từ thứ 2 trở đi.
 # `${1:?…}` = báo lỗi kèm danh sách lệnh nếu không truyền tham số nào.
-"cmd_${1:?lệnh: find|rent|wait|probe|inventory|platform|ssh|tunnel|runner-start|status|release}" "${@:2}"
+"cmd_${1:?lệnh: find|rent|wait|probe|inventory|platform|ssh|tunnel|runner-start|target|status|release}" "${@:2}"
