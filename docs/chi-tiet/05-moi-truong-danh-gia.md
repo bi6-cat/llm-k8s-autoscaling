@@ -234,11 +234,14 @@ Nếu máy chỉ có 32 vCPU: dùng 5 lõi cho mỗi pod vLLM; máy tạo tải 
 | `make find` | `vastai search offers` theo tiêu chí, in ra 5 máy rẻ nhất |
 | `make rent OFFER=<id>` | `vastai create instance` (template VM Ubuntu có driver NVIDIA), chờ SSH, ghi instance id |
 | `make burnin` | Ansible chạy các bước §3.4, xuất `burnin.json`; không đạt thì dừng |
+| `make probe` | Đo phần cứng và mạng thật của VM vừa thuê, để quyết định giữ hay trả máy |
 | `make bootstrap` | Ansible: chrony, NVMe, k3s (tham số §3.5), GPU, Argo CD, nạp khoá Sealed Secrets, root-app; in thời gian từng bước (dùng cho VH5) |
-| `make prefetch` | Job tải model, DaemonSet pre-pull image |
+| `make prefetch` | Tải model, kéo image trên VM (`make bootstrap` đã gồm bước này, chạy nền) |
+| `make cloud-platform` | Cài device plugin, Prometheus, KEDA, GPU exporter, vLLM bằng Helm (trên cloud chưa dùng Argo CD) |
+| `make vh5` | Bấm giờ VH5: bootstrap, cloud-platform, gọi API có streaming |
 | `make capacity` | Đo năng lực một replica, sinh `capacity.json` |
 | `make run MATRIX=…` | Chạy ma trận đánh giá autoscaling |
-| `make ops-tests` | Chạy các kịch bản vận hành tự động hoá được (VH2–VH4) |
+| `make ops-tests S=… MATRIX=… RATE=…` | Chạy một kịch bản vận hành dưới tải (VH2–VH4), chấm đạt/không đạt |
 | `make backup` | `rclone` lên R2, kiểm tra checksum |
 | `make release` | Huỷ instance; **từ chối chạy** nếu backup chưa xong |
 | `make analysis` | Tạo bảng, chạy notebook, xuất hình |

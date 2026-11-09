@@ -1,6 +1,6 @@
 # Việc sắp làm – Quang
 
-> Cập nhật **08/11/2026 khuya** (W5, sau V0+V1), làm **bản bàn giao**: đọc file này cùng [nhật ký tuần 05](tuan-05.md) và [log phiên 08/11](phien-2026-11-08-a4000.md) là đủ để làm tiếp trên máy khác hoặc trong phiên AI mới. Danh sách sống: đánh dấu `[x]` khi xong, ghi chi tiết vào nhật ký tuần. Mã việc theo [Kế hoạch §5.1](../../../chi-tiet/06-ke-hoach-quan-ly.md#51-phân-công).
+> Cập nhật **09/11/2026** (W6, sau V0+V1), làm **bản bàn giao**: đọc file này cùng [nhật ký tuần 05](tuan-05.md) và [log phiên 08/11](phien-2026-11-08-a4000.md) là đủ để làm tiếp trên máy khác hoặc trong phiên AI mới. Danh sách sống: đánh dấu `[x]` khi xong, ghi chi tiết vào nhật ký tuần. Mã việc theo [Kế hoạch §5.1](../../../chi-tiet/06-ke-hoach-quan-ly.md#51-phân-công).
 
 ## 1. Tình trạng hiện tại
 
@@ -34,10 +34,14 @@ Phần trăm là ước lượng theo đầu việc, không phải giờ đã d�
 - [x] (08/11) Sửa UTIL trong `capacity.py` (lấy GPU bận nhất mỗi lần scrape).
 - [ ] **Họp với Trình:** chốt máy V2 (4 × A4000, ≥ 20 vCPU), nạp tiền Vast; đọc kết quả V1 (hàng đợi ghim vào pod cũ, A1 kẹt ở 2 replica); các điểm cũ: lọc lỗi theo cột `error`, comment `pollingInterval` của A2, `for: 1m` của `LLMErrorRateHigh`.
 - [x] ~~Review PR #24, #25 của Trình~~: Trình đã tự merge (08–09/11), Quang chưa review. Hai phần này chưa chạy với log vLLM thật: kiểm bằng một lượt ngắn đầu V2.
-- [ ] **Q2 đưa phần làm tay 08/11 vào code:** tải model (`HF_HUB_DISABLE_XET=1`) và kéo image (`crictl pull`) chạy async trong Ansible; `make cloud-platform` từ `runs/vast-v2b-20261108/bundle/install-platform.sh` (helm device plugin, kube-prometheus-stack, KEDA, tạo namespace `gpu`, GPU exporter); `probe.sh` vào `infra/provision/`.
-- [ ] **Q2 `vast.sh`:** bộ lọc v2 đang đòi 8 lõi và 32 GB/GPU (32 vCPU với N = 4); cân nhắc nới xuống ~20 vCPU nếu không ra offer A4000.
-- [ ] **Q6 runner v2:** đẩy R2 sau mỗi lượt, unit systemd, báo Telegram (bot riêng, không đụng Alertmanager của Trình).
-- [ ] Sao lưu `runs/` (V0+V1 chỉ có trên laptop).
+- [x] (09/11, code xong, **chưa chạy trên VM**) **Q2:** `cloud-prefetch`, `make cloud-platform`, `make probe`, bộ lọc v2 mới.
+- [x] (09/11, code xong, **chưa thử R2 và Telegram thật**) **Q6 runner v2:** R2, systemd, Telegram.
+- [x] (09/11, chạy trên kind, **chưa chạy trên GPU**) **Q5, Q7:** `make ops-tests` (VH2–VH4), `make vh5`.
+- [ ] **Merge theo thứ tự:** PR `chore/v2-prep-to-main` → A1 → cloud → runner → VH. Trình review A1.
+- [ ] **Tạo `.env`:** `VAST_VM_TEMPLATE`, API key Vast, khoá R2, bot Telegram; thử `make backup` và một tin Telegram trước V2.
+- [ ] **Chốt máy V2:** 09/11 Vast không có offer VM 4 × A4000; chỉ có 4 × 5090 / 4 × 4090 từ $2,4/giờ và thay đổi trong vài phút. Theo dõi `make find`.
+- [ ] Sao lưu `runs/` bằng `make backup` (V0+V1 chỉ có trên laptop; cần `.env`).
+- [ ] Thử toàn bộ đường VM (`make probe vh5 run`) bằng một VM rẻ trước V2 nếu kịp: các script này chưa từng chạy trên VM.
 
 ## 3. Cần PC bật
 
@@ -63,16 +67,16 @@ Phần trăm là ước lượng theo đầu việc, không phải giờ đã d�
 ## 5. Sau đó
 
 - [ ] V2 (14–15/11): VH5 từ VM trắng, ĐG1 → `capacity.json` → ADR-003, ma trận 17 lượt, ĐG3 cold start L0/L2.
-- [ ] Q5: rolling update theo ADR-005 + VH2 (gồm ca 1 replica, ca đối chứng VH2c); VH1, VH3.
-- [ ] Q7: script VH5, sổ chi phí.
+- [ ] Q5: chạy VH1–VH4 trên GPU thật (`make ops-tests`); VH2 qua Git + Argo CD ở nhà.
+- [ ] Q7: chạy `make vh5` trên V2, sổ chi phí.
 - [ ] Viết phần của Quang ở chương 2–3; chương 5 dùng thêm quan sát V1 (hàng đợi ghim vào pod cũ).
 
 ## 6. Phụ thuộc vào Trình
 
 | Việc của Quang | Cần từ Trình |
 |---|---|
-| Runner, V2 (Q6) | **Sửa truy vấn A1** chỉ tính GPU của pod Ready (TR2, trước V2); review PR #26 |
+| Runner, V2 (Q6) | **Review** truy vấn A1 Quang đã sửa thay (TR2, 09/11; trung bình 15 s, chưa chạy trên cluster) |
 | PodMonitor vLLM và GPU ở nhà, số đo từ Prometheus | kube-prometheus-stack trên cluster nhà (TR3) |
 | Serving qua Argo CD | Argo CD + App-of-Apps (TR1) |
-| Đo 8 pha (Q4) | `parse_vllm_log` (TR5, PR #24 chờ review) |
+| Đo 8 pha (Q4) | `parse_vllm_log` (TR5, đã merge; chưa chạy với log vLLM thật) |
 | LT5, LT6 | Dữ liệu đã có trong `capacity-home*.json` và `runs/v1-a4000/` (V1 minh hoạ LT6), Trình phân tích (TR8) |

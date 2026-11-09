@@ -24,8 +24,9 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-# Bỏ khoá file của runner: nó thuộc về lượt đang chạy, không phải dữ liệu.
-EXCLUDES = ["--exclude", ".lock"]
+# .lock: khoá file của runner, không phải dữ liệu. *.secret, *.bak: thư mục phiên từng chứa API key và bản sao
+# inventory có IP công khai (runs/vast-v2b-20261108/); không để bí mật rời máy (CONTRIBUTING §2).
+EXCLUDES = ["--exclude", ".lock", "--exclude", "*.secret", "--exclude", "*.bak"]
 
 
 @dataclass

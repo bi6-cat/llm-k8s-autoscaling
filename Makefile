@@ -30,7 +30,7 @@ PROMTOOL ?= promtool
 YQ ?= yq
 
 # .PHONY: các target này không phải tên file, make luôn chạy chúng (kể cả khi có file trùng tên)
-.PHONY: help home-up sim-up sim-down sim-test-load sim-test find rent probe bootstrap prefetch cloud-platform run backup backup-check release lint alerts-test alerts-coverage dashboards-check
+.PHONY: help home-up sim-up sim-down sim-test-load sim-test find rent probe bootstrap prefetch cloud-platform run backup backup-check ops-tests vh5 release lint alerts-test alerts-coverage dashboards-check
 
 # In mọi target có comment `## mô tả` cùng dòng. Thêm target mới thì nhớ viết `## …` để nó hiện ở đây.
 help: ## In danh sách lệnh
@@ -130,6 +130,15 @@ backup: ## Đẩy runs/ lên R2 rồi xác nhận checksum
 
 backup-check: ## Xác nhận mọi file trong runs/ đã có trên R2
 	set -a; . ./.env; set +a; uv run --project experiments python -m experiments.runner.backup check
+
+# Một kịch bản VH dưới tải. RATE nên khoảng 0,5 C. Kết quả ở runs/ops-<kịch bản>-<thời điểm>/.
+ops-tests: ## Chạy kịch bản VH: make ops-tests S=vh3-delete MATRIX=… RATE=2 [CTX=…]
+	uv run --project experiments python -m experiments.ops.vh $(S) --matrix $(MATRIX) --rate $(RATE) \
+	  $(if $(CTX),--context $(CTX))
+
+# Bấm giờ VH5 từ VM vừa thuê tới API trả lời có streaming (N6 ≤ 30 phút).
+vh5: ## Dựng lại từ VM trắng, ghi thời gian từng bước vào runs/vh5-*
+	infra/provision/vh5.sh
 
 # Từ chối huỷ máy khi dữ liệu chưa có trên R2 (FORCE_RELEASE=1 để bỏ qua; xem vast.sh).
 release: ## Huỷ instance Vast đang thuê
@@ -234,7 +243,7 @@ dashboards-check: ## Kiểm JSON dashboard: uid, datasource, kích thước, Pro
 
 # ── Lệnh đã đặt tên nhưng chưa làm ──────────────────────────────────────────────
 # Tên lấy từ Môi trường §3.7. Gọi bây giờ thì báo "chưa làm" và trả mã lỗi 1, để script gọi nó dừng lại.
-NOT_YET := burnin capacity ops-tests analysis test
+NOT_YET := burnin capacity analysis test
 .PHONY: $(NOT_YET)
 $(NOT_YET):
 	@echo "make $@: chưa làm (xem kế hoạch W3–W5)"; exit 1
