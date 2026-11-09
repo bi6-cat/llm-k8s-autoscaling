@@ -512,6 +512,14 @@ def test_capacity_summarize_window_slo_and_little():
     assert s["tpot_p50_s"] == pytest.approx(1.9 / 255)
 
 
+def test_capacity_gpu_util_uses_busiest_gpu_on_multi_gpu_node():
+    # Node 4 GPU, ĐG1 1 replica: một GPU bận 100 %, ba GPU rảnh. UTIL phải là của GPU bận, không phải 0,25.
+    reqs = [_req(i, i, 0.1, 2.0) for i in range(100)]
+    metrics = [(1000.0 + t, "gpu_util", v) for t in range(0, 100, 5) for v in (1.0, 0.0, 0.0, 0.0)]
+    s = capacity.summarize_run(reqs, metrics, t0_unix=1000.0, rate=1.0, skip_s=20, duration_s=100)
+    assert s["gpu_util"] == pytest.approx(1.0)
+
+
 def test_capacity_picks_largest_passing_valid_level():
     c = [
         {

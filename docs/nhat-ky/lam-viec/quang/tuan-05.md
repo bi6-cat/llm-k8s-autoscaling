@@ -433,3 +433,18 @@
 - **Deviations:** vLLM 2 CPU/pod và máy tạo tải 2 CPU thay vì 3/3 (máy 15 vCPU).
 - **Links:** `experiments/matrix-dg1-v1.yaml`, `experiments/matrix-v1.yaml`; log thô `runs/dg1-v1-a4000/`, `runs/v1-a4000/`.
 - **Thesis:** §5 đánh giá: hàng đợi ghim vào pod cũ khi spike (N2a/N2b, hướng phát triển: load shedding, router theo tải); điểm yếu của A1 (LT6); cách đo C.
+
+## 2026-11-08 – Chấp nhận 2 lượt V1 là hợp lệ sau khi xem xét
+
+- **Task:** Q6 · **Environment:** V1
+- **Decision:** Quang quyết định tính `A1-KB3-1` và `A2-KB2-1` (phiên `v1-a4000`) là **hợp lệ (chấp nhận sau xem xét)**, dù runner đánh dấu `invalid` vì `cpu_ok`. `checks.json` gốc giữ nguyên, không sửa.
+- **Lý do:** chỉ vượt ngưỡng an toàn 70 % một chút (CPU máy tạo tải tối đa 72,8 % và 74,9 %); lịch gửi vẫn chính xác (trễ gửi p99 13,6 / 14,8 ms, tối đa 60 / 38 ms, throttle 0); Prometheus không mất mẫu > 5 s. Các phát hiện chính (hàng đợi ghim ở pod cũ, A1 kẹt ở 2 replica) đo từ metric phía server, không phụ thuộc máy tạo tải.
+- **Giới hạn khi dùng:** cấu hình V1 khác V2 (vLLM 2 lõi/pod, máy tạo tải 2 lõi, C và ngưỡng A2 từ ĐG1 thử), nên 2 lượt này **không gộp** vào ma trận 17 lượt của V2; trong luận văn ghi là "V1, chấp nhận sau xem xét", kèm lý do trên.
+
+## 2026-11-08 – Rà soát và dọn dự án sau V0+V1
+
+- **Task:** chung, Q6 · **Environment:** none
+- **Done:** xoá 8 nhánh local đã merge vào `main`; đồng bộ tài liệu thiết kế với quyết định 08/11 (model cloud 3B, V0+V1 đã chạy, checklist M1 7/7 và 2 mục M2, 800.000 VND là tiền GCP); ghi chú ở Kiến trúc §13 rằng A1 bị nhiễu bởi GPU của pod đang tắt; bỏ nhãn DEMO của overlay `cloud-3b` và sửa phép tính CPU trong đó (lõi `reserved-cpus` không thuộc allocatable); sửa comment N trong `matrix-v2.yaml`; viết lại `viec-sap-lam.md`.
+- **Decision:** không sửa ADR và hướng dẫn tuần (hồ sơ lịch sử); chưa đổi "4 × RTX 4090" thành A4000 trong Thông số §10.2 vì máy V2 chốt ở ADR-003, chỉ thêm ghi chú cập nhật.
+- **Results:** sửa `capacity.py`: UTIL lấy GPU bận nhất mỗi lần scrape (metrics bỏ nhãn GPU nên trước đây trung bình cả 4 GPU). Chạy lại trên `runs/dg1-v1-a4000`: UTIL\* 0,25 → 1,0, C, B\*, ngưỡng không đổi. `pytest` experiments 100 passed (thêm 1 test), `ruff` đạt, `yamllint`, `kubectl kustomize`, lychee (519 link, 0 lỗi) đạt.
+- **Links:** nhánh `chore/cleanup-0811` (xếp chồng trên PR #26).

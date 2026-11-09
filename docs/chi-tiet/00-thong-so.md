@@ -25,7 +25,7 @@
 | Quỹ giờ | 2 người × 8–15 giờ/tuần, tổng ~135–270 người-giờ đến hạn nộp |
 | Phân công | Quang: hạ tầng, serving, vòng đời pod, runner, năng lực; Trình: GitOps, autoscaling, giám sát, cảnh báo, tải, phân tích ([Kế hoạch §5.1](06-ke-hoach-quan-ly.md#51-phân-công)) |
 | Máy nhà | Xem [§10.1](#101-máy-nhà) |
-| Cloud | Chính: Vast.ai chế độ VM, 4 × RTX 4090. Dự phòng: máy Vast khác, rồi GCP g2/L4 ([§10.2](#102-gpu-thuê)) |
+| Cloud | Chính: Vast.ai chế độ VM, 4 × RTX 4090. Dự phòng: máy Vast khác, rồi GCP g2/L4 ([§10.2](#102-gpu-thuê)). **Cập nhật 08/11:** model cloud đổi sang 3B (§9.1); V0+V1 chạy trên VM 4 × RTX A4000 16 GB, máy V2 dự kiến cùng loại, ≥ 20 vCPU (chốt ở ADR-003) |
 | Tiền | Xem [§11](#11-ngân-sách) |
 | Demo khi bảo vệ | Chốt sau; định hướng là video, cộng phần live nhỏ bằng simulator |
 
@@ -171,10 +171,10 @@ B\* và KV\* là số request đồng thời trung bình và mức KV-cache trê
 
 ### 9.1. vLLM
 
-| Tham số | Cloud (GPU 24 GB) | Nhà (RTX 5060 8 GB, 2 pod chung card nhờ time-slicing) |
+| Tham số | Cloud (GPU 16–24 GB) | Nhà (RTX 5060 8 GB, 2 pod chung card nhờ time-slicing) |
 |---|---|---|
-| Model | `Qwen/Qwen2.5-7B-Instruct` (revision ghim) | `Qwen/Qwen2.5-0.5B-Instruct` (revision ghim; trước 06/11 là 1,5B) |
-| `--served-model-name` | `qwen2.5-7b` | `qwen2.5-0.5b` |
+| Model | `Qwen/Qwen2.5-3B-Instruct` (revision ghim, overlay `cloud-3b`; chốt 08/11 thay 7B: cold start ngắn hơn, vừa GPU 16 GB, rẻ hơn; overlay `cloud` vẫn giữ 7B) | `Qwen/Qwen2.5-0.5B-Instruct` (revision ghim; trước 06/11 là 1,5B) |
+| `--served-model-name` | `qwen2.5-3b` | `qwen2.5-0.5b` |
 | `--max-model-len` | 8192 | 2048 |
 | `--max-num-seqs` | 64 | 16 |
 | `--gpu-memory-utilization` | 0,90 | 0,40 mỗi pod (2 pod ≈ 6,5 GB, chừa ~1,2 GB cho màn hình); 0,25 không đủ chỗ cho KV-cache (đo 06/11) |
@@ -264,6 +264,6 @@ Máy nhà là **môi trường chức năng**: không dùng số liệu hiệu n
 |---|---|
 | Trần tiền thật cho GPU thuê | **≤ 150 USD** |
 | Dự toán (phương án Vast) | ~30–75 USD ([các phiên thuê](05-moi-truong-danh-gia.md#6-các-phiên-thuê-gpu)) |
-| Đã nạp | 800.000 VND (~30 USD, tỷ giá ~26.000 VND/USD). <!-- TODO(review:§0.3): chưa rõ nạp vào Vast hay GCP --> |
+| Đã nạp | 800.000 VND (~30 USD, tỷ giá ~26.000 VND/USD) vào **GCP** (Quang xác nhận 08/11), nên không dùng được cho Vast. Tiền Vast nạp riêng trước V2 |
 | Credit GCP | 200 USD, hết hạn khoảng 01/2027; **chỉ** dùng cho phương án dự phòng |
 | Số dư tối thiểu trước phiên V2 | ≥ 1,3 × chi phí dự kiến của V2; runner báo động khi số dư < 30 USD |

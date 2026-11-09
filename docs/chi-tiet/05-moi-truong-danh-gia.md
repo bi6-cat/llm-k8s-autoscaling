@@ -23,8 +23,8 @@
 | | Tầng 1: máy nhà và simulator | Tầng 2: GPU thuê |
 |---|---|---|
 | Mục đích | Phát triển; kiểm thử chức năng; kịch bản vận hành (rolling update, cảnh báo, sự cố); ĐG1-mini để lấy target tạm | Đo năng lực, đánh giá autoscaling, cold start, kịch bản vận hành trên GPU thật |
-| GPU | PC RTX 5060 8 GB, time-slicing 2 GPU replica (laptop RTX 4050 6 GB tuỳ chọn); simulator không cần GPU | 4 × RTX 4090 24 GB (Vast.ai, chế độ VM) |
-| Model | Qwen2.5-0.5B-Instruct (trước 06/11: 1,5B) | Qwen2.5-7B-Instruct |
+| GPU | PC RTX 5060 8 GB, time-slicing 2 GPU replica (laptop RTX 4050 6 GB tuỳ chọn); simulator không cần GPU | 4 × RTX 4090 24 GB (Vast.ai, chế độ VM). 08/11: V0+V1 chạy trên 4 × RTX A4000 16 GB; máy V2 dự kiến cùng loại, chốt ở ADR-003 |
+| Model | Qwen2.5-0.5B-Instruct (trước 06/11: 1,5B) | Qwen2.5-3B-Instruct (chốt 08/11; trước đó 7B) |
 | Chi phí | ≈ 0 (tiền điện) | Theo giờ |
 | Số liệu dùng trong chương đánh giá? | Chỉ kết quả đạt/không đạt của kiểm thử và kịch bản vận hành | **Có** |
 
@@ -299,8 +299,8 @@ Trên Vast.ai, giá hiển thị cho mỗi máy thường đã gồm CPU và RAM
 
 | Phiên | Ngày | Máy | Việc | Giờ | GPU-giờ | USD (0,30–0,50/GPU-giờ) |
 |---|---|---|---|---|---|---|
-| V0 smoke | ~~17–18/10~~ gộp với V1, ~11–12/11 ([Kế hoạch §1.1](06-ke-hoach-quan-ly.md#11-điều-chỉnh-ngày-04112026)) | VM 1 × 4090 | k3s trong VM, GPU, vLLM 7B, `fio`, TPOT ở batch 1/16/32, thử `make bootstrap` | 3–4 | 4 | 1–2 |
-| V1 phát triển | ~~31/10–01/11~~ gộp với V0, ~11–12/11 | VM 1 × 4090 | L2 (pre-pull, compile cache); runner chạy 2 lượt không cần can thiệp; ĐG1 thử (không dùng làm số liệu chính) | 6–8 | 6–8 | 2–4 |
+| V0 smoke | ~~17–18/10~~ gộp với V1, **làm 08/11** ([Kế hoạch §1.1](06-ke-hoach-quan-ly.md#11-điều-chỉnh-ngày-04112026)); thực tế: VM 2 × 5060 Ti rồi VM 4 × A4000, model 3B, ~$1,5 cho máy thứ hai ([log phiên](../nhat-ky/lam-viec/quang/phien-2026-11-08-a4000.md)) | VM 1 × 4090 | k3s trong VM, GPU, vLLM 7B, `fio`, TPOT ở batch 1/16/32, thử `make bootstrap` | 3–4 | 4 | 1–2 |
+| V1 phát triển | ~~31/10–01/11~~ gộp với V0, **làm 08/11** (ĐG1 thử C = 4,5 req/s; runner 2 lượt có KEDA) | VM 1 × 4090 | L2 (pre-pull, compile cache); runner chạy 2 lượt không cần can thiệp; ĐG1 thử (không dùng làm số liệu chính) | 6–8 | 6–8 | 2–4 |
 | **V2 đợt chính** | ~~07–08/11~~ **T7 14/11 08:00 → CN 15/11 ~06:00** | VM 4 × 4090 | Burn-in rút gọn; VH5 từ VM trắng; **ĐG1 → ADR-003**; ĐG3; ma trận 17 lượt; VH2–VH4 trên GPU thật; quay video thô | 20–22 | 80–88 | 24–44 |
 | V3 dự phòng | ~~14–15/11~~ bỏ (đã dùng cho V2) | VM 4 × 4090 (máy khác) | Chỉ khi V2 hỏng: chạy lại trọn bộ cấu hình của kịch bản hỏng + ĐG1 | ≤ 10 | ≤ 40 | ≤ 20 |
 | Đĩa, băng thông | – | – | – | – | – | ~3–6 |
