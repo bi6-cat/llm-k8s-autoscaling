@@ -5,7 +5,7 @@
 **Tóm tắt nhanh**
 - Năm nguyên tắc thiết kế: **đơn giản và minh bạch, tái lập được, quan sát được, vận hành được, an toàn khi thay đổi**.
 - Tầng serving: Deployment vLLM (mỗi pod 1 GPU), lưu trữ model theo môi trường, Service, Traefik (**không dùng ingress-nginx vì đã ngừng bảo trì**).
-- Hai vòng đời quan trọng nhất của pod: **cold start 8 pha** (Hình 12) và **graceful shutdown** (Hình 13). vLLM chỉ làm nốt request khi bị tắt nếu có `--shutdown-timeout` > 0; mặc định là huỷ ngay.
+- Hai vòng đời quan trọng nhất của pod: **cold start 8 pha** (Hình 12) và **graceful shutdown** (Hình 13). Theo tài liệu vLLM, engine chỉ làm nốt request khi bị tắt nếu có `--shutdown-timeout` > 0; **đo thực tế 06/11:** vLLM 0.31.0 không dừng khi nhận SIGTERM ở mọi chế độ, request an toàn là nhờ grace period 180 s (§8.3, [ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C8).
 - Mọi cấu hình autoscaling dùng **cùng một cơ chế**: KEDA đưa kết quả PromQL cho HPA, và HPA tính ⌈tổng ÷ target⌉. **Chỉ có metric là khác nhau.** **A2 (running + waiting)** là cấu hình vận hành chính thức; **A1 (GPU utilization)** là đối chứng; A3 là Could; A4 chỉ để minh hoạ **flapping** trên simulator.
 - Target được **tính từ kết quả đo năng lực**, không chọn cảm tính.
 - Kiến trúc giám sát (PodMonitor, recording rule, 3 dashboard) và GitOps, kèm hai cạm bẫy hay gặp: **Argo CD tranh quyền `replicas` với HPA**, và **PodMonitor không được Prometheus nhận** vì thiếu label.
@@ -41,7 +41,7 @@
 | Prometheus, Alertmanager (kube-prometheus-stack) | Thu metric, tính SLI, gửi cảnh báo | Recording rule; cảnh báo theo burn rate tới Telegram |
 | Grafana | Dashboard | 3 dashboard (§17.3) |
 | Argo CD (bản core) | GitOps: đồng bộ cluster theo Git | Một App-of-Apps; mỗi môi trường một overlay |
-| Sealed Secrets | Bí mật mã hoá trong Git | Khoá riêng của controller sao lưu ngoài Git |
+| Sealed Secrets | Bí mật mã hoá trong Git | Khoá riêng của controller sao lưu ngoài Git. **Chưa cài (10/11):** Secret đang tạo tay bằng `kubectl` (ADR-006 §3) |
 | Script thuê VM (CLI `vastai`) + Ansible | Thuê/huỷ VM GPU; cài k3s và cấu hình máy | Dựng trọn bộ trong ≤ 30 phút sau khi thuê (N6) |
 | Máy tạo tải + runner | Sinh tải, chạy đánh giá, thu dữ liệu | Python asyncio; máy tạo tải là pod có lõi CPU riêng |
 
@@ -52,18 +52,9 @@
 | `monitoring` | Prometheus Operator, Prometheus, **Alertmanager**, Grafana, kube-state-metrics, node-exporter | Helm chart `kube-prometheus-stack` |
 | `gpu` | Device plugin, exporter GPU | Helm chart của NVIDIA |
 | `argocd` | Argo CD (core) | Nền của GitOps |
-| `kube-system` | Traefik (có sẵn trong k3s), CoreDNS, Sealed Secrets controller | Traefik bật metrics để đo tỷ lệ lỗi |
+| `kube-system` | Traefik (có sẵn trong k3s), CoreDNS, Sealed Secrets controller (chưa cài) | Traefik bật metrics để đo tỷ lệ lỗi |
 
-**Bảng phiên bản** (điền và ghim ở W2, rồi ghi vào `metadata.json`):
-
-| Thành phần | Phiên bản | Cách ghim |
-|---|---|---|
-| k3s | `v1.xx.y+k3s1` | Biến `INSTALL_K3S_VERSION` |
-| NVIDIA driver | `5xx.yy` | Gói hệ điều hành hoặc template VM |
-| Device plugin / GPU Operator | `vXX.Y.Z` | Phiên bản Helm chart |
-| vLLM | `vllm/vllm-openai@sha256:…` | **Digest** thay vì tag |
-| Model | `Qwen/Qwen2.5-7B-Instruct@<commit>` | Revision trên Hugging Face |
-| KEDA, kube-prometheus-stack, Argo CD | Phiên bản chart | `Chart.yaml` / Argo Application |
+**Bảng phiên bản:** nằm ở một chỗ duy nhất, [docs/phien-ban.md](../phien-ban.md) (k3s, driver, device plugin, vLLM theo digest, model theo revision, chart KEDA/kube-prometheus-stack/Argo CD, công cụ CI). Runner ghi lại các giá trị này vào `metadata.json` của mỗi lượt.
 
 ---
 
@@ -102,8 +93,8 @@ Manifest thật nằm trong repo, mỗi dòng có comment giải thích: [servin
 | `replicas` | Không đặt | HPA quản lý; tránh tranh chấp với Argo CD (§18.3) |
 | `strategy` | `maxSurge: 0, maxUnavailable: 1` | Không kẹt khi mọi GPU đã có pod ([Vận hành §5](04-van-hanh.md#5-cập-nhật-phiên-bản-khi-gpu-đã-dùng-hết)) |
 | `runtimeClassName` | `nvidia` | k3s không đặt runtime NVIDIA làm mặc định; thiếu thì container không thấy GPU |
-| `--shutdown-timeout` | `150` | Làm nốt request khi nhận SIGTERM (mặc định 0 = huỷ) ([ADR-005](../adr/005-sua-thiet-ke-sau-review.md) T1) |
-| `terminationGracePeriodSeconds` | `180` | > preStop 20 s + shutdown-timeout 150 s |
+| `--shutdown-timeout` | `150` | Theo tài liệu: làm nốt request khi nhận SIGTERM (mặc định 0 = huỷ) ([ADR-005](../adr/005-sua-thiet-ke-sau-review.md) T1). Trên v0.31.0 cờ không có tác dụng quan sát được (§8.3) |
+| `terminationGracePeriodSeconds` | `180` | > preStop 20 s + shutdown-timeout 150 s. Thực tế đây là thứ giữ request an toàn ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C8) |
 | `preStop` | `sleep: {seconds: 20}` (hành động có sẵn của Kubernetes) | Chờ Endpoints cập nhật trước SIGTERM; không cần image có lệnh `sleep` |
 | API key | Biến môi trường `VLLM_API_KEY` từ Secret | vLLM tự đọc; khoá không hiện trong `ps` hay `kubectl describe` |
 | Cache | Một volume `/cache`: `HF_HOME=/cache/hf`, `VLLM_CACHE_ROOT=/cache/vllm` | Giữ cả model lẫn compile cache giữa các lần khởi động (nền của L2) |
@@ -153,13 +144,13 @@ serving/
 │   ├── model-prefetch-job.yaml
 │   └── prepull-daemonset.yaml
 └── overlays/
-    ├── home/                # model 1,5B, hostPath /var/lib/llm-cache trên từng node, requests nhỏ
-    ├── cloud/               # model 7B, hostPath NVMe, QoS Guaranteed
-    ├── cloud-3b/            # chồng lên cloud: model 3B cho GPU 16 GB (chốt 08/11)
+    ├── home/                # model 0,5B (trước 06/11: 1,5B), hostPath /var/lib/llm-cache, requests nhỏ, Ingress
+    ├── cloud/               # model 7B, hostPath NVMe, QoS Guaranteed (giữ tham khảo, không dùng cho V2)
+    ├── cloud-3b/            # chồng lên cloud: model 3B cho GPU 16 GB (chốt 08/11, ADR-006 C3)
     └── sim/                 # llm-d-inference-sim thay cho vLLM, cùng Deployment và Service
 ```
 
-Overlay `sim` cho phép simulator dùng **đúng** Deployment, Service và ScaledObject như vLLM thật, chỉ khác image và tham số. Các file `middleware.yaml`, `networkpolicy.yaml`, `model-prefetch-job.yaml`, `prepull-daemonset.yaml` được thêm ở W3–W4. Hai overlay `home` và `cloud` chỉ khác các giá trị trong [Thông số §9.1–§9.2](00-thong-so.md#91-vllm). Cấu trúc toàn bộ repository nằm ở [CONTRIBUTING §1](../../CONTRIBUTING.md#1-thư-mục).
+Overlay `sim` cho phép simulator dùng **đúng** Deployment, Service và ScaledObject như vLLM thật, chỉ khác image và tham số. Các file `middleware.yaml`, `networkpolicy.yaml`, `model-prefetch-job.yaml`, `prepull-daemonset.yaml` **chưa có tới 10/11** (ADR-006 §3): trên VM thuê, model và image được tải sẵn bằng role Ansible `cloud-prefetch` thay cho Job và DaemonSet; máy tạo tải gọi thẳng Service nên chưa cần route riêng. Hai overlay `home` và `cloud` chỉ khác các giá trị trong [Thông số §9.1–§9.2](00-thong-so.md#91-vllm). Cấu trúc toàn bộ repository nằm ở [CONTRIBUTING §1](../../CONTRIBUTING.md#1-thư-mục).
 
 ---
 
@@ -337,7 +328,7 @@ spec:
 2. Pod được đánh dấu **Terminating**. Kể từ đây, **hai việc chạy song song**:
    - Controller EndpointSlice gỡ pod khỏi Service. kube-proxy và Traefik nhận thay đổi sau khoảng 1–5 s.
    - Kubelet chạy **preStop** (`sleep 20`), rồi gửi **SIGTERM**.
-3. vLLM nhận SIGTERM. Hành vi phụ thuộc cờ `--shutdown-timeout`:
+3. vLLM nhận SIGTERM. Hành vi **theo tài liệu** phụ thuộc cờ `--shutdown-timeout` (đo thực tế ở §8.3 cho thấy v0.31.0 không làm như vậy):
    - **Mặc định 0: huỷ ngay** mọi request đang chạy. Client đang nhận stream bị cắt ngang.
    - **N > 0** (đồ án dùng 150 s): ngừng nhận việc mới, làm nốt các request đang chạy trong tối đa N giây, rồi thoát. Quá N giây thì huỷ phần còn lại.
 4. Nếu quá `terminationGracePeriodSeconds` (tính từ bước 2, **gồm cả thời gian preStop**) mà tiến trình chưa thoát, kubelet gửi **SIGKILL** và request dở dang bị cắt.
@@ -356,6 +347,16 @@ Giá trị nằm ở [Thông số §9.2](00-thong-so.md#92-deployment-vllm). Rà
 - **Ở nhà (W3):** mở khoảng 30 stream dài, chạy `kubectl delete pod <pod-vllm>`, đếm lỗi trong log client, lặp 3 lần. Chạy thêm một **ca đối chứng** (không preStop, `--shutdown-timeout=0`) để chứng minh 0 lỗi là nhờ cấu hình chứ không phải vì lúc đó ít request.
 - **Chưa rõ:** khi drain, vLLM làm nốt cả request đang `waiting` hay chỉ request đang `running`. Phép thử trên sẽ cho biết; nếu request `waiting` bị huỷ thì ghi vào runbook và vào phần hạn chế.
 - **Trên GPU thuê:** pha `drop` của KB2 và kịch bản VH1 (N4). Nếu có lỗi, sửa cấu hình (tăng preStop, chủ động gỡ pod khỏi Service trước) rồi đo lại, và ghi vào runbook.
+
+**Kết quả đo ở nhà (06/11/2026, vLLM v0.31.0, Qwen2.5-0.5B, 48 stream × 1.900 token, [nhật ký vận hành](../nhat-ky/van-hanh.md)):**
+
+| Ca | preStop | `--shutdown-timeout` | grace | Kết quả |
+|---|---|---|---|---|
+| Chính, 3 lần | 20 s | 150 | 180 s | 144/144 stream xong; pod chỉ mất ở giây ~182 |
+| Đối chứng 1 | không | 0 | 180 s | 48/48 xong; pod cũng mất ở giây ~183 |
+| Đối chứng 2 | không | 0 | 5 s | 0/48: cả 48 bị cắt ở giây 5,5 |
+
+Sau SIGTERM, vLLM log `mode=drain` (hoặc `mode=abort`) nhưng engine **vẫn nhận và xử lý request**, `/health` vẫn 200 và tiến trình không tự thoát, kể cả sau 150 s; pod chỉ dừng khi kubelet SIGKILL ở giây 180. Vậy 0 lỗi là **nhờ grace period giữ pod sống**, không phải nhờ drain. Nhóm tạm chấp nhận cấu hình này cho V2 ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C8) với hai hệ quả ghi vào Hạn chế: request dài quá ~160 s sau SIGTERM vẫn bị cắt; mỗi pod bị tắt giữ GPU thêm 180 s (scale-down và rolling update chậm thêm 3 phút mỗi pod, GPU-giờ của A2 tăng tương ứng). Nguyên nhân trong vLLM chưa tìm; ở W1 (Docker, 1 stream) chế độ abort có cắt stream, nên hành vi có thể phụ thuộc trạng thái engine.
 
 ---
 
@@ -387,9 +388,9 @@ vLLM/GPU exporter ──scrape 5 s──► Prometheus ◄──PromQL── KED
 - Ngược lại, khi tải rất thấp (KB1, có những khoảng không có request), GPU util dao động theo từng đợt request, nên có thể scale lên rồi xuống thất thường.
 - Dự đoán: A1 **gần như Static-4 cộng thêm độ trễ cold start**, tức là không tiết kiệm GPU-giờ. Tệ hơn, nó có thể dao động khi tải thấp. Ma trận đánh giá sẽ cho thấy dự đoán này đúng tới đâu.
 
-**Trên GPU GeForce** (RTX 4090 thuê, GPU nhà): exporter `nvidia_gpu_exporter` không có label pod. A1 vẫn dùng được nếu node chỉ chạy vLLM, vì GPU rảnh cộng thêm 0. **Ngoại lệ đo được ở V1 (08/11):** GPU của pod **đang tắt** (sau scale-down) báo util 100 % trong một mẫu; tổng tăng lên 100 → desired = 2, và cửa sổ ổn định 300 s giữ con số đó, A1 không về được 1 replica. Exporter không có label pod nên không lọc được theo pod Ready; vì vậy từ 09/11 truy vấn A1 lấy trung bình 15 s trên từng GPU trước khi cộng, hạ mẫu đơn lẻ còn 33 %. Chạy lại trên dữ liệu V1: hết kẹt, các mốc scale-up trễ thêm 5–20 s (chưa kiểm trên cluster; chi tiết: [log phiên 08/11 §13](../nhat-ky/lam-viec/quang/phien-2026-11-08-a4000.md#13-v1-runner-chạy-2-lượt-đg2-có-keda)). Ở nhà, RTX 5060 còn chạy màn hình nên số liệu bị nhiễu; vì vậy chạy Ubuntu không giao diện đồ hoạ ([ADR-005](../adr/005-sua-thiet-ke-sau-review.md) T9).
+**Với `nvidia_gpu_exporter`** (GPU nhà và VM thuê, vì DCGM chưa thử): exporter không có label pod. A1 vẫn dùng được nếu node chỉ chạy vLLM, vì GPU rảnh cộng thêm 0. **Ngoại lệ đo được ở V1 (08/11):** GPU của pod **đang tắt** (sau scale-down) báo util 100 % trong một mẫu; tổng tăng lên 100 → desired = 2, và cửa sổ ổn định 300 s giữ con số đó, A1 không về được 1 replica. Exporter không có label pod nên không lọc được theo pod Ready; vì vậy từ 09/11 truy vấn A1 lấy trung bình 15 s trên từng GPU trước khi cộng, hạ mẫu đơn lẻ còn 33 %. Chạy lại trên dữ liệu V1: hết kẹt, các mốc scale-up trễ thêm 5–20 s (chưa kiểm trên cluster; chi tiết: [log phiên 08/11 §13](../nhat-ky/lam-viec/quang/phien-2026-11-08-a4000.md#13-v1-runner-chạy-2-lượt-đg2-có-keda)). Ở nhà, RTX 5060 còn chạy màn hình nên số liệu bị nhiễu; vì vậy chạy Ubuntu không giao diện đồ hoạ ([ADR-005](../adr/005-sua-thiet-ke-sau-review.md) T9).
 
-**Biến thể A1′ (không khả thi trên RTX 4090):** dùng `DCGM_FI_PROF_SM_ACTIVE` hoặc `DCGM_FI_PROF_DRAM_ACTIVE`, phản ánh mức làm việc thật tốt hơn. Chỉ làm được nếu phải chuyển sang GPU datacenter (ví dụ L4 ở phương án dự phòng GCP).
+**Biến thể A1′ (không làm):** dùng `DCGM_FI_PROF_SM_ACTIVE` hoặc `DCGM_FI_PROF_DRAM_ACTIVE`, phản ánh mức làm việc thật tốt hơn. Cần dcgm-exporter với metric profiling; GeForce không có, còn trên A4000 nhóm chưa thử dcgm-exporter trước V2 nên không đưa vào ma trận.
 
 **Công bằng:** chu kỳ thu metric GPU phải là 5 s, giống vLLM (xem §6).
 
@@ -611,7 +612,7 @@ Ghi kết quả vào nhật ký. Đây cũng là tư liệu cho chương "Triể
 | scaleDown | Cửa sổ 300 s, giảm 1 pod mỗi 60 s | Tránh scale-down rồi lại phải chịu cold start |
 | Chu kỳ scrape / sync HPA | 5 s / 5 s | Độ trễ phát hiện khoảng 10 s |
 | `fallback` | Quá 3 lần lỗi liên tiếp → số replica tối đa; timeout mỗi lần hỏi 1 s | Mất metric thì ưu tiên chất lượng; timeout ngắn để kịp N6 ([Thông số §9.3](00-thong-so.md#93-keda-và-hpa)) |
-| Graceful shutdown | preStop + `--shutdown-timeout` + grace period theo ràng buộc ở §8.2 | Thiếu `--shutdown-timeout` thì mọi lần scale-down đều cắt request |
+| Graceful shutdown | preStop + `--shutdown-timeout` + grace period theo ràng buộc ở §8.2 | Trên v0.31.0, grace period là thứ thực sự bảo vệ request (§8.3); cần kiểm lại khi đổi phiên bản vLLM |
 | Cảnh báo đi kèm | `LLMAtMaxReplicas`, `KedaScalerErrors`, `LLMSLOBurnFast` | Biết khi autoscaling đã hết dư địa hoặc bị "mù" ([Vận hành §3](04-van-hanh.md#3-cảnh-báo)) |
 
 ---
@@ -640,7 +641,7 @@ spec:
 
 Metric GPU:
 - Nếu `dcgm-exporter` chạy được: bật ServiceMonitor (interval 5 s), chu kỳ thu 5000 ms.
-- Trên GPU GeForce (RTX 4090, 5060, 4050), DCGM có thể không hỗ trợ đầy đủ và **không có** `DCGM_FI_PROF_*`. Khi đó dùng `nvidia_gpu_exporter` (đọc qua `nvidia-smi`), và truy vấn A1 đổi theo (§13.3).
+- Trên GPU GeForce (RTX 5060, 4090), DCGM có thể không hỗ trợ đầy đủ và **không có** `DCGM_FI_PROF_*`. Đồ án dùng `nvidia_gpu_exporter` (đọc qua `nvidia-smi`) ở cả nhà lẫn VM thuê, và truy vấn A1 theo §13.3.
 
 ### 17.2. Recording rule (tính sẵn cho dashboard)
 
@@ -696,7 +697,8 @@ platform/argocd/
     ├── monitoring-extras.yaml   # PodMonitor cho Traefik; sau thêm rules, dashboards
     ├── keda.yaml
     ├── serving.yaml             # serving/overlays/<env>
-    └── autoscaling.yaml         # (W3) chỉ trỏ autoscaling/official/overlays/<env> (A2)
+    └── autoscaling.yaml         # (chưa có, 10/11) chỉ trỏ autoscaling/official/overlays/<env> (A2); rules, alerts,
+                                 # dashboards trong observability/ cũng chưa có Application (ADR-006 §3)
 ```
 
 Argo CD cài ở bản core (không có API server, UI và dex) để nhẹ trên máy nhà; xem giao diện bằng `argocd admin dashboard` khi cần. Cập nhật phiên bản được sync khi có người theo dõi; **không dùng sync window** ([ADR-005](../adr/005-sua-thiet-ke-sau-review.md) T2).
@@ -751,4 +753,4 @@ Khi đó phải xem **GPU-giờ**. Nếu A1 luôn chạy tối đa replica, SLO 
 Đúng là pod mới chỉ nhận request đến sau (§6). Vì vậy N2 được tách: N2a đo thời gian replica mới Ready (phần nền tảng kiểm soát được), còn N2b chỉ báo cáo thời gian hồi phục. Giới hạn hàng đợi hoặc admission control làm giảm vi phạm nhưng đổi bằng việc từ chối request; đây là hướng mở rộng, cùng với định tuyến theo trạng thái pod (E1).
 
 **"0 lỗi khi scale-down" là nhờ cấu hình, hay chỉ vì lúc đó ít request đang chạy?**
-Nhóm chạy một ca đối chứng ở nhà: không preStop và `--shutdown-timeout=0`, với khoảng 30 stream dài đang mở (§8.3). Ca đối chứng có lỗi, ca có cấu hình không có lỗi; đó là bằng chứng cho tác dụng của cấu hình.
+Nhóm chạy các ca đối chứng ở nhà với 48 stream dài đang mở (§8.3). Kết quả bất ngờ: ca không preStop và `--shutdown-timeout=0` **cũng 0 lỗi** khi grace period là 180 s, và chỉ ca grace 5 s mới cắt cả 48 stream. Vậy bằng chứng cho thấy thứ bảo vệ request trên vLLM v0.31.0 là grace period đủ dài, còn drain của vLLM chưa hoạt động. Nhóm trình bày đúng như đo được, kèm cái giá là pod giữ GPU 180 s mỗi lần tắt.

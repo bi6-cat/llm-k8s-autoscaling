@@ -24,7 +24,7 @@
 | Xử lý | Nhận cảnh báo xong thì làm gì? | Runbook | `docs/runbooks/` | VH3, VH4, VH6 |
 | Thay đổi | Cập nhật phiên bản thế nào cho an toàn, rollback thế nào? | Git, Argo CD | `serving/`, quy trình §5 | VH1, VH2 |
 | Khôi phục | Mất cả cluster thì dựng lại thế nào, mất bao lâu? | Ansible, Argo CD, Makefile | `infra/`, `platform/` | VH5 |
-| Bảo vệ | Ai được gọi API, gọi nhiều tới đâu, bí mật để ở đâu? | vLLM `--api-key`, Traefik, NetworkPolicy, Sealed Secrets | `platform/`, `serving/` | Checklist §8 |
+| Bảo vệ | Ai được gọi API, gọi nhiều tới đâu, bí mật để ở đâu? | vLLM `--api-key`, Traefik, NetworkPolicy, Sealed Secrets (tới 10/11 mới có API key; phần còn lại chưa làm, ADR-006 §3) | `platform/`, `serving/` | Checklist §8 |
 | Chi phí, năng lực | Đang tốn bao nhiêu GPU-giờ? Khi nào cần thêm GPU? | Grafana, recording rule | Dashboard SLO và chi phí | ĐG2 |
 
 ---
@@ -84,7 +84,7 @@ Viết `tổng − tốt` chứ không viết `1 − tốt/tổng` là có chủ
 
 ### 3.2. Danh sách cảnh báo
 
-**Sáu cảnh báo bắt buộc** (F6):
+**Sáu cảnh báo bắt buộc** (F6; là 7 quy tắc và 7 runbook, vì `LLMPodNotReady` và `LLMPodCrashLooping` là hai quy tắc riêng trong `observability/alerts/llm.yaml`):
 
 | Cảnh báo | Điều kiện (rút gọn) | Mức | Ý nghĩa |
 |---|---|---|---|
@@ -110,7 +110,7 @@ Viết `tổng − tốt` chứ không viết `1 − tốt/tổng` là có chủ
   labels: {severity: page}
   annotations:
     summary: "Hơn 20% request phải chờ token đầu tiên quá ngưỡng SLO"
-    runbook_url: "https://github.com/<org>/llm-k8s-autoscaling/blob/main/docs/runbooks/LLMSLOBurnFast.md"
+    runbook_url: "https://github.com/bi6-cat/llm-k8s-autoscaling/blob/main/docs/runbooks/LLMSLOBurnFast.md"
 
 - alert: LLMAtMaxReplicas
   expr: |
@@ -121,7 +121,7 @@ Viết `tổng − tốt` chứ không viết `1 − tốt/tổng` là có chủ
   labels: {severity: ticket}
   annotations:
     summary: "Đã chạy tối đa replica 15 phút mà vẫn có request phải chờ"
-    runbook_url: "https://github.com/<org>/llm-k8s-autoscaling/blob/main/docs/runbooks/LLMAtMaxReplicas.md"
+    runbook_url: "https://github.com/bi6-cat/llm-k8s-autoscaling/blob/main/docs/runbooks/LLMAtMaxReplicas.md"
 ```
 
 **Về các cửa sổ rút ngắn.** Với dịch vụ thật và SLO 99,9%, SRE Workbook [23] gợi ý page khi burn rate 14,4 trên cửa sổ 1 giờ và 5 phút. Ở đây SLO là 95%, nên burn rate tối đa có thể là 20 (khi 100% request xấu). Burn rate 4 tương đương 20% request xấu. Cửa sổ được rút xuống 5 phút và 1 phút để cảnh báo kịp kêu trong một lượt đánh giá 12–24 phút. Ước tính thời gian phát hiện: cửa sổ 5 phút vượt 20% sau khoảng 1–2 phút vi phạm, cộng `for: 1m` và `group_wait: 30s`, tổng khoảng 3–4 phút. Khi vận hành thật, chỉ cần đổi cửa sổ; công thức giữ nguyên.
@@ -297,8 +297,8 @@ spec:
 | Thành phần | Nằm ở đâu | Khi mất cluster |
 |---|---|---|
 | Manifest, Helm values, dashboard, quy tắc cảnh báo, runbook | Git | Argo CD áp lại |
-| Bí mật (khoá API, token Hugging Face, token bot Telegram) | Git, ở dạng Sealed Secret đã mã hoá | Giải mã được **chỉ khi còn khoá riêng của controller** |
-| **Khoá riêng của Sealed Secrets controller** | **Sao lưu ngoài Git** (hai thành viên mỗi người giữ một bản) | Nạp lại trước khi Argo CD sync |
+| Bí mật (khoá API, token Hugging Face, token bot Telegram) | Thiết kế: Git, ở dạng Sealed Secret đã mã hoá. **Tới 10/11:** tạo tay bằng `kubectl create secret` từ `.env` (ADR-006 §3) | Giải mã được **chỉ khi còn khoá riêng của controller**; hiện tại: tạo lại từ `.env` |
+| **Khoá riêng của Sealed Secrets controller** | **Sao lưu ngoài Git** (hai thành viên mỗi người giữ một bản); chưa có | Nạp lại trước khi Argo CD sync |
 | Weights của model | Hugging Face (theo revision đã ghim) | Job prefetch tải lại |
 | Dữ liệu Prometheus | Ổ của node | Không khôi phục; dữ liệu đánh giá đã được đẩy lên R2 sau mỗi lượt |
 
@@ -306,11 +306,13 @@ spec:
 
 ```text
 make rent            → VM trắng (không tính vào thời gian khôi phục)
-make bootstrap       → Ansible: chrony, NVMe, k3s, GPU; cài Argo CD; nạp khoá Sealed Secrets; áp root-app
-                       Argo CD dựng: exporter GPU, giám sát, cảnh báo, KEDA, Traefik middleware, vLLM
-make prefetch        → tải model về NVMe, pre-pull image
+make probe           → đo phần cứng, ổ, mạng thật; không đạt thì make release
+make bootstrap       → Ansible: chrony, tắt tự nâng cấp, mirror registry, k3s, GPU; tải sẵn model và image (chạy nền)
+make cloud-platform  → helm: device plugin, kube-prometheus-stack, KEDA, exporter GPU; kustomize: vLLM (overlay cloud-3b)
 kiểm tra             → gọi API có streaming; dashboard có số liệu; gửi thử một cảnh báo
 ```
+
+Thiết kế ban đầu để Argo CD dựng phần nền trên VM (bootstrap cài Argo CD, nạp khoá Sealed Secrets, áp root-app). Tới 10/11 VM thuê **chưa dùng Argo CD** (`argocd_enabled: false`): phần nền cài bằng helm trong `make cloud-platform`, để bớt một thành phần phải gỡ lỗi trên máy tính tiền theo giờ; GitOps đầy đủ được kiểm chứng trên cluster nhà (ADR-006 §3). `make vh5` bấm giờ trọn chuỗi trên; lần đo 08/11 trên 4 × A4000: 12,5 phút từ bootstrap tới pod vLLM Ready.
 
 **Chỉ tiêu:** từ VM trắng tới khi API phục vụ được, theo [N6](00-thong-so.md#4-chỉ-tiêu-nghiệm-thu) (định nghĩa "VM trắng" cũng nằm ở đó). Runner ghi thời gian của từng bước để biết bước nào chiếm nhiều nhất, thường là tải image và model. Ở nhà, cluster dựng lại bằng `make home-up`; đây cũng là cách "người thứ hai" dựng lại theo README (N8).
 
@@ -324,7 +326,7 @@ kiểm tra             → gọi API có streaming; dashboard có số liệu; g
 | Xác thực | Yêu cầu khoá API | `--api-key` của vLLM ([ADR-005](../adr/005-sua-thiet-ke-sau-review.md) T4); `forwardAuth` ở Traefik chỉ cần nếu muốn nhiều khoá |
 | Giới hạn tốc độ | Giới hạn số request theo khoá API | Middleware `rateLimit` của Traefik, tính theo header `Authorization`. Máy tạo tải đi route riêng có giới hạn cao ([Kiến trúc §3.5](03-kien-truc-autoscaling.md#35-ingress-và-giới-hạn-tốc-độ)) |
 | Cô lập trong cluster | Pod vLLM chỉ nhận kết nối từ Traefik và Prometheus | Một NetworkPolicy (k3s có sẵn bộ điều khiển NetworkPolicy) |
-| Bí mật | Không có bí mật dạng rõ trong Git | Sealed Secrets cho 3 bí mật: khoá API, token Hugging Face, token bot Telegram |
+| Bí mật | Không có bí mật dạng rõ trong Git | Sealed Secrets cho 3 bí mật: khoá API, token Hugging Face, token bot Telegram (chưa cài; hiện Secret tạo tay từ `.env`, đã gitignore) |
 | Chuỗi cung ứng | Image ghim theo digest; chart ghim phiên bản | Kustomize, Argo CD |
 
 ```yaml
