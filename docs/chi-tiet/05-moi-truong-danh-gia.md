@@ -4,8 +4,8 @@
 
 **Tóm tắt nhanh**
 - **Tầng 1 (máy nhà và simulator):** PC RTX 5060 chia thành 2 GPU replica (time-slicing) để chạy 2 pod vLLM model 0,5B, dựng k3s có GPU; máy không GPU dùng `llm-d-inference-sim`. Đây là **môi trường chức năng**: phát triển, kiểm thử, kịch bản vận hành; không dùng số liệu hiệu năng.
-- **Tầng 2 (GPU thuê):** **Vast.ai chế độ VM, 4 × RTX 4090, thuê trọn máy**. Toàn bộ ĐG1–ĐG3 đo trong **một lần thuê liền** cuối tuần 14–15/11 (dời từ 07–08/11; khoảng 20–22 giờ), runner chạy qua đêm. Dự phòng: máy Vast khác, rồi GCP g2/L4.
-- **Chi phí:** ước tính 30–75 USD tiền thật cho 4 phiên thuê (V0–V3), dưới trần 150 USD.
+- **Tầng 2 (GPU thuê):** **Vast.ai chế độ VM, 4 × RTX A4000 16 GB, thuê trọn máy** ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md); bản 08/10 chọn 4 × RTX 4090 nhưng không có máy VM verified vừa giá). Toàn bộ ĐG1–ĐG3 đo trong **một lần thuê liền** cuối tuần 14–15/11 (dời từ 07–08/11; khoảng 20–22 giờ), runner chạy qua đêm. Dự phòng: máy Vast khác (4 × 4090, hoặc 2 GPU với N = 2); GCP không dùng được.
+- **Chi phí:** V0+V1 đã tốn ≈ 1,5 USD (08/11); V2 ước tính 13–15 USD trên A4000, tối đa ≈ 60 USD nếu phải dùng 4 × 4090; dưới trần 150 USD.
 - **Đánh giá để nghiệm thu**, không phải nghiên cứu thống kê. Ba lớp: kiểm thử chức năng, **kịch bản vận hành VH1–VH6**, và **ĐG1–ĐG3** trên GPU thuê. ĐG2 so sánh S1, S4, A1, A2 dưới **3 kịch bản tải của đề cương**, tổng **17 lượt**.
 - **Kiểm chứng lý thuyết LT1–LT8** (§19): dự đoán bằng công thức có sẵn rồi đo ở nhà hoặc trên simulator, để phần xây dựng có chiều sâu phân tích mà không tốn máy thuê.
 - Số liệu báo cáo dạng **trung bình kèm min–max**, có vẽ từng lượt. Sản phẩm cuối cùng là **bảng nghiệm thu**.
@@ -23,7 +23,7 @@
 | | Tầng 1: máy nhà và simulator | Tầng 2: GPU thuê |
 |---|---|---|
 | Mục đích | Phát triển; kiểm thử chức năng; kịch bản vận hành (rolling update, cảnh báo, sự cố); ĐG1-mini để lấy target tạm | Đo năng lực, đánh giá autoscaling, cold start, kịch bản vận hành trên GPU thật |
-| GPU | PC RTX 5060 8 GB, time-slicing 2 GPU replica (laptop RTX 4050 6 GB tuỳ chọn); simulator không cần GPU | 4 × RTX 4090 24 GB (Vast.ai, chế độ VM). 08/11: V0+V1 chạy trên 4 × RTX A4000 16 GB; máy V2 dự kiến cùng loại, chốt ở ADR-003 |
+| GPU | PC RTX 5060 8 GB, time-slicing 2 GPU replica; simulator không cần GPU | 4 × RTX A4000 16 GB (Vast.ai, chế độ VM), đã dùng cho V0+V1 ngày 08/11 và chốt cho V2 ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C2) |
 | Model | Qwen2.5-0.5B-Instruct (trước 06/11: 1,5B) | Qwen2.5-3B-Instruct (chốt 08/11; trước đó 7B) |
 | Chi phí | ≈ 0 (tiền điện) | Theo giờ |
 | Số liệu dùng trong chương đánh giá? | Chỉ kết quả đạt/không đạt của kiểm thử và kịch bản vận hành | **Có** |
@@ -72,7 +72,7 @@ curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=v1.xx.y+k3s1 sh -s - server \
 
 sudo cat /var/lib/rancher/k3s/server/node-token     # token để máy khác join
 
-# Node agent (laptop 4050, nếu có)
+# Node agent (nếu có thêm máy; từ 06/11 không dùng laptop, ADR-004 §7)
 curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=v1.xx.y+k3s1 \
   K3S_URL=https://<ip-pc>:6443 K3S_TOKEN=<token> sh -
 ```
@@ -110,9 +110,9 @@ Overlay `home` dùng các giá trị ở [Thông số §9.1](00-thong-so.md#91-v
 | k3s server, Traefik, CoreDNS, local-path | 0,5 | 0,8–1,2 GB |
 | kube-prometheus-stack (scrape 5 s, retention 3 ngày) + Grafana + Alertmanager + kube-state-metrics | 0,5–1 | 2–3 GB |
 | Argo CD bản core | 0,3 | 0,6–1 GB |
-| KEDA + Sealed Secrets | 0,25 | 0,3 GB |
+| KEDA (Sealed Secrets chưa cài) | 0,25 | 0,3 GB |
 | Device plugin + `nvidia_gpu_exporter` | 0,1 | 0,1 GB |
-| vLLM 1,5B | 2 | 3–5 GB |
+| vLLM 0,5B × 2 pod (trước 06/11: 1,5B × 1) | 2 | ~3,4 GB mỗi pod (đo 06/11) |
 | Máy tạo tải + 3 pod simulator | 1,3 | 0,6–0,8 GB |
 | **Tổng** | **~5–6** | **~8–13 GB → sát** |
 
@@ -138,10 +138,11 @@ Thành viên ở xa truy cập cluster nhà (có GPU thật) qua Tailscale khi c
 
 | GPU | VRAM | Băng thông | Decode tối đa với 7B BF16 | Nhận xét |
 |---|---|---|---|---|
-| **RTX 4090** | 24 GB | ~1.008 GB/s | ~66 token/s | **Lựa chọn chính**: nhanh; khoảng 0,3–0,55 USD/GPU-giờ trên marketplace |
+| **RTX A4000** | 16 GB | ~448 GB/s | (7B không vừa; 3B: đo 57 token/s ở batch 1, 08/11) | **Lựa chọn thực tế** (ADR-006 C2): card workstation Ampere, máy 4 GPU VM verified ~0,6 USD/giờ cả máy; chạy model 3B |
+| RTX 4090 | 24 GB | ~1.008 GB/s | ~66 token/s | Lựa chọn ban đầu (ADR-004): tới 06/11 không có máy 4 × 4090 VM verified ≤ 2 USD/giờ cả máy; nay là dự phòng (2,4–2,7 USD/giờ) |
 | RTX 3090 | 24 GB | ~936 GB/s | ~61 token/s | Dự phòng rẻ hơn; Ampere, có BF16 |
 | RTX A5000 | 24 GB | ~768 GB/s | ~50 token/s | Dự phòng; card workstation, nhiệt độ và xung nhịp ổn định hơn |
-| L4 | 24 GB | ~300 GB/s | ~20 token/s | Chỉ dùng nếu chuyển sang GCP (§5); TPOT có thể sát ngưỡng |
+| L4 | 24 GB | ~300 GB/s | ~20 token/s | Phương án GCP, không còn dùng được (§5) |
 | A100 / H100 | 40–80 GB | 1,5–3,3 TB/s | 100+ token/s | Dư thừa cho 7B, đắt |
 
 **Hệ quả của việc dùng GPU GeForce:**
@@ -156,22 +157,21 @@ Thành viên ở xa truy cập cluster nhà (có GPU thật) qua Tailscale khi c
 | **Vast.ai, chế độ VM** | **Có**: VM KVM, có systemd | Rẻ; nhiều máy; **hiển thị chỉ số từng máy** (độ tin cậy, tốc độ ổ, PCIe, mạng) để lọc; nhóm đã có tài khoản | Ít máy hỗ trợ VM hơn máy container; khởi tạo chậm hơn; chỉ truy cập qua SSH; chưa chắc có máy 4 GPU vào cuối tuần |
 | Vast.ai, chế độ container (mặc định) | **Không**: không có systemd, không chạy container lồng được | Rẻ, nhiều máy | Chỉ dùng để thử vLLM đơn lẻ |
 | RunPod Pods | Không (container) | Dễ dùng | Không phù hợp |
-| GCP (Compute Engine, g2/L4) | Có | Ổn định; SKU cố định; có 200 USD credit | Free trial chặn GPU; quota GPU mặc định 0; tài khoản cá nhân dễ bị từ chối (§5) |
+| GCP (Compute Engine, g2/L4) | Có | Ổn định; SKU cố định; có 200 USD credit | **Bị loại 05/11:** yêu cầu tăng quota GPU bị từ chối (§5) |
 
 TensorDock không còn là phương án dự phòng ([ADR-004](../adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md)).
 
 ### 3.3. Lọc máy
 
-Tiêu chí ở [Thông số §10.2](00-thong-so.md#102-gpu-thuê). Lệnh tìm máy (kiểm tra lại tên trường bằng `vastai search offers --help`):
+Tiêu chí ở [Thông số §10.2](00-thong-so.md#102-gpu-thuê), đã mã hoá trong `infra/provision/vast.sh` (gọi qua `uvx vastai@1.11.0`, không cần cài):
 
 ```bash
-pip install vastai && vastai set api-key <KEY>
-vastai search offers \
-  'num_gpus=4 gpu_name=RTX_4090 vms_enabled=true rentable=true reliability>0.98 cpu_ram>=128 disk_space>=300 inet_down>=500' \
-  -o 'dph'
+make find MODE=v2                               # mặc định RTX_A4000, 4 GPU, ≤ 2 USD/giờ cả máy, verified
+make find MODE=v2 GPU=RTX_4090 MAX_DPH=3        # dự phòng
+make rent OFFER=<id> MODE=v2 && make probe      # thuê rồi đo phần cứng, ổ, mạng thật trước khi bootstrap
 ```
 
-Chạy lệnh vào **thứ Bảy và Chủ nhật** của hai cuối tuần trước hạn chọn cloud, ghi lại số offer và giá. Tiêu chí đạt và hạn quyết định nằm ở [ADR-004](../adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md) K6.
+Lưu ý: API Vast trả cả máy unverified và máy trượt kiểm tra VM (`is_vm_deverified`), còn giao diện web chỉ hiện máy verified; `vast.sh` lọc như web. Cột mạng của Vast không tin được (máy 2 × 5060 Ti ngày 08/11 chỉ tải được 8 MB/s), nên `make probe` đo thật. Lịch sử khảo sát và tiêu chí K6 cũ: [ADR-004](../adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md) K6 và §7, [ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md).
 
 **Vì sao thuê trọn máy:** không ai khác dùng chung CPU, RAM, PCIe hay ổ đĩa của máy. Đây là nguồn nhiễu lớn nhất trên marketplace.
 
@@ -184,7 +184,7 @@ nvidia-smi -q | grep -iE "product name|link|power limit|clocks|driver|cuda"   # 
 fio --name=seqread --rw=read --bs=1M --size=8G --filename=/data/fio.tmp --direct=1   # yêu cầu ≥ 1 GB/s
 # Chạy vLLM bằng Docker trên từng GPU, mỗi GPU khoảng 3 phút ở cùng λ:
 for g in 0 1 2 3; do
-  docker run --rm --gpus "device=$g" … vllm/vllm-openai@sha256:… --model /models/Qwen2.5-7B-Instruct &
+  docker run --rm --gpus "device=$g" … vllm/vllm-openai@sha256:… --model /models/Qwen2.5-3B-Instruct &
   vllm bench serve … --request-rate 1.5 --num-prompts 270   # ghi TTFT p95, token/s
 done
 nvidia-smi -q -d PERFORMANCE,TEMPERATURE    # không có lý do throttle; nhiệt < 83 °C
@@ -197,7 +197,7 @@ nvidia-smi -q -d PERFORMANCE,TEMPERATURE    # không có lý do throttle; nhiệ
 | Throttle / nhiệt độ | Không có / < 83 °C |
 | PCIe | Gen4 trở lên, đúng độ rộng khe cắm (thường x16) |
 
-**Không đạt** thì huỷ ngay và thử máy tiếp theo, tối đa 2 máy. Kiểm tra độ trôi năng lực được thay bằng một lượt kiểm tra giữa phiên (§6.2).
+**Không đạt** thì huỷ ngay và thử máy tiếp theo, tối đa 2 máy. Kiểm tra độ trôi năng lực được thay bằng một lượt kiểm tra giữa phiên (§6.2). Tới 10/11 chưa có `make burnin`: phần phần cứng, ổ và mạng do `make probe` làm; phần vLLM từng GPU chạy tay bằng `vllm bench serve` như ở V0 (08/11).
 
 ### 3.5. Cấu hình k3s và phân bổ CPU trên VM thuê
 
@@ -233,21 +233,20 @@ Nếu máy chỉ có 32 vCPU: dùng 5 lõi cho mỗi pod vLLM; máy tạo tải 
 | `make home-up` | Dựng k3s và toàn bộ nền tảng trên cluster nhà (Ansible + Argo CD) |
 | `make find` | `vastai search offers` theo tiêu chí, in ra 5 máy rẻ nhất |
 | `make rent OFFER=<id>` | `vastai create instance` (template VM Ubuntu có driver NVIDIA), chờ SSH, ghi instance id |
-| `make burnin` | Ansible chạy các bước §3.4, xuất `burnin.json`; không đạt thì dừng |
-| `make probe` | Đo phần cứng và mạng thật của VM vừa thuê, để quyết định giữ hay trả máy |
-| `make bootstrap` | Ansible: chrony, NVMe, k3s (tham số §3.5), GPU, Argo CD, nạp khoá Sealed Secrets, root-app; in thời gian từng bước (dùng cho VH5) |
+| `make probe` | Đo phần cứng, ổ và mạng thật của VM vừa thuê, để quyết định giữ hay trả máy (thay cho `make burnin` trong thiết kế, chưa làm) |
+| `make bootstrap` | Ansible: chrony, tắt tự nâng cấp, mirror registry, k3s (tham số §3.5), GPU, tải sẵn model và image; in tổng thời gian (dùng cho VH5). Trên VM **chưa** cài Argo CD và Sealed Secrets (`argocd_enabled: false`, ADR-006 §3) |
 | `make prefetch` | Tải model, kéo image trên VM (`make bootstrap` đã gồm bước này, chạy nền) |
 | `make cloud-platform` | Cài device plugin, Prometheus, KEDA, GPU exporter, vLLM bằng Helm (trên cloud chưa dùng Argo CD) |
 | `make vh5` | Bấm giờ VH5: bootstrap, cloud-platform, gọi API có streaming |
-| `make capacity` | Đo năng lực một replica, sinh `capacity.json` |
+| `make run MATRIX=experiments/matrix-dg1-v1.yaml` | ĐG1: quét λ với 1 replica, runner sinh `capacity.json` (chưa có lệnh `make capacity` riêng) |
 | `make run MATRIX=…` | Chạy ma trận đánh giá autoscaling |
 | `make ops-tests S=… MATRIX=… RATE=…` | Chạy một kịch bản vận hành dưới tải (VH2–VH4), chấm đạt/không đạt |
 | `make backup` | `rclone` lên R2, kiểm tra checksum |
 | `make release` | Huỷ instance; **từ chối chạy** nếu backup chưa xong |
-| `make analysis` | Tạo bảng, chạy notebook, xuất hình |
-| `make lint test` | Kiểm tra YAML, manifest, quy tắc cảnh báo, Python |
+| `make analysis` | Tạo bảng, chạy notebook, xuất hình (**chưa làm**, TR7) |
+| `make lint`, `make alerts-test`, `make dashboards-check` | Kiểm tra YAML, manifest, quy tắc cảnh báo, dashboard; Python chạy `pytest` và `ruff` trong từng gói |
 
-- Chỉ phần `find/rent/release` phụ thuộc Vast.ai. Nếu chuyển sang GCP thì chỉ viết lại ba lệnh này bằng `gcloud`; toàn bộ Ansible trở đi giữ nguyên.
+- Chỉ phần `find/rent/probe/release` (`infra/provision/vast.sh`) phụ thuộc Vast.ai. Đổi nhà cung cấp thì chỉ viết lại các lệnh này; toàn bộ Ansible trở đi giữ nguyên.
 - **Đồng bộ giờ:** mọi thứ chạy trên cùng một máy nên không lo lệch đồng hồ. Vẫn cài chrony để timestamp đúng giờ UTC.
 
 ### 3.8. Sao lưu dữ liệu
@@ -277,9 +276,11 @@ Trên Vast.ai, giá hiển thị cho mỗi máy thường đã gồm CPU và RAM
 
 ---
 
-## 5. Dự phòng: GCP và kế hoạch Z
+## 5. Dự phòng và kế hoạch Z
 
-**Dự phòng 1** là thuê một máy Vast khác ở cuối tuần kế tiếp (phiên V3, §6.1). **Dự phòng 2** là GCP, chỉ dùng nếu tới hạn chọn cloud mà Vast không đạt tiêu chí ([ADR-004](../adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md) K6). Thông tin dưới đây tra ngày 08/10/2026 và **cần kiểm chứng lại** khi dùng:
+**Dự phòng** là thuê một máy Vast khác: 4 × RTX 4090 VM (2,4–2,7 USD/giờ cả máy), hoặc máy 2 GPU với N = 2 ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C2). Không còn cuối tuần dự phòng V3 (dời V2 ngày 04/11).
+
+**GCP không còn là phương án:** ngày 05/11 yêu cầu tăng quota GPU bị từ chối ("not eligible for a quota increase"), và không còn thời gian xây lịch sử tài khoản trước V2 ([ADR-004 §7](../adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md#7-cập-nhật-sau-ngày-08102026)). Bảng dưới giữ lại làm tư liệu cho phần Hạn chế và hướng mở rộng (tra ngày 08/10/2026):
 
 | Hạng mục | Thông tin |
 |---|---|
@@ -302,27 +303,27 @@ Trên Vast.ai, giá hiển thị cho mỗi máy thường đã gồm CPU và RAM
 
 | Phiên | Ngày | Máy | Việc | Giờ | GPU-giờ | USD (0,30–0,50/GPU-giờ) |
 |---|---|---|---|---|---|---|
-| V0 smoke | ~~17–18/10~~ gộp với V1, **làm 08/11** ([Kế hoạch §1.1](06-ke-hoach-quan-ly.md#11-điều-chỉnh-ngày-04112026)); thực tế: VM 2 × 5060 Ti rồi VM 4 × A4000, model 3B, ~$1,5 cho máy thứ hai ([log phiên](../nhat-ky/lam-viec/quang/phien-2026-11-08-a4000.md)) | VM 1 × 4090 | k3s trong VM, GPU, vLLM 7B, `fio`, TPOT ở batch 1/16/32, thử `make bootstrap` | 3–4 | 4 | 1–2 |
-| V1 phát triển | ~~31/10–01/11~~ gộp với V0, **làm 08/11** (ĐG1 thử C = 4,5 req/s; runner 2 lượt có KEDA) | VM 1 × 4090 | L2 (pre-pull, compile cache); runner chạy 2 lượt không cần can thiệp; ĐG1 thử (không dùng làm số liệu chính) | 6–8 | 6–8 | 2–4 |
-| **V2 đợt chính** | ~~07–08/11~~ **T7 14/11 08:00 → CN 15/11 ~06:00** | VM 4 × 4090 | Burn-in rút gọn; VH5 từ VM trắng; **ĐG1 → ADR-003**; ĐG3; ma trận 17 lượt; VH2–VH4 trên GPU thật; quay video thô | 20–22 | 80–88 | 24–44 |
-| V3 dự phòng | ~~14–15/11~~ bỏ (đã dùng cho V2) | VM 4 × 4090 (máy khác) | Chỉ khi V2 hỏng: chạy lại trọn bộ cấu hình của kịch bản hỏng + ĐG1 | ≤ 10 | ≤ 40 | ≤ 20 |
+| V0 smoke | ~~17–18/10~~ gộp với V1, **làm 08/11** ([Kế hoạch §1.1](06-ke-hoach-quan-ly.md#11-điều-chỉnh-ngày-04112026)); thực tế: VM 2 × 5060 Ti rồi VM 4 × A4000, model 3B, ~$1,5 cho máy thứ hai ([log phiên](../nhat-ky/lam-viec/quang/phien-2026-11-08-a4000.md)) | ~~VM 1 × 4090~~ VM 4 × A4000 | k3s trong VM, GPU, vLLM 7B, `fio`, TPOT ở batch 1/16/32, thử `make bootstrap` | 3–4 | 4 | 1–2 |
+| V1 phát triển | ~~31/10–01/11~~ gộp với V0, **làm 08/11** (ĐG1 thử C = 4,5 req/s; runner 2 lượt có KEDA) | ~~VM 1 × 4090~~ VM 4 × A4000 | L2 (pre-pull, compile cache); runner chạy 2 lượt không cần can thiệp; ĐG1 thử (không dùng làm số liệu chính) | 6–8 | 6–8 | 2–4 |
+| **V2 đợt chính** | ~~07–08/11~~ **T7 14/11 08:00 → CN 15/11 ~06:00** | VM 4 × A4000, ≥ 20 vCPU (dự phòng 4 × 4090) | Burn-in rút gọn; VH5 từ VM trắng; **ĐG1 → ADR-003**; ĐG3; ma trận 17 lượt; VH2–VH4 trên GPU thật; quay video thô | 20–22 | 80–88 | 24–44 |
+| V3 dự phòng | ~~14–15/11~~ bỏ (đã dùng cho V2) | – | Chỉ khi V2 hỏng: chạy lại trọn bộ cấu hình của kịch bản hỏng + ĐG1 | ≤ 10 | ≤ 40 | ≤ 20 |
 | Đĩa, băng thông | – | – | – | – | – | ~3–6 |
 | **Tổng** | | | | | ~90–140 | **~30–75** |
 
-Giá Vast cho máy 4 × 4090 chế độ VM vào cuối tuần chưa kiểm chứng được (trang giá ngày 08/10/2026 không hiện offer); khoảng giá trên lấy theo ngưỡng lọc.
+Cột giờ và USD là dự toán ngày 08/10 cho 4 × 4090 ở 0,30–0,50 USD/GPU-giờ. Thực tế: máy 4 × A4000 ngày 08/11 giá **0,611 USD/giờ cả máy** (GPU 0,587 + ổ 0,025), V0+V1 ≈ 1,5 USD; V2 22 giờ trên máy cùng giá ≈ 13–15 USD, hoặc ≈ 55–60 USD nếu phải dùng 4 × 4090 (2,4–2,7 USD/giờ). Tổng dự kiến **15–65 USD** ([Thông số §11](00-thong-so.md#11-ngân-sách)).
 
 ### 6.2. Tiến trình phiên V2 theo giờ
 
 ```text
-Thứ Bảy 07/11
-08:00–08:30  burn-in rút gọn (đạt → tiếp tục)
+Thứ Bảy 14/11
+08:00–08:30  burn-in rút gọn: make probe + vllm bench serve từng GPU (đạt → tiếp tục)
 08:30–09:30  VH5: bootstrap từ VM trắng (đo thời gian từng bước), prefetch
 09:30–11:30  ĐG1 → chốt C, B*, SLO, threshold, λ của KB1–KB3 → ADR-003   (cả nhóm online)
 11:30–13:00  ĐG3: L0 × 2, L2 × 3
 13:00–15:00  VH2 (4/4 GPU), VH3 (xoá pod, kill tiến trình), VH4; quay video thô
 15:00–01:00  ma trận 17 lượt, thứ tự xáo trộn — runner tự chạy; VH1 và VH6 ghi trong các lượt
              (khoảng 22:00: chạy lại một mức tải 3 phút để kiểm tra năng lực không trôi)
-Chủ nhật 08/11
+Chủ nhật 15/11
 01:00–04:00  chạy lại lượt hỏng (runner tự xếp hàng)
 04:00–06:00  sao lưu, kiểm tra checksum, huỷ instance
 ```
@@ -352,7 +353,7 @@ Chủ nhật 08/11
 |---|---|---|---|
 | **Kiểm thử chức năng** | Simulator và máy nhà, từ W2 | API, probe, preStop, graceful shutdown; bài kiểm thử T1–T7 ([Kiến trúc §15](03-kien-truc-autoscaling.md#15-kiểm-thử-nhanh-cấu-hình-autoscaling)); quy tắc cảnh báo (`promtool test rules`); checklist bảo mật | Đạt / không đạt; chạy lại trong CI nếu tự động hoá được |
 | **Kịch bản vận hành VH1–VH6** | Máy nhà và simulator trước (W3–W5), lặp lại trên GPU thuê những gì cần GPU thật (V2) | §13 | Đạt / không đạt, kèm số đo |
-| **Đánh giá trên GPU thuê ĐG1–ĐG3** | VM 4 × RTX 4090, phiên V2 | §8, §11, §12 | Số liệu cho chương 5 |
+| **Đánh giá trên GPU thuê ĐG1–ĐG3** | VM 4 × RTX A4000, phiên V2 | §8, §11, §12 | Số liệu cho chương 5 |
 
 ---
 
@@ -533,7 +534,7 @@ Các cột của `requests.csv`. Thời gian tính bằng giây kể từ `t0_un
 | `status` | Mã HTTP của phần đầu câu trả lời. Stream bị cắt giữa chừng vẫn có `status` 200 |
 | `error` | **Rỗng nghĩa là request thành công.** Khác rỗng là lỗi: `HTTPStatus` (mã khác 200), `Timeout` (quá 120 s), `IncompleteStream` (không có chunk `usage`), `StreamError` (vLLM báo lỗi giữa stream), hoặc tên exception (lỗi mạng). Mọi chỉ số lỗi ở §15 lọc theo cột này, không theo `status` |
 
-Một script `analysis/build_tables.py` (có unit test) đọc các thư mục này và tạo một bảng mỗi lượt một dòng. Notebook vẽ biểu đồ từ bảng đó.
+Một script `analysis/build_tables.py` (có unit test) đọc các thư mục này và tạo một bảng mỗi lượt một dòng. Notebook vẽ biểu đồ từ bảng đó. (Tới 10/11 gói `analysis/` chưa có, TR7.)
 
 ---
 
@@ -641,11 +642,11 @@ Có, với năm biện pháp:
 4. Máy tạo tải nằm cùng VM với lõi CPU riêng, nên không có nhiễu mạng.
 5. Xáo trộn thứ tự các lượt, và chạy lại nhanh một mức tải giữa phiên để chắc năng lực không bị trôi ([Bài toán §12.5](01-bai-toan-yeu-cau.md#125-điều-kiện-để-so-sánh-công-bằng)).
 
-**Vì sao dùng RTX 4090 mà không dùng GPU datacenter?**
-Vì ngân sách. RTX 4090 có 24 GB VRAM và băng thông khoảng 1 TB/s, đủ để phục vụ model 7B một cách thực tế. Các cơ chế mà đồ án xử lý (metric bão hoà, cold start, scale-down, cập nhật khi hết GPU) không phụ thuộc dòng GPU. Kết luận định lượng gắn với RTX 4090 được ghi vào phần hạn chế.
+**Vì sao dùng RTX A4000 và model 3B mà không dùng GPU datacenter và model 7B?**
+Vì ngân sách và vì có máy. Máy 4 × 4090 chế độ VM verified gần như không có trên Vast vào tháng 11/2026 (≥ 2,4 USD/giờ), còn máy 4 × A4000 có ở 0,6 USD/giờ và đã dựng trọn ở V0+V1. A4000 16 GB vừa model 3B với KV-cache ~7 GB. Các cơ chế mà đồ án xử lý (metric bão hoà, cold start, scale-down, cập nhật khi hết GPU) không phụ thuộc dòng GPU hay cỡ model, vì mọi kịch bản tính theo C. Kết luận định lượng gắn với A4000 và 3B được ghi vào phần hạn chế ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md)).
 
 **Hết ngân sách hoặc không thuê được máy thì sao?**
-Dự toán chỉ khoảng một nửa trần ngân sách, và có hai mức dự phòng (máy Vast khác, rồi GCP bằng credit). Nếu vẫn không được thì dùng kế hoạch Z (§5) và cắt giảm theo thứ tự Must/Should/Could ([Thông số §5](00-thong-so.md#5-mức-độ-thành-công)).
+Dự toán dưới một nửa trần ngân sách; dự phòng là máy Vast khác (4 × 4090 đắt hơn nhưng vẫn trong trần, hoặc máy 2 GPU với N = 2). Nếu vẫn không được thì dùng kế hoạch Z (§5) và cắt giảm theo thứ tự Must/Should/Could ([Thông số §5](00-thong-so.md#5-mức-độ-thành-công)).
 
 **Vì sao output cố định 256 token, trong khi thực tế độ dài output rất khác nhau?**
 Để lượng việc giữa các cấu hình như nhau, và để E2E so sánh được. Đây là cách làm phổ biến trong benchmark serving, và được ghi thành hạn chế.
@@ -665,9 +666,9 @@ Máy tạo tải tự kiểm tra cả phía gửi (độ lệch lịch, CPU) l�
 
 **Mục đích:** để phần xây dựng không chỉ là "đã cài X". Với mỗi cơ chế quan trọng, dùng lý thuyết đã có ([Kiến thức nền](02-kien-thuc-nen.md)) **dự đoán** hành vi của hệ thống trên đúng phần cứng của mình, rồi **đo** để kiểm chứng và **giải thích** chỗ lệch. Luận văn trình bày mỗi mục theo mẫu *lý thuyết → dự đoán → số đo → giải thích*.
 
-**Nguyên tắc chọn:** số liệu phải dễ lấy. Mọi mục đều chạy được ở **nhà hoặc trên simulator** trong W3–W4, lấy số từ những gì hệ thống đã có sẵn (Prometheus, log vLLM, event Kubernetes, `requests.csv` của máy tạo tải), không cần thuê máy. Mục nào làm lại được trên RTX 4090 ở V2 mà không tốn thêm lượt chạy thì ghi thêm.
+**Nguyên tắc chọn:** số liệu phải dễ lấy. Mọi mục đều chạy được ở **nhà hoặc trên simulator** trong W3–W4, lấy số từ những gì hệ thống đã có sẵn (Prometheus, log vLLM, event Kubernetes, `requests.csv` của máy tạo tải), không cần thuê máy. Mục nào làm lại được trên máy thuê ở V2 mà không tốn thêm lượt chạy thì ghi thêm.
 
-> **Về số liệu ở nhà:** §1 nói tầng 1 "không dùng số liệu hiệu năng". Quy tắc đó vẫn giữ cho ĐG1–ĐG3: không trộn số đo 5060 với số đo 4090. LT1–LT8 là ngoại lệ có chủ đích: chúng kiểm chứng **quan hệ** (công thức có đúng không), không báo cáo hiệu năng tuyệt đối của nền tảng.
+> **Về số liệu ở nhà:** §1 nói tầng 1 "không dùng số liệu hiệu năng". Quy tắc đó vẫn giữ cho ĐG1–ĐG3: không trộn số đo 5060 với số đo máy thuê. LT1–LT8 là ngoại lệ có chủ đích: chúng kiểm chứng **quan hệ** (công thức có đúng không), không báo cáo hiệu năng tuyệt đối của nền tảng.
 
 | Mã | Lý thuyết | Dự đoán (tính trước khi đo) | Lấy số đo | Ở đâu | Mã việc | Người-giờ |
 |---|---|---|---|---|---|---|

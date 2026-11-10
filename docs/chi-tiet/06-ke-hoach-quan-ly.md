@@ -6,7 +6,7 @@
 - Kế hoạch **9 tuần** từ 08/10 đến hạn nộp khoảng **08/12/2026**. Mỗi tuần có việc chính, sản phẩm kiểm chứng được và **điểm dừng** khi chậm.
 - W1–W4 dành cho xây dựng và vận hành thử ở nhà và trên simulator, xen hai phiên thuê nhỏ (V0, V1). **Toàn bộ đánh giá trên GPU thuê dồn vào một lần thuê liền 14–15/11** (V2, dời từ 07–08/11 ngày 04/11, xem [§1.1](#11-điều-chỉnh-ngày-04112026)). **Đóng băng dữ liệu muộn nhất 22/11**; sau đó chỉ viết.
 - Khối lượng phạm vi rút gọn khoảng **169–251 người-giờ**, vừa quỹ giờ khi mỗi người làm khoảng 12–15 giờ/tuần. Phân công theo tính năng dọc: Quang "chạy được trên GPU", Trình "tự scale và đo được" ([§5.1](#51-phân-công)).
-- Sổ rủi ro gồm **28 rủi ro**; rủi ro lớn nhất là **thiếu thời gian viết**, **không có máy 4 × 4090 vào cuối tuần**, và **đồ án bị xem là thiên về cài đặt** (R21).
+- Sổ rủi ro gồm **28 rủi ro**; rủi ro lớn nhất là **thiếu thời gian viết**, **không có máy VM 4 GPU đạt tiêu chí vào đúng cuối tuần 14–15/11**, và **đồ án bị xem là thiên về cài đặt** (R21).
 - 7 sản phẩm bàn giao kèm tiêu chí nghiệm thu; luận văn 55–65 trang, chương 4 "Triển khai và vận hành" dài nhất; 13 hướng mở rộng.
 
 ---
@@ -71,7 +71,7 @@ Việc gắn với máy: các bước cài đặt trên PC (driver, k3s server) 
 
 ## 3. Checklist các mốc
 
-> Tình trạng cập nhật ngày **08/11/2026** (lần trước 04/11). Chỉ tích khi mục đạt trọn vẹn; mục mới làm một phần có ghi chú *(ngày: …)*.
+> Tình trạng cập nhật ngày **08/11/2026** (lần trước 04/11); các quyết định sau V0+V1 gom ở [ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md), kèm bảng tình trạng phạm vi tới 10/11 (ADR-006 §3). Chỉ tích khi mục đạt trọn vẹn; mục mới làm một phần có ghi chú *(ngày: …)*.
 
 ### M1 (18/10): nền tảng tối thiểu
 - [x] vLLM chạy trên GPU nhà (5060 hoặc 4050); đã ghim digest và revision model. *(04/11: RTX 5060, `v0.31.0@sha256:…`, Qwen2.5-1.5B ghim revision; xem [phiên bản](../phien-ban.md).)*
@@ -80,7 +80,7 @@ Việc gắn với máy: các bước cài đặt trên PC (driver, k3s server) 
 - [x] Simulator chạy trên kind; A2 scale 1 → 3 trên simulator. *(06/11: ScaledObject A2 lên `main` qua PR #11 (bản nháp, Trình review và thay bằng bản chính ở `feat/tr2-sim`). Trên kind: quyết định 3 replica ở 17 s, 3 pod Ready ở 27 s, scale-down đúng window 300 s rồi 1 pod/60 s.)*
 - [x] Repo có CI chạy xanh. *(04/11: PR #5; 6 job xanh trên `main` ngày 02/11.)*
 - [x] V0 đạt: k3s có GPU trong VM Vast, vLLM 7B trả lời, đã đo `fio` và TPOT. *(08/11: VM 4 × A4000, model 3B (chốt thay 7B cùng ngày); ghi tuần tự 599 MB/s, TPOT 17,2 ms ở 1 request. Xem [van-hanh.md](../nhat-ky/van-hanh.md) 08/11.)*
-- [x] Đã chốt cloud (ADR-004 K6). *(08/11: Vast VM; ADR-004 §7 ghi GCP bị từ chối quota (PR #15). Loại máy V2 chốt ở ADR-003.)*
+- [x] Đã chốt cloud (ADR-004 K6). *(08/11: Vast VM; ADR-004 §7 ghi GCP bị từ chối quota (PR #15). 10/11: loại máy V2 4 × A4000 chốt ở ADR-006 C2.)*
 
 ### M2 (01/11): vận hành thử đạt
 - [ ] A1, A2 qua bài kiểm thử T1–T7 (trên simulator và GPU nhà). *(08/11: T1–T5 tự động trên kind; A1, A2 scale 1 → 4 trên GPU thật ở V1; A1 không tự về 1 replica sau tải (Kiến trúc §13); chưa có T6, T7.)*
@@ -92,7 +92,7 @@ Việc gắn với máy: các bước cài đặt trên PC (driver, k3s server) 
 - [ ] LT1–LT8 có kết quả (dự đoán, số đo, giải thích) trong `docs/nhat-ky/van-hanh.md` ([Môi trường §19](05-moi-truong-danh-gia.md#19-kiểm-chứng-lý-thuyết-lt1lt8)). *(05/11: LT1 (5060), LT2, LT3 có kết quả trong `van-hanh.md`; dữ liệu ĐG1-mini đã có cho LT5, LT6 của Trình; LT1 trên 4050, LT4, LT7, LT8 chưa làm.)*
 - [x] Máy tạo tải đạt tiêu chí tự kiểm tra; runner chạy 2 lượt **không cần can thiệp** trên V1; `make bootstrap` dựng xong VM dưới 30 phút. *(08/11: runner chạy A1 × KB3, A2 × KB2 liền nhau không can thiệp; tự kiểm đánh dấu cả 2 invalid vì máy tạo tải 2 lõi vượt ngưỡng CPU, Quang chấp nhận sau xem xét (nhật ký tuần 05). Ansible dựng VM 164 s, tới vLLM phục vụ 12,5 phút; cài nền vẫn bằng script tay.)*
 
-### M3 (15/11, muộn nhất 22/11): xong đánh giá
+### M3 (22/11): xong đánh giá
 - [ ] `capacity.json` đã chốt (C, B\*, SLO, threshold), có ADR-003 đi kèm.
 - [ ] Cold start: L0 và L2 đủ số lần hợp lệ.
 - [ ] Ma trận: mọi ô đủ số lượt hợp lệ.
@@ -125,7 +125,7 @@ Viết chương 2–4 (W5–W7) ─► bản thảo (29/11) ─► bản cuối 
 
 - **Đường găng:** cài GPU nhà → nền tảng ở nhà → vận hành thử → V1 → **V2** → phân tích → chương 5 → bản thảo. Gần như không có độ dư; mỗi tuần có điểm dừng ở §2.
 - **Có thời gian đệm:** dashboard, cảnh báo, runner và autoscaling làm trên simulator song song với phần GPU thật.
-- **Phụ thuộc bên ngoài:** có máy 4 × 4090 chế độ VM vào cuối tuần 14–15/11 (dời từ 07–08/11, xem §1.1).
+- **Phụ thuộc bên ngoài:** có máy 4 × A4000 chế độ VM (≥ 20 vCPU) hoặc dự phòng 4 × 4090 vào cuối tuần 14–15/11 ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C2).
 
 ---
 
@@ -264,12 +264,12 @@ Nhờ hợp đồng này, dashboard, cảnh báo, autoscaling và runner đượ
 |---|---|
 | **vLLM không chạy trên RTX 5060** | Laptop 4050 làm node GPU; hoặc thuê 1 GPU cho các bài cần GPU thật; phần còn lại làm trên simulator |
 | **GVHD không đồng ý phạm vi rút gọn** | Đòi ma trận đủ 28 lượt: thêm khoảng 6 giờ máy 4 GPU (~10–15 USD), vẫn trong ngân sách. Đòi demo trực tiếp với GPU: mang PC đi hoặc dùng Tailscale. Đòi lịch 16 tuần: không khả thi với hạn 08/12, cần GVHD và trường xác nhận lại hạn |
-| **Tới 18/10 không có offer Vast đạt tiêu chí** | Chuyển sang GCP ([Môi trường §5](05-moi-truong-danh-gia.md#5-dự-phòng-gcp-và-kế-hoạch-z)); nếu chỉ được 2 GPU thì N = 2 và viết lại N3 theo N ở ADR-003 |
+| **Tới 18/10 không có offer Vast đạt tiêu chí** | ~~Chuyển sang GCP~~ (GCP bị từ chối quota 05/11). Đã xử lý 08/11: đổi sang 4 × A4000 và model 3B (ADR-006). Nếu 14/11 cũng không có: 4 × 4090 VM đắt hơn, hoặc máy 2 GPU với N = 2 và viết lại N3 theo N ở ADR-003 |
 | **Trễ 1 tuần ở M2** | Bỏ các mục Could; nếu V2 vẫn chưa sẵn sàng thì dời V2 sang 14–15/11 (mất phiên dự phòng) |
 | **Runner chưa chạy trọn ở V1** | V2 giảm số lượt lặp của mọi ô (tối thiểu 1 lượt/ô) và bỏ KB3 của S1. **Không bỏ A1 và L0**: đây là đối chứng cho đóng góp 2 và 3 |
 | **V2: sau 3 giờ chạy ma trận mà < 70% lượt hợp lệ** | Dừng VM, sửa, dồn phần còn lại sang V3 |
 | **Máy hỏng giữa V2** | Giữ các kịch bản đã chạy trọn bộ cấu hình; V3 chạy lại trọn kịch bản bị hỏng và ĐG1 trên máy mới; ghi `session_id` |
-| **Hoàn toàn không thuê được GPU** (kế hoạch Z) | Ở nhà với model 1,5B, N = 2, hoặc trên simulator; số liệu hiệu năng chỉ minh hoạ ([Môi trường §5](05-moi-truong-danh-gia.md#5-dự-phòng-gcp-và-kế-hoạch-z)) |
+| **Hoàn toàn không thuê được GPU** (kế hoạch Z) | Ở nhà với model 0,5B, N = 2 GPU replica time-slicing, hoặc trên simulator; số liệu hiệu năng chỉ minh hoạ ([Môi trường §5](05-moi-truong-danh-gia.md#5-dự-phòng-và-kế-hoạch-z)) |
 | **Một người phải nghỉ 1–2 tuần** | Người còn lại làm tiếp các việc thuộc đường găng; tạm dừng việc viết; báo GVHD |
 
 Thứ tự cắt: Could → Should, theo [Thông số §5](00-thong-so.md#5-mức-độ-thành-công). **Không cắt các ca đối chứng** (A1, S1/S4, L0, ca đối chứng của graceful shutdown và VH2c) và **không cắt LT1–LT8**, vì đây là phần biến đồ án từ "đã cài" thành "đã chứng minh" (R21). Khi cần cắt, giảm số lượt lặp hoặc bỏ mục Could trước. **Không lùi ngày đóng băng dữ liệu quá 22/11**; bản thảo có thể thu hẹp chương 5 thay vì trễ hạn nộp.
@@ -290,7 +290,7 @@ Thứ tự cắt: Could → Should, theo [Thông số §5](00-thong-so.md#5-mứ
 | ID | Nhóm | Rủi ro | Dấu hiệu sớm | K | A | Điểm | Phòng ngừa | Kế hoạch B |
 |---|---|---|---|---|---|---|---|---|
 | R1 | Chi phí | Tiền thuê GPU vượt dự toán | V2 kéo dài quá 24 giờ; nhiều lượt phải chạy lại | 1 | 2 | 2 | Phát triển ở nhà và trên simulator; V0, V1 trước; tín dụng trả trước làm giới hạn cứng; runner tự dừng | Bỏ lượt Could; V3 chỉ chạy phần tối thiểu |
-| R2 | Hạ tầng | Không có máy 4 × 4090 chế độ VM đạt tiêu chí vào cuối tuần | Tìm offer 10–11/10, 17–18/10 thấy < 3 offer | 2 | 3 | **6** | Tìm từ W1; nới sang 4 × 3090/A5000; chỉ phần `find/rent/release` phụ thuộc nhà cung cấp | GCP g2/L4 bằng credit; kế hoạch Z |
+| R2 | Hạ tầng | Không có máy VM 4 GPU đạt tiêu chí vào đúng cuối tuần V2 (**đã xảy ra** với 4 × 4090: 06/11 không có máy verified vừa giá → đổi sang 4 × A4000, ADR-006) | `make find MODE=v2` sáng 14/11 không có offer A4000 (09/11: không có) | 2 | 3 | **6** | Lọc bằng `vast.sh`; đo máy bằng `make probe`; code tham số hoá theo N | 4 × 4090 VM (~2,5 USD/giờ, trong trần); máy 2 GPU với N = 2; kế hoạch Z |
 | R3 | Hạ tầng | Thuê nhầm máy container (không chạy được K8s) | Không có systemd | 1 | 2 | 2 | Chỉ lọc máy `vms_enabled=true`; thử ở V0 | Huỷ, thuê máy khác |
 | R4 | Hạ tầng | Máy lỗi hoặc bị thu hồi giữa V2 | Mất kết nối, node NotReady, GPU biến mất | 2 | 2 | 4 | Chỉ thuê on-demand; sao lưu sau mỗi lượt; `progress.json` | V3 trên máy khác, chạy lại trọn kịch bản hỏng |
 | R5 | Kỹ thuật | Device plugin hoặc exporter GPU khó chạy trên k3s ở nhà | Tới cuối W2 vẫn chưa thấy `nvidia.com/gpu` | 2 | 2 | 4 | Theo hướng dẫn k3s; chỉ cài device plugin | Simulator cho phần lớn việc; thử GPU trên V0 |
@@ -307,7 +307,7 @@ Thứ tự cắt: Could → Should, theo [Thông số §5](00-thong-so.md#5-mứ
 | R16 | Bảo vệ | Demo hỏng trong buổi bảo vệ | Hình thức demo chưa chốt; mạng không ổn định khi tập | 2 | 2 | 4 | Định hướng demo bằng video; phần live (nếu có) chạy simulator không cần GPU, không cần Internet | Video quay sẵn |
 | R17 | Chi phí | Tín dụng Vast về 0 khiến instance bị dừng hoặc **xoá** | Số dư thấp | 1 | 3 | 3 | Nạp trước 06/11 đủ mức tối thiểu; runner kiểm tra số dư mỗi giờ và báo động | Nạp thêm ngay; nếu instance đã mất thì chạy lại các lượt chưa sao lưu |
 | R18 | Kỹ thuật | DCGM không chạy trên GPU GeForce | `dcgm-exporter` lỗi hoặc thiếu metric | 3 | 1 | 3 | Dùng `nvidia_gpu_exporter` ngay từ đầu | Đổi truy vấn A1 |
-| R19 | Đo lường | RTX 4090 giảm xung vì nhiệt giữa phiên | Xung nhịp giảm, nhiệt > 83 °C, TTFT tăng dần | 2 | 2 | 4 | Burn-in kiểm tra nhiệt độ; panel GPU; kiểm tra năng lực giữa phiên | Dừng, báo cáo; có thể khoá xung nhịp (`nvidia-smi -lgc`) |
+| R19 | Đo lường | GPU thuê giảm xung vì nhiệt giữa phiên | Xung nhịp giảm, nhiệt > 83 °C, TTFT tăng dần | 2 | 2 | 4 | Burn-in kiểm tra nhiệt độ; panel GPU; kiểm tra năng lực giữa phiên | Dừng, báo cáo; có thể khoá xung nhịp (`nvidia-smi -lgc`) |
 | R20 | Phạm vi | Phần vận hành phình to | Có issue mới không gắn với yêu cầu F/N nào | 2 | 2 | 4 | Tiêu chí vào/ra phạm vi ([Bài toán §12.4](01-bai-toan-yeu-cau.md#124-tiêu-chí-vào-và-ra-phạm-vi-trong-lúc-làm)); Must/Should/Could | Đưa vào hướng mở rộng |
 | R21 | Bảo vệ | Hội đồng đánh giá đồ án thiên về cài đặt, thiếu chiều sâu | GVHD nhận xét như vậy | 2 | 2 | 4 | Mỗi phần cài đặt gắn với một vấn đề riêng của GPU/LLM và có số đo; kiểm chứng lý thuyết LT1–LT8; giữ mọi ca đối chứng; bảng nghiệm thu | Nhấn mạnh phần phân tích trong chương 5 |
 | R22 | Kỹ thuật | Cảnh báo báo giả nhiều, hoặc không bao giờ kêu | Kênh chat bị "spam"; VH6 không thấy cảnh báo | 2 | 1 | 2 | `promtool test rules`; ngưỡng trùng biên bucket | Chỉnh ngưỡng hoặc cửa sổ; ghi lý do vào ADR |
@@ -316,19 +316,19 @@ Thứ tự cắt: Could → Should, theo [Thông số §5](00-thong-so.md#5-mứ
 | R25 | Phạm vi | GVHD không đồng ý phạm vi rút gọn hoặc demo bằng video | GVHD yêu cầu thêm ở một buổi báo cáo | 1 | 3 | 3 | **Đã giảm 15/10:** GVHD không yêu cầu duyệt chi tiết (ADR-004 §7); vẫn báo cáo theo §7; chuẩn bị phương án live bằng simulator | §8 |
 | R26 | Đánh giá | N2b và N7 trượt vì backlog kẹt ở pod cũ | KB2-mini ở nhà cho thấy hồi phục lâu | 2 | 2 | 4 | Đo KB2-mini ở W3; tách N2a/N2b; định nghĩa "page giả" | Báo cáo kèm phân tích; hướng mở rộng E1 |
 | R27 | Hạ tầng | Node chủ ở nhà thiếu RAM (16 GB) | OOM, pod bị evict | 2 | 1 | 2 | Ubuntu server; request vLLM nhỏ; Argo CD core; retention ngắn | Tách giám sát sang laptop; giảm stack |
-| R28 | Hạ tầng | (Chỉ khi dùng GCP) quota bị từ chối, hết L4, hoặc bị trừ tiền thẻ | Yêu cầu quota bị từ chối; quên tắt VM | 2 | 2 | 4 | Xin quota sớm; budget alert; runner `shutdown -h` | Kế hoạch Z |
+| R28 | Hạ tầng | ~~(Chỉ khi dùng GCP) quota bị từ chối~~ **Đã xảy ra 05/11:** GCP từ chối quota, phương án GCP bị loại (ADR-006 C1) | – | – | – | – | – |
 
 ### 9.3. Phân tích sâu các rủi ro đáng chú ý
 
 **R24. Không đủ thời gian viết luận văn**
 - **Vì sao đáng chú ý:** hạn nộp chỉ còn khoảng 8,7 tuần, trong khi đánh giá rơi vào tuần thứ 5.
-- **Phòng ngừa:** bộ tài liệu thiết kế này là bản nháp cho chương 1–3; viết chương 2–3 từ W5, chương 4 từ W6; đóng băng dữ liệu 15/11.
+- **Phòng ngừa:** bộ tài liệu thiết kế này là bản nháp cho chương 1–3; viết chương 2–3 từ W5, chương 4 từ W6; đóng băng dữ liệu 22/11 (dời từ 15/11 ngày 04/11).
 - **Kế hoạch B:** thu hẹp chương 5 (bỏ phần phân tích phụ), không đo thêm sau 22/11.
 
-**R2. Không có máy 4 × 4090 chế độ VM vào cuối tuần**
-- **Vì sao đáng chú ý:** cả phần đánh giá dồn vào một lần thuê; trang giá Vast ngày 08/10/2026 không hiện offer nào.
-- **Phòng ngừa:** tìm offer hai cuối tuần trước hạn 18/10 theo tiêu chí ở [ADR-004](../adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md) K6; nới sang 3090/A5000; vẫn xin quota GCP (miễn phí).
-- **Kế hoạch B:** GCP g2/L4. **Kế hoạch Z:** chạy ở nhà, chỉ rút kết luận định tính.
+**R2. Không có máy VM 4 GPU đạt tiêu chí vào cuối tuần V2**
+- **Vì sao đáng chú ý:** cả phần đánh giá dồn vào một lần thuê và không còn cuối tuần dự phòng. Đã xảy ra một lần: 06/11 không có máy 4 × 4090 VM verified vừa giá, GCP bị từ chối quota 05/11; nhóm đổi sang 4 × A4000 và model 3B, chạy trọn V0+V1 ngày 08/11 ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md)). Ngày 09/11 lại không thấy offer 4 × A4000 VM.
+- **Phòng ngừa:** `make find MODE=v2` nhiều lần trước 14/11; nạp tiền sẵn; code và ma trận tham số hoá theo N.
+- **Kế hoạch B:** 4 × 4090 VM (~2,5 USD/giờ, ≈ 55–60 USD cho V2, trong trần); máy 2 GPU với N = 2 (N3 viết lại theo N). **Kế hoạch Z:** chạy ở nhà, chỉ rút kết luận định tính.
 
 **R25. GVHD không đồng ý phạm vi rút gọn**
 - **Phòng ngừa:** đã gửi email 1 trang trong W1. Ngày 15/10: GVHD không yêu cầu duyệt chi tiết, chỉ cần làm được việc; xác suất hạ xuống 1. Vẫn báo cáo tiến độ đều ở các buổi trong §7.
@@ -397,15 +397,18 @@ Quy ước chi tiết (thư mục thực tế, YAML, Python, cảnh báo, Git v�
 
 ### 10.4. CI (GitHub Actions)
 
+Thực tế trong `.github/workflows/ci.yaml` (5 job, mọi công cụ ghim phiên bản và sha256; lệnh tương đương trên máy ghi ở comment đầu mỗi job):
+
 | Job | Kiểm tra |
 |---|---|
-| `yaml` | yamllint; kubeconform cho `serving/`, `autoscaling/` (kèm schema CRD của KEDA, Traefik) |
-| `helm` | `helm template` với các values trong `platform/` |
-| `kustomize` | `kustomize build` cho từng overlay |
-| `alerts` | `promtool check rules` và `promtool test rules` cho `observability/` |
-| `python` | ruff và pytest cho `loadgen/`, `experiments/runner/`, `analysis/` |
-| `docs` | Kiểm tra link hỏng trong `docs/`; mọi cảnh báo đều có file runbook tương ứng |
-| `secrets` (Could) | `gitleaks` |
+| `yaml` | yamllint (strict) cho mọi file YAML; actionlint + shellcheck cho chính workflow |
+| `manifests` | `kubectl kustomize` mọi thư mục có `kustomization.yaml`, rồi kubeconform (schema Kubernetes 1.36 + CRD của KEDA, Prometheus Operator, Traefik từ CRDs-catalog) |
+| `alerts` | `make alerts-test` (mỗi cảnh báo có severity, runbook, unit test; `promtool check rules` và `promtool test rules`) và `make dashboards-check` (uid, datasource, PromQL của 3 dashboard) |
+| `python` | pytest, ruff check, ruff format cho `loadgen/` và `experiments/` trên Python 3.11 và 3.15 (`analysis/` thêm khi có) |
+| `docs` | lychee: link tương đối và anchor trong `docs/` và `*.md` |
+| `secrets` (Could) | `gitleaks`: chưa có |
+
+Chưa có job `helm template` cho `platform/`; values được kiểm khi Argo CD sync ở nhà.
 
 ### 10.5. Phiên bản và phát hành
 
@@ -433,8 +436,8 @@ dataset/
 ### 10.7. Hướng dẫn tái lập và vận hành (dàn ý README)
 
 1. **Yêu cầu:** phần cứng (máy có GPU NVIDIA, hoặc tài khoản Vast.ai), công cụ (vastai CLI, ansible, kubectl, helm, kubeseal, python, uv, tailscale).
-2. **Chạy nhanh ở nhà:** `make home-up`, rồi `make run MATRIX=experiments/matrix-mini.yaml`, rồi `make analysis`. Không có GPU: dựng kind + simulator.
-3. **Chạy đầy đủ trên máy thuê:** cấu hình `.env` (API key Vast.ai, R2), rồi lần lượt `make find rent burnin bootstrap prefetch capacity`, sau đó `make run`, `make ops-tests`, `make backup`, `make release`.
+2. **Chạy nhanh ở nhà:** `make home-up`, rồi `make run MATRIX=experiments/matrix-home.yaml`, rồi `make analysis` (chưa có). Không có GPU: `make sim-up` rồi `make run MATRIX=experiments/matrix-sim.yaml`.
+3. **Chạy đầy đủ trên máy thuê:** cấu hình `.env` (template Vast, khoá R2, bot Telegram), rồi lần lượt `make find rent probe bootstrap cloud-platform`, ĐG1 bằng `make run MATRIX=experiments/matrix-dg1-v1.yaml`, sau đó `make run MATRIX=experiments/matrix-v2.yaml`, `make ops-tests`, `make backup`, `make release`.
 4. **Vận hành:** cập nhật phiên bản và rollback ([Vận hành §5.3](04-van-hanh.md#53-quy-trình-cập-nhật-qua-gitops)); xử lý cảnh báo (`docs/runbooks/`); dựng lại từ đầu ([Vận hành §7](04-van-hanh.md#7-dựng-lại-từ-đầu-khôi-phục-sau-thảm-hoạ)).
 5. **Chỉ tái tạo hình và bảng từ dữ liệu đã công bố:** tải `dataset/`, rồi `make analysis DATA=dataset/`.
 6. **Phiên bản đã dùng:** bảng phiên bản kèm digest.
@@ -488,7 +491,7 @@ Hình thức demo **chốt sau** ([ADR-004](../adr/004-dieu-kien-thuc-te-va-pham
 6. PR đổi tham số → Argo CD sync → 0 lỗi; ở nhà: cấu hình kiểu web bị Pending, `LLMPodPending` kêu.
 7. VH4: chặn Prometheus → fallback lên max replica.
 
-Các cảnh dùng model 7B thật quay trong phiên V2 (phần ban ngày); phần còn lại quay ở nhà.
+Các cảnh dùng vLLM thật (model 3B) quay trong phiên V2 (phần ban ngày); phần còn lại quay ở nhà.
 
 **Phần live bằng simulator:** trên laptop trình chiếu chạy kind + `llm-d-inference-sim` + KEDA + Grafana; bơm tải để thấy scale 1 → 3.
 
