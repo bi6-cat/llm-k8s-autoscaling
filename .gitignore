@@ -16,6 +16,9 @@ __pycache__/
 .venv/
 # Cài đặt editor cá nhân, mỗi người một kiểu
 .vscode/
+# Cache của ruff và pytest (ở gốc và trong từng gói Python)
+.ruff_cache/
+.pytest_cache/
 
 # --- Dữ liệu ---------------------------------------------------------------------
 # Dữ liệu thô của các lượt đánh giá: nặng, được sao lưu lên Cloudflare R2 thay vì Git
