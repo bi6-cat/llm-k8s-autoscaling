@@ -280,7 +280,7 @@ Bảng đối chiếu nội dung đề cương với bản mô tả nằm ở [P
 | # | Giả định | Vì sao hợp lý | Cách kiểm tra | Nếu sai thì sao |
 |---|---|---|---|---|
 | G1 | **Chi phí ≈ GPU-giờ cấp phát cho pod vLLM** | Trên cloud trả theo mức dùng (hoặc cluster dùng chung), GPU được giải phóng sẽ được dùng vào việc khác | Không kiểm chứng được bằng thực nghiệm; nêu rõ đây là quy ước | Trên một nhóm GPU cố định dành riêng, scale-down **không giảm tiền**. Khi đó kết quả chỉ còn nói về "GPU giải phóng được" |
-| G2 | Model vừa với 1 GPU, mỗi replica dùng 1 GPU | 7B ở BF16 cần khoảng 15 GB trên GPU 24 GB; ở nhà dùng model 1,5B | Log vLLM: KV-cache còn đủ cho `max-num-seqs` | Phải dùng lượng tử hoá hoặc model nhỏ hơn |
+| G2 | Model vừa với 1 GPU, mỗi replica dùng 1 GPU | 3B ở BF16 cần khoảng 6 GB weights, vừa GPU 16 GB (A4000) với KV-cache ~7 GB; ở nhà dùng model 0,5B ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md)) | Log vLLM: KV-cache còn đủ cho `max-num-seqs` | Phải dùng lượng tử hoá hoặc model nhỏ hơn |
 | G3 | Máy tạo tải không làm nhiễu hệ thống được đo | Trên GPU thuê, chạy cùng VM nhưng trên **lõi CPU riêng** (CPU manager static); không đi qua mạng ngoài | CPU của pod máy tạo tải; độ lệch lịch gửi p99 < 50 ms; độ trễ event loop | Phải tách lõi hoặc đổi sang máy riêng |
 | G4 | Phiên bản phần mềm cố định suốt đợt đánh giá | Ghim image digest và phiên bản Helm chart | `metadata.json` ghi digest | Kết quả giữa các lượt không so được với nhau |
 | G5 | Năng lực C ổn định trong suốt phiên đo | **Cùng một máy** trong cả phiên V2; máy đã qua burn-in rút gọn | Chạy lại nhanh một mức tải giữa phiên (3 phút) | Nếu lệch hơn 10% thì đo năng lực lại và ghi vào nhật ký |
@@ -289,14 +289,15 @@ Bảng đối chiếu nội dung đề cương với bản mô tả nằm ở [P
 
 ### 12.3. Hạn chế sẽ ghi trong luận văn
 
-1. **Chỉ một model, một loại GPU (RTX 4090, dòng consumer).** Kết luận về cơ chế (metric nào phản ánh tải, vì sao cold start dài) có khả năng khái quát. Con số cụ thể (bao nhiêu giây, bao nhiêu phần trăm) chỉ đúng cho cấu hình đã đo.
+1. **Chỉ một model (Qwen2.5-3B), một loại GPU (RTX A4000 16 GB, card workstation Ampere).** Kết luận về cơ chế (metric nào phản ánh tải, vì sao cold start dài) có khả năng khái quát. Con số cụ thể (bao nhiêu giây, bao nhiêu phần trăm) chỉ đúng cho cấu hình đã đo; cold start của 3B ngắn hơn 7B, chỉ ngoại suy được theo kích thước weights ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C3).
 2. **Tối đa 4 replica.** Chưa kiểm tra được hành vi ở quy mô hàng chục replica, nơi scheduling và cân bằng tải phức tạp hơn.
 3. **Tải tổng hợp** với độ dài output cố định, và chỉ ba kịch bản tải. Tải thật đa dạng hơn.
 4. **Mỗi ô của ma trận chỉ có 1–3 lượt.** Đủ để nghiệm thu và thấy các khác biệt lớn, không đủ để khẳng định các khác biệt nhỏ. Đồ án không tính khoảng tin cậy thống kê.
 5. **Không có autoscaling mức node.** Trên cloud công cộng, thời gian phản ứng thật cộng thêm thời gian cấp node GPU.
 6. **Cân bằng tải round-robin.**
 7. **Các kịch bản vận hành được dựng có chủ đích** (xoá pod, chặn Prometheus…). Chúng chưa bao quát mọi sự cố thật, ví dụ GPU hỏng dần hay mạng chập chờn.
-8. **Môi trường nhà chỉ là môi trường chức năng** (1–2 GPU khác loại, VRAM nhỏ). Các kịch bản nhiều replica ở nhà chạy trên simulator.
+8. **Môi trường nhà chỉ là môi trường chức năng** (một RTX 5060 8 GB chia 2 GPU replica bằng time-slicing). Các kịch bản cần nhiều node chạy trên simulator.
+9. **Graceful shutdown dựa vào grace period, không phải vào drain của vLLM.** vLLM 0.31.0 không dừng khi nhận SIGTERM (đo 06/11); request an toàn vì pod sống tới 180 s, nên request dài hơn ~160 s sau SIGTERM vẫn bị cắt, và mỗi pod bị tắt giữ GPU thêm 180 s ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C8).
 
 ### 12.4. Tiêu chí vào và ra phạm vi trong lúc làm
 
