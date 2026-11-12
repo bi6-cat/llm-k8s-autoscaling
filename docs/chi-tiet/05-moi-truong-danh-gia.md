@@ -625,7 +625,7 @@ Yêu cầu không đạt **không bị giấu đi**. Luận văn phân tích ngu
 | Node có sự cố, pod bị OOMKilled ngoài dự kiến | Không có |
 | Trạng thái đầu đúng (1 replica, hàng đợi trống; S4: 4 replica) | Đúng |
 
-Lượt không đạt được đánh dấu `invalid` kèm lý do và **chạy lại** ở cuối phiên V2 (§6.2) hoặc trong phiên V3. Dữ liệu lượt hỏng vẫn được giữ lại.
+Lượt không đạt được đánh dấu `invalid` kèm lý do và **chạy lại** ở cuối phiên V2 (§6.2). Không còn phiên V3 ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C9): lượt không kịp chạy lại thì ô đó chỉ có 1 lượt hợp lệ. Dữ liệu lượt hỏng vẫn được giữ lại.
 
 ---
 

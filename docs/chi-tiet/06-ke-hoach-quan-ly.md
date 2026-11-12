@@ -267,8 +267,8 @@ Nhờ hợp đồng này, dashboard, cảnh báo, autoscaling và runner đượ
 | **Tới 18/10 không có offer Vast đạt tiêu chí** | ~~Chuyển sang GCP~~ (GCP bị từ chối quota 05/11). Đã xử lý 08/11: đổi sang 4 × A4000 và model 3B (ADR-006). Nếu 14/11 cũng không có: 4 × 4090 VM đắt hơn, hoặc máy 2 GPU với N = 2 và viết lại N3 theo N ở ADR-003 |
 | **Trễ 1 tuần ở M2** | Bỏ các mục Could; nếu V2 vẫn chưa sẵn sàng thì dời V2 sang 14–15/11 (mất phiên dự phòng) |
 | **Runner chưa chạy trọn ở V1** | V2 giảm số lượt lặp của mọi ô (tối thiểu 1 lượt/ô) và bỏ KB3 của S1. **Không bỏ A1 và L0**: đây là đối chứng cho đóng góp 2 và 3 |
-| **V2: sau 3 giờ chạy ma trận mà < 70% lượt hợp lệ** | Dừng VM, sửa, dồn phần còn lại sang V3 |
-| **Máy hỏng giữa V2** | Giữ các kịch bản đã chạy trọn bộ cấu hình; V3 chạy lại trọn kịch bản bị hỏng và ĐG1 trên máy mới; ghi `session_id` |
+| **V2: sau 3 giờ chạy ma trận mà < 70% lượt hợp lệ** | Dừng runner, sửa, chạy lại phần hỏng trong 15/11 (không còn V3, [ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C9). Hết giờ thì ô đó chỉ có 1 lượt |
+| **Máy hỏng giữa V2** | Giữ các kịch bản đã chạy trọn bộ cấu hình; thuê ngay một máy Vast khác trong 14–15/11, chạy lại ĐG1 và trọn kịch bản bị hỏng trên máy mới; ghi `session_id` mới. Không kịp thì kịch bản đó chỉ có số liệu từ máy cũ |
 | **Hoàn toàn không thuê được GPU** (kế hoạch Z) | Ở nhà với model 0,5B, N = 2 GPU replica time-slicing, hoặc trên simulator; số liệu hiệu năng chỉ minh hoạ ([Môi trường §5](05-moi-truong-danh-gia.md#5-dự-phòng-và-kế-hoạch-z)) |
 | **Một người phải nghỉ 1–2 tuần** | Người còn lại làm tiếp các việc thuộc đường găng; tạm dừng việc viết; báo GVHD |
 
@@ -292,7 +292,7 @@ Thứ tự cắt: Could → Should, theo [Thông số §5](00-thong-so.md#5-mứ
 | R1 | Chi phí | Tiền thuê GPU vượt dự toán | V2 kéo dài quá 24 giờ; nhiều lượt phải chạy lại | 1 | 2 | 2 | Phát triển ở nhà và trên simulator; V0, V1 trước; tín dụng trả trước làm giới hạn cứng; runner tự dừng | Bỏ lượt Could; V3 chỉ chạy phần tối thiểu |
 | R2 | Hạ tầng | Không có máy VM 4 GPU đạt tiêu chí vào đúng cuối tuần V2 (**đã xảy ra** với 4 × 4090: 06/11 không có máy verified vừa giá → đổi sang 4 × A4000, ADR-006) | `make find MODE=v2` sáng 14/11 không có offer A4000 (09/11: không có) | 2 | 3 | **6** | Lọc bằng `vast.sh`; đo máy bằng `make probe`; code tham số hoá theo N | 4 × 4090 VM (~2,5 USD/giờ, trong trần); máy 2 GPU với N = 2; kế hoạch Z |
 | R3 | Hạ tầng | Thuê nhầm máy container (không chạy được K8s) | Không có systemd | 1 | 2 | 2 | Chỉ lọc máy `vms_enabled=true`; thử ở V0 | Huỷ, thuê máy khác |
-| R4 | Hạ tầng | Máy lỗi hoặc bị thu hồi giữa V2 | Mất kết nối, node NotReady, GPU biến mất | 2 | 2 | 4 | Chỉ thuê on-demand; sao lưu sau mỗi lượt; `progress.json` | V3 trên máy khác, chạy lại trọn kịch bản hỏng |
+| R4 | Hạ tầng | Máy lỗi hoặc bị thu hồi giữa V2 | Mất kết nối, node NotReady, GPU biến mất | 2 | 2 | 4 | Chỉ thuê on-demand; sao lưu sau mỗi lượt; `progress.json` | Thuê máy Vast khác ngay trong 14–15/11, chạy lại trọn kịch bản hỏng (không còn V3) |
 | R5 | Kỹ thuật | Device plugin hoặc exporter GPU khó chạy trên k3s ở nhà | Tới cuối W2 vẫn chưa thấy `nvidia.com/gpu` | 2 | 2 | 4 | Theo hướng dẫn k3s; chỉ cài device plugin | Simulator cho phần lớn việc; thử GPU trên V0 |
 | R6 | Kỹ thuật | Cold start quá dài làm autoscaling "vô dụng" ở KB2 | L2 vẫn ≥ 3 phút ở V1 | 2 | 1 | 2 | Tối ưu L2; đĩa VM đọc ≥ 1 GB/s | Ghi N2a "không đạt", dùng số đo 8 pha chỉ ra pha chậm; cân nhắc warm pool |
 | R7 | Kỹ thuật | Scale-down hoặc rolling update làm lỗi request | Có lỗi ở test graceful shutdown hoặc VH2 ở nhà | 2 | 2 | 4 | `--shutdown-timeout`, preStop, grace period; bước nâng min = 2 khi cập nhật; kiểm thử từ W3 | Tăng preStop; chủ động gỡ pod khỏi Endpoints trước; ghi vào runbook và đo lại |
@@ -349,7 +349,7 @@ Thứ tự cắt: Could → Should, theo [Thông số §5](00-thong-so.md#5-mứ
 |---|---|---|
 | Xanh | Bám theo dự toán từng phiên ([Môi trường §6.1](05-moi-truong-danh-gia.md#61-bảng-phiên)) | Tiếp tục kế hoạch đầy đủ |
 | Vàng | V2 kéo dài quá 24 giờ, hoặc tổng chi đã quá 75 USD | Rà soát; bỏ các lượt Could |
-| Đỏ | Tổng chi quá 100 USD trước V3 | V3 chỉ chạy phần tối thiểu để đủ Must |
+| Đỏ | Tổng chi quá 100 USD trong V2 | Chỉ chạy tiếp phần tối thiểu để đủ Must |
 | Dừng | Chạm trần ở [Thông số §11](00-thong-so.md#11-ngân-sách) | Dừng thuê; phân tích với dữ liệu hiện có; báo GVHD |
 
 ### 9.5. Runbook xử lý sự cố trong phiên đánh giá
@@ -359,7 +359,7 @@ Runbook cho các cảnh báo của nền tảng nằm ở `docs/runbooks/` ([V�
 | Sự cố | Nhận biết | Xử lý ngay | Sau đó |
 |---|---|---|---|
 | Pod vLLM CrashLoopBackOff | Runner thấy pod không Ready sau 15 phút | Xem log (OOM? thiếu `/dev/shm`? sai đường dẫn model?); đánh dấu lượt invalid | Sửa manifest, ghi ADR nếu đổi tham số |
-| Node NotReady / GPU biến mất | `kubectl get nodes`; `nvidia-smi` lỗi | Dừng runner; khởi động lại node; kiểm tra lại năng lực | Chạy lại các lượt bị ảnh hưởng ở cuối phiên (hoặc trên máy mới ở V3) |
+| Node NotReady / GPU biến mất | `kubectl get nodes`; `nvidia-smi` lỗi | Dừng runner; khởi động lại node; kiểm tra lại năng lực | Chạy lại các lượt bị ảnh hưởng ở cuối phiên (hoặc trên máy mới thuê trong cùng cuối tuần) |
 | Prometheus đầy ổ hoặc ngừng scrape | Khoảng trống scrape > 15 s; lỗi ghi | Tăng dung lượng hoặc giảm retention; khởi động lại Prometheus | Lượt bị ảnh hưởng là invalid |
 | Máy tạo tải treo | Không có dòng CSV mới quá 60 s | Runner kill và đánh dấu invalid | Điều tra (hết file descriptor? hết RAM?) |
 | KEDA hoặc HPA không scale | `kubectl get hpa`: `<unknown>` metrics | Kiểm tra PromQL, `serverAddress`, label, NetworkPolicy còn sót từ VH4 | Sửa và chạy lại |
