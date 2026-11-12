@@ -19,11 +19,11 @@
 
 | Việc | Câu hỏi phải trả lời được | Công cụ | Sản phẩm trong repo | Kiểm chứng |
 |---|---|---|---|---|
-| Quan sát | Người dùng có đang được phục vụ tốt không? | Prometheus, Grafana | `observability/rules/`, `observability/dashboards/` | Mọi lượt đánh giá |
-| Cảnh báo | Khi nào cần con người vào cuộc, gấp tới đâu? | Alertmanager, Telegram | `observability/alerts/` | VH6 |
+| Quan sát | Người dùng có đang được phục vụ tốt không? | Prometheus, Grafana | `common/observability/rules/`, `common/observability/dashboards/` | Mọi lượt đánh giá |
+| Cảnh báo | Khi nào cần con người vào cuộc, gấp tới đâu? | Alertmanager, Telegram | `common/observability/alerts/` | VH6 |
 | Xử lý | Nhận cảnh báo xong thì làm gì? | Runbook | `docs/runbooks/` | VH3, VH4, VH6 |
 | Thay đổi | Cập nhật phiên bản thế nào cho an toàn, rollback thế nào? | Git, Argo CD | `serving/`, quy trình §5 | VH1, VH2 |
-| Khôi phục | Mất cả cluster thì dựng lại thế nào, mất bao lâu? | Ansible, Argo CD, Makefile | `infra/`, `platform/` | VH5 |
+| Khôi phục | Mất cả cluster thì dựng lại thế nào, mất bao lâu? | Ansible, Argo CD, Makefile | `ansible/`, `envs/<env>/` | VH5 |
 | Bảo vệ | Ai được gọi API, gọi nhiều tới đâu, bí mật để ở đâu? | vLLM `--api-key`, Traefik, NetworkPolicy, Sealed Secrets (tới 10/11 mới có API key; phần còn lại chưa làm, ADR-006 §3) | `platform/`, `serving/` | Checklist §8 |
 | Chi phí, năng lực | Đang tốn bao nhiêu GPU-giờ? Khi nào cần thêm GPU? | Grafana, recording rule | Dashboard SLO và chi phí | ĐG2 |
 
@@ -51,7 +51,7 @@ Với SLO 95%, ngân sách lỗi là 5% request; với SLO lỗi 99%, ngân sác
 ### 2.3. Recording rule
 
 ```yaml
-# observability/rules/slo.yaml (trích)
+# common/observability/rules/slo.yaml (trích)
 - record: llm:ttft_bad_ratio:rate1m
   expr: |
     (
@@ -84,7 +84,7 @@ Viết `tổng − tốt` chứ không viết `1 − tốt/tổng` là có chủ
 
 ### 3.2. Danh sách cảnh báo
 
-**Sáu cảnh báo bắt buộc** (F6; là 7 quy tắc và 7 runbook, vì `LLMPodNotReady` và `LLMPodCrashLooping` là hai quy tắc riêng trong `observability/alerts/llm.yaml`):
+**Sáu cảnh báo bắt buộc** (F6; là 7 quy tắc và 7 runbook, vì `LLMPodNotReady` và `LLMPodCrashLooping` là hai quy tắc riêng trong `common/observability/alerts/llm.yaml`):
 
 | Cảnh báo | Điều kiện (rút gọn) | Mức | Ý nghĩa |
 |---|---|---|---|
@@ -100,7 +100,7 @@ Viết `tổng − tốt` chứ không viết `1 − tốt/tổng` là có chủ
 ### 3.3. Quy tắc mẫu
 
 ```yaml
-# observability/alerts/llm.yaml (trích)
+# common/observability/alerts/llm.yaml (trích)
 - alert: LLMSLOBurnFast
   expr: |
     llm:ttft_bad_ratio:rate5m > (4 * 0.05)
@@ -249,7 +249,7 @@ Ngược lại, với `maxUnavailable: 1` mà chỉ có **1 replica**, Deploymen
 - Phương án (c) hợp với cluster lớn, nơi một GPU chỉ là phần nhỏ của năng lực.
 
 ```yaml
-# serving/base/deployment.yaml (trích)
+# common/serving/deployment.yaml (trích)
 spec:
   strategy:
     type: RollingUpdate
@@ -308,7 +308,7 @@ spec:
 make rent            → VM trắng (không tính vào thời gian khôi phục)
 make probe           → đo phần cứng, ổ, mạng thật; không đạt thì make release
 make bootstrap       → Ansible: chrony, tắt tự nâng cấp, mirror registry, k3s, GPU; tải sẵn model và image (chạy nền)
-make cloud-platform  → helm: device plugin, kube-prometheus-stack, KEDA, exporter GPU; kustomize: vLLM (overlay cloud-3b)
+make cloud-platform  → helm: device plugin, kube-prometheus-stack, KEDA, exporter GPU; kustomize: vLLM (overlay `envs/cloud/serving`)
 kiểm tra             → gọi API có streaming; dashboard có số liệu; gửi thử một cảnh báo
 ```
 

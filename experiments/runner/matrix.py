@@ -18,7 +18,7 @@ Mục đích: Kiểm tra file ngay khi bắt đầu, báo lỗi rõ ràng, để
       matrix-v2.yaml).
     - `signal` của cấu hình phải là selector của một chuỗi, không phải biểu thức (xem SELECTOR_RE).
 
-Ví dụ một file: experiments/matrix-sim.yaml.
+Ví dụ một file: envs/sim/experiments/matrix.yaml.
 """
 
 from __future__ import annotations

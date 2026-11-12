@@ -173,7 +173,7 @@ B\* và KV\* là số request đồng thời trung bình và mức KV-cache trê
 
 | Tham số | Cloud (GPU 16–24 GB) | Nhà (RTX 5060 8 GB, 2 pod chung card nhờ time-slicing) |
 |---|---|---|
-| Model | `Qwen/Qwen2.5-3B-Instruct` (revision ghim, overlay `cloud-3b`; chốt 08/11 thay 7B, [ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C3: cold start ngắn hơn, vừa GPU 16 GB, rẻ hơn; overlay `cloud` giữ 7B để tham khảo) | `Qwen/Qwen2.5-0.5B-Instruct` (revision ghim; trước 06/11 là 1,5B) |
+| Model | `Qwen/Qwen2.5-3B-Instruct` (revision ghim, overlay `envs/cloud/serving`; chốt 08/11 thay 7B, [ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C3: cold start ngắn hơn, vừa GPU 16 GB, rẻ hơn; overlay `cloud` giữ 7B để tham khảo) | `Qwen/Qwen2.5-0.5B-Instruct` (revision ghim; trước 06/11 là 1,5B) |
 | `--served-model-name` | `qwen2.5-3b` | `qwen2.5-0.5b` |
 | `--max-model-len` | 8192 | 2048 |
 | `--max-num-seqs` | 64 | 16 |
@@ -242,7 +242,7 @@ Máy nhà là **môi trường chức năng**: không dùng số liệu hiệu n
 
 ### 10.2. GPU thuê
 
-**Vast.ai chế độ VM, 4 × RTX A4000 16 GB, thuê trọn máy** ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C2; bản mô tả 3.0 chọn 4 × RTX 4090, nhưng tới 06/11 không có máy 4 × 4090 VM verified ≤ 2 USD/giờ cả máy, còn A4000 đã chạy trọn V0+V1 ngày 08/11). Tiêu chí lọc máy, cũng là mặc định của `make find MODE=v2` (`infra/provision/vast.sh`):
+**Vast.ai chế độ VM, 4 × RTX A4000 16 GB, thuê trọn máy** ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C2; bản mô tả 3.0 chọn 4 × RTX 4090, nhưng tới 06/11 không có máy 4 × 4090 VM verified ≤ 2 USD/giờ cả máy, còn A4000 đã chạy trọn V0+V1 ngày 08/11). Tiêu chí lọc máy, cũng là mặc định của `make find MODE=v2` (`envs/cloud/provision/vast.sh`):
 
 | Tiêu chí | Ngưỡng |
 |---|---|

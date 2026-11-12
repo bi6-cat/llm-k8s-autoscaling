@@ -5,8 +5,8 @@
 #            step theo thứ tự. Job lỗi thì PR hiện dấu đỏ; branch protection chặn merge khi còn đỏ.
 # Mục đích:  Bắt lỗi trước khi merge vào main (nhánh Argo CD đọc): YAML sai, manifest sai schema, rule
 #            Prometheus sai hoặc cảnh báo thiếu test/runbook, code Python lỗi, link tài liệu hỏng.
-#            Chỉ kiểm những gì đã có trên main. Job helm và ansible (Kế hoạch §10.4, w2 §10) thêm khi
-#            platform/ và infra/ lên main; gói Python mới (experiments/, analysis/) thì thêm vào job python.
+#            Chỉ kiểm những gì đã có trên main. Chưa có job helm (values Helm được kiểm khi Argo CD sync
+#            ở nhà); gói Python mới thì thêm vào job python.
 #            Job manifests và docs tự nhận thư mục mới, không phải sửa.
 # Ghim:      File chạy (kubectl, promtool, shellcheck…) tải đúng phiên bản và kiểm sha256 trước khi chạy.
 #            Công cụ Python cài bằng uv: loadgen ghim qua uv.lock; yamllint ghim phiên bản và ngày giải
@@ -164,7 +164,7 @@ jobs:
           # monitoring.coreos.com/prometheusrule_v1.json. `default` = schema của tài nguyên gốc Kubernetes
           # (Deployment, Service…) theo K8S_VERSION. Không tìm được schema thì kubeconform báo lỗi, không bỏ qua.
           crds="https://raw.githubusercontent.com/datreeio/CRDs-catalog/${CRDS_CATALOG_REF}/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json"
-          # Tìm mọi thư mục có kustomization.yaml mà Git đang theo dõi, nên serving/, autoscaling/, platform/
+          # Tìm mọi thư mục có kustomization.yaml mà Git đang theo dõi, nên common/, envs/
           # được kiểm ngay khi lên main. `xargs -r -n1 dirname`: đổi đường dẫn file thành thư mục chứa nó.
           mapfile -t dirs < <(git ls-files '*kustomization.yaml' | xargs -r -n1 dirname | sort -u)
           if [ "${#dirs[@]}" -eq 0 ]; then echo "::error::Không thấy kustomization.yaml nào"; exit 1; fi
@@ -291,13 +291,14 @@ jobs:
       - name: Kiểm link và anchor
         run: |
           set -euo pipefail
-          # Tài liệu (w2.md, Kiến trúc) đã link tới file trong serving/, autoscaling/, platform/, infra/, nhưng
-          # code lên main dần theo từng PR. Chỉ bỏ qua link tới FILE (hoặc thư mục) CHƯA có trên nhánh đang
-          # kiểm: file nào lên main thì link tới nó tự được kiểm lại, không phải sửa file này. Bỏ qua theo
-          # từng file chứ không theo cả thư mục, vì một thư mục có thể mới có một phần (platform/keda/ đã có
-          # mà platform/argocd/ chưa): bỏ qua cả thư mục thì link tới file đã có không được kiểm, còn kiểm cả
-          # thư mục thì link tới file chưa có làm job đỏ.
-          #   grep -rhoE: lấy phần "](<đường dẫn>" của mọi link Markdown trỏ vào 4 thư mục trên
+          # Tài liệu link tới file code. Chỉ bỏ qua link tới FILE (hoặc thư mục) KHÔNG có trên nhánh đang
+          # kiểm, theo từng file chứ không theo cả thư mục (để link tới file có thật vẫn được kiểm). Hai lý do
+          # có link như vậy: (1) code mới được nhắc trong tài liệu trước khi lên main; (2) ngày 12/11/2026 repo
+          # chuyển sang cấu trúc envs/ + common/, còn nhật ký, ADR và hướng dẫn W1, W2 là tư liệu nên giữ
+          # đường dẫn cũ (serving/, autoscaling/, platform/, infra/, observability/).
+          # Lưu ý: cách này cũng bỏ qua một link mới bị gõ sai đường dẫn, nên danh sách "Bỏ qua" in ra bên
+          # dưới phải được soát bằng mắt: trong đó chỉ nên có đường dẫn cũ.
+          #   grep -rhoE: lấy phần "](<đường dẫn>" của mọi link Markdown trỏ vào các thư mục code
           #               (-r đệ quy, -h bỏ tên file, -o chỉ in phần khớp, -E regex mở rộng);
           #   sed: bỏ "](" cùng các "../", "./" ở đầu, còn lại đường dẫn tính từ gốc repo;
           #   ${p%/}: bỏ "/" cuối của link tới thư mục; regex exclude khớp cả khi có "/", "#…" hay "?…" sau đó;
@@ -310,7 +311,7 @@ jobs:
               missing+=("$p")
               skip+=(--exclude "^file://.*/$(printf '%s' "$p" | sed 's/[.]/[.]/g')/?([#?]|$)")
             fi
-          done < <(grep -rhoE '\]\((\.\./|\./)*(serving|autoscaling|platform|infra)(/[^)#? ]*)?' docs ./*.md \
+          done < <(grep -rhoE '\]\((\.\./|\./)*(common|envs|ansible|serving|autoscaling|platform|infra|observability)(/[^)#? ]*)?' docs ./*.md \
                    | sed -E 's#^\]\((\.\./|\./)*##' | sort -u)
           echo "Bỏ qua link tới ${#missing[@]} đường dẫn chưa có trên nhánh:"
           if (( ${#missing[@]} )); then printf '  %s\n' "${missing[@]}"; fi

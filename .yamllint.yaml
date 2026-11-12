@@ -8,7 +8,7 @@
 extends: default                       # bắt đầu từ bộ luật mặc định của yamllint, chỉ nới vài luật dưới đây
 ignore: |
   docs/
-  infra/ansible/roles/*/templates/
+  ansible/roles/*/templates/
 # docs/: chỉ có Markdown. templates/: file Jinja2 (.j2) chứa {{ }}, {% %} nên không phải YAML hợp lệ
 # cho tới khi Ansible điền giá trị.
 rules:

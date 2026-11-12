@@ -13,7 +13,7 @@ Mục đích: Sinh `capacity-*.json` (C, B*, threshold A1–A3, curves) mà runn
 
 Chạy:
     uv run --project experiments python -m experiments.runner.capacity runs/dg1-home-05b \\
-        --out experiments/capacity-home.json
+        --out envs/home/experiments/capacity.json
 """
 
 from __future__ import annotations

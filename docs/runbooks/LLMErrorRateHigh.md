@@ -1,7 +1,7 @@
-<!-- Mục đích: runbook cho cảnh báo LLMErrorRateHigh (observability/alerts/llm.yaml). Mẫu: Vận hành §4.1. -->
+<!-- Mục đích: runbook cho cảnh báo LLMErrorRateHigh (common/observability/alerts/llm.yaml). Mẫu: Vận hành §4.1. -->
 # LLMErrorRateHigh
 
-**Mức:** page · **Quy tắc:** [observability/alerts/llm.yaml](../../observability/alerts/llm.yaml)
+**Mức:** page · **Quy tắc:** [common/observability/alerts/llm.yaml](../../common/observability/alerts/llm.yaml)
 
 **Ý nghĩa.** Trong 5 phút gần nhất, ≥ 1% request tới vLLM bị Traefik trả mã 5xx, kéo dài ít nhất 1 phút (SLO lỗi 99%, [Thông số §6](../chi-tiet/00-thong-so.md#6-slo)).
 

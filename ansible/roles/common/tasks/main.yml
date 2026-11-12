@@ -1,0 +1,131 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# ansible/roles/common/tasks/main.yml
+# Khái niệm: Role = gói task dùng lại được; tasks/main.yml là danh sách task chạy lần lượt.
+#            Mỗi task gọi một module (ansible.builtin.apt, …) và mô tả TRẠNG THÁI MONG MUỐN, không phải
+#            lệnh: module tự kiểm tra, chỉ thay đổi khi máy chưa đúng trạng thái đó (idempotent).
+# Mục đích:  Chuẩn bị hệ điều hành cho Kubernetes: gói cơ bản, tắt swap, tăng giới hạn inotify, mở
+#            cổng firewall, giữ laptop không ngủ khi gập màn hình.
+# Tham khảo: docs/huong-dan/w2.md §3.3
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Tắt tự động nâng cấp gói TRƯỚC mọi việc khác (chỉ VM thuê, biến disable_auto_upgrades).
+# Sự cố 08/11/2026 trên máy Vast đầu tiên: VM vừa bật thì unattended-upgrades nâng cả hệ thống, gồm thư
+# viện driver NVIDIA 580.95 → 580.178, trong khi module kernel đang nạp vẫn là 580.95. Từ đó mọi container
+# GPU lỗi "failed to initialize NVML: Driver/library version mismatch" cho tới khi reboot. Trên V2 điều này
+# làm hỏng cả phiên đo. Đồng thời apt bị khoá suốt lúc nâng cấp nên task apt bên dưới phải chờ.
+#  - Dừng và tắt timer apt-daily (tải danh sách gói), apt-daily-upgrade (chạy nâng cấp) và service.
+#  - Giữ (hold) các gói driver NVIDIA: apt sẽ không đổi phiên bản kể cả khi ai đó chạy `apt upgrade`.
+- name: Tắt tự động nâng cấp gói (VM thuê)
+  ansible.builtin.systemd_service: {name: "{{ item }}", state: stopped, enabled: false}
+  loop: [apt-daily.timer, apt-daily-upgrade.timer, unattended-upgrades.service]
+  when: disable_auto_upgrades | bool
+  failed_when: false                # máy không có service này (image khác) thì bỏ qua
+
+# Nếu một lượt nâng cấp đang chạy dở thì chờ nó xong, không giết giữa chừng (dễ hỏng dpkg).
+# Mẫu '[/]usr/…' thay vì '/usr/…': `pgrep -f` so với cả dòng lệnh, mà dòng lệnh của chính shell này chứa
+# mẫu tìm, nên mẫu thường luôn khớp chính nó và task chờ đủ 15 phút rồi lỗi (gặp 08/11 trên máy thứ hai).
+# '[/]' khớp ký tự '/' trong tên tiến trình thật, nhưng chuỗi "[/]usr" trong dòng lệnh shell thì không.
+- name: Chờ lượt nâng cấp đang chạy (nếu có) kết thúc
+  ansible.builtin.shell: |
+    for i in $(seq 1 180); do pgrep -f '[/]usr/bin/unattended-upgrade' >/dev/null || exit 0; sleep 5; done
+    echo "unattended-upgrade vẫn chạy sau 15 phút" >&2; exit 1
+  when: disable_auto_upgrades | bool
+  changed_when: false
+
+- name: Giữ phiên bản các gói driver NVIDIA
+  ansible.builtin.shell: |
+    # Chỉ lấy gói ĐÃ CÀI (trạng thái "ii"): mẫu 'nvidia-*' còn khớp cả gói ảo chưa cài, và apt-mark hold
+    # báo lỗi với gói đó (gặp 08/11). Bỏ toolkit: role nvidia cần cài/nâng nó bên dưới.
+    pk=$(dpkg-query -W -f='${db:Status-Abbrev} ${Package}\n' 'nvidia-*' 'libnvidia-*' 2>/dev/null \
+         | awk '$1 == "ii" {print $2}' | grep -v toolkit)
+    [ -z "$pk" ] && exit 0
+    before=$(apt-mark showhold | sort); apt-mark hold $pk >/dev/null; after=$(apt-mark showhold | sort)
+    [ "$before" = "$after" ] || echo changed
+  register: nvidia_hold
+  changed_when: "'changed' in nvidia_hold.stdout"
+  when: disable_auto_upgrades | bool
+
+# curl, jq, gnupg: script cài đặt cần. chrony: đồng bộ giờ, để mốc thời gian giữa các node (log, metric)
+# so được với nhau. fio: đo tốc độ đọc ổ đĩa (cold start, V0).
+- name: Gói cơ bản
+  ansible.builtin.apt:
+    name: [curl, jq, ca-certificates, gnupg, chrony, fio]
+    update_cache: true
+    cache_valid_time: 3600          # chỉ `apt update` lại nếu lần trước đã quá 1 giờ: chạy lại nhanh hơn
+
+# kubelet mặc định từ chối chạy khi có swap: bộ nhớ swap làm giới hạn RAM của pod mất ý nghĩa.
+# `command` không biết trạng thái nên phải tự khai báo: chỉ chạy khi đang có swap (`when`), và luôn báo
+# "changed" khi đã chạy (`changed_when: true`).
+- name: Tắt swap ngay
+  ansible.builtin.command: swapoff -a
+  when: ansible_swaptotal_mb > 0
+  changed_when: true
+
+# swapoff chỉ có tác dụng tới lần khởi động lại. Comment dòng swap trong /etc/fstab để tắt hẳn.
+# Regex: dòng KHÔNG bắt đầu bằng # (`^[^#]`) và có chữ " swap " → thêm "# " vào đầu dòng (\1 = cả dòng).
+- name: Tắt swap vĩnh viễn (comment dòng swap trong fstab)
+  ansible.builtin.replace:
+    path: /etc/fstab
+    regexp: '^([^#].*\sswap\s.*)$'
+    replace: '# \1'
+
+# inotify = cơ chế Linux báo khi file thay đổi. Prometheus, sidecar của Grafana và kubelet theo dõi rất
+# nhiều file; giới hạn mặc định của Ubuntu thấp, hết thì pod lỗi "too many open files".
+# sysctl_file: ghi vào file riêng để còn hiệu lực sau khi khởi động lại.
+- name: Giới hạn inotify đủ cho nhiều pod (Prometheus, Grafana sidecar, kubelet)
+  ansible.posix.sysctl:
+    name: "{{ item.k }}"
+    value: "{{ item.v }}"
+    sysctl_file: /etc/sysctl.d/90-k8s.conf
+  loop:                             # chạy task một lần cho mỗi phần tử; `item` là phần tử hiện tại
+    - {k: fs.inotify.max_user_instances, v: "1024"}
+    - {k: fs.inotify.max_user_watches, v: "524288"}
+
+# Laptop là node agent: gập màn hình mà máy ngủ thì node "NotReady" và pod vLLM trên đó chết.
+# `block` = nhóm nhiều task dùng chung một điều kiện `when`.
+- name: Laptop không ngủ khi gập máy
+  when: is_laptop | bool
+  block:
+    # systemd-logind quyết định làm gì khi gập nắp. Đặt cả 3 trường hợp (pin, cắm sạc, cắm dock) = ignore.
+    # regexp "^#?Key=" khớp cả dòng đang bị comment; lineinfile thay đúng dòng đó thay vì thêm dòng mới.
+    - name: logind bỏ qua nắp máy
+      ansible.builtin.lineinfile:
+        path: /etc/systemd/logind.conf
+        regexp: "^#?{{ item }}="
+        line: "{{ item }}=ignore"
+      loop: [HandleLidSwitch, HandleLidSwitchExternalPower, HandleLidSwitchDocked]
+      notify: Restart logind        # chỉ restart logind nếu file thực sự đổi (xem handlers/main.yml)
+    # "mask" = khoá hẳn unit, không gì kích hoạt được (kể cả nút nguồn hay hết thời gian chờ)
+    - name: Chặn các chế độ ngủ
+      ansible.builtin.systemd_service:
+        name: "{{ item }}"
+        masked: true
+      loop: [sleep.target, suspend.target, hibernate.target, hybrid-sleep.target]
+
+# Chỉ đọc trạng thái ufw để quyết định task sau. failed_when: false = máy không có ufw cũng không lỗi.
+- name: Xem ufw có bật không
+  ansible.builtin.command: ufw status
+  register: ufw_status              # lưu kết quả (stdout, rc…) vào biến ufw_status
+  changed_when: false               # lệnh chỉ đọc, không bao giờ coi là "đã thay đổi"
+  failed_when: false
+
+# Nếu firewall ufw đang bật thì phải mở các cổng node cần để nói chuyện với nhau trong LAN.
+- name: Mở cổng k3s trong LAN (chỉ khi ufw đang bật)
+  community.general.ufw:
+    rule: allow
+    port: "{{ item.port }}"
+    proto: "{{ item.proto }}"
+  loop:
+    - {port: "6443", proto: tcp}    # API server: agent và kubectl gọi vào
+    - {port: "10250", proto: tcp}   # kubelet: API server gọi xuống để lấy log, exec, metrics
+    - {port: "8472", proto: udp}    # flannel VXLAN: mạng pod giữa các node
+  when: "'Status: active' in ufw_status.stdout"
+
+# Trên VM thuê: một thư mục cache trên ổ NVMe, mount vào pod vLLM (envs/cloud/serving) chứa cả
+# model (hf/) lẫn compile cache (vllm/). Nằm trên NVMe để nạp model nhanh (mức L2).
+- name: Thư mục cache model trên VM thuê
+  ansible.builtin.file:
+    path: /mnt/nvme/cache
+    state: directory
+    mode: "0755"
+  when: env_name == 'cloud'

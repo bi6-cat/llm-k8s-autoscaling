@@ -2,9 +2,10 @@
 
 Ví dụ:
     # Xem trước danh sách lượt, không đụng cluster
-    uv run --project experiments python -m experiments.runner --matrix experiments/matrix-sim.yaml --dry-run
+    uv run --project experiments python -m experiments.runner \\
+        --matrix envs/sim/experiments/matrix.yaml --dry-run
     # Chạy phiên trên kind (context kind-llm-sim); bị ngắt thì chạy lại đúng lệnh này để chạy tiếp
-    uv run --project experiments python -m experiments.runner --matrix experiments/matrix-sim.yaml \\
+    uv run --project experiments python -m experiments.runner --matrix envs/sim/experiments/matrix.yaml \\
         --context kind-llm-sim
     # Chỉ chạy một lượt
     ... --only A2-CONST2-1

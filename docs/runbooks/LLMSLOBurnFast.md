@@ -1,7 +1,7 @@
-<!-- Mục đích: runbook cho cảnh báo LLMSLOBurnFast (observability/alerts/llm.yaml). Mẫu: Vận hành §4.1. -->
+<!-- Mục đích: runbook cho cảnh báo LLMSLOBurnFast (common/observability/alerts/llm.yaml). Mẫu: Vận hành §4.1. -->
 # LLMSLOBurnFast
 
-**Mức:** page · **Quy tắc:** [observability/alerts/llm.yaml](../../observability/alerts/llm.yaml)
+**Mức:** page · **Quy tắc:** [common/observability/alerts/llm.yaml](../../common/observability/alerts/llm.yaml)
 
 **Ý nghĩa.** Trong cả 5 phút và 1 phút gần nhất, hơn 20% request phải chờ token đầu tiên lâu hơn 2,5 s (burn rate ≥ 4 so với SLO 95%, [Thông số §6](../chi-tiet/00-thong-so.md#6-slo)).
 

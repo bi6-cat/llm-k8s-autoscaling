@@ -1,0 +1,20 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# envs/cloud/serving/kustomization.yaml
+# Khái niệm: Overlay `cloud` = manifest vLLM chung (common/serving) + patch cho VM thuê trên Vast.ai
+#            (4 × RTX A4000 16 GB, model Qwen2.5-3B).
+# Mục đích:  Đây là cấu hình chạy ở phiên đánh giá V2 (ADR-006 C2, C3). VM thuê không chạy Argo CD
+#            (ADR-006 §3.1): `make cloud-platform` render thư mục này trên máy dev rồi apply trên VM.
+#            Trước 12/11 có hai overlay `cloud` (7B, GPU 24 GB) và `cloud-3b` chồng lên nó; nay gộp làm
+#            một vì 7B không dùng nữa (bản 7B còn trong lịch sử Git, trước commit tái cấu trúc 12/11).
+# Dùng:      kubectl kustomize envs/cloud/serving     (xem kết quả)
+#            make cloud-platform                      (render + apply trên VM đang thuê)
+# Tham khảo: Thông số §9.1; ADR-006 C2, C3; envs/cloud/README.md
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../../common/serving            # manifest vLLM dùng chung mọi môi trường
+patches:
+  # Áp patch-vllm.yaml (JSON patch) lên đúng Deployment tên vllm
+  - path: patch-vllm.yaml
+    target: {kind: Deployment, name: vllm}

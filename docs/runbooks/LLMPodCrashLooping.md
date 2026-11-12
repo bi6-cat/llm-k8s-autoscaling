@@ -1,7 +1,7 @@
-<!-- Mục đích: runbook cho cảnh báo LLMPodCrashLooping (observability/alerts/llm.yaml). Mẫu: Vận hành §4.1. -->
+<!-- Mục đích: runbook cho cảnh báo LLMPodCrashLooping (common/observability/alerts/llm.yaml). Mẫu: Vận hành §4.1. -->
 # LLMPodCrashLooping
 
-**Mức:** page · **Quy tắc:** [observability/alerts/llm.yaml](../../observability/alerts/llm.yaml)
+**Mức:** page · **Quy tắc:** [common/observability/alerts/llm.yaml](../../common/observability/alerts/llm.yaml)
 
 **Ý nghĩa.** Container vLLM liên tục thoát với lỗi rồi bị khởi động lại (CrashLoopBackOff) hơn 5 phút. Kubernetes chờ lâu dần giữa các lần thử (10 s, 20 s, 40 s… tối đa 5 phút).
 

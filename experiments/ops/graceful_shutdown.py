@@ -174,7 +174,7 @@ def control_manifest(kube: Kube, repo: Path, grace_s: int | None = None) -> str:
     """Sinh Deployment + Service đối chứng từ overlay home (luôn khớp cấu hình trong Git), chỉ đổi 3 thứ:
     tên/nhãn, bỏ preStop, --shutdown-timeout=0. safe_load_all đọc từng object trong YAML nhiều tài liệu
     (ngăn bởi `---`) mà kustomize in ra."""
-    rendered = kube.run("kustomize", str(repo / "serving/overlays/home")).stdout
+    rendered = kube.run("kustomize", str(repo / "envs/home/serving")).stdout
     out = []
     for o in yaml.safe_load_all(rendered):
         if not o:

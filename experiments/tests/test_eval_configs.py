@@ -1,4 +1,4 @@
-"""Kiểm các file cấu hình đánh giá autoscaling/eval/<ID>.yaml theo hợp đồng với runner (Kế hoạch §6).
+"""Kiểm các file cấu hình đánh giá common/autoscaling/eval/<ID>.yaml theo hợp đồng với runner (Kế hoạch §6).
 
 Khái niệm:
     Runner đọc từng file eval như một ScaledObject đơn rồi ghi đè threshold, max replica
@@ -24,8 +24,8 @@ import yaml
 from experiments.runner import configs
 
 REPO = Path(__file__).resolve().parents[2]
-EVAL_DIR = REPO / "autoscaling" / "eval"
-A2_FILE = REPO / "autoscaling" / "official" / "base" / "scaledobject-a2.yaml"
+EVAL_DIR = REPO / "common" / "autoscaling" / "eval"
+A2_FILE = REPO / "common" / "autoscaling" / "a2" / "scaledobject-a2.yaml"
 EVAL_FILES = sorted(EVAL_DIR.glob("A*.yaml"))
 
 
@@ -80,6 +80,6 @@ def test_eval_kustomization_lists_every_file():
 def test_a1_smooths_single_gpu_samples():
     # V1 (08/11): một mẫu 100 % của GPU pod đang tắt giữ A1 ở 2 replica suốt cửa sổ ổn định 300 s
     # (Kiến trúc §13). Trung bình trên từng GPU phải đứng TRONG sum(), nếu không mẫu đơn lẻ vẫn lọt.
-    doc = yaml.safe_load((REPO / "autoscaling" / "eval" / "A1.yaml").read_text(encoding="utf-8"))
+    doc = yaml.safe_load((EVAL_DIR / "A1.yaml").read_text(encoding="utf-8"))
     query = doc["spec"]["triggers"][0]["metadata"]["query"]
     assert "sum(avg_over_time(nvidia_smi_utilization_gpu_ratio[15s]))" in query
