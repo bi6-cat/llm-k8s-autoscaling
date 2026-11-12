@@ -5,48 +5,70 @@
 
 ## 1. Thư mục
 
+Repo chia theo hai câu hỏi: **chạy ở đâu** (`envs/<env>/`, mỗi môi trường một thư mục, có README hướng dẫn chạy) và **chạy cái gì** (`common/`, manifest và cấu hình giống nhau ở mọi môi trường). Thư mục môi trường chỉ chứa phần khác biệt, chồng lên `common/` bằng Kustomize overlay hoặc file values Helm thứ hai.
+
 ```text
 llm-k8s-autoscaling/
+├── README.md                     # bắt đầu từ đây: dự án là gì, chạy ở đâu
 ├── AGENTS.md, CLAUDE.md          # quy tắc cho AI agent (gồm ghi nhật ký)
-├── Makefile                      # mọi thao tác vận hành: `make help`
-├── infra/
-│   ├── ansible/                  # site.yml, inventory/, roles/<role>/{tasks,handlers,templates}/
-│   ├── kind/                     # cluster simulator trên laptop
-│   └── provision/                # script thuê/huỷ VM; CHỈ nơi này phụ thuộc nhà cung cấp
-├── platform/                     # thành phần nền (Helm values, kustomize) do Argo CD quản lý
-│   ├── argocd/                   # root-app-<env>.yaml, apps/<env>/<thành phần>.yaml
-│   └── <thành phần>/             # gpu/, keda/, kube-prometheus-stack/, sealed-secrets/ (W4) …
-├── serving/{base, overlays/{home,cloud,cloud-3b,sim}}/   # vLLM; cloud-3b = cloud với model 3B (đang thử)
-├── autoscaling/
-│   ├── official/{base, overlays/<env>}/           # A2 chính thức (Argo CD quản lý)
-│   ├── eval/<ID>.yaml                             # cấu hình đánh giá A1, A3, A4 (runner áp; A2 dùng official/base)
-│   └── tests/                                     # tải, NetworkPolicy cho T1–T7
-├── observability/{rules, alerts{,/tests}, dashboards}/
-├── loadgen/                      # gói Python: loadgen/<module>.py, tests/
-├── experiments/                  # runner/, ops/ (VH2–VH4), matrix.yaml, capacity.yaml
-├── analysis/                     # build_tables.py, tests/, notebooks/ (khám phá), figures/ (hình cho luận văn)
+├── Makefile                      # mọi thao tác: `make help` (chia nhóm theo môi trường)
+├── envs/                         # ── CHẠY Ở ĐÂU ──
+│   ├── home/                     # PC RTX 5060 8 GB, k3s + Argo CD: demo ở nhà
+│   │   ├── README.md             # dựng và chạy demo ở nhà
+│   │   ├── argocd/               # root-app.yaml, project-default.yaml, apps/<thành phần>.yaml
+│   │   ├── serving/              # overlay vLLM: model 0,5B, 2 GPU replica time-slicing, Ingress
+│   │   ├── platform/             # values Helm riêng của nhà (device plugin, kube-prometheus-stack)
+│   │   └── experiments/          # ma trận và capacity đo ở nhà
+│   ├── cloud/                    # VM Vast.ai 4 × RTX A4000 16 GB: phiên đánh giá V2
+│   │   ├── README.md             # thuê, dựng, chạy V2, trả máy
+│   │   ├── provision/            # vast.sh, probe.sh, install-platform.sh, vh5.sh, llm-runner.service;
+│   │   │                         #   CHỈ nơi này phụ thuộc nhà cung cấp
+│   │   ├── serving/              # overlay vLLM: model 3B, QoS Guaranteed, cache NVMe
+│   │   └── experiments/          # matrix-v2.yaml (V2), matrix-dg1.yaml (ĐG1), matrix-v1.yaml (V1, lưu lại)
+│   └── sim/                      # kind + llm-d-inference-sim trên laptop, không cần GPU
+│       ├── README.md
+│       ├── kind-config.yaml
+│       ├── serving/, autoscaling/  # overlay simulator, A2 với ngưỡng của simulator
+│       ├── platform/             # values kube-prometheus-stack nhẹ cho kind
+│       ├── tests/                # T1–T5: run-t1-t5.sh, load-sim.sh
+│       └── experiments/          # matrix.yaml
+├── common/                       # ── CHẠY CÁI GÌ (dùng chung) ──
+│   ├── serving/                  # Deployment vLLM, Service, PodMonitor (Kustomize base)
+│   ├── autoscaling/
+│   │   ├── a2/                   # A2 chính thức (KEDA ScaledObject theo số request đang chạy)
+│   │   ├── eval/<ID>.yaml        # cấu hình chỉ dùng khi đánh giá: A1, A3, A4 (runner áp)
+│   │   └── tests/                # NetworkPolicy chặn KEDA → Prometheus (T4, VH4)
+│   ├── observability/            # rules/, alerts/{,tests/}, dashboards/
+│   └── platform/                 # values Helm chung, gpu-exporter/, kube-prometheus-stack-extras/
+├── ansible/                      # dựng k3s từ máy trắng: site.yml, inventory/, roles/ (dùng cho home và cloud)
+├── loadgen/                      # gói Python: máy tạo tải
+├── experiments/                  # gói Python: runner/ (chạy ma trận), ops/ (kịch bản VH2–VH4), tests/
 ├── runs/                         # (gitignore) dữ liệu thô của các lượt chạy
 └── docs/
-    ├── chi-tiet/, huong-dan/     # thiết kế; hướng dẫn theo tuần
+    ├── mo-ta-chi-tiet-do-an.md   # bản mô tả tổng; chi-tiet/ là thiết kế chi tiết
+    ├── bao-cao/                  # báo cáo kỹ thuật HTML cho người không trực tiếp làm
+    ├── huong-dan/                # hướng dẫn theo tuần (W1, W2: tư liệu, đường dẫn cũ)
     ├── adr/NNN-<ten>.md          # quyết định kiến trúc
     ├── runbooks/<TênCảnhBáo>.md  # mỗi cảnh báo một file
     ├── nhat-ky/                  # tuan-XX.md (họp), van-hanh.md, lam-viec/<người>/ (cá nhân)
     └── phien-ban.md              # bảng ghim phiên bản duy nhất
 ```
 
+Cấu trúc này có từ 12/11/2026. Trước đó repo chia theo thành phần (`serving/overlays/<env>`, `platform/`, `infra/`…); nhật ký, ADR và hướng dẫn W1, W2 viết trước ngày đó vẫn dùng đường dẫn cũ và được giữ nguyên.
+
 **Đặt file mới ở đâu**
 
 | Loại | Chỗ đặt |
 |---|---|
-| Manifest chạy trên cluster của ứng dụng | `serving/` hoặc `autoscaling/`, có `base/` + `overlays/<env>/` |
-| Thành phần nền cài bằng Helm | `platform/<thành phần>/values*.yaml` + một Application trong `platform/argocd/apps/<env>/` |
-| Cấu hình chỉ dùng khi đánh giá | `autoscaling/eval/` hoặc `experiments/` (không để Argo CD quản lý) |
-| Script vận hành một lần | `experiments/ops/` (kịch bản VH) hoặc `infra/provision/` (máy thuê); gọi qua `make` |
-| Hình cho luận văn | `analysis/figures/` (sinh từ code), `docs/images/` (sơ đồ) |
+| Manifest giống nhau ở mọi môi trường | `common/<thành phần>/` (Kustomize base) |
+| Phần khác biệt của một môi trường | `envs/<env>/<thành phần>/` (overlay trỏ về `../../../common/<thành phần>`, chỉ chứa patch) |
+| Thành phần nền cài bằng Helm | values chung `common/platform/<tên>-values.yaml`, values riêng `envs/<env>/platform/<tên>-values.yaml`, và (ở nhà) một Application trong `envs/home/argocd/apps/` |
+| Cấu hình chỉ dùng khi đánh giá | `common/autoscaling/eval/` hoặc `envs/<env>/experiments/` (không để Argo CD quản lý) |
+| Script vận hành một lần | `experiments/ops/` (kịch bản VH) hoặc `envs/cloud/provision/` (máy thuê); gọi qua `make` |
+| Hình cho luận văn | `docs/images/` (sinh từ `docs/diagrams/`) |
 
-Môi trường (`<env>`) chỉ có ba giá trị: `home` (PC + laptop), `cloud` (VM thuê), `sim` (kind + simulator).
-Ngoại lệ: `serving/overlays/cloud-3b` là biến thể model của `cloud` (cùng VM thuê, model Qwen2.5-3B), đặt ngang hàng vì kustomize không cho overlay con nằm trong thư mục overlay cha.
-Tên file và thư mục: chữ thường, nối bằng `-`, không dấu (`scaledobject-a2.yaml`). Ngoại lệ: runbook đặt đúng tên cảnh báo; module Python dùng `_`.
+Môi trường (`<env>`) chỉ có ba giá trị: `home` (PC ở nhà), `cloud` (VM thuê), `sim` (kind + simulator).
+Tên file và thư mục: chữ thường, nối bằng `-`, không dấu (`scaledobject-a2.yaml`). Ngoại lệ: runbook đặt đúng tên cảnh báo; module Python dùng `_`; cấu hình đánh giá đặt theo mã (`A1.yaml`).
 
 ## 2. Quy tắc chung
 
@@ -71,7 +93,7 @@ Tên file và thư mục: chữ thường, nối bằng `-`, không dấu (`scal
   - **Cái bẫy đã gặp:** ghi lại ngay tại chỗ (`# Lưu ý: thiếu label release thì Prometheus không thấy PodMonitor`).
   - Không viết comment thừa kiểu `i += 1  # tăng i`. Sửa code thì sửa comment theo; comment sai còn tệ hơn không có comment.
 - **Ghim phiên bản:** image theo digest, chart theo version, model theo revision, Python bằng lockfile. Mỗi lần đổi phiên bản phải sửa cả `docs/phien-ban.md` trong cùng PR.
-- **Bí mật:** không bao giờ commit. Dùng Sealed Secrets; giá trị cục bộ để trong `.env` (mẫu ở `.env.example`).
+- **Bí mật:** không bao giờ commit. Giá trị cục bộ để trong `.env` (mẫu ở `.env.example`, đã gitignore); Secret tạo tay từ đó. Sealed Secrets đã lược (ADR-006 §3.1).
 - Không sửa tay trên cluster những thứ Argo CD quản lý. Mọi thay đổi đi qua Git; selfHeal sẽ ghi đè thay đổi sửa tay.
 
 ## 3. YAML và Kubernetes
@@ -82,14 +104,14 @@ Tên file và thư mục: chữ thường, nối bằng `-`, không dấu (`scal
 - Nhãn chung: `app: <tên>`. Ví dụ Deployment vLLM tên `vllm`, nhãn `app: vllm`.
 - **Deployment không có `replicas`**, để HPA của KEDA quản lý mà không tranh với Argo CD.
 - Image khai báo không kèm tag trong manifest; tag và digest ghim ở `images:` của `kustomization.yaml`.
-- ScaledObject đặt tên `vllm-<id>` (`vllm-a2`). Mỗi cấu hình đánh giá là một file `autoscaling/eval/<ID>.yaml`, trừ A2 (runner dùng thẳng `official/base`) và S1, S4 (không có ScaledObject).
-- Overlay chỉ chứa phần khác biệt (patch). Thứ gì giống nhau ở mọi môi trường thì đưa lên `base/`.
+- ScaledObject đặt tên `vllm-<id>` (`vllm-a2`). Mỗi cấu hình đánh giá là một file `common/autoscaling/eval/<ID>.yaml`, trừ A2 (runner dùng thẳng `common/autoscaling/a2`) và S1, S4 (không có ScaledObject).
+- Overlay chỉ chứa phần khác biệt (patch). Thứ gì giống nhau ở mọi môi trường thì đưa lên `common/`.
 
 ## 4. Prometheus, cảnh báo, dashboard
 
 - Recording rule đặt tên theo dạng `level:metric:operation`, ví dụ `llm:ttft_bad_ratio:rate5m`.
 - Cảnh báo đặt tên PascalCase có tiền tố (`LLM…`, `Keda…`). Bắt buộc có nhãn `severity: page|ticket` và annotation `runbook_url`.
-- Mỗi cảnh báo bắt buộc có **ba thứ trong cùng PR**: quy tắc trong `observability/alerts/`, unit test trong `alerts/tests/` (`promtool test rules`) và runbook `docs/runbooks/<TênCảnhBáo>.md` theo mẫu ở [Vận hành §4.2](docs/chi-tiet/04-van-hanh.md#42-ví-dụ-llmsloburnfast).
+- Mỗi cảnh báo bắt buộc có **ba thứ trong cùng PR**: quy tắc trong `common/observability/alerts/`, unit test trong `alerts/tests/` (`promtool test rules`) và runbook `docs/runbooks/<TênCảnhBáo>.md` theo mẫu ở [Vận hành §4.2](docs/chi-tiet/04-van-hanh.md#42-ví-dụ-llmsloburnfast).
 - ScaledObject dùng biểu thức PromQL gốc, không dùng recording rule, vì recording rule thêm một chu kỳ trễ.
 - Dashboard lưu ở dạng JSON đã export, bỏ `id` và đặt `uid` cố định.
 
@@ -116,5 +138,5 @@ Tên file và thư mục: chữ thường, nối bằng `-`, không dấu (`scal
 - **Trước khi mở PR**, chạy:
   - `make lint` (yamllint, kustomize build, ansible syntax-check);
   - `pytest` và `ruff check` với gói Python đã sửa;
-  - `promtool check rules` và `promtool test rules` nếu có sửa `observability/`.
+  - `promtool check rules` và `promtool test rules` nếu có sửa `common/observability/`.
 - **Nhật ký:** PR nào cũng kèm mục nhật ký cá nhân tương ứng ([AGENTS.md](AGENTS.md)).
