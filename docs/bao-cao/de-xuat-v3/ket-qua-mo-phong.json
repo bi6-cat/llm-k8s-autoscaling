@@ -1,0 +1,202 @@
+{
+ "A2-KB1": {
+  "slo": 1.0,
+  "gpu_h": 0.2,
+  "rej": 0.0,
+  "slo_adm": 1.0,
+  "slo_min": 1.0,
+  "slo_max": 1.0
+ },
+ "A2jsq-KB1": {
+  "slo": 1.0,
+  "gpu_h": 0.2,
+  "rej": 0.0,
+  "slo_adm": 1.0,
+  "slo_min": 1.0,
+  "slo_max": 1.0
+ },
+ "A3-KB1": {
+  "slo": 1.0,
+  "gpu_h": 0.3108,
+  "rej": 0.0,
+  "slo_adm": 1.0,
+  "slo_min": 1.0,
+  "slo_max": 1.0
+ },
+ "A3jsq-KB1": {
+  "slo": 1.0,
+  "gpu_h": 0.3998,
+  "rej": 0.0,
+  "slo_adm": 1.0,
+  "slo_min": 1.0,
+  "slo_max": 1.0
+ },
+ "A3jsqshed-KB1": {
+  "slo": 1.0,
+  "gpu_h": 0.3998,
+  "rej": 0.0,
+  "slo_adm": 1.0,
+  "slo_min": 1.0,
+  "slo_max": 1.0
+ },
+ "A2-KB2": {
+  "slo": 0.7188,
+  "gpu_h": 1.2924,
+  "rej": 0.0,
+  "slo_adm": 0.7188,
+  "slo_min": 0.7082,
+  "slo_max": 0.7324
+ },
+ "A2jsq-KB2": {
+  "slo": 0.8355,
+  "gpu_h": 1.3106,
+  "rej": 0.0,
+  "slo_adm": 0.8355,
+  "slo_min": 0.8317,
+  "slo_max": 0.8399
+ },
+ "A3-KB2": {
+  "slo": 0.7968,
+  "gpu_h": 1.345,
+  "rej": 0.0,
+  "slo_adm": 0.7968,
+  "slo_min": 0.7134,
+  "slo_max": 0.9987
+ },
+ "A3jsq-KB2": {
+  "slo": 0.8843,
+  "gpu_h": 1.4142,
+  "rej": 0.0,
+  "slo_adm": 0.8843,
+  "slo_min": 0.7918,
+  "slo_max": 1.0
+ },
+ "A3jsqshed-KB2": {
+  "slo": 0.9402,
+  "gpu_h": 1.4126,
+  "rej": 0.0361,
+  "slo_adm": 0.9748,
+  "slo_min": 0.8639,
+  "slo_max": 1.0
+ },
+ "A2-KB3": {
+  "slo": 0.8884,
+  "gpu_h": 1.0466,
+  "rej": 0.0,
+  "slo_adm": 0.8884,
+  "slo_min": 0.8735,
+  "slo_max": 0.9121
+ },
+ "A2jsq-KB3": {
+  "slo": 0.8972,
+  "gpu_h": 1.0482,
+  "rej": 0.0,
+  "slo_adm": 0.8972,
+  "slo_min": 0.8891,
+  "slo_max": 0.9159
+ },
+ "A3-KB3": {
+  "slo": 0.9619,
+  "gpu_h": 1.0838,
+  "rej": 0.0,
+  "slo_adm": 0.9619,
+  "slo_min": 0.9475,
+  "slo_max": 0.9708
+ },
+ "A3jsq-KB3": {
+  "slo": 0.9703,
+  "gpu_h": 1.093,
+  "rej": 0.0,
+  "slo_adm": 0.9703,
+  "slo_min": 0.9434,
+  "slo_max": 0.983
+ },
+ "A3jsqshed-KB3": {
+  "slo": 0.9882,
+  "gpu_h": 1.093,
+  "rej": 0.0062,
+  "slo_adm": 0.9944,
+  "slo_min": 0.9833,
+  "slo_max": 0.99
+ },
+ "S4-4C": {
+  "slo": 0.9857,
+  "gpu_h": 1.133,
+  "rej": 0.0,
+  "slo_adm": 0.9857,
+  "slo_min": 0.9729,
+  "slo_max": 0.9945
+ },
+ "S4shed-4C": {
+  "slo": 0.9944,
+  "gpu_h": 1.133,
+  "rej": 0.0018,
+  "slo_adm": 0.9962,
+  "slo_min": 0.9894,
+  "slo_max": 0.9972
+ },
+ "A2-4C": {
+  "slo": 0.7263,
+  "gpu_h": 1.0556,
+  "rej": 0.0,
+  "slo_adm": 0.7263,
+  "slo_min": 0.6631,
+  "slo_max": 0.7888
+ },
+ "A2shed-4C": {
+  "slo": 0.8945,
+  "gpu_h": 1.0072,
+  "rej": 0.061,
+  "slo_adm": 0.9526,
+  "slo_min": 0.8846,
+  "slo_max": 0.9054
+ },
+ "A3jsqshed-4C": {
+  "slo": 0.9798,
+  "gpu_h": 1.0992,
+  "rej": 0.0117,
+  "slo_adm": 0.9914,
+  "slo_min": 0.9785,
+  "slo_max": 0.9822
+ },
+ "S4-5C": {
+  "slo": 0.1868,
+  "gpu_h": 1.133,
+  "rej": 0.0,
+  "slo_adm": 0.1868,
+  "slo_min": 0.1798,
+  "slo_max": 0.2023
+ },
+ "S4shed-5C": {
+  "slo": 0.7825,
+  "gpu_h": 1.133,
+  "rej": 0.0926,
+  "slo_adm": 0.8624,
+  "slo_min": 0.7721,
+  "slo_max": 0.7907
+ },
+ "A2-5C": {
+  "slo": 0.0778,
+  "gpu_h": 1.0708,
+  "rej": 0.0,
+  "slo_adm": 0.0778,
+  "slo_min": 0.0615,
+  "slo_max": 0.0962
+ },
+ "A2shed-5C": {
+  "slo": 0.6751,
+  "gpu_h": 1.0172,
+  "rej": 0.1642,
+  "slo_adm": 0.8077,
+  "slo_min": 0.6685,
+  "slo_max": 0.6908
+ },
+ "A3jsqshed-5C": {
+  "slo": 0.592,
+  "gpu_h": 1.1064,
+  "rej": 0.1057,
+  "slo_adm": 0.662,
+  "slo_min": 0.565,
+  "slo_max": 0.6221
+ }
+}

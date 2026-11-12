@@ -116,3 +116,20 @@
 - **Deviations:** CONTRIBUTING §1 đổi từ chia theo thành phần sang chia theo môi trường; overlay 7B mà ADR-006 C3 ghi "giữ tham khảo" đã xoá (còn trong lịch sử Git).
 - **Links:** nhánh `refactor/split-home-cloud`; `CONTRIBUTING.md`, `envs/*/README.md`, `docs/bao-cao/`.
 - **Thesis:** §3–§4 (cấu trúc repo, ba môi trường); §5 (mô phỏng có hiệu chỉnh, chỉ dùng làm ước lượng); Hướng phát triển (lý thuyết hàng đợi, autoscaling dự báo, JSQ).
+
+## 2026-11-13 – Tờ trình nâng cấp V3 trên cloud (chờ duyệt)
+
+- **Task:** chung · **Environment:** none (mô phỏng trên laptop)
+- **Done:**
+  1. Quang quyết định từ nay chỉ tập trung cloud và yêu cầu nghiên cứu nâng cấp để có thêm phần làm và demo. Nghiên cứu hệ sinh thái: Gateway API Inference Extension (endpoint picker, nay ở llm-d), vLLM production-stack router, NVIDIA Dynamo SLA planner, AIBrix, sleep mode của vLLM, Run:ai streamer, bài MLSys 2026 "Breaking the Ice" về cold start, trace Azure 2024 và BurstGPT. Kiểm mã nguồn vLLM v0.31.0: có `max_num_queued_reqs` (quá giới hạn trả 503).
+  2. Phân rã cold start 152 s (log 08/11): lập lịch + probe 9 s, import Python + khởi tạo engine 77 s, nạp weights 11 s, torch.compile 27 s, CUDA graph + KV-cache + warmup 28 s → tăng tốc nạp model gần như không rút được cold start.
+  3. Mở rộng mô phỏng (`docs/bao-cao/de-xuat-v3/mo_phong_v3.py`): chặn quá tải mỗi pod, pool pod ngủ sẵn, dự báo bằng hồi quy 120 s + ngưỡng chết, kịch bản quá tải (đỉnh 4 C và 5 C).
+  4. Viết tờ trình 9 hạng mục Đ1–Đ9 (`docs/bao-cao/de-xuat-v3/to-trinh.html`, đăng artifact riêng tư), kèm lịch 14–22/11, ma trận V3, chi phí, rủi ro, kịch bản demo 10 phút.
+- **Decision:** (đề xuất, **chưa duyệt**) giữ nguyên V2; thêm phiên V3 20/11 (~8 giờ, ≈ 5 USD) và ADR-007; bắt buộc Đ1 gateway LeastRequest, Đ2 A3 = A2 + `predict_linear`, Đ3 `--max-num-queued-reqs=75` (định lý Little: 64 + C × 2,5 s), Đ7 Argo CD + Telegram + dashboard demo trên cloud, Đ9 V3 + demo. Loại: pool pod ngủ sẵn (KB2 chỉ 71,9 → 74,7 %, KB1 tốn gấp đôi), Run:ai streamer, KServe, endpoint picker đầy đủ, rate limit theo token.
+- **Results:** mô phỏng, 5 seed mỗi biến thể (không phải số đo):
+  - KB2 đạt SLO: A2 71,9 %; + gateway (JSQ) 83,5 %; A3 79,7 % (dao động 71–100 %); A3 + gateway 88,4 %; A3 + gateway + chặn 75 là 94,0 % (từ chối 3,6 %), GPU-giờ 1,41 so với S4 1,60.
+  - KB3: A2 88,8 % → A3 96,2 % → đủ ba nâng cấp 98,8 %. KB1 GPU-giờ: A2 0,20, A3 0,31, A3 + gateway 0,40.
+  - Quá tải đỉnh 5 C: S4 18,7 % → 78,2 % khi chặn 75; chặn 68 thì phần được nhận đạt ~100 %, từ chối 10–18 %.
+- **Incidents:** mô phỏng "dự báo" của báo cáo kỹ thuật bản 2 có lỗi: giá trị đã ngoại suy bị ghi vào lịch sử metric (vòng phản hồi). Sửa xong: KB3 96,9 → 96,2 %, KB2 80,9 → 79,7 %, KB1 0,40 → 0,31 GPU-giờ; kết luận không đổi. **Chưa** cập nhật báo cáo kỹ thuật.
+- **Links:** nhánh `refactor/split-home-cloud`; `docs/bao-cao/de-xuat-v3/`.
+- **Thesis:** §5 (phân rã cold start), Hướng phát triển (gateway, autoscaling dự báo, admission control, goodput); nếu V3 chạy thì thành mục §5.x "Cải tiến".
