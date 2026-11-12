@@ -95,6 +95,7 @@
   3. `make help` chia nhóm theo môi trường; sửa lỗi cũ: regex không khớp target có chữ số nên `vh5` không hiện. Các lệnh `burnin`/`capacity`/`analysis` in lệnh thay thế (ADR-006 §3.1).
   4. README gốc viết lại; thêm README cho `envs/home`, `envs/cloud`, `envs/sim`; CONTRIBUTING §1 mô tả cấu trúc mới; Hình 6 vẽ lại khối repo.
   5. Báo cáo kỹ thuật `docs/bao-cao/bao-cao-ky-thuat.html` (đăng artifact riêng tư): kiến trúc, số đo 08/11, mô phỏng ma trận V2, hướng nâng cấp (lý thuyết hàng đợi, A2 dự báo, JSQ).
+  6. Viết lại báo cáo chi tiết hơn theo yêu cầu (17 mục): thuật ngữ, minh hoạ bài toán, một request đi qua hệ thống, GitOps, vòng autoscaling từng bước, tín hiệu scale, ba kịch bản tải, timeline tắt pod, chi phí quy ra USD, lộ trình nâng cấp, hỏi đáp khi bảo vệ. Thêm số đo mới trích từ `runs/dg1-v1-a4000/`: GPU util của GPU có pod = 100 % ở cả 5 mức λ (2–6 req/s), request đang chạy 12,1 / 39,6 / 51,6 / 63,6 / 63,4, KV-cache 4,3–22,8 %; request trung vị tại λ = 2: TTFT 0,18 s, E2E 6,14 s; tại C: TTFT 0,30 s, E2E 11,51 s.
 - **Decision:**
   - Giữ Kustomize base + overlay (base ở `common/`), không nhân đôi manifest theo môi trường.
   - Giữ nguyên tên lệnh `make` (ADR và nhật ký dùng chúng), chỉ nhóm lại trong `make help`.
