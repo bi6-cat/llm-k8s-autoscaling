@@ -85,3 +85,33 @@
 - **Incidents:** bản nháp ngân sách VRAM ghi 14.416 MiB = 14,4 GiB; đúng là ≈ 14,1 GiB (14,4 GiB là mức 0,90 cho phép). Sửa trước khi commit. Nhãn M3 và M5 ở Hình 9 đè nhau sau khi dời M3 sang 22/11; sửa bằng căn phải.
 - **Links:** PR #33 (nhánh `docs/sync-after-v1`); `docs/chi-tiet/02-kien-thuc-nen.md`, `docs/diagrams/build_diagrams.py`, `docs/adr/004-*.md`, `docs/adr/005-*.md`.
 - **Thesis:** §2 (kiến thức nền: KV-cache, giới hạn decode với số đo A4000), LT1, LT2; Hình 6, 9 cho chương 3 và phần kế hoạch.
+
+## 2026-11-13 – Tái cấu trúc repo theo môi trường và báo cáo kỹ thuật HTML
+
+- **Task:** chung · **Environment:** sim (kind `llm-sim`); không đụng cluster nhà và VM
+- **Done:**
+  1. Chuyển repo sang `envs/{home,cloud,sim}/` (chạy ở đâu) + `common/` (chạy cái gì) + `ansible/`, bằng `git mv`; sửa mọi tham chiếu bằng một lượt thay theo bảng ánh xạ, rồi sửa tay phần còn lại (đường dẫn tương đối trong kustomization, `cd ../../..` của script, role Argo CD, test Python, regex của job docs trong CI).
+  2. Gộp overlay `cloud` (7B) và `cloud-3b` thành một overlay `envs/cloud/serving` (3B); bỏ 7B.
+  3. `make help` chia nhóm theo môi trường; sửa lỗi cũ: regex không khớp target có chữ số nên `vh5` không hiện. Các lệnh `burnin`/`capacity`/`analysis` in lệnh thay thế (ADR-006 §3.1).
+  4. README gốc viết lại; thêm README cho `envs/home`, `envs/cloud`, `envs/sim`; CONTRIBUTING §1 mô tả cấu trúc mới; Hình 6 vẽ lại khối repo.
+  5. Báo cáo kỹ thuật `docs/bao-cao/bao-cao-ky-thuat.html` (đăng artifact riêng tư): kiến trúc, số đo 08/11, mô phỏng ma trận V2, hướng nâng cấp (lý thuyết hàng đợi, A2 dự báo, JSQ).
+- **Decision:**
+  - Giữ Kustomize base + overlay (base ở `common/`), không nhân đôi manifest theo môi trường.
+  - Giữ nguyên tên lệnh `make` (ADR và nhật ký dùng chúng), chỉ nhóm lại trong `make help`.
+  - Nhật ký, ADR, hướng dẫn W1/W2 giữ đường dẫn cũ (tư liệu); CI vẫn bỏ qua link tới đường dẫn cũ.
+  - Báo cáo dùng số thật 08/11 + mô phỏng có nhãn cho ô chưa chạy (Quang chọn).
+- **Results:**
+  - 10 thư mục kustomize render **giống từng byte** trước và sau (kể cả `envs/cloud/serving` so với `serving/overlays/cloud-3b` cũ).
+  - pytest `experiments` 146 passed (bằng `main`), `loadgen` 55 passed; ruff, yamllint, ansible syntax-check, shellcheck sạch; `make alerts-test` (promtool 3.15.0) 7 cảnh báo + 2 file rule đạt; `make dashboards-check` 3 dashboard đạt.
+  - `make sim-up` trên kind mới: exit 0, A2 được tạo từ `envs/sim/autoscaling`. Runner `--dry-run` đọc được 5 ma trận ở chỗ mới; `matrix-v2.yaml` từ chối vì C và threshold còn trống (đúng thiết kế).
+  - **Chưa chạy:** `make sim-test` (máy chưa có `hey`; tải binary bị chặn). Chưa thử `make home-up`, `make cloud-platform` với đường dẫn mới trên máy thật.
+  - Mô phỏng hiệu chỉnh bằng 2 lượt V1: A2×KB2 spike 64,6 % so với thật 62,7 %; A1×KB3 ramp 79,9 % so với 88,6 %, sustain 99,8 % so với 99,9 %. Kết quả (5 seed): A1 tốn 86–93 % GPU-giờ của S4 ở mọi kịch bản; A2 KB1 0,20 GPU-giờ (= S1), KB2 SLO 71,9 %; A2 dự báo đưa KB3 từ 88,8 % lên 96,9 % (+4 % GPU-giờ) nhưng KB1 tốn gấp đôi.
+  - Hàng đợi đỉnh ở pod cũ (A2×KB2) đo 1.041, công thức (λ − C) × timeout 120 s = 1.080.
+- **Incidents:**
+  - `git stash` / `stash pop` làm mất các rename trong index, khiến danh sách file của lượt thay thiếu file đã dời → `git add -A` rồi chạy lại.
+  - Mẫu `observability/` trong lượt thay đầu có lookahead chặn mọi đường dẫn con → gần như không thay; phát hiện khi `make alerts-test` lỗi, sửa bằng lượt riêng.
+  - Bốn script và role Argo CD tính gốc repo theo số tầng (`../..`), sai sau khi sâu thêm một tầng; không công cụ kiểm nào bắt được, tìm bằng grep.
+  - Mô phỏng: lần đầu tính GPU-giờ cả phần sau khi lượt kết thúc (A1×KB1 > S4, vô lý) → giới hạn trong thời lượng lượt. Bản nháp báo cáo có chia pha cold start lần 2 không có trong log → bỏ, ghi "chưa tách".
+- **Deviations:** CONTRIBUTING §1 đổi từ chia theo thành phần sang chia theo môi trường; overlay 7B mà ADR-006 C3 ghi "giữ tham khảo" đã xoá (còn trong lịch sử Git).
+- **Links:** nhánh `refactor/split-home-cloud`; `CONTRIBUTING.md`, `envs/*/README.md`, `docs/bao-cao/`.
+- **Thesis:** §3–§4 (cấu trúc repo, ba môi trường); §5 (mô phỏng có hiệu chỉnh, chỉ dùng làm ước lượng); Hướng phát triển (lý thuyết hàng đợi, autoscaling dự báo, JSQ).
