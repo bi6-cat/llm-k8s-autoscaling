@@ -52,3 +52,34 @@
 - **Deviations:** VH2 qua annotation thay vì Git + Argo CD (Vận hành §5.3); ở nhà vẫn phải làm theo quy trình Git. Runner trên VM clone repo công khai thay vì chép từ laptop.
 - **Links:** nhánh `feat/cloud-automation`, `feat/runner-backup-notify`, `feat/ops-scenarios`.
 - **Thesis:** §4 (tự động hoá dựng VM, sao lưu, chạy không người trực), §5 VH2–VH5 (chỉ dùng số đo trên GPU thật), Hạn chế (ít máy VM 4 GPU trên Vast).
+
+## 2026-11-10 – ADR-006 và đồng bộ tài liệu thiết kế sau V0+V1
+
+- **Task:** chung · **Environment:** none
+- **Done:** (ghi bù ngày 12/11 theo lịch sử commit, phiên 10/11 chưa ghi nhật ký)
+  1. Viết ADR-006: gom các quyết định 04–09/11 (chỉ còn Vast VM, 4 × RTX A4000 ≥ 20 vCPU, model 3B, N = 4, kịch bản 12/24/17 phút, KEDA `timeout` 1000 ms, truy vấn A1 mới, tạm chấp nhận grace 180 s) và bảng các hạng mục thiết kế chưa có trong repo; thêm `docs/adr/README.md`.
+  2. Đồng bộ Thông số, Bài toán, mô tả tổng; Môi trường, Kế hoạch (theo CI thật); Kiến trúc, Vận hành (hành vi tắt pod đã đo, trạng thái repo).
+  3. `.gitignore` bỏ cache của ruff và pytest.
+- **Decision:** ghi một ADR gom thay vì sửa ADR-004/005 (quy tắc không sửa ADR cũ). ADR-003 vẫn để dành cho kết quả ĐG1 trong V2.
+- **Links:** nhánh `docs/sync-after-v1`; commit `d6a0ef0`, `4be2338`, `acfa7c8`, `18dc033`, `7c94846`.
+- **Thesis:** §3–§4 (thiết kế theo điều kiện thực tế), Hạn chế (A4000 + 3B thay 4090 + 7B; grace 180 s).
+
+## 2026-11-12 – Đồng bộ nốt tài liệu với ADR-006
+
+- **Task:** chung · **Environment:** none
+- **Done:**
+  1. Rà mọi file `.md` còn ghi giá trị trước ADR-006 (4090, 7B, GCP, V3, 20/25/25, đỉnh 3,0 C, query A1 cũ). Phần lớn chỗ còn lại là ghi chú lịch sử hợp lệ, giữ nguyên.
+  2. Dòng trạng thái ADR-004 (K4, K5, K6, K9) và ADR-005 (T1) ghi bị ADR-006 thay.
+  3. Bỏ V3 khỏi Môi trường §17 và Kế hoạch §8, §9 (dự phòng, rủi ro R4, ngưỡng ngân sách, runbook phiên): máy hỏng thì thuê máy Vast khác ngay trong 14–15/11.
+  4. Kiến thức nền §1.3–§1.5: thêm Qwen2.5-3B và RTX A4000, kèm số đo 08/11.
+  5. Vẽ lại Hình 6 (A4000, 3B, nhà 0,5B time-slicing, bỏ laptop 4050, cloud qua `make cloud-platform`) và Hình 9 (V0+V1 gộp 08/11, V2 14–15/11, bỏ V3, M3 22/11); xuất lại SVG và PNG 2x.
+  6. W1, W2: thêm ghi chú đầu file rằng phần máy thuê đã lỗi thời, không viết lại.
+  7. `viec-sap-lam.md`: đánh dấu PR #28–#32 đã merge 09/11, thêm việc họp chốt ADR-006 §3.
+- **Decision:** W1, W2 là hướng dẫn của tuần đã qua nên giữ làm tư liệu, chỉ gắn ghi chú. Hình 18, 19 (trạng thái dự kiến W1, W2) giữ nguyên vì cùng lý do. Hình 9 giữ các thanh W1–W4 theo kế hoạch gốc, chỉ thêm dòng việc bổ sung 04/11, vì đây là hình kế hoạch chứ không phải tiến độ thực tế.
+- **Results:**
+  - KV-cache 3B: vLLM báo 7,28 GiB = 211.936 token → ≈ 36.880 B/token; công thức 2 × 36 lớp × 2 KV head × 128 × 2 B = 36.864 B, lệch < 0,1 %.
+  - TPOT 3B trên A4000 ở 1 request: 17,2 ms; cận dưới lý thuyết 6,17 GB ÷ 448 GB/s ≈ 13,8 ms → băng thông hiệu dụng ≈ 359 GB/s ≈ 80 % (1,5B trên 5060: 79 %). Đây là tính lại từ số đo 08/11, không đo mới.
+  - `build_diagrams.py` chạy lại trên code cũ không đổi SVG nào (sinh hình ổn định); sau khi sửa chỉ Hình 6, 9 đổi.
+- **Incidents:** bản nháp ngân sách VRAM ghi 14.416 MiB = 14,4 GiB; đúng là ≈ 14,1 GiB (14,4 GiB là mức 0,90 cho phép). Sửa trước khi commit. Nhãn M3 và M5 ở Hình 9 đè nhau sau khi dời M3 sang 22/11; sửa bằng căn phải.
+- **Links:** nhánh `docs/sync-after-v1` (chưa push); `docs/chi-tiet/02-kien-thuc-nen.md`, `docs/diagrams/build_diagrams.py`, `docs/adr/004-*.md`, `docs/adr/005-*.md`.
+- **Thesis:** §2 (kiến thức nền: KV-cache, giới hạn decode với số đo A4000), LT1, LT2; Hình 6, 9 cho chương 3 và phần kế hoạch.
