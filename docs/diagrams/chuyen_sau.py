@@ -137,7 +137,7 @@ def fig_coldstart_detail():
     s = Svg(W, H, "Tám pha khởi động một pod vLLM: scheduling, chuẩn bị pod, pull image, khởi động tiến trình, "
                   "tải model, nạp weights, compile và CUDA graph, probe; pod giữ GPU suốt quá trình")
     s.header("Tám pha khởi động (cold start) một pod vLLM",
-             "Ước lượng cho model 7–8B ở mức L0 (chưa tối ưu); nhãn dưới mỗi pha cho biết pha đó có tránh được không")
+             "Ước lượng ở mức L0 (chưa tối ưu); pha 5 theo model 3B của V2, các pha khác ước lượng gốc cho 7–8B; nhãn dưới mỗi pha cho biết pha đó có tránh được không")
     cats = {"skip": ("bỏ qua được", AQUA, AQUA_T), "short": ("rút ngắn được", "#c98500", YELLOW_T),
             "none": ("không tránh được", MUTED, GRAY_T)}
     x = 32
@@ -149,7 +149,7 @@ def fig_coldstart_detail():
         ("Chuẩn bị pod", "≈ 2–5 s", ["cấp IP, mount volume,", "device plugin gán GPU cụ thể"], "none", None),
         ("Pull image", "≈ 60–180 s", ["tải và giải nén image", "vLLM cỡ ~10 GB"], "skip", "nhờ pre-pull image"),
         ("Khởi động tiến trình", "≈ 5–15 s", ["import torch, vllm;", "khởi tạo CUDA context"], "none", None),
-        ("Tải model", "≈ 150 s", ["tải ~15 GB safetensors", "từ Hugging Face"], "skip", "nhờ model cache"),
+        ("Tải model", "≈ 30–60 s", ["tải ~6 GB safetensors (3B)", "từ Hugging Face"], "skip", "nhờ model cache"),
         ("Nạp weights → GPU", "≈ 10–60 s", ["đĩa → RAM → VRAM;", "NVMe nhanh, ổ mạng chậm"], "short", "nhờ NVMe cục bộ"),
         ("Compile · KV · graph", "≈ 20–60 s", ["torch.compile, đo bộ nhớ,", "cấp KV-cache, capture graph"],
          "short", "nhờ compile cache"),

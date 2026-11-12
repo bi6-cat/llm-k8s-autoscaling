@@ -261,7 +261,7 @@ L2 là cấu hình vận hành; đồ án đo L0 và L2 để biết rút ngắn
 
 **Pha 4. Khởi động tiến trình (≈ 5–15 s).** Chạy `vllm serve`: import `torch`/`vllm` (nặng), đọc tham số, khởi tạo CUDA context, tạo tiến trình EngineCore.
 
-**Pha 5. Tải model (≈ 150 s, hoặc 0 s).** Chỉ xảy ra khi `--model` là tên repo trên Hugging Face và chưa có cache. Qwen2.5-7B gồm khoảng 15 GB file safetensors (4 shard); ở 100 MB/s mất khoảng 150 s. Log: `Time spent downloading weights for … seconds` (chỉ in khi tải mất hơn 0,5 s).
+**Pha 5. Tải model (≈ 30–60 s, hoặc 0 s).** Chỉ xảy ra khi `--model` là tên repo trên Hugging Face và chưa có cache. Qwen2.5-3B gồm khoảng 5,8 GB file safetensors; ở 100 MB/s mất khoảng 60 s. Đo ngày 08/11/2026: VM 4 × A4000 tải mất 27 s, máy 2 × 5060 Ti (mạng chỉ ~8 MB/s) mất 690 s ([nhật ký vận hành](../nhat-ky/van-hanh.md)). Model 7B (~15 GB) sẽ mất khoảng 2,5 lần. Log: `Time spent downloading weights for … seconds` (chỉ in khi tải mất hơn 0,5 s).
 
 **Pha 6. Nạp weights vào GPU (≈ 10–60 s).** Đọc file từ đĩa lên RAM, rồi copy qua PCIe vào VRAM. Tốc độ phụ thuộc chủ yếu vào ổ đĩa: NVMe cục bộ (2–3 GB/s) mất khoảng 10 s; NFS (100–300 MB/s) mất 50–150 s. Log có dòng `Loading weights took … seconds` (không gồm thời gian tải ở pha 5) và `Model loading took … GiB memory and … seconds` (gồm cả pha 5).
 
@@ -738,7 +738,7 @@ KServe thêm nhiều tầng (Knative, activator, CRD riêng). Các tầng này l
 Khi pod rất tải, `/health` có thể trả chậm. Liveness quá gắt sẽ **kill một pod đang làm việc** ngay lúc cần nó nhất, gây thêm một lần cold start.
 
 **Sao không cho mọi pod đọc chung model qua NFS cho gọn?**
-Hoàn toàn được (mức L1), và đây là cách phổ biến trong cluster nhiều node. Nhưng nạp 15 GB qua mạng chậm hơn NVMe nhiều. Trên một máy thuê, nhóm không có ổ mạng tương đương để đo L1, nên chỉ so L0 với L2.
+Hoàn toàn được (mức L1), và đây là cách phổ biến trong cluster nhiều node. Nhưng nạp ~6 GB weights (15 GB với 7B) qua mạng chậm hơn NVMe nhiều. Trên một máy thuê, nhóm không có ổ mạng tương đương để đo L1, nên chỉ so L0 với L2.
 
 **Sao không kết hợp nhiều metric trong một ScaledObject?**
 KEDA hỗ trợ nhiều trigger, và HPA sẽ lấy giá trị desired **lớn nhất** trong các trigger. Khi đánh giá, nhóm tách riêng từng metric để thấy rõ hành vi của mỗi loại. Kết hợp A2 với một trigger theo TTFT là hướng mở rộng E6.
