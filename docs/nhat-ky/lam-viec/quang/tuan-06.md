@@ -75,7 +75,9 @@
   5. Vẽ lại Hình 6 (A4000, 3B, nhà 0,5B time-slicing, bỏ laptop 4050, cloud qua `make cloud-platform`) và Hình 9 (V0+V1 gộp 08/11, V2 14–15/11, bỏ V3, M3 22/11); xuất lại SVG và PNG 2x.
   6. W1, W2: thêm ghi chú đầu file rằng phần máy thuê đã lỗi thời, không viết lại.
   7. `viec-sap-lam.md`: đánh dấu PR #28–#32 đã merge 09/11, thêm việc họp chốt ADR-006 §3.
-- **Decision:** W1, W2 là hướng dẫn của tuần đã qua nên giữ làm tư liệu, chỉ gắn ghi chú. Hình 18, 19 (trạng thái dự kiến W1, W2) giữ nguyên vì cùng lý do. Hình 9 giữ các thanh W1–W4 theo kế hoạch gốc, chỉ thêm dòng việc bổ sung 04/11, vì đây là hình kế hoạch chứ không phải tiến độ thực tế.
+  8. Theo quyết định của Quang: đổi ví dụ 7B sang 3B trên A4000 ở Bài toán §1.2–§1.3, §2 và Kiến trúc pha 5, L1; Hình 12 pha 5 (≈ 30–60 s, ~6 GB). Dùng số đo 08/11: KV-cache 7,28 GiB, TPOT 17,2 ms (1 request) / 25,1 ms (32 request, 1.121 token/s), tải model 27 s.
+  9. Ghi đề xuất của Quang cho ADR-006 §3 vào `viec-sap-lam.md` (làm trước V2: Argo CD app `autoscaling`/`observability`, Telegram cho Alertmanager); chưa chốt, chờ họp với Trình.
+- **Decision:** Ví dụ trong Bài toán dùng số thật của 3B/A4000 thay vì 7B/24 GB: lộ ra giới hạn thật trên máy V2 là `--max-num-seqs` 64 chứ không phải KV-cache (đủ ~210 request). W1, W2 là hướng dẫn của tuần đã qua nên giữ làm tư liệu, chỉ gắn ghi chú. Hình 18, 19 (trạng thái dự kiến W1, W2) giữ nguyên vì cùng lý do. Hình 9 giữ các thanh W1–W4 theo kế hoạch gốc, chỉ thêm dòng việc bổ sung 04/11, vì đây là hình kế hoạch chứ không phải tiến độ thực tế.
 - **Results:**
   - KV-cache 3B: vLLM báo 7,28 GiB = 211.936 token → ≈ 36.880 B/token; công thức 2 × 36 lớp × 2 KV head × 128 × 2 B = 36.864 B, lệch < 0,1 %.
   - TPOT 3B trên A4000 ở 1 request: 17,2 ms; cận dưới lý thuyết 6,17 GB ÷ 448 GB/s ≈ 13,8 ms → băng thông hiệu dụng ≈ 359 GB/s ≈ 80 % (1,5B trên 5060: 79 %). Đây là tính lại từ số đo 08/11, không đo mới.
