@@ -83,5 +83,5 @@
   - TPOT 3B trên A4000 ở 1 request: 17,2 ms; cận dưới lý thuyết 6,17 GB ÷ 448 GB/s ≈ 13,8 ms → băng thông hiệu dụng ≈ 359 GB/s ≈ 80 % (1,5B trên 5060: 79 %). Đây là tính lại từ số đo 08/11, không đo mới.
   - `build_diagrams.py` chạy lại trên code cũ không đổi SVG nào (sinh hình ổn định); sau khi sửa chỉ Hình 6, 9 đổi.
 - **Incidents:** bản nháp ngân sách VRAM ghi 14.416 MiB = 14,4 GiB; đúng là ≈ 14,1 GiB (14,4 GiB là mức 0,90 cho phép). Sửa trước khi commit. Nhãn M3 và M5 ở Hình 9 đè nhau sau khi dời M3 sang 22/11; sửa bằng căn phải.
-- **Links:** nhánh `docs/sync-after-v1` (chưa push); `docs/chi-tiet/02-kien-thuc-nen.md`, `docs/diagrams/build_diagrams.py`, `docs/adr/004-*.md`, `docs/adr/005-*.md`.
+- **Links:** PR #33 (nhánh `docs/sync-after-v1`); `docs/chi-tiet/02-kien-thuc-nen.md`, `docs/diagrams/build_diagrams.py`, `docs/adr/004-*.md`, `docs/adr/005-*.md`.
 - **Thesis:** §2 (kiến thức nền: KV-cache, giới hạn decode với số đo A4000), LT1, LT2; Hình 6, 9 cho chương 3 và phần kế hoạch.

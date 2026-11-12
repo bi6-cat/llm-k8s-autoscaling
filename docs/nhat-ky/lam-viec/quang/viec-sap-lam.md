@@ -38,7 +38,7 @@ Phần trăm là ước lượng theo đầu việc, không phải giờ đã d�
 - [x] (09/11, code xong, **chưa thử R2 và Telegram thật**) **Q6 runner v2:** R2, systemd, Telegram.
 - [x] (09/11, chạy trên kind, **chưa chạy trên GPU**) **Q5, Q7:** `make ops-tests` (VH2–VH4), `make vh5`.
 - [x] (09/11) **Merge theo thứ tự:** PR #28 `chore/v2-prep-to-main` → #29 A1 → #30 cloud → #31 runner → #32 VH, đều vào `main`. Không PR nào có review; **Trình vẫn cần review A1** (ADR-006 C7). Quang tự nhắn Trình.
-- [x] (10/11, 12/11) **Đồng bộ tài liệu với ADR-006:** ADR-006 + chỉ mục ADR; Thông số, Bài toán, Kiến trúc, Vận hành, Môi trường, Kế hoạch, Kiến thức nền, mô tả tổng; trạng thái ADR-004/005; Hình 6, 9; ghi chú lỗi thời ở W1, W2. Nhánh `docs/sync-after-v1`, **chưa push, chưa mở PR**.
+- [x] (10/11, 12/11) **Đồng bộ tài liệu với ADR-006:** ADR-006 + chỉ mục ADR; Thông số, Bài toán, Kiến trúc, Vận hành, Môi trường, Kế hoạch, Kiến thức nền, mô tả tổng; trạng thái ADR-004/005; Hình 6, 9; ghi chú lỗi thời ở W1, W2. PR #33 (nhánh `docs/sync-after-v1`), chưa merge.
 - [ ] **Họp chốt ADR-006 §3:** làm hay hạ mức Sealed Secrets, NetworkPolicy/rate limit, Argo CD app `autoscaling`/`observability`, Telegram cho Alertmanager (trước 13/11). **Đề xuất của Quang (12/11):** làm trước V2: Argo CD app `autoscaling`/`observability` và Telegram cho Alertmanager; để sau V2 hoặc hạ mức: Sealed Secrets, NetworkPolicy/rate limit. Chốt với Trình rồi ghi vào ADR-006.
 - [ ] **Tạo `.env`:** `VAST_VM_TEMPLATE`, API key Vast, khoá R2, bot Telegram; thử `make backup` và một tin Telegram trước V2.
 - [ ] **Chốt máy V2:** 09/11 Vast không có offer VM 4 × A4000; chỉ có 4 × 5090 / 4 × 4090 từ $2,4/giờ và thay đổi trong vài phút. Theo dõi `make find`.
