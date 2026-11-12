@@ -1,6 +1,6 @@
 # ADR-004: Điều kiện thực tế, phạm vi rút gọn, môi trường và kế hoạch đến hạn nộp
 
-- **Trạng thái:** Đã chấp nhận ngày 08/10/2026. K13 được bổ sung ngày 15–16/10/2026 (xem §7).
+- **Trạng thái:** Đã chấp nhận ngày 08/10/2026. K13 được bổ sung ngày 15–16/10/2026 (xem §7). K4, K5, K6, K9 bị [ADR-006](006-chot-may-model-va-kich-ban-truoc-v2.md) thay ngày 10/11/2026 (xem ADR-006 §4); các mục còn lại giữ nguyên.
 - **Người quyết định:** Nhóm, dựa trên báo cáo review nội bộ ngày 08/10/2026 (§0, §7, §9; không lưu trong repo, các kết luận chính được ghi lại trong ADR này và ADR-005) và các thông tin nhóm đã xác nhận cùng ngày.
 - **Thay thế một phần:** [ADR-001](001-cac-lua-chon-ban-dau.md) và [ADR-002](002-chuyen-trong-tam-sang-van-hanh.md) (chi tiết ở §4).
 - **Liên quan:** [ADR-005](005-sua-thiet-ke-sau-review.md) (các sửa thiết kế kỹ thuật), [Thông số và chỉ tiêu](../chi-tiet/00-thong-so.md), [Môi trường và đánh giá](../chi-tiet/05-moi-truong-danh-gia.md), [Kế hoạch và quản lý](../chi-tiet/06-ke-hoach-quan-ly.md)

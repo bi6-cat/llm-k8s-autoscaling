@@ -27,24 +27,24 @@ Chi tiết từng pha nằm trong [Kiến thức nền §1](02-kien-thuc-nen.md#
 
 ### 1.2. VRAM bị chiếm vào đâu
 
-Lấy ví dụ một GPU 24 GB chạy Qwen2.5-7B-Instruct ở định dạng BF16, với `--gpu-memory-utilization 0.9`:
+Lấy đúng cấu hình của phiên đánh giá: một GPU RTX A4000 16 GB chạy Qwen2.5-3B-Instruct ở định dạng BF16, với `--gpu-memory-utilization 0.9`. Số liệu đo trong phiên V0+V1 ngày 08/11/2026:
 
 | Thành phần | Dung lượng | Ghi chú |
 |---|---|---|
-| Weights | ~15,2 GB | 7,6 tỷ tham số × 2 byte |
-| Bộ nhớ trung gian (activation), CUDA graph | ~1–2 GB | vLLM đo lúc khởi động |
-| **KV-cache** | **~4–5 GB** | Phần còn lại trong ngân sách 0,9 × 24 GB |
-| Phần chừa lại | ~2,4 GB | 10% VRAM không cấp phát |
+| Weights | ~5,8 GiB (≈ 6,2 GB) | 3,09 tỷ tham số × 2 byte |
+| Bộ nhớ trung gian (activation), CUDA graph | ~1,4 GiB | Phần còn lại sau khi trừ weights và KV-cache khỏi ngân sách |
+| **KV-cache** | **7,28 GiB** | vLLM báo lúc khởi động; phần còn lại trong ngân sách 0,9 × 16 GiB ≈ 14,4 GiB |
+| Phần chừa lại | ~1,6 GiB | 10% VRAM không cấp phát |
 
-Mỗi token trong KV-cache của Qwen2.5-7B chiếm khoảng 56 KiB (cách tính ở [Kiến thức nền §1.3](02-kien-thuc-nen.md#13-kv-cache)). Vậy 4,5 GB KV-cache chứa được khoảng **80 nghìn token**. Nếu mỗi request dài trung bình 1.000 token (prompt cộng câu trả lời), một GPU chỉ giữ được khoảng **80 request cùng lúc**. Request thứ 81 phải chờ trong hàng đợi.
+Mỗi token trong KV-cache của Qwen2.5-3B chiếm 36 KiB (cách tính ở [Kiến thức nền §1.3](02-kien-thuc-nen.md#13-kv-cache)). Vậy 7,28 GiB KV-cache chứa được **211.936 token** (vLLM báo đúng con số này). Nếu mỗi request dài trung bình 1.000 token (prompt cộng câu trả lời), KV-cache đủ cho khoảng **210 request cùng lúc**. Trên thực tế giới hạn đến sớm hơn, từ tham số `--max-num-seqs` = 64: request thứ 65 phải chờ trong hàng đợi dù KV-cache còn trống (ở ĐG1 thử, lúc hàng đợi bắt đầu dài thì KV-cache mới dùng 18,5 %). Với model lớn hơn trên cùng GPU, chẳng hạn 7B (weights 15,2 GB), KV-cache mới là giới hạn: 7B thậm chí không vừa GPU 16 GB.
 
 ### 1.3. Vì sao "số request đồng thời" là đơn vị tiền tệ của LLM serving
 
-Pha decode bị **giới hạn bởi băng thông bộ nhớ**: mỗi bước phải đọc toàn bộ 15 GB weights, bất kể batch có 1 request hay 32 request.
+Pha decode bị **giới hạn bởi băng thông bộ nhớ**: mỗi bước phải đọc toàn bộ ~6,2 GB weights, bất kể batch có 1 request hay 32 request.
 
-Ví dụ trên GPU A10 (băng thông khoảng 600 GB/s), một bước decode mất tối thiểu khoảng 15,2 GB ÷ 600 GB/s ≈ **25 ms**:
-- Batch chỉ có 1 request: khoảng 40 token/s cho cả GPU.
-- Batch 32 request: gần 32 × 35 ≈ **1.100 token/s**. Thời gian mỗi bước tăng không đáng kể vì vẫn chỉ đọc weights một lần.
+Trên RTX A4000 (băng thông khoảng 448 GB/s), một bước decode mất tối thiểu khoảng 6,17 GB ÷ 448 GB/s ≈ **13,8 ms**. Đo ngày 08/11/2026 bằng `vllm bench serve` (input 512, output 256 token):
+- 1 request đồng thời: mỗi bước 17,2 ms, khoảng **57 token/s** cho cả GPU.
+- 32 request đồng thời: mỗi bước 25,1 ms, tổng **1.121 token/s**, gấp khoảng 20 lần. Thời gian mỗi bước chỉ tăng 46 % trong khi số request tăng 32 lần, vì vẫn chỉ đọc weights một lần.
 
 Như vậy **gộp nhiều request vào cùng một batch** là cách duy nhất để khai thác GPU hiệu quả. Khi số request vượt quá khả năng chứa của batch và KV-cache, request mới phải chờ. Đây là lý do đồ án chọn **số request đồng thời** làm tín hiệu scale chính (cấu hình A2, xem [Kiến trúc §10](03-kien-truc-autoscaling.md#10-phân-tích-từng-metric)).
 
@@ -129,7 +129,7 @@ Trên giấy, autoscaling tiết kiệm **50%** chi phí so với Static-max. Nh
 
 | Đặc điểm | Web service thông thường | LLM inference trên GPU |
 |---|---|---|
-| Thời gian khởi động một replica | Vài giây | **1–8 phút**: pull image ~10 GB, nạp weights ~15 GB, compile và CUDA graph |
+| Thời gian khởi động một replica | Vài giây | **1–8 phút**: pull image ~10 GB, nạp weights ~6 GB (3B), compile và CUDA graph |
 | Metric phản ánh tải | CPU utilization phản ánh khá tốt | GPU utilization **bão hoà sớm**; VRAM luôn ở mức ~90% vì vLLM cấp phát trước |
 | Đơn vị tài nguyên | CPU chia nhỏ được (millicore) | Nguyên một GPU cho mỗi replica |
 | Thời gian xử lý một request | Mili-giây, khá đồng đều | Vài giây đến vài chục giây, phụ thuộc độ dài prompt và output |
@@ -140,7 +140,7 @@ Trên giấy, autoscaling tiết kiệm **50%** chi phí so với Static-max. Nh
 Vì vậy không thể áp nguyên công thức quen thuộc "HPA theo CPU 70%, rolling update mặc định" cho LLM.
 
 ### 5.2. Cold start tính bằng phút
-Một pod web thông thường sẵn sàng sau vài giây. Một pod vLLM phải pull image khoảng 10 GB, tải và nạp khoảng 15 GB weights, rồi compile và capture CUDA graph, tổng cộng **từ 1 đến 8 phút** (Hình 12). Trong khoảng thời gian đó, tải tăng đột ngột sẽ dồn hết lên các replica hiện có. → Chi tiết ở [Kiến trúc §7](03-kien-truc-autoscaling.md#7-cold-start-chi-tiết).
+Một pod web thông thường sẵn sàng sau vài giây. Một pod vLLM phải pull image khoảng 10 GB, tải và nạp khoảng 6 GB weights (model 3B; 15 GB với 7B), rồi compile và capture CUDA graph, tổng cộng **từ 1 đến 8 phút** (Hình 12). Trong khoảng thời gian đó, tải tăng đột ngột sẽ dồn hết lên các replica hiện có. → Chi tiết ở [Kiến trúc §7](03-kien-truc-autoscaling.md#7-cold-start-chi-tiết).
 
 ### 5.3. Metric quen thuộc chỉ sai hướng
 - **VRAM:** vLLM cấp phát trước khoảng 90% VRAM ngay khi khởi động, nên metric bộ nhớ gần như là một đường thẳng.
@@ -280,7 +280,7 @@ Bảng đối chiếu nội dung đề cương với bản mô tả nằm ở [P
 | # | Giả định | Vì sao hợp lý | Cách kiểm tra | Nếu sai thì sao |
 |---|---|---|---|---|
 | G1 | **Chi phí ≈ GPU-giờ cấp phát cho pod vLLM** | Trên cloud trả theo mức dùng (hoặc cluster dùng chung), GPU được giải phóng sẽ được dùng vào việc khác | Không kiểm chứng được bằng thực nghiệm; nêu rõ đây là quy ước | Trên một nhóm GPU cố định dành riêng, scale-down **không giảm tiền**. Khi đó kết quả chỉ còn nói về "GPU giải phóng được" |
-| G2 | Model vừa với 1 GPU, mỗi replica dùng 1 GPU | 7B ở BF16 cần khoảng 15 GB trên GPU 24 GB; ở nhà dùng model 1,5B | Log vLLM: KV-cache còn đủ cho `max-num-seqs` | Phải dùng lượng tử hoá hoặc model nhỏ hơn |
+| G2 | Model vừa với 1 GPU, mỗi replica dùng 1 GPU | 3B ở BF16 cần khoảng 6 GB weights, vừa GPU 16 GB (A4000) với KV-cache ~7 GB; ở nhà dùng model 0,5B ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md)) | Log vLLM: KV-cache còn đủ cho `max-num-seqs` | Phải dùng lượng tử hoá hoặc model nhỏ hơn |
 | G3 | Máy tạo tải không làm nhiễu hệ thống được đo | Trên GPU thuê, chạy cùng VM nhưng trên **lõi CPU riêng** (CPU manager static); không đi qua mạng ngoài | CPU của pod máy tạo tải; độ lệch lịch gửi p99 < 50 ms; độ trễ event loop | Phải tách lõi hoặc đổi sang máy riêng |
 | G4 | Phiên bản phần mềm cố định suốt đợt đánh giá | Ghim image digest và phiên bản Helm chart | `metadata.json` ghi digest | Kết quả giữa các lượt không so được với nhau |
 | G5 | Năng lực C ổn định trong suốt phiên đo | **Cùng một máy** trong cả phiên V2; máy đã qua burn-in rút gọn | Chạy lại nhanh một mức tải giữa phiên (3 phút) | Nếu lệch hơn 10% thì đo năng lực lại và ghi vào nhật ký |
@@ -289,14 +289,15 @@ Bảng đối chiếu nội dung đề cương với bản mô tả nằm ở [P
 
 ### 12.3. Hạn chế sẽ ghi trong luận văn
 
-1. **Chỉ một model, một loại GPU (RTX 4090, dòng consumer).** Kết luận về cơ chế (metric nào phản ánh tải, vì sao cold start dài) có khả năng khái quát. Con số cụ thể (bao nhiêu giây, bao nhiêu phần trăm) chỉ đúng cho cấu hình đã đo.
+1. **Chỉ một model (Qwen2.5-3B), một loại GPU (RTX A4000 16 GB, card workstation Ampere).** Kết luận về cơ chế (metric nào phản ánh tải, vì sao cold start dài) có khả năng khái quát. Con số cụ thể (bao nhiêu giây, bao nhiêu phần trăm) chỉ đúng cho cấu hình đã đo; cold start của 3B ngắn hơn 7B, chỉ ngoại suy được theo kích thước weights ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C3).
 2. **Tối đa 4 replica.** Chưa kiểm tra được hành vi ở quy mô hàng chục replica, nơi scheduling và cân bằng tải phức tạp hơn.
 3. **Tải tổng hợp** với độ dài output cố định, và chỉ ba kịch bản tải. Tải thật đa dạng hơn.
 4. **Mỗi ô của ma trận chỉ có 1–3 lượt.** Đủ để nghiệm thu và thấy các khác biệt lớn, không đủ để khẳng định các khác biệt nhỏ. Đồ án không tính khoảng tin cậy thống kê.
 5. **Không có autoscaling mức node.** Trên cloud công cộng, thời gian phản ứng thật cộng thêm thời gian cấp node GPU.
 6. **Cân bằng tải round-robin.**
 7. **Các kịch bản vận hành được dựng có chủ đích** (xoá pod, chặn Prometheus…). Chúng chưa bao quát mọi sự cố thật, ví dụ GPU hỏng dần hay mạng chập chờn.
-8. **Môi trường nhà chỉ là môi trường chức năng** (1–2 GPU khác loại, VRAM nhỏ). Các kịch bản nhiều replica ở nhà chạy trên simulator.
+8. **Môi trường nhà chỉ là môi trường chức năng** (một RTX 5060 8 GB chia 2 GPU replica bằng time-slicing). Các kịch bản cần nhiều node chạy trên simulator.
+9. **Graceful shutdown dựa vào grace period, không phải vào drain của vLLM.** vLLM 0.31.0 không dừng khi nhận SIGTERM (đo 06/11); request an toàn vì pod sống tới 180 s, nên request dài hơn ~160 s sau SIGTERM vẫn bị cắt, và mỗi pod bị tắt giữ GPU thêm 180 s ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C8).
 
 ### 12.4. Tiêu chí vào và ra phạm vi trong lúc làm
 

@@ -1,6 +1,6 @@
 # Thông số và chỉ tiêu (nguồn sự thật duy nhất)
 
-> Thuộc [bộ tài liệu đồ án](../mo-ta-chi-tiet-do-an.md#bộ-tài-liệu) · Quyết định liên quan: [ADR-004](../adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md), [ADR-005](../adr/005-sua-thiet-ke-sau-review.md)
+> Thuộc [bộ tài liệu đồ án](../mo-ta-chi-tiet-do-an.md#bộ-tài-liệu) · Quyết định liên quan: [ADR-004](../adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md), [ADR-005](../adr/005-sua-thiet-ke-sau-review.md), [ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) (chốt trước V2, 10/11)
 
 **Tóm tắt nhanh**
 - Mọi yêu cầu (F1–F7), chỉ tiêu (N1–N8), SLO, kịch bản tải (KB1–KB3), cấu hình đánh giá, tham số triển khai, cấu hình máy và ngân sách được **định nghĩa ở đúng một chỗ: tài liệu này**.
@@ -25,7 +25,7 @@
 | Quỹ giờ | 2 người × 8–15 giờ/tuần, tổng ~135–270 người-giờ đến hạn nộp |
 | Phân công | Quang: hạ tầng, serving, vòng đời pod, runner, năng lực; Trình: GitOps, autoscaling, giám sát, cảnh báo, tải, phân tích ([Kế hoạch §5.1](06-ke-hoach-quan-ly.md#51-phân-công)) |
 | Máy nhà | Xem [§10.1](#101-máy-nhà) |
-| Cloud | Chính: Vast.ai chế độ VM, 4 × RTX 4090. Dự phòng: máy Vast khác, rồi GCP g2/L4 ([§10.2](#102-gpu-thuê)). **Cập nhật 08/11:** model cloud đổi sang 3B (§9.1); V0+V1 chạy trên VM 4 × RTX A4000 16 GB, máy V2 dự kiến cùng loại, ≥ 20 vCPU (chốt ở ADR-003) |
+| Cloud | **Chỉ Vast.ai chế độ VM** (GCP bị từ chối quota 05/11). V0+V1 (08/11) chạy trên VM **4 × RTX A4000 16 GB**; máy V2 cùng loại, ≥ 20 vCPU, N = 4. Dự phòng: máy Vast khác ([§10.2](#102-gpu-thuê)). Model cloud 3B (§9.1). [ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C1–C4 |
 | Tiền | Xem [§11](#11-ngân-sách) |
 | Demo khi bảo vệ | Chốt sau; định hướng là video, cộng phần live nhỏ bằng simulator |
 
@@ -88,7 +88,7 @@ Nếu chậm tiến độ thì cắt từ dưới lên theo thứ tự trên ([K
 
 | Đại lượng | Giá trị | Ghi chú |
 |---|---|---|
-| TTFT | **≤ 2,5 s** (*tạm*) | Phải **trùng một biên bucket có thật** của histogram `vllm:time_to_first_token_seconds` trong bản đã ghim (*cần kiểm chứng*). Cảnh báo và nghiệm thu dùng **cùng** ngưỡng này |
+| TTFT | **≤ 2,5 s** (*tạm*) | Phải **trùng một biên bucket có thật** của histogram `vllm:time_to_first_token_seconds` trong bản đã ghim (đã kiểm 23/10: v0.31.0 có bucket `le="2.5"`, [nhật ký tuần 01](../nhat-ky/tuan-01.md)). Cảnh báo và nghiệm thu dùng **cùng** ngưỡng này |
 | TPOT | **≤ 100 ms** | Tương đương ít nhất 10 token/s, nhanh hơn tốc độ đọc |
 | Request đạt SLO | TTFT và TPOT đều đạt, và request không lỗi | Lỗi gồm lỗi HTTP, timeout, stream bị cắt (không có `usage`) |
 | Mục tiêu SLO attainment | **95%** request đạt SLO | Ngân sách lỗi 5% |
@@ -109,7 +109,7 @@ Nếu chậm tiến độ thì cắt từ dưới lên theo thứ tự trên ([K
 
 Hai phút đầu của KB1 và KB2 là thời gian ổn định, không tính.
 
-**Sửa ngày 08/11/2026** (trước đó: 20 / 25 / 25 phút, đỉnh KB2 cố định 3,0; nay 12 / 24 / 17 phút). Rút thời lượng để V2 còn thời gian cho lần lặp (kết luận "khác nhau" cần mọi lượt cùng chiều, §6), và cho đỉnh KB2 theo N để chạy được cả máy 2 GPU. Giới hạn khi rút:
+**Sửa ngày 08/11/2026** ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C5; trước đó: 20 / 25 / 25 phút, đỉnh KB2 cố định 3,0; nay 12 / 24 / 17 phút). Rút thời lượng để V2 còn thời gian cho lần lặp (kết luận "khác nhau" cần mọi lượt cùng chiều, §6), và cho đỉnh KB2 theo N để chạy được cả máy 2 GPU. Giới hạn khi rút:
 - Pha cần xem flapping (`steady` của KB1, `sustain` của KB3) dài ít nhất 10 phút = hai cửa sổ scale-down 300 s.
 - `drop` của KB2 giữ 10 phút: với N = 4, chờ 300 s rồi bớt 1 pod mỗi 60 s, pod cuối bị xoá khoảng 8 phút sau khi tải giảm; vLLM 0.31.0 còn giữ pod tới hết grace 180 s ([nhật ký vận hành 06/11](../nhat-ky/van-hanh.md)).
 - `spike` giữ 10 phút như bản cũ: cold start vLLM 3B đo trên VM 2 × RTX 5060 Ti ngày 08/11 là 363–377 s dù image, model và compile cache đã nằm sẵn trên ổ ([nhật ký vận hành 08/11](../nhat-ky/van-hanh.md)), nên replica mới chỉ Ready ở khoảng phút 6,5 của pha. Bản rút còn 7 phút (sáng 08/11) giả định cold start ≤ 2,5 phút, không đạt.
@@ -136,7 +136,7 @@ Hai phút đầu của KB1 và KB2 là thời gian ổn định, không tính.
 |---|---|---|---|---|---|
 | **S1** | Static-1 | – (cố định 1 replica) | – | Cấp thiếu: chi phí thấp nhất | GPU thuê |
 | **S4** | Static-4 (S_N) | – (cố định N replica) | – | Cấp theo đỉnh: hiệu năng tốt nhất | GPU thuê |
-| **A1** | GPU utilization | `sum(DCGM_FI_DEV_GPU_UTIL{…})`, hoặc `sum(avg_over_time(nvidia_smi_utilization_gpu_ratio[15s])) * 100` trên GPU GeForce | **70** (%) | Đối chứng: cách làm phổ biến | GPU thuê, nhà |
+| **A1** | GPU utilization | `sum(DCGM_FI_DEV_GPU_UTIL{…})`, hoặc `sum(avg_over_time(nvidia_smi_utilization_gpu_ratio[15s])) * 100` với `nvidia_gpu_exporter` (trung bình 15 s từ 09/11, [ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C7) | **70** (%) | Đối chứng: cách làm phổ biến | GPU thuê, nhà |
 | **A2** | Tải đồng thời | `sum(vllm:num_requests_running) + sum(vllm:num_requests_waiting)` | **0,8 × B\*** (*tạm*; minh hoạ: 24) | **Cấu hình vận hành chính thức** | GPU thuê, nhà, simulator |
 | A3 | KV-cache | `sum(vllm:kv_cache_usage_perc)` | 0,8 × KV\* | Could | – |
 | A4 | Chỉ hàng đợi | `sum(vllm:num_requests_waiting)` | 5 | Minh hoạ flapping | Simulator |
@@ -173,16 +173,16 @@ B\* và KV\* là số request đồng thời trung bình và mức KV-cache trê
 
 | Tham số | Cloud (GPU 16–24 GB) | Nhà (RTX 5060 8 GB, 2 pod chung card nhờ time-slicing) |
 |---|---|---|
-| Model | `Qwen/Qwen2.5-3B-Instruct` (revision ghim, overlay `cloud-3b`; chốt 08/11 thay 7B: cold start ngắn hơn, vừa GPU 16 GB, rẻ hơn; overlay `cloud` vẫn giữ 7B) | `Qwen/Qwen2.5-0.5B-Instruct` (revision ghim; trước 06/11 là 1,5B) |
+| Model | `Qwen/Qwen2.5-3B-Instruct` (revision ghim, overlay `cloud-3b`; chốt 08/11 thay 7B, [ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C3: cold start ngắn hơn, vừa GPU 16 GB, rẻ hơn; overlay `cloud` giữ 7B để tham khảo) | `Qwen/Qwen2.5-0.5B-Instruct` (revision ghim; trước 06/11 là 1,5B) |
 | `--served-model-name` | `qwen2.5-3b` | `qwen2.5-0.5b` |
 | `--max-model-len` | 8192 | 2048 |
 | `--max-num-seqs` | 64 | 16 |
 | `--gpu-memory-utilization` | 0,90 | 0,40 mỗi pod (2 pod ≈ 6,5 GB, chừa ~1,2 GB cho màn hình); 0,25 không đủ chỗ cho KV-cache (đo 06/11) |
 | `--max-num-batched-tokens` | Mặc định, ghi lại giá trị | như cloud |
 | Prefix caching | **Tắt** khi đánh giá (`--no-enable-prefix-caching`); bật khi vận hành thật | như cloud |
-| `--shutdown-timeout` | **150** (s) (*cần kiểm chứng* tên cờ trên bản ghim) | như cloud |
+| `--shutdown-timeout` | **150** (s). Cờ có trên bản ghim, nhưng vLLM 0.31.0 **không dừng khi nhận SIGTERM** (đo 06/11): request an toàn là nhờ grace period 180 s, pod giữ GPU đủ 180 s mỗi lần tắt ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C8) | như cloud |
 | `--api-key` | Lấy từ Secret | như cloud |
-| Image | `vllm/vllm-openai@sha256:…`, ghim theo digest | như cloud (*cần kiểm chứng* trên RTX 5060, sm_120) |
+| Image | `vllm/vllm-openai@sha256:…`, ghim theo digest ([phiên bản](../phien-ban.md)); đã chạy trên A4000 (08/11) | như cloud; đã chạy trên RTX 5060 sm_120 (23/10, bản `v0.31.0` CUDA 13) |
 
 ### 9.2. Deployment vLLM
 
@@ -196,7 +196,7 @@ B\* và KV\* là số request đồng thời trung bình và mức KV-cache trê
 | `readinessProbe` | `/health`, chu kỳ 5 s |
 | `livenessProbe` | `/health`, chu kỳ 10 s, `failureThreshold: 6` |
 | `preStop` | `sleep 20` |
-| `terminationGracePeriodSeconds` | **180** (phải > preStop + `--shutdown-timeout`) |
+| `terminationGracePeriodSeconds` | **180** (phải > preStop + `--shutdown-timeout`). Thực tế đây là thứ giữ request an toàn, vì vLLM 0.31.0 không tự thoát (§9.1) |
 | `strategy` | `RollingUpdate`, `maxSurge: 0`, `maxUnavailable: 1`; khi chỉ có 1 replica thì nâng `minReplicaCount` lên 2 trước khi cập nhật |
 | `progressDeadlineSeconds` | 900 |
 | `imagePullPolicy` | `IfNotPresent` |
@@ -206,7 +206,7 @@ B\* và KV\* là số request đồng thời trung bình và mức KV-cache trê
 
 | Tham số | Giá trị |
 |---|---|
-| `minReplicaCount` / `maxReplicaCount` | 1 / **N = 4** (bằng số GPU và bằng S4). Ở nhà: số GPU có thật (1–2). Simulator: 3 |
+| `minReplicaCount` / `maxReplicaCount` | 1 / **N = 4** (bằng số GPU và bằng S4; N = 2 nếu phải thuê máy 2 GPU, [ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C2). Ở nhà: 2 GPU replica time-slicing. Simulator: 3 |
 | `metricType` | `AverageValue` cho mọi trigger (desired = ⌈tổng ÷ target⌉) |
 | `pollingInterval` | 5 s |
 | Chu kỳ sync HPA | **5 s** (k3s: `--kube-controller-manager-arg=horizontal-pod-autoscaler-sync-period=5s`) |
@@ -214,7 +214,7 @@ B\* và KV\* là số request đồng thời trung bình và mức KV-cache trê
 | scaleDown | `stabilizationWindowSeconds: 300`; 1 pod mỗi 60 s |
 | tolerance | 10% (mặc định) |
 | `fallback` | `failureThreshold: 3`, `replicas` = max. KEDA bật fallback khi số lỗi liên tiếp **lớn hơn** ngưỡng, tức ở lần lỗi thứ 4 |
-| Timeout trigger Prometheus | `timeout: "1000"` (ms; mặc định KEDA 3000 ms). Với 3000 ms, T4 trên kind mất 24–38 s, 3/7 lần vượt N6; với 1000 ms: 17–23 s, 8/8 lần đạt (07/11) |
+| Timeout trigger Prometheus | `timeout: "1000"` (ms; mặc định KEDA 3000 ms). Với 3000 ms, T4 trên kind mất 24–38 s, 3/7 lần vượt N6; với 1000 ms: 17–23 s, 8/8 lần đạt (07/11; [ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C6) |
 | Target | Theo [§8.1](#81-các-cấu-hình) |
 
 ### 9.4. Giám sát
@@ -235,26 +235,26 @@ B\* và KV\* là số request đồng thời trung bình và mức KV-cache trê
 | Máy | Cấu hình | Vai trò |
 |---|---|---|
 | PC | RTX 5060 8 GB (Blackwell, sm_120); CPU 6 nhân/12 luồng; RAM 16 GB; ổ trống 100–200 GB; bật 24/7; Tailscale; mạng ~30 MB/s | Node chủ k3s có GPU; time-slicing thành 2 GPU replica (từ 06/11) |
-| Laptop (tuỳ chọn) | RTX 4050 Laptop 6 GB (Ada, sm_89); RAM 16 GB | Node agent có GPU; từ 06/11 không còn bắt buộc (ADR-004 §7) |
+| Laptop (tuỳ chọn) | RTX 4050 Laptop 6 GB (Ada, sm_89); RAM 16 GB | Từ 06/11 **không dùng** (ADR-004 §7); thay bằng time-slicing trên PC |
 | Laptop không GPU | – | kind/k3d + `llm-d-inference-sim`; truy cập cluster nhà qua Tailscale |
 
 Máy nhà là **môi trường chức năng**: không dùng số liệu hiệu năng của nó trong chương đánh giá.
 
 ### 10.2. GPU thuê
 
-**Chính: Vast.ai chế độ VM, 4 × RTX 4090 24 GB.** Tiêu chí lọc máy:
+**Vast.ai chế độ VM, 4 × RTX A4000 16 GB, thuê trọn máy** ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C2; bản mô tả 3.0 chọn 4 × RTX 4090, nhưng tới 06/11 không có máy 4 × 4090 VM verified ≤ 2 USD/giờ cả máy, còn A4000 đã chạy trọn V0+V1 ngày 08/11). Tiêu chí lọc máy, cũng là mặc định của `make find MODE=v2` (`infra/provision/vast.sh`):
 
 | Tiêu chí | Ngưỡng |
 |---|---|
-| Chế độ | VM (`vms_enabled=true`), on-demand |
-| GPU | Máy có **đúng 4** RTX 4090, thuê cả 4 (dự phòng: 4 × RTX 3090 hoặc A5000) |
+| Chế độ | VM (`vms_enabled=true`), on-demand, **verified** (không `is_vm_deverified`), ngoài Trung Quốc |
+| GPU | Máy có **đúng 4** RTX A4000, thuê cả 4 |
 | Độ tin cậy | ≥ 0,98 |
-| CPU / RAM | ≥ 32 vCPU (nên ≥ 48) / ≥ 128 GB |
-| Ổ đĩa | ≥ 300 GB, đọc tuần tự ≥ 1 GB/s |
-| PCIe / mạng | Gen4 trở lên / tải xuống ≥ 500 Mbps |
-| Giá | **≤ 0,50 USD/GPU-giờ** |
+| CPU / RAM | ≥ 8 + 3N = **20 vCPU** (4 pod vLLM × 3 lõi + máy tạo tải 3 lõi + hệ thống; máy V1 15 vCPU không đủ) / ≥ 24 GB mỗi GPU |
+| Ổ đĩa | ≥ 130 GB (image 9 GB + model 6 GB + TSDB), đọc tuần tự ≥ 500 MB/s, đo bằng `make probe` |
+| Mạng | Không tin cột của Vast; đo thật bằng `make probe` ngay sau khi thuê (máy 2 × 5060 Ti ngày 08/11 chỉ 8 MB/s) |
+| Giá | **≤ 2 USD/giờ cả máy** (máy V1: 0,611 USD/giờ) |
 
-**Dự phòng cuối:** GCP g2-standard-48 (4 × L4) bằng credit, chạy k3s trên Compute Engine ([Môi trường §5](05-moi-truong-danh-gia.md#5-dự-phòng-gcp-và-kế-hoạch-z)).
+**Dự phòng** (không còn GCP: quota bị từ chối 05/11): (a) 4 × RTX 4090 VM, khoảng 2,4–2,7 USD/giờ cả máy, vẫn dưới trần ngân sách; (b) máy 2 GPU (2 × A4000 hoặc 2 × 5060 Ti) với N = 2 và N3 viết lại theo N ở ADR-003. Kế hoạch Z (không thuê được gì): [Môi trường §5](05-moi-truong-danh-gia.md#5-dự-phòng-và-kế-hoạch-z).
 
 ---
 
@@ -263,7 +263,7 @@ Máy nhà là **môi trường chức năng**: không dùng số liệu hiệu n
 | Hạng mục | Giá trị |
 |---|---|
 | Trần tiền thật cho GPU thuê | **≤ 150 USD** |
-| Dự toán (phương án Vast) | ~30–75 USD ([các phiên thuê](05-moi-truong-danh-gia.md#6-các-phiên-thuê-gpu)) |
+| Dự toán (phương án Vast) | ~15–65 USD: V0+V1 đã tốn ≈ 1,5 USD; V2 trên 4 × A4000 ≈ 13–15 USD, nếu phải dùng 4 × 4090 ≈ 55–60 USD ([các phiên thuê](05-moi-truong-danh-gia.md#6-các-phiên-thuê-gpu)) |
 | Đã nạp | 800.000 VND (~30 USD, tỷ giá ~26.000 VND/USD) vào **GCP** (Quang xác nhận 08/11), nên không dùng được cho Vast. Tiền Vast nạp riêng trước V2 |
-| Credit GCP | 200 USD, hết hạn khoảng 01/2027; **chỉ** dùng cho phương án dự phòng |
+| Credit GCP | 200 USD, nhưng **không dùng được**: GCP từ chối tăng quota GPU ngày 05/11 (ADR-004 §7, ADR-006 C1) |
 | Số dư tối thiểu trước phiên V2 | ≥ 1,3 × chi phí dự kiến của V2; runner báo động khi số dư < 30 USD |

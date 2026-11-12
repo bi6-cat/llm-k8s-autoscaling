@@ -27,7 +27,7 @@ Vận hành LLM trên GPU có những khó khăn mà cấu hình mặc định c
 
 **Tỷ trọng công việc:** khoảng **70% xây dựng và vận hành**, **30% đánh giá**. Kết quả cuối cùng là một nền tảng dựng lại được bằng vài lệnh, một bộ công cụ vận hành (dashboard, cảnh báo, runbook, quy trình), một **bảng nghiệm thu** cho từng yêu cầu, và khuyến nghị cấu hình.
 
-**Điều kiện thực hiện** ([chi tiết](chi-tiet/00-thong-so.md#2-điều-kiện-thực-hiện)): khoảng 9 tuần đến hạn nộp; hai thành viên đều đi làm; máy nhà có GPU 6–8 GB nên chỉ dùng để phát triển và kiểm thử chức năng; phần đánh giá chạy trên GPU thuê (Vast.ai, 4 × RTX 4090) trong **một lần thuê liền vào cuối tuần**; tiền thuê GPU tối đa 150 USD.
+**Điều kiện thực hiện** ([chi tiết](chi-tiet/00-thong-so.md#2-điều-kiện-thực-hiện)): khoảng 9 tuần đến hạn nộp; hai thành viên đều đi làm; máy nhà có GPU 6–8 GB nên chỉ dùng để phát triển và kiểm thử chức năng; phần đánh giá chạy trên GPU thuê (Vast.ai chế độ VM, 4 GPU một máy; bản này viết cho 4 × RTX 4090, từ 08/11 chốt 4 × RTX A4000 16 GB và model 3B theo [ADR-006](adr/006-chot-may-model-va-kich-ban-truoc-v2.md)) trong **một lần thuê liền vào cuối tuần**; tiền thuê GPU tối đa 150 USD.
 
 ## Mục lục
 
@@ -141,7 +141,7 @@ Mỗi khó khăn riêng của GPU có một cách xử lý trong thiết kế:
 *Hình 6. Hai tầng môi trường từ cùng một Git repository: máy nhà và simulator để xây dựng và vận hành thử; VM 4 GPU thuê theo giờ để đánh giá.*
 
 - **Tầng 1 (máy nhà và simulator):** phát triển, kiểm thử chức năng và phần lớn kịch bản vận hành, gần như không tốn tiền. Số liệu hiệu năng ở đây không dùng để kết luận.
-- **Tầng 2 (GPU thuê):** toàn bộ phần đo trên GPU thật chạy trong **một lần thuê liền** trên cùng một máy, để các cấu hình so sánh được với nhau. Có hai mức dự phòng: máy khác cùng loại, rồi GCP bằng credit.
+- **Tầng 2 (GPU thuê):** toàn bộ phần đo trên GPU thật chạy trong **một lần thuê liền** trên cùng một máy, để các cấu hình so sánh được với nhau. Dự phòng: máy Vast khác (GCP không dùng được vì bị từ chối quota, [ADR-006](adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C1).
 - **Đánh giá để nghiệm thu**, không phải nghiên cứu thống kê:
   - **ĐG1** đo năng lực một replica, từ đó chốt SLO, target và tải của các kịch bản.
   - **ĐG2** so sánh hai cấu hình tĩnh (1 và 4 replica) với hai cấu hình autoscaling (A1, A2) dưới **ba kịch bản tải của đề cương**: thấp ổn định, tăng đột ngột rồi giảm, cao kéo dài.
@@ -180,10 +180,12 @@ Mỗi giá trị (yêu cầu, chỉ tiêu, SLO, kịch bản, tham số, cấu h
 | 2 | [Kiến thức nền](chi-tiet/02-kien-thuc-nen.md) | Prefill/decode, KV-cache, vLLM V1 và metric, thuật toán HPA, KEDA, metric GPU, SLO và burn rate, GitOps, rolling update, giải pháp liên quan, thuật ngữ | 11 | 2 |
 | 3 | [Kiến trúc và autoscaling](chi-tiet/03-kien-truc-autoscaling.md) | Thành phần, Deployment, lưu trữ model, Ingress; mô hình thời gian; cold start 8 pha; graceful shutdown; phân tích A1–A4, chọn target, YAML, cạm bẫy, kiểm thử, cấu hình khuyến nghị; giám sát; GitOps | 2, 3, 4, 5, 12, 13, 14, 15 | 3.2–3.3, 4.3–4.5 |
 | 4 | [Vận hành](chi-tiet/04-van-hanh.md) | SLI/SLO, cảnh báo theo burn rate, Alertmanager, runbook, cập nhật khi hết GPU, sự cố, dựng lại từ đầu, bảo mật tối thiểu, chi phí và năng lực | 7, 16 | 3.4–3.5, 4.6–4.10 |
-| 5 | [Môi trường và đánh giá](chi-tiet/05-moi-truong-danh-gia.md) | Máy nhà và simulator; Vast.ai chế độ VM; burn-in; Makefile; chi phí; dự phòng GCP; các phiên thuê; ĐG1–ĐG3; máy tạo tải; VH1–VH6; chỉ số; bảng nghiệm thu | 6, 8, 17 | 3.6, 4.1, 4.11, 5 |
+| 5 | [Môi trường và đánh giá](chi-tiet/05-moi-truong-danh-gia.md) | Máy nhà và simulator; Vast.ai chế độ VM; burn-in; Makefile; chi phí; dự phòng; các phiên thuê; ĐG1–ĐG3; máy tạo tải; VH1–VH6; chỉ số; bảng nghiệm thu | 6, 8, 17 | 3.6, 4.1, 4.11, 5 |
 | 6 | [Kế hoạch và quản lý](chi-tiet/06-ke-hoach-quan-ly.md) | Lịch 9 tuần, mốc, đường găng, người-giờ, hợp đồng giao diện, cắt giảm, rủi ro, sản phẩm bàn giao, cấu trúc repo, luận văn, slide, demo, hướng mở rộng | 9 | 6 |
 
-Quyết định: [docs/adr/](adr/) ([ADR-001](adr/001-cac-lua-chon-ban-dau.md), [ADR-002](adr/002-chuyen-trong-tam-sang-van-hanh.md), [ADR-004](adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md), [ADR-005](adr/005-sua-thiet-ke-sau-review.md); ADR-003 dành cho kết quả đo năng lực).
+Quyết định: [docs/adr/](adr/README.md) ([ADR-001](adr/001-cac-lua-chon-ban-dau.md), [ADR-002](adr/002-chuyen-trong-tam-sang-van-hanh.md), [ADR-004](adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md), [ADR-005](adr/005-sua-thiet-ke-sau-review.md), [ADR-006](adr/006-chot-may-model-va-kich-ban-truoc-v2.md); ADR-003 dành cho kết quả đo năng lực).
+
+**Cập nhật sau bản 3.0:** các con số về máy thuê và model trong bản này (4 × RTX 4090, Qwen2.5-7B) là của ngày 08/10; từ 08/11 nhóm dùng 4 × RTX A4000 16 GB và Qwen2.5-3B ([ADR-006](adr/006-chot-may-model-va-kich-ban-truoc-v2.md)). Giá trị hiện hành luôn ở [Thông số](chi-tiet/00-thong-so.md).
 
 **Lộ trình đọc gợi ý**
 - *Để hiểu nền tảng:* 1 → 2 → 3 → 4.

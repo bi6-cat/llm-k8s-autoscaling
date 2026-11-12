@@ -9,48 +9,35 @@
 <text x="416" y="136" font-size="11.5" font-weight="400" fill="#0b0b0b" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">serving/base/</text>
 <text x="606" y="136" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">Deployment vLLM, Service, probes</text>
 <text x="416" y="154.5" font-size="11.5" font-weight="400" fill="#0b0b0b" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">serving/overlays/</text>
-<text x="606" y="154.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">home (1,5B) · cloud (7B)</text>
+<text x="606" y="154.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">home (0,5B) · cloud-3b (3B)</text>
 <text x="416" y="173" font-size="11.5" font-weight="400" fill="#0b0b0b" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">autoscaling/</text>
 <text x="606" y="173" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">official: A2 · eval: S1, S4, A1</text>
 <text x="416" y="191.5" font-size="11.5" font-weight="400" fill="#0b0b0b" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">observability/</text>
 <text x="606" y="191.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">dashboard, cảnh báo, runbook</text>
 <text x="416" y="210" font-size="11.5" font-weight="400" fill="#0b0b0b" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">infra/</text>
-<text x="606" y="210" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">script vastai + Ansible</text>
+<text x="606" y="210" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">vast.sh + Ansible</text>
 <rect x="32" y="290" width="580" height="262" rx="14" fill="#f4f3ef" stroke="#c3c2b7" stroke-width="1.2"/>
 <text x="50" y="318" font-size="14.5" font-weight="700" fill="#0b0b0b" text-anchor="start">Tầng 1 · Xây dựng &amp; vận hành thử</text>
 <text x="50" y="338" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Máy nhà + simulator · chi phí ≈ 0 · không dùng số liệu hiệu năng</text>
-<rect x="52" y="354" width="168" height="112" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<rect x="52" y="354" width="262" height="112" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
 <text x="66" y="378" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">PC</text>
-<text x="66" y="396" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">k3s server</text>
-<line x1="94" y1="414" x2="94" y2="418" stroke="#008300" stroke-width="1.5"/>
-<line x1="94" y1="450" x2="94" y2="454" stroke="#008300" stroke-width="1.5"/>
-<line x1="122" y1="414" x2="122" y2="418" stroke="#008300" stroke-width="1.5"/>
-<line x1="122" y1="450" x2="122" y2="454" stroke="#008300" stroke-width="1.5"/>
-<line x1="150" y1="414" x2="150" y2="418" stroke="#008300" stroke-width="1.5"/>
-<line x1="150" y1="450" x2="150" y2="454" stroke="#008300" stroke-width="1.5"/>
-<line x1="178" y1="414" x2="178" y2="418" stroke="#008300" stroke-width="1.5"/>
-<line x1="178" y1="450" x2="178" y2="454" stroke="#008300" stroke-width="1.5"/>
-<rect x="66" y="418" width="140" height="32" rx="5" fill="#edf6ed" stroke="#008300" stroke-width="1.4"/>
-<text x="136" y="438.5" font-size="11.5" font-weight="650" fill="#0b0b0b" text-anchor="middle">RTX 5060 · 8 GB</text>
-<rect x="240" y="354" width="168" height="112" rx="10" fill="#ffffff" stroke="#52514e" stroke-width="1.2" stroke-dasharray="5 4"/>
-<text x="254" y="378" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">Laptop</text>
-<text x="254" y="396" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">k3s agent (nếu có)</text>
-<line x1="282" y1="414" x2="282" y2="418" stroke="#008300" stroke-width="1.5"/>
-<line x1="282" y1="450" x2="282" y2="454" stroke="#008300" stroke-width="1.5"/>
-<line x1="310" y1="414" x2="310" y2="418" stroke="#008300" stroke-width="1.5"/>
-<line x1="310" y1="450" x2="310" y2="454" stroke="#008300" stroke-width="1.5"/>
-<line x1="338" y1="414" x2="338" y2="418" stroke="#008300" stroke-width="1.5"/>
-<line x1="338" y1="450" x2="338" y2="454" stroke="#008300" stroke-width="1.5"/>
-<line x1="366" y1="414" x2="366" y2="418" stroke="#008300" stroke-width="1.5"/>
-<line x1="366" y1="450" x2="366" y2="454" stroke="#008300" stroke-width="1.5"/>
-<rect x="254" y="418" width="140" height="32" rx="5" fill="#edf6ed" stroke="#008300" stroke-width="1.4"/>
-<text x="324" y="438.5" font-size="11.5" font-weight="650" fill="#0b0b0b" text-anchor="middle">RTX 4050 · 6 GB</text>
-<rect x="428" y="354" width="168" height="112" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
-<text x="442" y="378" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">Máy không GPU</text>
-<text x="442" y="396" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">kind + simulator</text>
-<rect x="442" y="418" width="140" height="32" rx="5" fill="#eef4fc" stroke="#c9dcf3" stroke-width="1.2"/>
-<text x="512" y="438.5" font-size="11" font-weight="600" fill="#0b0b0b" text-anchor="middle">llm-d-inference-sim</text>
-<text x="52" y="496" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Ubuntu server · k3s (Ansible) · device plugin · vLLM + Qwen2.5-1.5B</text>
+<text x="66" y="396" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">k3s server · time-slicing 2 GPU replica</text>
+<line x1="112.8" y1="414" x2="112.8" y2="418" stroke="#008300" stroke-width="1.5"/>
+<line x1="112.8" y1="450" x2="112.8" y2="454" stroke="#008300" stroke-width="1.5"/>
+<line x1="159.6" y1="414" x2="159.6" y2="418" stroke="#008300" stroke-width="1.5"/>
+<line x1="159.6" y1="450" x2="159.6" y2="454" stroke="#008300" stroke-width="1.5"/>
+<line x1="206.4" y1="414" x2="206.4" y2="418" stroke="#008300" stroke-width="1.5"/>
+<line x1="206.4" y1="450" x2="206.4" y2="454" stroke="#008300" stroke-width="1.5"/>
+<line x1="253.2" y1="414" x2="253.2" y2="418" stroke="#008300" stroke-width="1.5"/>
+<line x1="253.2" y1="450" x2="253.2" y2="454" stroke="#008300" stroke-width="1.5"/>
+<rect x="66" y="418" width="234" height="32" rx="5" fill="#edf6ed" stroke="#008300" stroke-width="1.4"/>
+<text x="183" y="438.5" font-size="11.5" font-weight="650" fill="#0b0b0b" text-anchor="middle">RTX 5060 · 8 GB</text>
+<rect x="334" y="354" width="262" height="112" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
+<text x="348" y="378" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">Máy làm việc</text>
+<text x="348" y="396" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">kind llm-sim · Ansible, kubectl</text>
+<rect x="348" y="418" width="234" height="32" rx="5" fill="#eef4fc" stroke="#c9dcf3" stroke-width="1.2"/>
+<text x="465" y="438.5" font-size="11" font-weight="600" fill="#0b0b0b" text-anchor="middle">llm-d-inference-sim</text>
+<text x="52" y="496" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Ubuntu server · k3s (Ansible) · device plugin · vLLM + Qwen2.5-0.5B</text>
 <text x="52" y="518" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Dùng cho: phát triển, kiểm thử chức năng, kịch bản vận hành</text>
 <text x="52" y="540" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Simulator: scale 1 → 3, A4, drain node; truy cập cluster nhà qua Tailscale</text>
 <rect x="628" y="290" width="580" height="262" rx="14" fill="#f4f3ef" stroke="#c3c2b7" stroke-width="1.2"/>
@@ -58,7 +45,7 @@
 <text x="646" y="338" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Vast.ai chế độ VM · thuê trọn máy · một lần thuê liền cuối tuần (~20–22 giờ)</text>
 <rect x="648" y="354" width="540" height="112" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
 <text x="662" y="378" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">VM 4 GPU · k3s single-node</text>
-<text x="662" y="396" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">4× RTX 4090 24 GB · CPU manager static</text>
+<text x="662" y="396" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">4× RTX A4000 16 GB · ≥ 20 vCPU · CPU manager static</text>
 <line x1="676.4" y1="414" x2="676.4" y2="418" stroke="#008300" stroke-width="1.5"/>
 <line x1="676.4" y1="450" x2="676.4" y2="454" stroke="#008300" stroke-width="1.5"/>
 <line x1="690.8" y1="414" x2="690.8" y2="418" stroke="#008300" stroke-width="1.5"/>
@@ -104,13 +91,13 @@
 <text x="1014" y="417" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">lõi CPU riêng</text>
 <text x="1014" y="433.7" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">không qua mạng ngoài</text>
 <path d="M1000,434 L984,434" fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a2a78d6)"/>
-<text x="648" y="496" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Qwen2.5-7B-Instruct · ghim digest của vLLM và image</text>
+<text x="648" y="496" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Qwen2.5-3B-Instruct · ghim digest của vLLM và image</text>
 <text x="648" y="518" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Dùng cho: đo năng lực, ma trận 17 lượt, cold start, kịch bản vận hành</text>
 <text x="648" y="540" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Dữ liệu đẩy lên R2 sau mỗi lượt; huỷ instance ngay khi xong</text>
 <path d="M520,228 L520,250 Q520,258 512,258 L330,258 Q322,258 322,266 L322,290" fill="none" stroke="#52514e" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
 <rect x="334.5" y="240" width="172.9" height="18" rx="4" fill="#fcfcfb"/>
 <text x="421" y="252" font-size="11" font-weight="400" fill="#0b0b0b" text-anchor="middle">Argo CD sync · overlays/home</text>
 <path d="M720,228 L720,250 Q720,258 728,258 L910,258 Q918,258 918,266 L918,290" fill="none" stroke="#52514e" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
-<rect x="718.7" y="240" width="298.6" height="18" rx="4" fill="#fcfcfb"/>
-<text x="868" y="252" font-size="11" font-weight="400" fill="#0b0b0b" text-anchor="middle">thuê VM (vastai) → Ansible → Argo CD · overlays/cloud</text>
+<rect x="673" y="240" width="389.9" height="18" rx="4" fill="#fcfcfb"/>
+<text x="868" y="252" font-size="11" font-weight="400" fill="#0b0b0b" text-anchor="middle">thuê VM (vast.sh) → Ansible → make cloud-platform · overlays/cloud-3b</text>
 </svg>

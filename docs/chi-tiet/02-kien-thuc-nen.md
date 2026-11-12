@@ -42,10 +42,13 @@ $$
 | Model | Số lớp | Số KV head | d_head | KV/token (BF16) | 8.192 token |
 |---|---|---|---|---|---|
 | Qwen2.5-1.5B | 28 | 2 | 128 | 28 KiB | 224 MiB |
+| **Qwen2.5-3B** (model cloud của V2) | 36 | 2 | 128 | 36 KiB | 288 MiB |
 | Qwen2.5-7B | 28 | 4 | 128 | 56 KiB | 448 MiB |
 | Llama-3.1-8B | 32 | 8 | 128 | 128 KiB | 1 GiB |
 
 Các model trên đều dùng **GQA** (grouped-query attention): nhiều head truy vấn dùng chung một KV head. Nhờ vậy KV-cache nhỏ hơn nhiều so với attention đầy đủ. Đây là lý do Qwen2.5-7B chứa được nhiều request đồng thời hơn Llama-3.1-8B trên cùng một GPU.
+
+Kiểm bằng số đo: trên RTX A4000 ngày 08/11/2026, vLLM báo KV-cache của 3B là 7,28 GiB = 211.936 token, tức ≈ 36.880 B/token, lệch dưới 0,1 % so với 36 KiB = 36.864 B theo công thức (vLLM làm tròn dung lượng tới 0,01 GiB). Model 1,5B ở nhà cũng khớp tương tự ([nhật ký vận hành](../nhat-ky/van-hanh.md), LT2).
 
 ### 1.4. Ngân sách VRAM trên GPU 24 GB (ví dụ)
 
@@ -59,6 +62,20 @@ Các model trên đều dùng **GQA** (grouped-query attention): nhiều head tr
 
 vLLM in con số thật khi khởi động (`GPU KV cache size: … tokens`, `Maximum concurrency …`). **Hãy ghi lại con số này** vào `metadata.json`.
 
+Cấu hình thật của V2 (Qwen2.5-3B trên RTX A4000 16 GB, cùng `gpu-memory-utilization` 0,90), số lấy từ phiên V0+V1 ngày 08/11/2026:
+
+```text
+16 GiB × 0,90 (gpu-memory-utilization)         ≈ 14,4 GiB được phép dùng
+ − weights Qwen2.5-3B (BF16, ≈ 3,09 tỷ tham số) ≈  5,8 GiB  (≈ 6,2 GB)
+ − activation + CUDA graph (phần còn lại)       ≈  1,4 GiB
+ = KV-cache (vLLM báo)                          =  7,28 GiB = 211.936 token
+→ "Maximum concurrency 25,87×" ở 8.192 token/request; với request ~1.000 token: ~210 request
+```
+
+nvidia-smi báo mỗi GPU dùng 14.416 MiB (≈ 14,1 GiB) khi chạy, dưới mức 14,4 GiB cho phép.
+
+Vì vậy trên máy V2, giới hạn số request đồng thời là `--max-num-seqs` 64 chứ không phải KV-cache: lúc tải cao nhất của ĐG1 thử, KV-cache mới dùng 18,5 %.
+
 Trên GPU nhà, model 1,5B ở BF16 chiếm khoảng 3,1 GB. Với `gpu-memory-utilization` 0,85 trên GPU 6 GB, KV-cache còn khoảng 1–1,5 GB, tức 40–50 nghìn token, đủ cho 32 request song song [ước lượng, cần kiểm bằng log khởi động].
 
 ### 1.5. Giới hạn trên của tốc độ decode theo GPU
@@ -69,6 +86,7 @@ Với batch nhỏ, thời gian một bước decode ≳ kích thước weights �
 |---|---|---|---|---|
 | RTX 4050 Laptop | 6 GB | ~192 GB/s | (7B không vừa) | – |
 | RTX 5060 | 8 GB | ~448 GB/s | (7B không vừa) | – |
+| RTX A4000 | 16 GB | ~448 GB/s | (7B không vừa: weights 15,2 GB đã bằng cả phần 0,90 VRAM) | – |
 | L4 | 24 GB | ~300 GB/s | ~51 ms | ~20 |
 | A10 | 24 GB | ~600 GB/s | ~25 ms | ~40 |
 | RTX A5000 | 24 GB | ~768 GB/s | ~20 ms | ~50 |
@@ -77,6 +95,8 @@ Với batch nhỏ, thời gian một bước decode ≳ kích thước weights �
 | A100 80GB | 80 GB | ~2.000 GB/s | ~8 ms | ~130 |
 
 Đây là giới hạn lý thuyết; thực tế chậm hơn khoảng 20–40%. Băng thông của hai GPU nhà là số theo thông số nhà sản xuất [cần kiểm chứng]. Bảng này là lý do nên **ưu tiên GPU có băng thông cao** khi thuê (xem [Môi trường §3.1](05-moi-truong-danh-gia.md#31-chọn-loại-gpu)).
+
+**Với model 3B dùng ở V2** (≈ 6,17 GB ở BF16) trên RTX A4000 (~448 GB/s): bước decode tối thiểu ≈ 6,17 ÷ 448 ≈ **13,8 ms**, tức ≤ ~72 token/s cho 1 request. Đo ngày 08/11/2026 (`vllm bench serve`, 1 request đồng thời, input 512 / output 256): TPOT **17,2 ms** (57 token/s), băng thông hiệu dụng ≈ 6,17 GB ÷ 17,2 ms ≈ 359 GB/s ≈ **80 %** lý thuyết. Model 1,5B trên RTX 5060 cho 79 % ([nhật ký vận hành](../nhat-ky/van-hanh.md), LT1), nên mức "chậm hơn 20–40 %" ở trên khớp ở cả hai máy.
 
 ---
 
@@ -273,7 +293,7 @@ KEDA gồm *operator*, đọc `ScaledObject` và tạo HPA tương ứng, và *m
 
 DCGM exporter có thể mặc định thu metric **30 s một lần** (tham số collect interval). Cần chỉnh về 5 s để so sánh công bằng với metric của vLLM.
 
-Trên GPU GeForce (RTX 4090, 5060, 4050), DCGM có thể không chạy đầy đủ và **không có** metric `DCGM_FI_PROF_*`. Khi đó dùng `nvidia_gpu_exporter` (đọc qua `nvidia-smi`, metric kiểu `nvidia_smi_utilization_gpu_ratio`). Exporter này **không gắn label pod hay namespace**, nên truy vấn phải cộng trên cả node.
+Trên GPU GeForce (RTX 4090, 5060, 4050), DCGM có thể không chạy đầy đủ và **không có** metric `DCGM_FI_PROF_*`. Khi đó dùng `nvidia_gpu_exporter` (đọc qua `nvidia-smi`, metric kiểu `nvidia_smi_utilization_gpu_ratio`). Exporter này **không gắn label pod hay namespace**, nên truy vấn phải cộng trên cả node. Đồ án dùng exporter này cả ở nhà lẫn trên VM RTX A4000 (card workstation, không phải GeForce): DCGM chưa được thử trên A4000 nên không biết `DCGM_FI_PROF_*` có dùng được không.
 
 ### 4.4. Vì sao GPU_UTIL bão hoà
 
