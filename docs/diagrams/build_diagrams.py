@@ -682,11 +682,12 @@ def fig_envs():
     gx, gy, gw, gh = 400, 86, 440, 142
     s.rect(gx, gy, gw, gh, fill=WHITE, stroke=INK2, sw=1.4, rx=12)
     s.rich(gx + 16, gy + 26, [("Git repository", 650, INK), ("  nguồn sự thật duy nhất", 400, INK2)], size=13.5)
-    rows = [("serving/base/", "Deployment vLLM, Service, probes"),
-            ("serving/overlays/", "home (0,5B) · cloud-3b (3B)"),
-            ("autoscaling/", "official: A2 · eval: S1, S4, A1"),
-            ("observability/", "dashboard, cảnh báo, runbook"),
-            ("infra/", "vast.sh + Ansible")]
+    # Cấu trúc repo từ 12/11/2026: "chạy cái gì" (common/) tách khỏi "chạy ở đâu" (envs/<env>/).
+    rows = [("common/", "vLLM, A2 + A1/A3/A4, giám sát, cảnh báo"),
+            ("envs/home/", "overlay 0,5B · Argo CD"),
+            ("envs/cloud/", "overlay 3B · vast.sh"),
+            ("envs/sim/", "kind · simulator · T1–T5"),
+            ("ansible/", "dựng k3s từ máy trắng")]
     for i, (p, d) in enumerate(rows):
         y = gy + 50 + i * 18.5
         s.text(gx + 16, y, p, size=11.5, fill=INK, family=MONO)
@@ -734,9 +735,9 @@ def fig_envs():
         s.text(648, 496 + i * 22, ln, size=12, fill=INK2)
 
     s.arrow([(520, 228), (520, 258), (322, 258), (322, 290)], INK2, sw=1.6)
-    s.label(421, 252, "Argo CD sync · overlays/home", fill=INK)
+    s.label(421, 252, "Argo CD sync · envs/home", fill=INK)
     s.arrow([(720, 228), (720, 258), (918, 258), (918, 290)], INK2, sw=1.6)
-    s.label(868, 252, "thuê VM (vast.sh) → Ansible → make cloud-platform · overlays/cloud-3b", fill=INK)
+    s.label(868, 252, "thuê VM (vast.sh) → Ansible → make cloud-platform · envs/cloud", fill=INK)
     s.save("06-moi-truong-trien-khai.svg")
 
 
