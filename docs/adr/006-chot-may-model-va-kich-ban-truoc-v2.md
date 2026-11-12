@@ -1,6 +1,6 @@
 # ADR-006: Chốt cloud, model, kịch bản tải và các điểm kỹ thuật trước phiên V2
 
-- **Trạng thái:** Đã chấp nhận ngày 10/11/2026; §3.1 bổ sung ngày 12/11/2026 (Quang chốt, Trình chưa xác nhận). Gom lại các quyết định đã đưa ra trong khoảng 04–09/11/2026 (họp nhóm 04/11, rà tiến độ 08/11, phiên V0+V1 08/11, sửa A1 09/11) mà trước đó chỉ nằm rải rác trong [Thông số](../chi-tiet/00-thong-so.md) ("Sửa ngày 08/11"), [ADR-004 §7](004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md#7-cập-nhật-sau-ngày-08102026) và nhật ký.
+- **Trạng thái:** Đã chấp nhận ngày 10/11/2026; §3.1 bổ sung ngày 12/11/2026 (Quang đề xuất, Trình đồng ý cùng ngày). Gom lại các quyết định đã đưa ra trong khoảng 04–09/11/2026 (họp nhóm 04/11, rà tiến độ 08/11, phiên V0+V1 08/11, sửa A1 09/11) mà trước đó chỉ nằm rải rác trong [Thông số](../chi-tiet/00-thong-so.md) ("Sửa ngày 08/11"), [ADR-004 §7](004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md#7-cập-nhật-sau-ngày-08102026) và nhật ký.
 - **Người quyết định:** Nhóm (Quang và Trình). Việc nào Trình chưa review thì ghi rõ.
 - **Thay thế một phần:** [ADR-004](004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md) K4, K5, K6, K9 và [ADR-005](005-sua-thiet-ke-sau-review.md) T1 (phần "cần kiểm chứng"); chi tiết ở §4.
 - **Liên quan:** [Thông số §2, §7, §8, §9, §10, §11](../chi-tiet/00-thong-so.md), [Môi trường §3, §6](../chi-tiet/05-moi-truong-danh-gia.md), [Kế hoạch §1.1](../chi-tiet/06-ke-hoach-quan-ly.md#11-điều-chỉnh-ngày-04112026), [nhật ký vận hành](../nhat-ky/van-hanh.md) các mục 06/11 và 08/11, [nhật ký Quang tuần 05](../nhat-ky/lam-viec/quang/tuan-05.md) (08/11) và [tuần 06](../nhat-ky/lam-viec/quang/tuan-06.md) (09/11).
@@ -37,7 +37,7 @@ ADR-004 (08/10) giả định thuê 4 × RTX 4090 chế độ VM trên Vast.ai, 
 
 ## 3. Tình trạng phạm vi tới 10/11 (không đổi mức Must/Should, chỉ ghi nhận)
 
-Các mục dưới đây có trong thiết kế nhưng **chưa có trong repo**. Nhóm chưa quyết định làm hay hạ mức; cần chốt ở buổi họp trước V2.
+Các mục dưới đây có trong thiết kế nhưng **chưa có trong repo**. Quyết định làm hay lược từng mục ở §3.1 (12/11).
 
 | Hạng mục | Thiết kế | Thực tế 10/11 |
 |---|---|---|
@@ -50,7 +50,7 @@ Các mục dưới đây có trong thiết kế nhưng **chưa có trong repo**.
 
 ### 3.1. Quyết định ngày 12/11/2026
 
-Quang chốt theo tiêu chí: **hạng mục nào hội đồng không nhìn thấy được (trong luận văn, video demo, phần chạy trực tiếp, giao diện Argo CD, Grafana, Telegram) thì lược**. Trình chưa xác nhận; nếu Trình không đồng ý thì sửa mục này trước V2.
+Nhóm chốt theo tiêu chí Quang đề xuất, Trình đồng ý (nhắn tin 12/11): **hạng mục nào hội đồng không nhìn thấy được (trong luận văn, video demo, phần chạy trực tiếp, giao diện Argo CD, Grafana, Telegram) thì lược**.
 
 | Hạng mục | Quyết định | Lý do | Người làm |
 |---|---|---|---|
@@ -89,7 +89,6 @@ Các mục còn lại của ADR-004 và ADR-005 giữ nguyên.
 | Việc | Hạn |
 |---|---|
 | Trình review C7 (truy vấn A1) | Trước V2 |
-| ~~Họp chốt §3~~: Quang chốt 12/11 (§3.1); Trình xác nhận | Trước V2 (13/11) |
 | Argo CD app `autoscaling`/`observability`; Alertmanager → Telegram (§3.1) | Trước V2 (13/11) |
 | Chốt offer máy V2 bằng `make find MODE=v2` sáng 14/11; nạp tiền Vast | 13–14/11 |
 | ADR-003: C, B\*, threshold, ngưỡng N2b, N3 theo N | Trong V2 |
