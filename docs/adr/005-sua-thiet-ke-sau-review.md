@@ -1,6 +1,6 @@
 # ADR-005: Sửa thiết kế kỹ thuật sau review 08/10/2026
 
-- **Trạng thái:** Đã chấp nhận ngày 08/10/2026. Các điểm đánh dấu *cần kiểm chứng* phải được thử trên phiên bản vLLM, KEDA và Traefik đã ghim.
+- **Trạng thái:** Đã chấp nhận ngày 08/10/2026. Các điểm đánh dấu *cần kiểm chứng* phải được thử trên phiên bản vLLM, KEDA và Traefik đã ghim. T1 bị [ADR-006](006-chot-may-model-va-kich-ban-truoc-v2.md) C8 thay ngày 10/11/2026: cờ `--shutdown-timeout` có trong bản đã ghim nhưng không có tác dụng trên vLLM 0.31.0, request an toàn là nhờ grace period 180 s.
 - **Người quyết định:** Nhóm, theo báo cáo review nội bộ ngày 08/10/2026, §12 (không lưu trong repo; mã ISSUE trong ngoặc ở cột "Vấn đề" là mã của báo cáo đó).
 - **Liên quan:** [ADR-004](004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md), [Kiến trúc và autoscaling](../chi-tiet/03-kien-truc-autoscaling.md), [Vận hành](../chi-tiet/04-van-hanh.md), [Thông số và chỉ tiêu](../chi-tiet/00-thong-so.md)
 
