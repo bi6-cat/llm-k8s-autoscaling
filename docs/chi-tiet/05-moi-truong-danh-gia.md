@@ -234,7 +234,7 @@ Nếu máy chỉ có 32 vCPU: dùng 5 lõi cho mỗi pod vLLM; máy tạo tải 
 | `make find` | `vastai search offers` theo tiêu chí, in ra 5 máy rẻ nhất |
 | `make rent OFFER=<id>` | `vastai create instance` (template VM Ubuntu có driver NVIDIA), chờ SSH, ghi instance id |
 | `make probe` | Đo phần cứng, ổ và mạng thật của VM vừa thuê, để quyết định giữ hay trả máy (thay cho `make burnin` trong thiết kế, chưa làm) |
-| `make bootstrap` | Ansible: chrony, tắt tự nâng cấp, mirror registry, k3s (tham số §3.5), GPU, tải sẵn model và image; in tổng thời gian (dùng cho VH5). Trên VM **chưa** cài Argo CD và Sealed Secrets (`argocd_enabled: false`, ADR-006 §3) |
+| `make bootstrap` | Ansible: chrony, tắt tự nâng cấp, mirror registry, k3s (tham số §3.5), GPU, tải sẵn model và image; in tổng thời gian (dùng cho VH5). Trên VM **không** cài Argo CD và Sealed Secrets (`argocd_enabled: false`, [ADR-006 §3.1](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md#31-quyết-định-ngày-12112026)) |
 | `make prefetch` | Tải model, kéo image trên VM (`make bootstrap` đã gồm bước này, chạy nền) |
 | `make cloud-platform` | Cài device plugin, Prometheus, KEDA, GPU exporter, vLLM bằng Helm (trên cloud chưa dùng Argo CD) |
 | `make vh5` | Bấm giờ VH5: bootstrap, cloud-platform, gọi API có streaming |
@@ -243,7 +243,7 @@ Nếu máy chỉ có 32 vCPU: dùng 5 lõi cho mỗi pod vLLM; máy tạo tải 
 | `make ops-tests S=… MATRIX=… RATE=…` | Chạy một kịch bản vận hành dưới tải (VH2–VH4), chấm đạt/không đạt |
 | `make backup` | `rclone` lên R2, kiểm tra checksum |
 | `make release` | Huỷ instance; **từ chối chạy** nếu backup chưa xong |
-| `make analysis` | Tạo bảng, chạy notebook, xuất hình (**chưa làm**, TR7) |
+| `make analysis` | Tạo bảng, chạy notebook, xuất hình (**lược** lệnh `make`, [ADR-006 §3.1](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md#31-quyết-định-ngày-12112026); bảng và hình chương 5 vẫn làm bằng script, TR7) |
 | `make lint`, `make alerts-test`, `make dashboards-check` | Kiểm tra YAML, manifest, quy tắc cảnh báo, dashboard; Python chạy `pytest` và `ruff` trong từng gói |
 
 - Chỉ phần `find/rent/probe/release` (`infra/provision/vast.sh`) phụ thuộc Vast.ai. Đổi nhà cung cấp thì chỉ viết lại các lệnh này; toàn bộ Ansible trở đi giữ nguyên.

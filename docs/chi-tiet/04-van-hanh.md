@@ -320,6 +320,8 @@ Thiết kế ban đầu để Argo CD dựng phần nền trên VM (bootstrap c�
 
 ## 8. Bảo mật tối thiểu
 
+**Sửa 12/11/2026** ([ADR-006 §3.1](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md#31-quyết-định-ngày-12112026)): chỉ làm các lớp Mạng, Xác thực và Chuỗi cung ứng. Ba lớp Giới hạn tốc độ, Cô lập trong cluster và Bí mật bị lược vì hội đồng không nhìn thấy; bảng dưới giữ thiết kế gốc để tham khảo, phần lược được ghi vào Hạn chế ([Bài toán §12.3](01-bai-toan-yeu-cau.md#123-hạn-chế-sẽ-ghi-trong-luận-văn)).
+
 | Lớp | Biện pháp | Cấu hình |
 |---|---|---|
 | Mạng | API chỉ mở trong mạng nội bộ; không có IP công khai | Traefik chỉ lắng nghe trên mạng riêng (VM thuê: chỉ SSH được mở ra ngoài; máy nhà: chỉ trong LAN và Tailscale) |
