@@ -9,4 +9,4 @@ Mỗi quyết định lớn một file `NNN-<ten>.md`, không sửa nội dung c
 | 003 | (dành) | Kết quả đo năng lực ĐG1 và các giá trị chốt: C, B\*, threshold, ngưỡng N2b, N3 theo N. Viết trong phiên V2 | Chưa viết |
 | [004](004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md) | 08/10/2026 | Điều kiện thực tế (hạn 08/12, máy nhà, cloud), phạm vi rút gọn, 17 lượt, kế hoạch 9 tuần; §7 ghi cập nhật tới 06/11 | Bị thay một phần bởi 006 |
 | [005](005-sua-thiet-ke-sau-review.md) | 08/10/2026 | 18 sửa thiết kế kỹ thuật sau review: graceful shutdown, rolling update khi 1 replica, ngưỡng TTFT trùng bucket, VH4 bằng NetworkPolicy… | T1 bị thay bởi 006 C8 |
-| [006](006-chot-may-model-va-kich-ban-truoc-v2.md) | 10/11/2026 | Chốt trước V2: chỉ còn Vast, máy 4 × A4000, model 3B, N = 4, kịch bản 12/24/17, KEDA timeout, truy vấn A1, chấp nhận grace 180 s; tình trạng phạm vi | Đang áp dụng |
+| [006](006-chot-may-model-va-kich-ban-truoc-v2.md) | 10/11/2026 | Chốt trước V2: chỉ còn Vast, máy 4 × A4000, model 3B, N = 4, kịch bản 12/24/17, KEDA timeout, truy vấn A1, chấp nhận grace 180 s; tình trạng phạm vi, lược các hạng mục hội đồng không thấy (12/11) | Đang áp dụng |

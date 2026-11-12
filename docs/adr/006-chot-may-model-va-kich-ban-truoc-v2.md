@@ -1,6 +1,6 @@
 # ADR-006: Chốt cloud, model, kịch bản tải và các điểm kỹ thuật trước phiên V2
 
-- **Trạng thái:** Đã chấp nhận ngày 10/11/2026. Gom lại các quyết định đã đưa ra trong khoảng 04–09/11/2026 (họp nhóm 04/11, rà tiến độ 08/11, phiên V0+V1 08/11, sửa A1 09/11) mà trước đó chỉ nằm rải rác trong [Thông số](../chi-tiet/00-thong-so.md) ("Sửa ngày 08/11"), [ADR-004 §7](004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md#7-cập-nhật-sau-ngày-08102026) và nhật ký.
+- **Trạng thái:** Đã chấp nhận ngày 10/11/2026; §3.1 bổ sung ngày 12/11/2026 (Quang chốt, Trình chưa xác nhận). Gom lại các quyết định đã đưa ra trong khoảng 04–09/11/2026 (họp nhóm 04/11, rà tiến độ 08/11, phiên V0+V1 08/11, sửa A1 09/11) mà trước đó chỉ nằm rải rác trong [Thông số](../chi-tiet/00-thong-so.md) ("Sửa ngày 08/11"), [ADR-004 §7](004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md#7-cập-nhật-sau-ngày-08102026) và nhật ký.
 - **Người quyết định:** Nhóm (Quang và Trình). Việc nào Trình chưa review thì ghi rõ.
 - **Thay thế một phần:** [ADR-004](004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md) K4, K5, K6, K9 và [ADR-005](005-sua-thiet-ke-sau-review.md) T1 (phần "cần kiểm chứng"); chi tiết ở §4.
 - **Liên quan:** [Thông số §2, §7, §8, §9, §10, §11](../chi-tiet/00-thong-so.md), [Môi trường §3, §6](../chi-tiet/05-moi-truong-danh-gia.md), [Kế hoạch §1.1](../chi-tiet/06-ke-hoach-quan-ly.md#11-điều-chỉnh-ngày-04112026), [nhật ký vận hành](../nhat-ky/van-hanh.md) các mục 06/11 và 08/11, [nhật ký Quang tuần 05](../nhat-ky/lam-viec/quang/tuan-05.md) (08/11) và [tuần 06](../nhat-ky/lam-viec/quang/tuan-06.md) (09/11).
@@ -48,6 +48,21 @@ Các mục dưới đây có trong thiết kế nhưng **chưa có trong repo**.
 | Alertmanager → Telegram (F6) | 6 cảnh báo tới Telegram | Rule và runbook có, unit test đạt; chưa áp lên cluster, chưa có Telegram cho Alertmanager (Telegram của runner thì có) |
 | `make burnin`, `make capacity`, `make analysis`, gói `analysis/` (TR7) | [Môi trường §3.7](../chi-tiet/05-moi-truong-danh-gia.md#37-tự-động-hoá-bằng-makefile) | Chưa có; burn-in rút gọn làm bằng `make probe` + `vllm bench serve` tay; ĐG1 chạy bằng `make run MATRIX=experiments/matrix-dg1-*.yaml` |
 
+### 3.1. Quyết định ngày 12/11/2026
+
+Quang chốt theo tiêu chí: **hạng mục nào hội đồng không nhìn thấy được (trong luận văn, video demo, phần chạy trực tiếp, giao diện Argo CD, Grafana, Telegram) thì lược**. Trình chưa xác nhận; nếu Trình không đồng ý thì sửa mục này trước V2.
+
+| Hạng mục | Quyết định | Lý do | Người làm |
+|---|---|---|---|
+| Argo CD app `autoscaling` và `observability` | **Làm trước V2** (ở nhà) | Hội đồng thấy mọi thành phần *Synced* trên giao diện Argo CD; F3 là Must | Trình (TR1) |
+| Alertmanager → Telegram | **Làm trước V2** | Cảnh báo tới điện thoại thấy được trong demo, ảnh chụp đưa vào luận văn; F6 là Must | Trình (TR4) |
+| Sealed Secrets | **Lược** | Chạy ngầm, không có gì để trình diễn; F7 là Should. Secret vẫn tạo tay từ `.env` (đã gitignore) | – |
+| NetworkPolicy thường trực, rate limit Traefik, route riêng cho máy tạo tải | **Lược** | Như trên (F7). Vẫn có API key, API không mở ra Internet; VH4 dùng một NetworkPolicy tạm thời làm ví dụ | – |
+| Argo CD trên VM thuê | **Lược** | VM bị huỷ sau V2, hội đồng không thấy. F4 vẫn đạt: VH5 dựng bằng `make bootstrap` + `make cloud-platform`, có bấm giờ | – |
+| `make burnin`, `make capacity`, `make analysis` | **Lược phần đóng gói thành lệnh `make`** | Hội đồng chỉ thấy kết quả. **Vẫn phải làm**: ĐG1 → C, B\*, threshold (ADR-003) và bảng, biểu đồ chương 5, bằng script chạy tay cũng được | – |
+
+Các mục bị lược được ghi vào Hạn chế ([Bài toán §12.3](../chi-tiet/01-bai-toan-yeu-cau.md#123-hạn-chế-sẽ-ghi-trong-luận-văn)).
+
 ## 4. Các mục bị thay thế
 
 | Mục | Nội dung cũ | Nội dung mới |
@@ -74,6 +89,7 @@ Các mục còn lại của ADR-004 và ADR-005 giữ nguyên.
 | Việc | Hạn |
 |---|---|
 | Trình review C7 (truy vấn A1) | Trước V2 |
-| Họp chốt §3: làm hay hạ mức Sealed Secrets, NetworkPolicy/rate limit, Argo CD app `autoscaling`/`observability`, Telegram cho Alertmanager | Trước V2 (13/11) |
+| ~~Họp chốt §3~~: Quang chốt 12/11 (§3.1); Trình xác nhận | Trước V2 (13/11) |
+| Argo CD app `autoscaling`/`observability`; Alertmanager → Telegram (§3.1) | Trước V2 (13/11) |
 | Chốt offer máy V2 bằng `make find MODE=v2` sáng 14/11; nạp tiền Vast | 13–14/11 |
 | ADR-003: C, B\*, threshold, ngưỡng N2b, N3 theo N | Trong V2 |
