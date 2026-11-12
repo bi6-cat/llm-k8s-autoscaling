@@ -85,3 +85,18 @@
 - **Incidents:** bản nháp ngân sách VRAM ghi 14.416 MiB = 14,4 GiB; đúng là ≈ 14,1 GiB (14,4 GiB là mức 0,90 cho phép). Sửa trước khi commit. Nhãn M3 và M5 ở Hình 9 đè nhau sau khi dời M3 sang 22/11; sửa bằng căn phải.
 - **Links:** PR #33 (nhánh `docs/sync-after-v1`); `docs/chi-tiet/02-kien-thuc-nen.md`, `docs/diagrams/build_diagrams.py`, `docs/adr/004-*.md`, `docs/adr/005-*.md`.
 - **Thesis:** §2 (kiến thức nền: KV-cache, giới hạn decode với số đo A4000), LT1, LT2; Hình 6, 9 cho chương 3 và phần kế hoạch.
+
+## 2026-11-12 – Chốt phạm vi ADR-006 §3 và xác nhận của Trình
+
+- **Task:** chung · **Environment:** none
+- **Done:**
+  1. Ghi quyết định vào ADR-006 §3.1, cập nhật chỉ mục ADR; bỏ khỏi bảng việc mở các mục "họp chốt §3" và "Trình review C7".
+  2. Đồng bộ Thông số (F4, F7, danh sách đã bỏ), Bài toán §12.3 (thêm Hạn chế 10), Vận hành §8, Môi trường §3.7, Kế hoạch (TR1, nguyên tắc bí mật), bản bàn giao.
+- **Decision:** tiêu chí của Quang: **hội đồng không nhìn thấy thì lược**.
+  - Làm trước V2: Argo CD app `autoscaling`/`observability` (TR1; F3 Must, thấy trên giao diện Argo CD) và Alertmanager → Telegram (TR4; F6 Must, thấy trong demo).
+  - Lược: Sealed Secrets, NetworkPolicy thường trực và rate limit (F7 chỉ là Should), Argo CD trên VM (F4 vẫn đạt bằng `make`), các lệnh `make burnin`/`capacity`/`analysis`. Việc đo ĐG1 → ADR-003 và biểu đồ chương 5 vẫn làm.
+  - Trình đồng ý toàn bộ qua tin nhắn ngày 12/11, gồm cả truy vấn A1 (ADR-006 C7). PR #29 vẫn không có review trên GitHub.
+- **Deviations:** F7 chỉ còn API key và mạng riêng; VH2 trên VM không qua Git. Cả hai đã ghi vào Hạn chế (Bài toán §12.3 mục 10).
+- **Links:** PR #33; `docs/adr/006-chot-may-model-va-kich-ban-truoc-v2.md` §3.1.
+- **Thesis:** §1 hoặc §3 (phạm vi và lý do lược), Hạn chế mục 10.
+

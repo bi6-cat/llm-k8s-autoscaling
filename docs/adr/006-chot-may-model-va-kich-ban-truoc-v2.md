@@ -30,7 +30,7 @@ ADR-004 (08/10) giả định thuê 4 × RTX 4090 chế độ VM trên Vast.ai, 
 | C4 | N | **N = 4** làm mặc định; code và ma trận tham số hoá theo N để chạy được N = 2 nếu rơi vào C2(b) | Giữ đúng S4 và N3 như thiết kế |
 | C5 | Kịch bản tải | KB1 / KB2 / KB3 = **12 / 24 / 17 phút** (trước: 20 / 25 / 25); **đỉnh KB2 = 0,75 × N × C** (trước: cố định 3,0 C). Chi tiết và giới hạn khi rút ở [Thông số §7](../chi-tiet/00-thong-so.md#7-kịch-bản-tải) | Để V2 còn giờ cho lần lặp; đỉnh theo N để chạy được máy 2 GPU |
 | C6 | KEDA `timeout` | `timeout: "1000"` ms cho mọi trigger Prometheus (mặc định 3000) | Với 3000 ms, T4 trên kind 3/7 lần vượt N6 (30 s); với 1000 ms 8/8 lần đạt (07/11) |
-| C7 | Truy vấn A1 | `sum(avg_over_time(nvidia_smi_utilization_gpu_ratio[15s])) * 100` thay cho `sum(nvidia_smi_utilization_gpu_ratio) * 100` | Hạ một mẫu nhiễu 100 % của GPU vừa tắt xuống 33 %, khỏi kẹt replica; scale-up trễ thêm 5–20 s trên dữ liệu V1. **Quang làm thay phần TR2, Trình cần review**; chưa chạy với KEDA trên cluster, lần đầu là V2 |
+| C7 | Truy vấn A1 | `sum(avg_over_time(nvidia_smi_utilization_gpu_ratio[15s])) * 100` thay cho `sum(nvidia_smi_utilization_gpu_ratio) * 100` | Hạ một mẫu nhiễu 100 % của GPU vừa tắt xuống 33 %, khỏi kẹt replica; scale-up trễ thêm 5–20 s trên dữ liệu V1. **Quang làm thay phần TR2; Trình đồng ý qua tin nhắn ngày 12/11** (PR #29 không có review trên GitHub); chưa chạy với KEDA trên cluster, lần đầu là V2 |
 | C8 | Graceful shutdown | **Tạm chấp nhận** cấu hình hiện tại (preStop 20 s + `--shutdown-timeout 150` + grace 180 s): request an toàn nhờ grace period giữ pod sống tới 180 s. Không gỡ lỗi vLLM trước V2. Ghi vào Hạn chế: (1) request kéo dài quá ~160 s sau SIGTERM vẫn bị SIGKILL cắt; (2) mỗi lần tắt, pod giữ GPU đủ 180 s, nên scale-down và rolling update tốn thêm 3 phút mỗi pod | Thời gian tới V2 không đủ để tìm nguyên nhân trong vLLM; N4 vẫn đo được |
 | C9 | Lịch | V0+V1 gộp, **đã xong 08/11**; **V2 14–15/11**; không còn V3; đóng băng dữ liệu **22/11**, không lùi | Theo họp 04/11 |
 | C10 | Tiền | 800.000 VND đã nạp là tiền GCP, không dùng được cho Vast. Tiền Vast nạp riêng trước 13/11, đủ ≥ 1,3 × chi phí dự kiến V2 | – |
@@ -82,13 +82,12 @@ Các mục còn lại của ADR-004 và ADR-005 giữ nguyên.
 - Mọi số đo của chương 5 sẽ gắn với **RTX A4000 (card workstation Ampere, 16 GB) và model 3B**, không phải 4090 và 7B như bản mô tả 3.0. Phần Hạn chế của luận văn ghi rõ, kèm ước lượng ngoại suy theo kích thước weights cho cold start.
 - GPU-giờ của A2 ở KB2 cộng thêm 180 s mỗi pod bị tắt (C8); khi so với S4 ở N3 phải nói rõ phần này.
 - Không còn phiên dự phòng: V2 hỏng thì áp dụng các dòng còn lại của [Kế hoạch §8](../chi-tiet/06-ke-hoach-quan-ly.md#8-dự-phòng-và-cắt-giảm-phạm-vi), chấp nhận ô chỉ có 1 lượt.
-- C7 đổi tín hiệu A1 so với thiết kế gốc; nếu Trình không đồng ý thì đổi lại trước V2 và ghi vào ADR này.
+- C7 đổi tín hiệu A1 so với thiết kế gốc; Trình đã đồng ý ngày 12/11, nên V2 chạy A1 với truy vấn mới.
 
 ## 6. Việc còn mở
 
 | Việc | Hạn |
 |---|---|
-| Trình review C7 (truy vấn A1) | Trước V2 |
 | Argo CD app `autoscaling`/`observability`; Alertmanager → Telegram (§3.1) | Trước V2 (13/11) |
 | Chốt offer máy V2 bằng `make find MODE=v2` sáng 14/11; nạp tiền Vast | 13–14/11 |
 | ADR-003: C, B\*, threshold, ngưỡng N2b, N3 theo N | Trong V2 |

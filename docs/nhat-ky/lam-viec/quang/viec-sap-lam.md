@@ -37,9 +37,9 @@ Phần trăm là ước lượng theo đầu việc, không phải giờ đã d�
 - [x] (09/11, code xong, **chưa chạy trên VM**) **Q2:** `cloud-prefetch`, `make cloud-platform`, `make probe`, bộ lọc v2 mới.
 - [x] (09/11, code xong, **chưa thử R2 và Telegram thật**) **Q6 runner v2:** R2, systemd, Telegram.
 - [x] (09/11, chạy trên kind, **chưa chạy trên GPU**) **Q5, Q7:** `make ops-tests` (VH2–VH4), `make vh5`.
-- [x] (09/11) **Merge theo thứ tự:** PR #28 `chore/v2-prep-to-main` → #29 A1 → #30 cloud → #31 runner → #32 VH, đều vào `main`. Không PR nào có review; **Trình vẫn cần review A1** (ADR-006 C7). Quang tự nhắn Trình.
+- [x] (09/11) **Merge theo thứ tự:** PR #28 `chore/v2-prep-to-main` → #29 A1 → #30 cloud → #31 runner → #32 VH, đều vào `main`. Không PR nào có review trên GitHub; Trình đồng ý truy vấn A1 (ADR-006 C7) qua tin nhắn ngày 12/11.
 - [x] (10/11, 12/11) **Đồng bộ tài liệu với ADR-006:** ADR-006 + chỉ mục ADR; Thông số, Bài toán, Kiến trúc, Vận hành, Môi trường, Kế hoạch, Kiến thức nền, mô tả tổng; trạng thái ADR-004/005; Hình 6, 9; ghi chú lỗi thời ở W1, W2. PR #33 (nhánh `docs/sync-after-v1`), chưa merge.
-- [ ] **Họp chốt ADR-006 §3:** làm hay hạ mức Sealed Secrets, NetworkPolicy/rate limit, Argo CD app `autoscaling`/`observability`, Telegram cho Alertmanager (trước 13/11). **Đề xuất của Quang (12/11), tiêu chí "hội đồng không thấy thì lược":** làm trước V2: Argo CD app `autoscaling`/`observability` (thấy trên giao diện Argo CD, F3 Must) và Telegram cho Alertmanager (thấy trong demo, F6 Must). Lược: Sealed Secrets và NetworkPolicy/rate limit (F7 chỉ là Should; ghi vào Hạn chế), Argo CD trên VM (VM bị huỷ sau V2; F4 vẫn đạt bằng `make`), các target `make burnin`/`capacity`/`analysis` (chỉ lược phần đóng gói, vẫn phải đo ĐG1 → ADR-003 và làm biểu đồ chương 5). Chốt với Trình rồi ghi vào ADR-006.
+- [x] (12/11) **Chốt ADR-006 §3:** Quang đề xuất, Trình đồng ý qua tin nhắn; ghi ở ADR-006 §3.1. Làm trước V2: Argo CD app `autoscaling`/`observability` (TR1), Alertmanager → Telegram (TR4). Lược: Sealed Secrets, NetworkPolicy/rate limit, Argo CD trên VM, các lệnh `make burnin`/`capacity`/`analysis` (vẫn phải đo ĐG1 → ADR-003 và làm biểu đồ chương 5).
 - [ ] **Tạo `.env`:** `VAST_VM_TEMPLATE`, API key Vast, khoá R2, bot Telegram; thử `make backup` và một tin Telegram trước V2.
 - [ ] **Chốt máy V2:** 09/11 Vast không có offer VM 4 × A4000; chỉ có 4 × 5090 / 4 × 4090 từ $2,4/giờ và thay đổi trong vài phút. Theo dõi `make find`.
 - [ ] Sao lưu `runs/` bằng `make backup` (V0+V1 chỉ có trên laptop; cần `.env`).
@@ -77,7 +77,8 @@ Phần trăm là ước lượng theo đầu việc, không phải giờ đã d�
 
 | Việc của Quang | Cần từ Trình |
 |---|---|
-| Runner, V2 (Q6) | **Review** truy vấn A1 Quang đã sửa thay (TR2, 09/11; trung bình 15 s, chưa chạy trên cluster) |
+| Runner, V2 (Q6) | ~~Review truy vấn A1~~: Trình đồng ý 12/11 (qua tin nhắn). Truy vấn chưa chạy trên cluster, lần đầu là V2 |
+| Demo (F3, F6) | Argo CD app `autoscaling`/`observability` (TR1) và Alertmanager → Telegram (TR4) trước V2 (ADR-006 §3.1) |
 | PodMonitor vLLM và GPU ở nhà, số đo từ Prometheus | kube-prometheus-stack trên cluster nhà (TR3) |
 | Serving qua Argo CD | Argo CD + App-of-Apps (TR1) |
 | Đo 8 pha (Q4) | `parse_vllm_log` (TR5, đã merge; chưa chạy với log vLLM thật) |
