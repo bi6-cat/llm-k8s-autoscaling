@@ -100,3 +100,33 @@
 - **Links:** PR #33; `docs/adr/006-chot-may-model-va-kich-ban-truoc-v2.md` §3.1.
 - **Thesis:** §1 hoặc §3 (phạm vi và lý do lược), Hạn chế mục 10.
 
+## 2026-11-13 – Tái cấu trúc repo theo môi trường và báo cáo kỹ thuật HTML
+
+- **Task:** chung · **Environment:** sim (kind `llm-sim`); không đụng cluster nhà và VM
+- **Done:**
+  1. Chuyển repo sang `envs/{home,cloud,sim}/` (chạy ở đâu) + `common/` (chạy cái gì) + `ansible/`, bằng `git mv`; sửa mọi tham chiếu bằng một lượt thay theo bảng ánh xạ, rồi sửa tay phần còn lại (đường dẫn tương đối trong kustomization, `cd ../../..` của script, role Argo CD, test Python, regex của job docs trong CI).
+  2. Gộp overlay `cloud` (7B) và `cloud-3b` thành một overlay `envs/cloud/serving` (3B); bỏ 7B.
+  3. `make help` chia nhóm theo môi trường; sửa lỗi cũ: regex không khớp target có chữ số nên `vh5` không hiện. Các lệnh `burnin`/`capacity`/`analysis` in lệnh thay thế (ADR-006 §3.1).
+  4. README gốc viết lại; thêm README cho `envs/home`, `envs/cloud`, `envs/sim`; CONTRIBUTING §1 mô tả cấu trúc mới; Hình 6 vẽ lại khối repo.
+  5. Báo cáo kỹ thuật `docs/bao-cao/bao-cao-ky-thuat.html` (đăng artifact riêng tư): kiến trúc, số đo 08/11, mô phỏng ma trận V2, hướng nâng cấp (lý thuyết hàng đợi, A2 dự báo, JSQ).
+  6. Viết lại báo cáo chi tiết hơn theo yêu cầu (17 mục): thuật ngữ, minh hoạ bài toán, một request đi qua hệ thống, GitOps, vòng autoscaling từng bước, tín hiệu scale, ba kịch bản tải, timeline tắt pod, chi phí quy ra USD, lộ trình nâng cấp, hỏi đáp khi bảo vệ. Thêm số đo mới trích từ `runs/dg1-v1-a4000/`: GPU util của GPU có pod = 100 % ở cả 5 mức λ (2–6 req/s), request đang chạy 12,1 / 39,6 / 51,6 / 63,6 / 63,4, KV-cache 4,3–22,8 %; request trung vị tại λ = 2: TTFT 0,18 s, E2E 6,14 s; tại C: TTFT 0,30 s, E2E 11,51 s.
+- **Decision:**
+  - Giữ Kustomize base + overlay (base ở `common/`), không nhân đôi manifest theo môi trường.
+  - Giữ nguyên tên lệnh `make` (ADR và nhật ký dùng chúng), chỉ nhóm lại trong `make help`.
+  - Nhật ký, ADR, hướng dẫn W1/W2 giữ đường dẫn cũ (tư liệu); CI vẫn bỏ qua link tới đường dẫn cũ.
+  - Báo cáo dùng số thật 08/11 + mô phỏng có nhãn cho ô chưa chạy (Quang chọn).
+- **Results:**
+  - 10 thư mục kustomize render **giống từng byte** trước và sau (kể cả `envs/cloud/serving` so với `serving/overlays/cloud-3b` cũ).
+  - pytest `experiments` 146 passed (bằng `main`), `loadgen` 55 passed; ruff, yamllint, ansible syntax-check, shellcheck sạch; `make alerts-test` (promtool 3.15.0) 7 cảnh báo + 2 file rule đạt; `make dashboards-check` 3 dashboard đạt.
+  - `make sim-up` trên kind mới: exit 0, A2 được tạo từ `envs/sim/autoscaling`. Runner `--dry-run` đọc được 5 ma trận ở chỗ mới; `matrix-v2.yaml` từ chối vì C và threshold còn trống (đúng thiết kế).
+  - **Chưa chạy:** `make sim-test` (máy chưa có `hey`; tải binary bị chặn). Chưa thử `make home-up`, `make cloud-platform` với đường dẫn mới trên máy thật.
+  - Mô phỏng hiệu chỉnh bằng 2 lượt V1: A2×KB2 spike 64,6 % so với thật 62,7 %; A1×KB3 ramp 79,9 % so với 88,6 %, sustain 99,8 % so với 99,9 %. Kết quả (5 seed): A1 tốn 86–93 % GPU-giờ của S4 ở mọi kịch bản; A2 KB1 0,20 GPU-giờ (= S1), KB2 SLO 71,9 %; A2 dự báo đưa KB3 từ 88,8 % lên 96,9 % (+4 % GPU-giờ) nhưng KB1 tốn gấp đôi.
+  - Hàng đợi đỉnh ở pod cũ (A2×KB2) đo 1.041, công thức (λ − C) × timeout 120 s = 1.080.
+- **Incidents:**
+  - `git stash` / `stash pop` làm mất các rename trong index, khiến danh sách file của lượt thay thiếu file đã dời → `git add -A` rồi chạy lại.
+  - Mẫu `observability/` trong lượt thay đầu có lookahead chặn mọi đường dẫn con → gần như không thay; phát hiện khi `make alerts-test` lỗi, sửa bằng lượt riêng.
+  - Bốn script và role Argo CD tính gốc repo theo số tầng (`../..`), sai sau khi sâu thêm một tầng; không công cụ kiểm nào bắt được, tìm bằng grep.
+  - Mô phỏng: lần đầu tính GPU-giờ cả phần sau khi lượt kết thúc (A1×KB1 > S4, vô lý) → giới hạn trong thời lượng lượt. Bản nháp báo cáo có chia pha cold start lần 2 không có trong log → bỏ, ghi "chưa tách".
+- **Deviations:** CONTRIBUTING §1 đổi từ chia theo thành phần sang chia theo môi trường; overlay 7B mà ADR-006 C3 ghi "giữ tham khảo" đã xoá (còn trong lịch sử Git).
+- **Links:** nhánh `refactor/split-home-cloud`; `CONTRIBUTING.md`, `envs/*/README.md`, `docs/bao-cao/`.
+- **Thesis:** §3–§4 (cấu trúc repo, ba môi trường); §5 (mô phỏng có hiệu chỉnh, chỉ dùng làm ước lượng); Hướng phát triển (lý thuyết hàng đợi, autoscaling dự báo, JSQ).

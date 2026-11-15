@@ -1,0 +1,1171 @@
+<title>LLM serving co giãn trên Kubernetes</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@500;600;700;800&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Bố cục: một cột đọc ~68 ký tự, hình rộng hơn cột chữ; mỗi số liệu mang nhãn nguồn gốc (đo thật / mô phỏng / minh hoạ / đề xuất). */
+:root {
+  --bg: #f6f8f9;
+  --surface: #ffffff;
+  --ink: #12202a;
+  --ink-2: #44535d;
+  --muted: #74838c;
+  --rule: #dbe3e7;
+  --band: #eaf0f2;
+  --accent: #0b6870;
+  --accent-soft: #dcefef;
+  --good: #1d7a3b;
+  --warn: #9a5b00;
+  --bad: #b2331d;
+  --bad-soft: #f8e4df;
+  --s-a2: #2a78d6;
+  --s-a1: #eb6834;
+  --s-s4: #1baf7a;
+  --s-s1: #eda100;
+  --load: #9fb0b9;
+  --font-display: "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Literata", Georgia, "Times New Roman", serif;
+  --font-data: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step--1: 0.84rem;
+  --step-0: 1.02rem;
+  --step-1: 1.22rem;
+  --step-2: 1.55rem;
+  --step-3: 2.1rem;
+  --step-4: 2.9rem;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #10171b; --surface: #162026; --ink: #e3eaed; --ink-2: #a7b5bc; --muted: #7d8c94; --rule: #263439;
+    --band: #1a262c; --accent: #5db8b8; --accent-soft: #163233; --good: #52c27e; --warn: #e2a440; --bad: #f07b63;
+    --bad-soft: #3a211c; --s-a2: #3987e5; --s-a1: #d95926; --s-s4: #199e70; --s-s1: #c98500; --load: #56666e;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #10171b; --surface: #162026; --ink: #e3eaed; --ink-2: #a7b5bc; --muted: #7d8c94; --rule: #263439;
+  --band: #1a262c; --accent: #5db8b8; --accent-soft: #163233; --good: #52c27e; --warn: #e2a440; --bad: #f07b63;
+  --bad-soft: #3a211c; --s-a2: #3987e5; --s-a1: #d95926; --s-s4: #199e70; --s-s1: #c98500; --load: #56666e;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: var(--step-0); line-height: 1.62;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 920px; margin: 0 auto; padding-block: 48px 96px; display: flex; flex-direction: column; gap: 60px; }
+h1, h2, h3 { font-family: var(--font-display); color: var(--ink); text-wrap: balance; margin: 0; line-height: 1.2; }
+h1 { font-size: var(--step-4); font-weight: 800; letter-spacing: -0.02em; }
+h2 { font-size: var(--step-3); font-weight: 700; letter-spacing: -0.01em; }
+h3 { font-size: var(--step-1); font-weight: 600; margin-top: 8px; }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
+code, .mono { font-family: var(--font-data); font-size: 0.86em; }
+strong { font-weight: 600; }
+.num { font-variant-numeric: tabular-nums; }
+
+header.hero { display: flex; flex-direction: column; gap: 18px; padding-bottom: 8px; border-bottom: 1px solid var(--rule); }
+.kicker { font-family: var(--font-data); font-size: var(--step--1); color: var(--accent); letter-spacing: 0.06em; text-transform: uppercase; }
+.lede { font-size: var(--step-1); color: var(--ink-2); max-width: 60ch; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 20px; font-family: var(--font-data); font-size: var(--step--1); color: var(--muted); }
+.status { display: flex; gap: 12px; align-items: flex-start; background: var(--accent-soft); color: var(--ink); padding: 12px 16px; border-radius: 6px; font-size: 0.95rem; max-width: 78ch; }
+.status b { font-family: var(--font-display); font-weight: 600; white-space: nowrap; }
+
+.prov { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-data); font-size: 0.72rem; letter-spacing: 0.05em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; white-space: nowrap; vertical-align: 0.15em; }
+.prov.measured { background: var(--ink); color: var(--bg); }
+.prov.sim { border: 1px dashed var(--ink-2); color: var(--ink-2); }
+.prov.illus { border: 1px dotted var(--muted); color: var(--muted); }
+.prov.proposal { border: 1px solid var(--accent); color: var(--accent); }
+
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
+.stat { background: var(--surface); padding: 16px; display: flex; flex-direction: column; gap: 4px; }
+.stat .v { font-family: var(--font-display); font-size: var(--step-2); font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.stat .v small { font-size: 0.55em; font-weight: 600; color: var(--ink-2); margin-left: 3px; }
+.stat .k { font-size: 0.88rem; color: var(--ink-2); line-height: 1.4; }
+
+.brief { display: flex; flex-direction: column; gap: 12px; }
+.brief h2 { font-size: var(--step-2); }
+.brief ol { margin: 0; padding-left: 1.4em; display: flex; flex-direction: column; gap: 8px; max-width: 72ch; }
+.brief li::marker { font-family: var(--font-data); color: var(--accent); font-size: 0.85em; }
+
+nav.toc ol { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 6px 24px; counter-reset: toc; }
+nav.toc li { counter-increment: toc; font-family: var(--font-display); font-size: 0.95rem; display: flex; gap: 10px; }
+nav.toc li::before { content: counter(toc, decimal-leading-zero); font-family: var(--font-data); color: var(--muted); font-size: 0.82rem; padding-top: 2px; }
+nav.toc a { color: var(--ink); text-decoration: none; }
+nav.toc a:hover { color: var(--accent); }
+
+section { display: flex; flex-direction: column; gap: 20px; scroll-margin-top: 24px; }
+section > .sec-head { display: flex; flex-direction: column; gap: 6px; }
+.secno { font-family: var(--font-data); font-size: var(--step--1); color: var(--muted); letter-spacing: 0.06em; }
+.prose { display: flex; flex-direction: column; gap: 14px; }
+ul.points { margin: 0; padding-left: 1.2em; max-width: 68ch; display: flex; flex-direction: column; gap: 6px; }
+
+dl.gloss { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0 32px; }
+dl.gloss > div { padding: 12px 0; border-top: 1px solid var(--rule); display: flex; flex-direction: column; gap: 4px; }
+dl.gloss dt { font-family: var(--font-display); font-weight: 600; font-size: 0.98rem; }
+dl.gloss dt span { font-family: var(--font-data); font-weight: 400; font-size: 0.78rem; color: var(--muted); margin-left: 6px; }
+dl.gloss dd { margin: 0; font-size: 0.92rem; color: var(--ink-2); line-height: 1.5; }
+dl.gloss dd em { color: var(--ink); }
+
+ol.seq { margin: 0; padding: 0; list-style: none; counter-reset: seq; display: flex; flex-direction: column; max-width: 76ch; }
+ol.seq li { counter-increment: seq; display: grid; grid-template-columns: 34px 1fr auto; gap: 12px; padding: 10px 0; border-top: 1px solid var(--rule); align-items: baseline; }
+ol.seq li::before { content: counter(seq); font-family: var(--font-data); font-weight: 600; color: var(--accent); }
+ol.seq .t { font-family: var(--font-data); font-size: 0.8rem; color: var(--ink-2); white-space: nowrap; text-align: right; }
+
+figure { margin: 0; background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 20px; display: flex; flex-direction: column; gap: 12px; position: relative; }
+figure .fig-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 16px; }
+figure .fig-title { font-family: var(--font-display); font-weight: 600; font-size: 1.02rem; }
+figure .provs { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+figcaption { font-size: 0.9rem; color: var(--ink-2); max-width: 74ch; line-height: 1.55; }
+.chart { width: 100%; overflow-x: auto; }
+.chart svg { display: block; width: 100%; height: auto; min-width: 520px; }
+.chart.narrow svg { min-width: 280px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-family: var(--font-data); font-size: 0.78rem; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; }
+.legend i.box { height: 10px; width: 10px; border-radius: 2px; }
+.legend i.dash { background: none !important; border-top: 2px dashed currentColor; height: 0; }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.two > figure { min-width: 0; }
+
+svg text { font-family: var(--font-data); font-size: 11px; fill: var(--ink-2); }
+svg .axis-label { fill: var(--muted); font-size: 10.5px; }
+svg .grid { stroke: var(--rule); stroke-width: 1; }
+svg .axis { stroke: var(--ink-2); stroke-width: 1; }
+svg .band { fill: var(--band); }
+svg .band-label { fill: var(--muted); font-size: 10px; letter-spacing: 0.04em; }
+svg .ref { stroke: var(--ink-2); stroke-dasharray: 4 4; stroke-width: 1; }
+svg .ref-label { fill: var(--ink-2); font-size: 10.5px; }
+svg .xhair { stroke: var(--ink-2); stroke-width: 1; }
+svg .direct { font-size: 11px; font-weight: 600; }
+
+.dia .box { fill: var(--surface); stroke: var(--ink-2); stroke-width: 1.2; }
+.dia .box.em { fill: var(--accent-soft); stroke: var(--accent); }
+.dia .box.bad { fill: var(--bad-soft); stroke: var(--bad); }
+.dia .box.soft { fill: var(--band); stroke: var(--rule); }
+.dia .grp { fill: none; stroke: var(--rule); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.dia .gpu { fill: var(--band); stroke: var(--ink-2); stroke-width: 1; }
+.dia .gpu.cold { stroke-dasharray: 4 3; fill: var(--surface); }
+.dia .t1 { font-family: var(--font-display); font-size: 13px; font-weight: 600; fill: var(--ink); }
+.dia .t2 { font-size: 10.5px; fill: var(--ink-2); }
+.dia .t3 { font-size: 10px; fill: var(--muted); }
+.dia .lnk { stroke: var(--ink-2); stroke-width: 1.4; fill: none; }
+.dia .lnk.ctl { stroke: var(--accent); }
+.dia .lbl { font-size: 10.5px; fill: var(--ink-2); }
+.dia .lbl.ctl { fill: var(--accent); }
+.dia .head { fill: var(--ink-2); }
+.dia .head.ctl { fill: var(--accent); }
+.dia .q { fill: var(--s-a1); }
+.dia .q.ok { fill: var(--s-s4); }
+.dia .run { fill: var(--s-a2); }
+
+.hbars { display: flex; flex-direction: column; gap: 8px; }
+.hbar { display: grid; grid-template-columns: minmax(96px, 150px) 1fr minmax(64px, auto); gap: 12px; align-items: center; font-size: 0.88rem; }
+.hbar .lab { font-family: var(--font-data); font-size: 0.8rem; color: var(--ink); }
+.hbar .track { height: 18px; background: var(--band); border-radius: 0 4px 4px 0; position: relative; display: flex; }
+.hbar .fill { height: 100%; border-radius: 0 4px 4px 0; min-width: 2px; }
+.hbar .val { font-family: var(--font-data); font-size: 0.8rem; color: var(--ink); font-variant-numeric: tabular-nums; text-align: right; }
+.hbar .tick { position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 1.5px dashed var(--ink-2); }
+.stack { display: flex; height: 26px; border-radius: 4px; overflow: hidden; gap: 2px; background: var(--surface); }
+.stack > div { display: flex; align-items: center; justify-content: center; font-family: var(--font-data); font-size: 0.74rem; color: #fff; white-space: nowrap; overflow: hidden; min-width: 2px; }
+.stack-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-family: var(--font-data); font-size: 0.78rem; color: var(--ink-2); }
+.stack-legend span { display: inline-flex; gap: 6px; align-items: center; }
+.stack-legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.rowlab { font-family: var(--font-data); font-size: 0.8rem; color: var(--ink-2); display: flex; justify-content: space-between; gap: 12px; }
+.rows { display: flex; flex-direction: column; gap: 6px; }
+
+.multiples { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; }
+.multiple { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.multiple h4 { margin: 0; font-family: var(--font-display); font-size: 0.95rem; font-weight: 600; }
+.multiple .hbar { grid-template-columns: 34px 1fr 50px; gap: 10px; }
+#upgrades .hbar { grid-template-columns: 108px 1fr 46px; }
+#signals .hbar { grid-template-columns: 48px 1fr 52px; }
+.multiple .sub { font-family: var(--font-data); font-size: 0.72rem; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; }
+
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.88rem; }
+th, td { padding: 7px 10px; text-align: left; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--font-display); font-weight: 600; font-size: 0.82rem; color: var(--ink-2); }
+td.n, th.n { text-align: right; font-family: var(--font-data); font-variant-numeric: tabular-nums; font-size: 0.82rem; }
+tr.em td { background: var(--accent-soft); }
+caption { text-align: left; padding-bottom: 6px; font-size: 0.86rem; color: var(--ink-2); }
+details { font-size: 0.88rem; }
+details summary { cursor: pointer; font-family: var(--font-data); font-size: 0.78rem; color: var(--accent); }
+details[open] summary { margin-bottom: 8px; }
+
+.faq { display: flex; flex-direction: column; }
+.faq details { border-top: 1px solid var(--rule); padding: 12px 0; font-size: var(--step-0); }
+.faq details:last-child { border-bottom: 1px solid var(--rule); }
+.faq summary { font-family: var(--font-display); font-weight: 600; font-size: 1rem; color: var(--ink); }
+.faq details p { margin-top: 8px; color: var(--ink-2); font-size: 0.95rem; }
+
+.cfg { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-data); font-weight: 600; font-size: 0.82rem; }
+.cfg i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.pill { display: inline-block; font-family: var(--font-data); font-size: 0.74rem; padding: 1px 8px; border-radius: 999px; white-space: nowrap; }
+.pill.ok { color: var(--good); border: 1px solid var(--good); }
+.pill.bad { color: var(--bad); border: 1px solid var(--bad); }
+.pill.warn { color: var(--warn); border: 1px solid var(--warn); }
+
+.formula { font-family: var(--font-data); font-size: 0.95rem; background: var(--band); padding: 12px 16px; border-radius: 6px; overflow-x: auto; }
+.formula code { font-size: 1em; white-space: nowrap; display: block; }
+.formula small { display: block; font-family: var(--font-body); font-size: 0.86rem; color: var(--ink-2); margin-top: 6px; }
+.callout { border-left: 3px solid var(--accent); padding: 4px 0 4px 16px; display: flex; flex-direction: column; gap: 6px; max-width: 72ch; }
+.callout b { font-family: var(--font-display); font-weight: 600; }
+.callout.analogy { border-left-color: var(--muted); }
+
+.tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); font-family: var(--font-data); font-size: 0.74rem; line-height: 1.5; padding: 8px 10px; border-radius: 6px; white-space: nowrap; z-index: 5; box-shadow: 0 4px 14px rgb(0 0 0 / 0.18); }
+.tip b { font-weight: 600; }
+.tip .sw { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; }
+
+footer { border-top: 1px solid var(--rule); padding-top: 20px; font-size: 0.86rem; color: var(--ink-2); display: flex; flex-direction: column; gap: 8px; }
+
+@media (max-width: 560px) {
+  .wrap { padding-block: 28px 64px; gap: 48px; }
+  figure { padding: 14px; }
+  .hbar { grid-template-columns: 88px 1fr 56px; gap: 8px; }
+  ol.seq li { grid-template-columns: 26px 1fr; }
+  ol.seq .t { grid-column: 2; text-align: left; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
+</style>
+
+<div class="wrap">
+
+<header class="hero">
+  <div class="kicker">Đồ án tốt nghiệp · báo cáo kỹ thuật</div>
+  <h1>LLM serving co giãn trên Kubernetes</h1>
+  <p class="lede">Một nền tảng phục vụ mô hình ngôn ngữ lớn tự thêm và bớt GPU theo tải, được dựng, vận hành và đo trên phần cứng thật. Báo cáo này viết cho người không trực tiếp làm dự án: nó giải thích từ gốc hệ thống làm gì, vì sao làm như vậy, đã đo được gì, và còn gì phải chứng minh.</p>
+  <div class="meta"><span>Nguyễn Quang · Trình</span><span>13/11/2026</span><span>vLLM 0.31.0 · KEDA 2.21.0 · k3s 1.36</span><span>repo llm-k8s-autoscaling</span></div>
+  <div class="status"><b>Dữ liệu</b><span>Mọi số đo trên GPU thuê lấy từ phiên V0+V1 ngày 08/11/2026 (VM 4 × RTX A4000 16 GB, model Qwen2.5-3B). Phiên đánh giá chính V2 chạy 14–15/11 sẽ thay các số này. Mỗi hình mang một nhãn: <span class="prov measured">đo thật</span> từ dữ liệu thô, <span class="prov sim">mô phỏng</span> từ mô hình đã hiệu chỉnh, <span class="prov illus">minh hoạ</span> để giải thích ý tưởng (không phải số liệu), <span class="prov proposal">đề xuất</span> chưa có trong hệ thống.</span></div>
+</header>
+
+<div class="stats">
+  <div class="stat"><span class="v num">4,5<small>req/s</small></span><span class="k">Năng lực C của một GPU khi vẫn giữ ≥ 95 % request đạt SLO</span></div>
+  <div class="stat"><span class="v num">108–152<small>s</small></span><span class="k">Cold start: từ lúc tạo pod tới lúc phục vụ được</span></div>
+  <div class="stat"><span class="v num">12,5<small>phút</small></span><span class="k">Dựng lại từ VM trắng tới API trả lời (chỉ tiêu ≤ 30)</span></div>
+  <div class="stat"><span class="v num">144/144</span><span class="k">Stream không lỗi khi xoá pod đang phục vụ</span></div>
+  <div class="stat"><span class="v num">≈ 1,5<small>USD</small></span><span class="k">Chi phí cả phiên V0+V1, máy 0,611 USD/giờ</span></div>
+</div>
+
+<div class="brief">
+  <h2>Đọc trong 2 phút</h2>
+  <ol>
+    <li><strong>Hệ thống chạy được trọn vòng trên GPU thật.</strong> Từ một VM trắng, vài lệnh <code>make</code> dựng xong cluster, model và giám sát trong 12,5 phút; KEDA tự thêm GPU khi tải tăng và bớt khi tải giảm; runner chạy hai lượt đo liền một giờ không cần người.</li>
+    <li><strong>GPU utilization không dùng được để co giãn.</strong> Ở mọi mức tải từ 44 % tới 133 % năng lực, GPU util đều báo 100 %. Số request đang chạy thì tăng đều 12 → 64. Đồ án scale theo số request (cấu hình A2), không theo GPU util (A1).</li>
+    <li><strong>Một GPU gánh được 4,5 request/giây, và gãy rất gắt.</strong> Tăng tải thêm 11 % là tỷ lệ đạt chất lượng rơi từ 99 % xuống 6 %, vì mỗi pod chỉ chạy tối đa 64 request cùng lúc.</li>
+    <li><strong>Điểm yếu thật là cold start.</strong> GPU mới mất ~2 phút mới phục vụ được. Tải nhảy gấp 3 lần trong 30 giây thì 2 phút đó đủ để dồn hơn 1.000 request vào hàng đợi của pod cũ, và hàng đợi này không chuyển sang pod mới được.</li>
+    <li><strong>Hướng nâng cấp đã có số ước lượng.</strong> Lý thuyết hàng đợi dự đoán đúng hàng đợi đỉnh (1.080 so với 1.041 đo được). Autoscaling dự báo nâng chất lượng ở tải tăng dần từ 89 % lên 97 % với 4 % GPU thêm (mô phỏng).</li>
+  </ol>
+</div>
+
+<nav class="toc" aria-label="Mục lục">
+  <ol>
+    <li><a href="#thuat-ngu">Thuật ngữ trong 1 trang</a></li>
+    <li><a href="#bai-toan">Bài toán</a></li>
+    <li><a href="#mot-request">Một request đi qua hệ thống</a></li>
+    <li><a href="#kien-truc">Kiến trúc</a></li>
+    <li><a href="#vong-lap">Vòng autoscaling từng bước</a></li>
+    <li><a href="#moi-truong">Ba môi trường và GitOps</a></li>
+    <li><a href="#mot-gpu">Một GPU làm được bao nhiêu</a></li>
+    <li><a href="#nang-luc">Năng lực C và điểm gãy</a></li>
+    <li><a href="#tin-hieu">Scale theo tín hiệu nào</a></li>
+    <li><a href="#cold-start">Cold start</a></li>
+    <li><a href="#kich-ban">Ba kịch bản tải</a></li>
+    <li><a href="#autoscaling">Autoscaling trên GPU thật</a></li>
+    <li><a href="#ma-tran">Ma trận đánh giá V2</a></li>
+    <li><a href="#van-hanh">Vận hành an toàn</a></li>
+    <li><a href="#nang-cap">Hướng nâng cấp</a></li>
+    <li><a href="#hoi-dap">Hỏi đáp khi bảo vệ</a></li>
+    <li><a href="#han-che">Hạn chế và việc còn lại</a></li>
+  </ol>
+</nav>
+
+<section id="thuat-ngu">
+  <div class="sec-head"><span class="secno">01</span><h2>Thuật ngữ trong 1 trang</h2></div>
+  <p>Báo cáo giữ nguyên thuật ngữ tiếng Anh như trong ngành. Mỗi khái niệm có một ví dụ đời thường để dễ hình dung: hãy tưởng tượng một <em>tiệm trà sữa</em> có nhiều quầy pha chế.</p>
+  <dl class="gloss">
+    <div><dt>LLM, token<span>large language model</span></dt><dd>Mô hình sinh văn bản từng mẩu nhỏ gọi là <em>token</em> (khoảng ¾ một từ tiếng Anh). Câu trả lời 256 token là 256 lần "sinh một mẩu".</dd></div>
+    <div><dt>vLLM<span>inference server</span></dt><dd>Phần mềm chạy model trên GPU và nhận request qua API giống OpenAI. Ví như <em>một quầy pha chế</em>.</dd></div>
+    <div><dt>Pod, replica<span>Kubernetes</span></dt><dd>Pod là một bản chạy của vLLM, giữ đúng 1 GPU. Replica là số pod giống nhau đang chạy. 4 replica = <em>4 quầy mở cửa</em>.</dd></div>
+    <div><dt>TTFT<span>time to first token</span></dt><dd>Thời gian từ lúc gửi tới khi nhận token đầu tiên: <em>đứng chờ tới lượt được phục vụ</em>. Chỉ tiêu ≤ 2,5 s.</dd></div>
+    <div><dt>TPOT<span>time per output token</span></dt><dd>Thời gian sinh mỗi token sau đó: <em>tốc độ pha</em>. Chỉ tiêu ≤ 100 ms.</dd></div>
+    <div><dt>SLO<span>service level objective</span></dt><dd>Cam kết chất lượng: một request "đạt" khi TTFT ≤ 2,5 s và TPOT ≤ 100 ms. Mục tiêu ≥ 95 % request đạt.</dd></div>
+    <div><dt>Batching<span>continuous batching</span></dt><dd>vLLM gom nhiều request vào cùng một bước tính, như <em>pha một mẻ 32 ly cùng lúc</em> thay vì từng ly. Tối đa 64 request mỗi pod.</dd></div>
+    <div><dt>KV-cache</dt><dd>Bộ nhớ GPU lưu ngữ cảnh của các request đang chạy, như <em>chỗ để order đang làm dở</em>. 36 KiB mỗi token với model 3B.</dd></div>
+    <div><dt>Năng lực C, B*</dt><dd>C: số request mỗi giây một GPU gánh được mà vẫn ≥ 95 % đạt SLO. B*: số request đồng thời trung bình lúc đó. Đo được C = 4,5, B* = 52,5.</dd></div>
+    <div><dt>HPA, KEDA<span>autoscaler</span></dt><dd>HPA là bộ co giãn có sẵn của Kubernetes; KEDA đưa cho nó số liệu từ Prometheus. Ví như <em>quản lý ca</em> quyết định mở thêm hay đóng bớt quầy.</dd></div>
+    <div><dt>Cold start</dt><dd>Thời gian từ lúc quyết định mở thêm pod tới lúc pod phục vụ được: <em>gọi nhân viên tới, thay đồ, bật máy</em>. ~2 phút.</dd></div>
+    <div><dt>Prometheus, Grafana</dt><dd>Prometheus thu và lưu số liệu đo mỗi 5 giây; Grafana vẽ dashboard; Alertmanager gửi cảnh báo.</dd></div>
+    <div><dt>GitOps, Argo CD</dt><dd>Mọi cấu hình nằm trong Git; Argo CD tự đưa cluster về đúng như Git. Sửa hệ thống = sửa file và merge, không gõ lệnh tay.</dd></div>
+    <div><dt>GPU-giờ</dt><dd>Số GPU × số giờ giữ GPU. Đơn vị chi phí: máy thuê 0,611 USD/giờ cho 4 GPU ≈ 0,15 USD mỗi GPU-giờ.</dd></div>
+  </dl>
+</section>
+
+<section id="bai-toan">
+  <div class="sec-head"><span class="secno">02</span><h2>Bài toán</h2></div>
+  <p>Một GPU chạy LLM tốn từ vài chục xu tới vài đô la mỗi giờ, và tải của người dùng lên xuống theo giờ trong ngày. Có ba cách cấp GPU:</p>
+  <figure>
+    <div class="fig-head"><span class="fig-title">Một ngày của dịch vụ: cấp cố định hay co giãn</span><span class="prov illus">minh hoạ</span></div>
+    <div class="legend"><span><i class="box" style="background:var(--load)"></i>số GPU cần để phục vụ tải</span><span><i style="background:var(--s-s1)"></i>cố định 1 GPU</span><span><i style="background:var(--s-s4)"></i>cố định 4 GPU</span><span><i style="background:var(--s-a2)"></i>tự co giãn</span></div>
+    <div class="chart" id="c-day"></div>
+    <figcaption>Cố định 1 GPU: rẻ nhưng giờ cao điểm thiếu máy, người dùng chờ. Cố định 4 GPU: luôn đủ nhưng phần lớn ngày trả tiền cho GPU ngồi không. Tự co giãn bám theo tải, nhưng luôn đi sau một chút vì GPU mới cần thời gian khởi động. Toàn bộ đồ án xoay quanh khoảng trễ đó. Hình chỉ minh hoạ ý tưởng, không phải số đo.</figcaption>
+  </figure>
+  <div class="prose">
+    <p>Autoscaling đã giải quyết việc này cho web service thông thường từ lâu. LLM có ba điểm khác khiến cách làm quen thuộc không dùng được nguyên xi:</p>
+    <ul class="points">
+      <li><strong>Khởi động chậm.</strong> Pod vLLM mất khoảng 2 tới 6 phút tuỳ máy mới phục vụ được (nạp model ~6 GB vào GPU, compile, chuẩn bị bộ nhớ); web service chỉ mất vài giây. Tải tăng đột ngột thì hệ thống phải gánh bằng số GPU đang có trong suốt khoảng đó.</li>
+      <li><strong>GPU utilization là tín hiệu kém.</strong> Chỉ số này đo "có kernel nào đang chạy không", nên chạm 100 % ngay khi GPU mới làm một phần nhỏ việc nó làm được (mục 09 có số đo).</li>
+      <li><strong>Một request chiếm GPU nhiều giây.</strong> Câu trả lời 256 token mất 6–12 giây. Tắt pod giữa chừng là cắt ngang câu trả lời, nên scale-down và cập nhật phiên bản phải "tắt êm" (graceful shutdown).</li>
+    </ul>
+    <p>Đồ án dựng một nền tảng hoàn chỉnh xử lý cả ba điểm này. Khoảng 70 % khối lượng là xây dựng và vận hành: hạ tầng dựng bằng code (Ansible), triển khai qua Git (Argo CD), giám sát, cảnh báo, runbook. 30 % còn lại là đo đạc để nghiệm thu bằng chỉ tiêu cụ thể, cộng 8 điểm kiểm chứng lý thuyết (LT1–LT8).</p>
+  </div>
+  <div class="callout analogy">
+    <b>Nói theo tiệm trà sữa</b>
+    <p>Quầy pha chế đắt tiền. Mở thêm quầy mất 2 phút (gọi người, bật máy), nên khi khách ùa vào, 2 phút đầu khách xếp hàng ở quầy đang mở. Muốn biết lúc nào cần mở thêm, đừng nhìn "máy pha có đang chạy không" (luôn có), mà nhìn "có bao nhiêu khách đang chờ và đang được pha". Và khi đóng quầy, phải pha nốt ly đang làm cho khách rồi mới tắt máy.</p>
+  </div>
+</section>
+
+<section id="mot-request">
+  <div class="sec-head"><span class="secno">03</span><h2>Một request đi qua hệ thống</h2></div>
+  <p>Mỗi request trong bài đo gửi một prompt khoảng 670 token và yêu cầu đúng 256 token trả lời. vLLM xử lý trong hai pha: <strong>prefill</strong> đọc cả prompt một lần rồi sinh token đầu tiên, sau đó <strong>decode</strong> sinh từng token còn lại. TTFT gồm thời gian chờ cộng prefill; TPOT là thời gian trung bình một bước decode.</p>
+  <figure>
+    <div class="fig-head"><span class="fig-title">Thời gian một request điển hình (trung vị)</span><span class="prov measured">đo thật · ĐG1, 08/11</span></div>
+    <div class="rows" id="req-tl"></div>
+    <div class="stack-legend"><span><i style="background:var(--s-a1)"></i>chờ + prefill (TTFT)</span><span><i style="background:var(--s-a2)"></i>decode 255 token còn lại</span></div>
+    <figcaption>Tải nhẹ (2 req/s, 582 request): TTFT 0,18 s, cả câu trả lời 6,1 s. Tại năng lực C (4,5 req/s, 1.337 request): TTFT vẫn chỉ 0,30 s nhưng câu trả lời kéo dài 11,5 s, vì GPU đang chia mỗi bước cho ~52 request. Phần lớn thời gian nằm ở decode; người dùng thấy chữ chảy ra dần nhờ streaming. Đoạn TTFT rất mỏng; rê chuột để xem số.</figcaption>
+  </figure>
+  <figure>
+    <div class="fig-head"><span class="fig-title">Vì sao gộp nhiều request lại nhanh hơn</span><span class="prov illus">minh hoạ · số từ mục 07</span></div>
+    <div class="chart dia" id="d-batch"></div>
+    <figcaption>Mỗi bước decode phải đọc toàn bộ ~6,2 GB weights từ bộ nhớ GPU, dù sinh token cho 1 hay cho 32 request. Đọc bộ nhớ mới là phần tốn thời gian, nên gộp 32 request vào một bước gần như "miễn phí": thời gian mỗi bước chỉ tăng 46 % (17 → 25 ms) nhưng ra 32 token thay vì 1.</figcaption>
+  </figure>
+</section>
+
+<section id="kien-truc">
+  <div class="sec-head"><span class="secno">04</span><h2>Kiến trúc</h2></div>
+  <p>Request đi theo đường màu xám; vòng điều khiển autoscaling đi theo đường màu xanh. Mọi thứ trên cluster được khai báo trong Git; ở nhà, Argo CD tự đồng bộ cluster theo nhánh <code>main</code>.</p>
+  <figure>
+    <div class="fig-head"><span class="fig-title">Đường đi của request và vòng autoscaling</span></div>
+    <div class="chart dia" role="img" aria-label="Sơ đồ kiến trúc: client gửi request qua Service tới các pod vLLM, mỗi pod một GPU; Prometheus thu metric; KEDA đọc Prometheus và điều khiển HPA, HPA đặt số replica của Deployment vllm.">
+      <svg viewBox="0 0 880 380" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head" d="M0,0 L10,5 L0,10 z"/></marker>
+          <marker id="ahc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head ctl" d="M0,0 L10,5 L0,10 z"/></marker>
+        </defs>
+        <rect class="box" x="350" y="6" width="180" height="40" rx="6"/>
+        <text class="t1" x="440" y="24" text-anchor="middle">Argo CD</text>
+        <text class="t2" x="440" y="38" text-anchor="middle">đồng bộ từ Git (chỉ ở nhà)</text>
+        <path class="lnk" d="M440,46 L440,68" marker-end="url(#ah)"/>
+        <rect class="box" x="14" y="160" width="128" height="56" rx="6"/>
+        <text class="t1" x="78" y="183" text-anchor="middle">Client</text>
+        <text class="t2" x="78" y="199" text-anchor="middle">máy tạo tải</text>
+        <path class="lnk" d="M142,188 L184,188" marker-end="url(#ah)"/>
+        <rect class="box" x="186" y="160" width="128" height="56" rx="6"/>
+        <text class="t1" x="250" y="183" text-anchor="middle">Service</text>
+        <text class="t2" x="250" y="199" text-anchor="middle">chia ngẫu nhiên</text>
+        <path class="lnk" d="M314,188 L346,188" marker-end="url(#ah)"/>
+        <rect class="grp" x="350" y="70" width="180" height="246" rx="8"/>
+        <text class="t2" x="362" y="88">Deployment vllm · 1 → 4 replica</text>
+        <rect class="gpu" x="364" y="98" width="152" height="44" rx="5"/>
+        <text class="t1" x="378" y="118">pod 1</text><text class="t2" x="378" y="133">vLLM · 1 × A4000</text>
+        <rect class="gpu" x="364" y="150" width="152" height="44" rx="5"/>
+        <text class="t1" x="378" y="170">pod 2</text><text class="t2" x="378" y="185">vLLM · 1 × A4000</text>
+        <rect class="gpu cold" x="364" y="202" width="152" height="44" rx="5"/>
+        <text class="t1" x="378" y="222">pod 3</text><text class="t2" x="378" y="237">đang cold start</text>
+        <rect class="gpu cold" x="364" y="254" width="152" height="44" rx="5"/>
+        <text class="t1" x="378" y="274">pod 4</text><text class="t2" x="378" y="289">đang cold start</text>
+        <path class="lnk" d="M530,188 L594,188" marker-end="url(#ah)"/>
+        <text class="lbl" x="534" y="180">/metrics</text>
+        <text class="lbl" x="534" y="204">mỗi 5 s</text>
+        <rect class="box" x="596" y="70" width="128" height="44" rx="6"/>
+        <text class="t1" x="660" y="89" text-anchor="middle">GPU exporter</text>
+        <text class="t2" x="660" y="104" text-anchor="middle">util, VRAM mỗi GPU</text>
+        <path class="lnk" d="M660,114 L660,158" marker-end="url(#ah)"/>
+        <rect class="box em" x="596" y="160" width="128" height="56" rx="6"/>
+        <text class="t1" x="660" y="183" text-anchor="middle">Prometheus</text>
+        <text class="t2" x="660" y="199" text-anchor="middle">lưu metric, SLO</text>
+        <path class="lnk" d="M660,216 L660,256" marker-end="url(#ah)"/>
+        <rect class="box" x="596" y="258" width="128" height="48" rx="6"/>
+        <text class="t1" x="660" y="278" text-anchor="middle">Grafana</text>
+        <text class="t2" x="660" y="294" text-anchor="middle">Alertmanager</text>
+        <path class="lnk ctl" d="M724,188 L746,188" marker-end="url(#ahc)"/>
+        <rect class="box em" x="748" y="160" width="124" height="56" rx="6"/>
+        <text class="t1" x="810" y="183" text-anchor="middle">KEDA</text>
+        <text class="t2" x="810" y="199" text-anchor="middle">PromQL mỗi 5 s</text>
+        <path class="lnk ctl" d="M810,216 L810,256" marker-end="url(#ahc)"/>
+        <text class="lbl ctl" x="816" y="240">desired</text>
+        <rect class="box em" x="748" y="258" width="124" height="48" rx="6"/>
+        <text class="t1" x="810" y="278" text-anchor="middle">HPA</text>
+        <text class="t2" x="810" y="294" text-anchor="middle">giảm chậm 300 s</text>
+        <path class="lnk ctl" d="M810,306 L810,350 L440,350 L440,320" marker-end="url(#ahc)"/>
+        <text class="lbl ctl" x="560" y="366">đặt số replica (1 GPU mỗi pod)</text>
+      </svg>
+    </div>
+    <figcaption><strong>KEDA</strong> chạy một câu truy vấn trên Prometheus mỗi 5 s và đưa kết quả cho <strong>HPA</strong>: desired = ⌈giá trị ÷ ngưỡng⌉. Cấu hình chính thức <strong>A2</strong> dùng giá trị = số request đang chạy + đang chờ trên mọi pod, ngưỡng 42 mỗi pod. Cấu hình đối chứng <strong>A1</strong> dùng tổng GPU utilization, ngưỡng 70 %.</figcaption>
+  </figure>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Thành phần</th><th>Làm gì</th><th>Ở tiệm trà sữa</th></tr></thead>
+      <tbody>
+        <tr><td>Service</td><td>Một địa chỉ chung; chia mỗi request mới cho một pod Ready, ngẫu nhiên</td><td>Người đứng cửa chỉ khách vào quầy</td></tr>
+        <tr><td>vLLM (Deployment)</td><td>Chạy model, gộp request thành batch, tối đa 64 request mỗi pod; quá thì xếp hàng trong pod</td><td>Các quầy pha chế</td></tr>
+        <tr><td>GPU exporter, Prometheus</td><td>Thu số liệu mỗi 5 s: request đang chạy, đang chờ, GPU util, độ trễ</td><td>Sổ ghi tình hình từng quầy</td></tr>
+        <tr><td>KEDA + HPA</td><td>Đọc số liệu, tính số pod cần, ra lệnh thêm/bớt</td><td>Quản lý ca</td></tr>
+        <tr><td>Grafana, Alertmanager</td><td>3 dashboard; 6 cảnh báo, mỗi cảnh báo có runbook hướng dẫn xử lý</td><td>Bảng theo dõi và chuông báo</td></tr>
+        <tr><td>Argo CD, Ansible</td><td>Dựng và giữ hệ thống đúng như mô tả trong Git</td><td>Bản vẽ thiết kế tiệm và đội thi công</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="tablewrap">
+    <table>
+      <caption>Bốn cấu hình được so sánh. Màu này dùng thống nhất trong mọi biểu đồ.</caption>
+      <thead><tr><th>Cấu hình</th><th>Cách chọn số GPU</th><th>Vai trò khi đánh giá</th></tr></thead>
+      <tbody>
+        <tr><td><span class="cfg"><i style="background:var(--s-s1)"></i>S1</span></td><td>Cố định 1 GPU</td><td>Cận dưới chi phí: rẻ nhất, chịu tải kém nhất</td></tr>
+        <tr><td><span class="cfg"><i style="background:var(--s-s4)"></i>S4</span></td><td>Cố định 4 GPU</td><td>Cận trên chất lượng: luôn đủ máy, tốn nhất</td></tr>
+        <tr><td><span class="cfg"><i style="background:var(--s-a1)"></i>A1</span></td><td>KEDA theo tổng GPU utilization, ngưỡng 70 %</td><td>Cách "thường gặp", để đối chứng</td></tr>
+        <tr class="em"><td><span class="cfg"><i style="background:var(--s-a2)"></i>A2</span></td><td>KEDA theo số request đang chạy + chờ, ngưỡng 0,8 × B* = 42</td><td>Cấu hình đồ án đề xuất</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="vong-lap">
+  <div class="sec-head"><span class="secno">05</span><h2>Vòng autoscaling từng bước</h2></div>
+  <p>Khi tải tăng, tín hiệu phải đi qua năm chặng trước khi có thêm GPU phục vụ. Thời gian bên phải là của cấu hình hiện tại.</p>
+  <ol class="seq">
+    <li><span>vLLM cập nhật số request đang chạy và đang chờ trên <code>/metrics</code></span><span class="t">liên tục</span></li>
+    <li><span>Prometheus scrape (đọc) số liệu của từng pod</span><span class="t">mỗi 5 s</span></li>
+    <li><span>KEDA chạy câu PromQL, tính tổng và báo cho HPA</span><span class="t">mỗi 5 s</span></li>
+    <li><span>HPA tính desired = ⌈tổng ÷ 42⌉ (tối đa 4) và đổi số replica của Deployment</span><span class="t">mỗi 15 s</span></li>
+    <li><span>Kubernetes tạo pod, gắn GPU; vLLM khởi động; readiness probe đạt thì Service mới gửi request vào</span><span class="t">105–120 s</span></li>
+  </ol>
+  <figure>
+    <div class="fig-head"><span class="fig-title">Từ lúc tải nhảy tới lúc có GPU mới (lượt A2 × KB2)</span><span class="prov measured">đo thật · V1</span></div>
+    <div class="rows" id="react"></div>
+    <figcaption>Chặng 1–4 (phát hiện và quyết định) chỉ mất 30 s. Chặng 5 (cold start) mất 120 s, chiếm 80 % tổng thời gian phản ứng. Vì vậy cải tiến đáng giá nhất là rút cold start hoặc đoán trước tải (mục 15), chứ không phải scrape nhanh hơn.</figcaption>
+  </figure>
+  <figure>
+    <div class="fig-head"><span class="fig-title">Chiều ngược lại: bớt GPU khi tải giảm (cùng lượt)</span><span class="prov measured">đo thật · V1</span></div>
+    <div class="rows" id="scaledown"></div>
+    <figcaption>HPA cố ý chậm khi giảm: chỉ bớt khi nhu cầu đã thấp suốt 300 s, và mỗi 60 s bớt tối đa 1 pod. Nếu bớt ngay, một đợt tải ngắn sau đó sẽ phải chờ thêm 2 phút cold start; và nếu tải dao động, hệ thống sẽ thêm bớt liên tục (flapping). Cái giá là khoảng 6 phút giữ GPU thừa sau mỗi đợt cao điểm.</figcaption>
+  </figure>
+</section>
+
+<section id="moi-truong">
+  <div class="sec-head"><span class="secno">06</span><h2>Ba môi trường và GitOps</h2></div>
+  <p>Cùng một bộ manifest chạy ở ba nơi. Repo chia theo hai câu hỏi: <code>common/</code> chứa thứ giống nhau ở mọi nơi (Deployment vLLM, cấu hình A2, cảnh báo, dashboard), còn <code>envs/&lt;nơi chạy&gt;/</code> chỉ chứa phần khác biệt. Cấu hình A2 được thử trên simulator, chạy demo ở nhà và đo trên GPU thuê là <em>cùng một file</em>, nên kết quả ở nơi này có ý nghĩa cho nơi kia.</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Môi trường</th><th>Phần cứng</th><th>Model</th><th>Cài đặt</th><th>Dùng để</th></tr></thead>
+      <tbody>
+        <tr><td><code>envs/sim</code></td><td>Laptop, kind, không GPU</td><td>Simulator (giả lập vLLM)</td><td>helm, kubectl</td><td>Thử nhanh vòng autoscaling: bài T1–T5, VH2–VH4</td></tr>
+        <tr><td><code>envs/home</code></td><td>PC RTX 5060 8 GB, chia 2 GPU replica</td><td>Qwen2.5-0,5B</td><td>Ansible + Argo CD</td><td>Demo trên GPU thật, cập nhật qua Git</td></tr>
+        <tr class="em"><td><code>envs/cloud</code></td><td>VM Vast.ai 4 × RTX A4000 16 GB</td><td>Qwen2.5-3B</td><td>Ansible + <code>make cloud-platform</code></td><td>Mọi số đo của chương đánh giá</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <figure>
+    <div class="fig-head"><span class="fig-title">Thay đổi hệ thống bằng Git (GitOps)</span><span class="prov illus">quy trình</span></div>
+    <div class="chart dia" id="d-gitops"></div>
+    <figcaption>Không ai gõ lệnh sửa tay trên cluster. Mọi thay đổi (đổi ngưỡng A2, nâng phiên bản vLLM) đi qua pull request; CI kiểm cú pháp YAML, render manifest, unit test cảnh báo bằng promtool và test Python trước khi cho merge. Argo CD thấy <code>main</code> đổi thì tự áp; ai sửa tay thì Argo CD đưa về đúng Git (selfHeal). Quay lại phiên bản cũ là <code>git revert</code>. Nhờ vậy mọi lượt đo đều truy được về đúng một commit.</figcaption>
+  </figure>
+</section>
+
+<section id="mot-gpu">
+  <div class="sec-head"><span class="secno">07</span><h2>Một GPU làm được bao nhiêu</h2></div>
+  <p>Trước khi nói chuyện co giãn, phải biết một GPU gánh được bao nhiêu. Hai giới hạn quyết định: <strong>bộ nhớ</strong> (chứa được bao nhiêu request cùng lúc) và <strong>băng thông bộ nhớ</strong> (sinh token nhanh tới đâu).</p>
+  <figure>
+    <div class="fig-head"><span class="fig-title">VRAM của một RTX A4000 khi chạy Qwen2.5-3B</span><span class="prov measured">đo thật · 08/11</span></div>
+    <div id="vram"></div>
+    <div class="stack-legend" id="vram-legend"></div>
+    <figcaption>vLLM cấp sẵn 90 % VRAM. Sau khi trừ weights của model, phần lớn còn lại thành <strong>KV-cache</strong>: 7,28 GiB chứa 211.936 token, đủ cho khoảng 210 request dài 1.000 token. Vì vậy giới hạn thật trên máy này là tham số <code>--max-num-seqs</code> = 64 request mỗi pod, không phải bộ nhớ.</figcaption>
+  </figure>
+  <div class="two">
+    <figure>
+      <div class="fig-head"><span class="fig-title">Thời gian mỗi token theo số request đồng thời</span><span class="prov measured">đo thật</span></div>
+      <div class="legend"><span><i style="background:var(--s-a2)"></i>TPOT trung bình</span><span><i class="dash" style="color:var(--ink-2)"></i>cận dưới lý thuyết 13,8 ms</span></div>
+      <div class="chart narrow" id="c-tpot"></div>
+      <figcaption>Từ 1 lên 32 request, mỗi token chỉ chậm thêm 46 % (17,2 → 25,1 ms). Vẫn xa ngưỡng SLO 100 ms.</figcaption>
+    </figure>
+    <figure>
+      <div class="fig-head"><span class="fig-title">Thông lượng theo số request đồng thời</span><span class="prov measured">đo thật</span></div>
+      <div class="legend"><span><i style="background:var(--s-a2)"></i>token/s cả GPU</span></div>
+      <div class="chart narrow" id="c-thru"></div>
+      <figcaption>Gộp 32 request vào một batch cho thông lượng gấp ~20 lần chạy từng cái.</figcaption>
+    </figure>
+  </div>
+  <div class="callout">
+    <b>Kiểm chứng lý thuyết (LT1, LT2)</b>
+    <p>Mỗi bước sinh token phải đọc toàn bộ weights từ bộ nhớ GPU, nên thời gian một bước ≥ kích thước weights ÷ băng thông = 6,17 GB ÷ 448 GB/s ≈ <span class="num">13,8 ms</span>. Đo được 17,2 ms, tức băng thông hiệu dụng ≈ 80 % lý thuyết. Model 0,5B trên RTX 5060 ở nhà cho 79 %: cùng một quy luật trên hai GPU khác nhau. KV-cache cũng khớp công thức: 2 × 36 lớp × 2 KV head × 128 × 2 byte = 36.864 byte/token, vLLM báo 36.880 (lệch dưới 0,1 %).</p>
+  </div>
+  <details><summary>Bảng số liệu benchmark (vllm bench serve, input 512, output 256 token)</summary>
+    <div class="tablewrap"><table id="t-bench"></table></div>
+  </details>
+</section>
+
+<section id="nang-luc">
+  <div class="sec-head"><span class="secno">08</span><h2>Năng lực C và điểm gãy</h2></div>
+  <p><strong>Năng lực C</strong> là tốc độ request lớn nhất mà một GPU còn giữ được ≥ 95 % request đạt SLO. Mọi kịch bản tải và ngưỡng autoscaling đều tính theo C, nên đây là con số nền của cả phần đánh giá. Cách đo (ĐG1): cố định 1 replica, bơm tải đều ở từng mức λ trong 5 phút, bỏ phút đầu làm ấm.</p>
+  <div class="two">
+    <figure>
+      <div class="fig-head"><span class="fig-title">Tỷ lệ request đạt SLO theo tải</span><span class="prov measured">đo thật</span></div>
+      <div class="legend"><span><i style="background:var(--s-a2)"></i>% đạt SLO</span><span><i class="dash" style="color:var(--ink-2)"></i>mục tiêu 95 %</span></div>
+      <div class="chart narrow" id="c-dg1-slo"></div>
+    </figure>
+    <figure>
+      <div class="fig-head"><span class="fig-title">TTFT p95 theo tải (thang log)</span><span class="prov measured">đo thật</span></div>
+      <div class="legend"><span><i style="background:var(--s-a1)"></i>TTFT p95</span><span><i class="dash" style="color:var(--ink-2)"></i>SLO 2,5 s</span></div>
+      <div class="chart narrow" id="c-dg1-ttft"></div>
+    </figure>
+  </div>
+  <p>Điểm gãy rất gắt: tăng tải 11 % (4,5 → 5 req/s) làm tỷ lệ đạt SLO rơi từ 99 % xuống 6 %. Lúc đó số request đồng thời chạm trần 64, request mới phải xếp hàng, và hàng đợi dài ra không ngừng: ở 6 req/s, TTFT p95 lên tới 62 s. Trong khi đó TPOT vẫn ~53 ms và KV-cache mới dùng 18,5 %: GPU chưa hết sức, chỉ hết chỗ. Kết quả: <strong>C = 4,5 req/s</strong>, <strong>B* = 52,5</strong> request đồng thời, ngưỡng A2 = 0,8 × B* ≈ <strong>42</strong> (để dư 20 % trước điểm gãy).</p>
+  <div class="callout analogy">
+    <b>Vì sao gãy gắt như vậy</b>
+    <p>Khi khách đến chậm hơn tốc độ pha, hàng đợi lúc dài lúc ngắn nhưng luôn tự rút. Khi khách đến nhanh hơn tốc độ pha dù chỉ một chút, hàng đợi dài thêm mỗi phút và không bao giờ rút. Không có vùng "hơi chậm": hệ thống đi thẳng từ ổn sang sập. Đây là lý do autoscaling phải hành động <em>trước</em> khi chạm C, và lý do ngưỡng A2 đặt ở 80 % B*.</p>
+  </div>
+  <div class="tablewrap">
+    <table>
+      <caption>Định luật Little: số request trong hệ thống B = λ × thời gian mỗi request (E2E). Khớp trong 1 % ở mọi mức ổn định, nên cách đo B đáng tin.</caption>
+      <thead><tr><th class="n">λ (req/s)</th><th class="n">% đạt SLO</th><th class="n">TTFT p95</th><th class="n">TPOT p95</th><th class="n">B đo</th><th class="n">λ × E2E</th><th class="n">Hàng đợi</th></tr></thead>
+      <tbody id="t-dg1"></tbody>
+    </table>
+  </div>
+</section>
+
+<section id="tin-hieu">
+  <div class="sec-head"><span class="secno">09</span><h2>Scale theo tín hiệu nào</h2></div>
+  <p>Autoscaler chỉ thông minh bằng tín hiệu nó đọc. Một tín hiệu tốt phải tăng khi tải tăng, và chạm ngưỡng <em>trước</em> khi hệ thống sập. Cùng 5 mức tải của ĐG1, đây là ba tín hiệu ứng viên, trung bình 4 phút mỗi mức:</p>
+  <div class="multiples" id="signals"></div>
+  <figure>
+    <div class="fig-head"><span class="fig-title">GPU util và số request đang chạy, cùng một lượt đo</span><span class="prov measured">đo thật · ĐG1</span></div>
+    <div class="legend"><span><i style="background:var(--s-a1)"></i>GPU util của GPU có pod (%)</span><span><i style="background:var(--s-a2)"></i>request đang chạy, quy ra % của 64</span><span><i class="dash" style="color:var(--ink-2)"></i>năng lực C</span></div>
+    <div class="chart" id="c-signals"></div>
+    <figcaption>GPU util đứng yên ở 100 % từ mức tải bằng 44 % năng lực tới khi đã sập: không phân biệt được "rảnh một nửa" với "đã quá tải". Số request đang chạy tăng đều theo tải và chạm trần 64 đúng lúc hệ thống gãy, nên ngưỡng 42 cho autoscaler đủ thời gian hành động. Đây là kiểm chứng LT6 và là lý do chọn A2.</figcaption>
+  </figure>
+</section>
+
+<section id="cold-start">
+  <div class="sec-head"><span class="secno">10</span><h2>Cold start</h2></div>
+  <p>Cold start là khoảng từ lúc tạo pod tới lúc pod nhận request. Trong khoảng này GPU đã bị giữ (tính tiền) nhưng chưa phục vụ ai. Đồ án tối ưu theo ba mức: <strong>L0</strong> (không chuẩn bị gì), <strong>L1</strong> (model trên ổ mạng dùng chung), <strong>L2</strong> (image và model tải sẵn lên ổ NVMe của máy, có compile cache). Máy thuê dùng L2: hai bước chậm nhất (kéo image 9 GB, tải model 5,8 GB) đã làm khi dựng máy.</p>
+  <figure>
+    <div class="fig-head"><span class="fig-title">Một pod vLLM khởi động, từng pha (giây)</span><span class="prov measured">đo thật · log vLLM</span></div>
+    <div class="rows" id="cold"></div>
+    <div class="stack-legend" id="cold-legend"></div>
+    <figcaption>Lần 2 có <strong>compile cache</strong> (kết quả torch.compile lưu lại trên đĩa) nên pha compile từ 27,4 s còn 2 s. Ba pod khởi động cùng lúc mất 117–122 s, chỉ chậm hơn một pod ~10 %. Ở lần 1, phần lớn còn lại là import Python và khởi tạo engine, khó rút thêm nếu không đổi phiên bản vLLM. "Khác" là khoảng giữa các mốc log chưa tách được; lần 2 log chỉ ghi riêng compile và CUDA graph.</figcaption>
+  </figure>
+  <div class="tablewrap">
+    <table>
+      <caption>Cùng model 3B trên hai máy thuê khác nhau (cùng ngày 08/11): chọn máy ảnh hưởng tới cold start nhiều hơn mọi tối ưu trong code.</caption>
+      <thead><tr><th>Bước</th><th class="n">Máy 2 × 5060 Ti (loại)</th><th class="n">Máy 4 × A4000 (dùng)</th></tr></thead>
+      <tbody>
+        <tr><td>Tải model 5,8 GB từ Hugging Face</td><td class="n">690 s</td><td class="n">27 s</td></tr>
+        <tr><td>Kéo image vLLM 9 GB</td><td class="n">24 phút 22 s</td><td class="n">413 s</td></tr>
+        <tr><td>Cold start pod đầu (chưa có cache)</td><td class="n">412 s</td><td class="n">152 s</td></tr>
+        <tr><td>Trong đó: CUDA graph capture</td><td class="n">127 + 121 s</td><td class="n">4 + 4 s</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="kich-ban">
+  <div class="sec-head"><span class="secno">11</span><h2>Ba kịch bản tải</h2></div>
+  <p>Máy tạo tải gửi request theo phân phối Poisson (ngẫu nhiên như người dùng thật) với tốc độ trung bình λ(t) theo ba hình dạng. Mọi kịch bản tính theo bội số của C, nên đổi máy hay đổi model thì kịch bản tự co giãn theo.</p>
+  <figure>
+    <div class="fig-head"><span class="fig-title">λ(t) của ba kịch bản với C = 4,5 req/s và N = 4 GPU</span><span class="prov measured">định nghĩa trong code máy tạo tải</span></div>
+    <div class="multiples" id="kb"></div>
+    <figcaption><strong>KB1</strong>: tải thấp đều 0,5 C, kiểm hệ thống không phung phí GPU khi vắng. <strong>KB2</strong>: nhảy từ 0,5 C lên 3 C trong 30 giây, giữ 10 phút rồi rơi lại, kiểm phản ứng với cú sốc và scale-down an toàn. <strong>KB3</strong>: tăng dần lên 3 C trong 5 phút rồi giữ, kiểm tăng nhiều bước và không dao động khi tải cao kéo dài. Đỉnh 3 C = 13,5 req/s cần đúng 4 GPU (0,75 × N × C).</figcaption>
+  </figure>
+</section>
+
+<section id="autoscaling">
+  <div class="sec-head"><span class="secno">12</span><h2>Autoscaling trên GPU thật</h2></div>
+  <p>Phiên V1 chạy hai lượt có KEDA trên 4 × A4000. Runner tự chạy cả hai lượt liền 60 phút, không cần người can thiệp: áp cấu hình, đưa hệ thống về 1 replica, làm ấm, bơm tải, thu số liệu, tự kiểm tính hợp lệ. Mỗi lượt một kịch bản khác nhau, mỗi ô một lượt, nên đây là quan sát chứ chưa phải kết luận so sánh A1 với A2.</p>
+  <figure>
+    <div class="fig-head"><span class="fig-title">A2 × KB2: tải nhảy từ 0,5 C lên 3 C trong 30 giây</span><span class="prov measured">đo thật · 10.058 request</span></div>
+    <div class="legend"><span><i class="box" style="background:var(--load)"></i>tải gửi (req/s)</span><span><i style="background:var(--accent)"></i>năng lực đang Ready = số pod × C</span></div>
+    <div class="chart" id="c-a2-load"></div>
+    <div class="legend"><span><i style="background:var(--s-a2)"></i>pod Ready</span><span><i class="dash" style="color:var(--s-a2)"></i>HPA desired</span></div>
+    <div class="chart" id="c-a2-rep"></div>
+    <div class="legend"><span><i style="background:var(--s-a2)"></i>% request đạt SLO (theo lúc gửi, mỗi 15 s)</span></div>
+    <div class="chart" id="c-a2-slo"></div>
+    <figcaption>Đọc từ trên xuống. Khi vùng xám (tải) vượt đường xanh (năng lực), request bắt đầu xếp hàng. KEDA phản ứng nhanh: 30 s sau khi tải nhảy, HPA đã muốn đủ 4 pod. Nhưng pod mới chỉ Ready sau ~2 phút cold start; trong khoảng đó tải gấp 3 lần năng lực và tỷ lệ đạt SLO rơi về 0. Pha spike chỉ đạt 62,7 %; trước và sau spike đạt 100 %. Scale-down đúng thiết kế (mục 05).</figcaption>
+  </figure>
+  <figure>
+    <div class="fig-head"><span class="fig-title">Hàng đợi bị "ghim" vào pod cũ</span><span class="prov measured">đo thật</span></div>
+    <div class="legend"><span><i style="background:var(--s-a1)"></i>request chờ trong pod cũ</span><span><i style="background:var(--s-s4)"></i>request chờ trong 3 pod mới (cộng lại)</span></div>
+    <div class="chart" id="c-a2-wait"></div>
+    <figcaption>Phát hiện quan trọng nhất của V1. Trong cold start, mọi request dồn vào pod duy nhất và xếp hàng <em>bên trong vLLM của pod đó</em>, đỉnh 1.041 request. Khi 3 pod mới Ready, Service chỉ chia request <em>mới</em> cho chúng; request đã xếp hàng không chuyển đi được. Pod mới rảnh trong khi pod cũ chạy kín 64 slot thêm 5 phút. Thêm GPU không cứu được những request đã xếp hàng; mục 15 bàn cách xử lý.</figcaption>
+  </figure>
+  <figure>
+    <div class="fig-head"><span class="fig-title">Cùng hiện tượng, nhìn như một tiệm trà sữa</span><span class="prov illus">minh hoạ · số từ biểu đồ trên</span></div>
+    <div class="chart dia" id="d-pinned"></div>
+    <figcaption>Hàng khách đã đứng trước quầy 1 không tự chuyển sang quầy mới mở; chỉ khách đến sau mới được chia đều. Quầy 1 vẫn phải pha hết hàng của mình.</figcaption>
+  </figure>
+  <figure>
+    <div class="fig-head"><span class="fig-title">A1 × KB3: tải tăng dần, rồi A1 kẹt ở 2 GPU</span><span class="prov measured">đo thật · 11.975 request</span></div>
+    <div class="legend"><span><i class="box" style="background:var(--load)"></i>tải gửi (req/s)</span><span><i style="background:var(--accent)"></i>năng lực Ready</span></div>
+    <div class="chart" id="c-a1-load"></div>
+    <div class="legend"><span><i style="background:var(--s-a1)"></i>pod Ready</span><span><i class="dash" style="color:var(--s-a1)"></i>HPA desired</span></div>
+    <div class="chart" id="c-a1-rep"></div>
+    <div class="legend"><span><i style="background:var(--s-a1)"></i>Σ GPU util của node (%), giá trị lớn nhất mỗi 15 s</span><span><i class="dash" style="color:var(--ink-2)"></i>ngưỡng A1: 70 % mỗi pod</span></div>
+    <div class="chart" id="c-a1-gpu"></div>
+    <figcaption>A1 lên 2 GPU ngay khi tải mới bằng nửa năng lực một GPU: GPU util của pod đầu đã 100 %. Mỗi khi pod mới Ready và nhận việc, util lại cộng thêm 100, nên A1 leo đều lên tối đa. Tải tăng dần nên lần này A1 kịp: pha sustain đạt 99,9 %. Sau tải, một mẫu util 100 % đơn lẻ của GPU đang tắt (đỉnh nhọn ở phút ~24) giữ A1 ở 2 replica quá hạn chờ. Đã sửa truy vấn: lấy trung bình 15 s trên từng GPU trước khi cộng (<code>avg_over_time</code>), mẫu đó còn 33 %.</figcaption>
+  </figure>
+</section>
+
+<section id="ma-tran">
+  <div class="sec-head"><span class="secno">13</span><h2>Ma trận đánh giá V2</h2></div>
+  <p>V2 (14–15/11) sẽ chạy 17 lượt: 4 cấu hình × 3 kịch bản tải, có lặp ở các ô quan trọng. Trong lúc chờ, các ô được ước lượng bằng một <strong>mô hình mô phỏng</strong> dựng từ đúng số đo ở trên: TPOT theo số request đồng thời (mục 08), 64 slot mỗi pod, hàng đợi nằm trong từng pod, chia request ngẫu nhiên, cold start 110 s, timeout 120 s, cùng tham số HPA, và hàm tải λ(t) lấy thẳng từ code máy tạo tải. Mỗi ô chạy 5 seed (5 chuỗi request ngẫu nhiên khác nhau).</p>
+  <figure>
+    <div class="fig-head"><span class="fig-title">Kiểm mô hình bằng hai lượt thật trước khi tin</span><span class="prov sim">mô phỏng</span></div>
+    <div class="tablewrap"><table><thead><tr><th>Lượt</th><th>Pha</th><th class="n">Đo thật</th><th class="n">Mô phỏng</th><th class="n">Lệch</th></tr></thead><tbody id="t-calib"></tbody></table></div>
+    <figcaption>Mô hình bám sát A2 và pha ổn định của A1, nhưng bi quan hơn thực tế 9 điểm ở pha tăng tải của A1. Mốc A1 đủ 4 pod Ready: mô phỏng giây 370, thực tế giây 360. Đọc các số dưới đây như ước lượng có sai số cỡ vài điểm phần trăm, không phải kết quả.</figcaption>
+  </figure>
+  <figure>
+    <div class="fig-head"><span class="fig-title">Chất lượng và chi phí theo kịch bản</span><span class="prov sim">mô phỏng · 5 seed</span></div>
+    <div class="multiples" id="matrix"></div>
+    <figcaption>Thanh trên: % request đạt SLO (vạch đứt = mục tiêu 95 %). Thanh dưới: GPU-giờ cả lượt, tính cả 180 s mỗi pod bị tắt còn giữ GPU.</figcaption>
+    <details><summary>Bảng số liệu ma trận</summary><div class="tablewrap"><table id="t-matrix"></table></div></details>
+  </figure>
+  <div class="callout">
+    <b>Bức tranh mà V2 cần xác nhận</b>
+    <p><strong>A1</strong> giữ SLO tốt chỉ vì GPU util bão hoà nên nó gần như luôn lên tối đa: tốn 86–93 % chi phí của S4, kể cả lúc tải chỉ bằng nửa một GPU (KB1). <strong>A2</strong> chỉ dùng 1 GPU ở KB1, bằng 1/4 chi phí S4 với cùng 100 % SLO, nhưng mất SLO khi tải nhảy nhanh hơn cold start (KB2: ~72 %). Đó là đánh đổi cốt lõi: A1 trả bằng tiền, A2 trả bằng cold start.</p>
+  </div>
+  <figure>
+    <div class="fig-head"><span class="fig-title">Nếu tải thấp đều như KB1 kéo dài cả tháng</span><span class="prov sim">ước lượng</span></div>
+    <div class="hbars" id="month"></div>
+    <figcaption>Quy GPU-giờ của ô KB1 ra một tháng 30 ngày, giá 0,153 USD mỗi GPU-giờ (máy 4 × A4000 giá 0,611 USD/giờ). Với tải này cả bốn cấu hình đều đạt 100 % SLO; chênh lệch thuần là tiền. Đây là phép nhân để thấy thứ bậc, không phải dự báo chi phí của một dịch vụ thật.</figcaption>
+  </figure>
+</section>
+
+<section id="van-hanh">
+  <div class="sec-head"><span class="secno">14</span><h2>Vận hành an toàn</h2></div>
+  <p>Khoảng 70 % đồ án là phần vận hành: hệ thống phải thay đổi được (scale, cập nhật, mất node) mà không làm hỏng request của người dùng, và dựng lại được từ đầu bằng vài lệnh.</p>
+  <figure>
+    <div class="fig-head"><span class="fig-title">Một pod được tắt êm như thế nào</span><span class="prov measured">mốc đo thật · nhà, 06/11</span></div>
+    <div class="chart dia" id="d-shutdown"></div>
+    <figcaption>Khi pod bị xoá, Kubernetes lập tức rút nó khỏi Service (không nhận request mới), chạy <strong>preStop</strong> chờ 20 s để mọi thành phần kịp biết, rồi gửi tín hiệu tắt. vLLM 0.31.0 không tự dừng gọn như tài liệu mô tả nhưng vẫn chạy tiếp, nên các stream đang dở hoàn tất ở giây ~23. Pod chỉ bị giết hẳn ở giây 180 (grace period).</figcaption>
+  </figure>
+  <figure>
+    <div class="fig-head"><span class="fig-title">Xoá pod khi đang phục vụ 48 stream dài</span><span class="prov measured">đo thật · nhà, 06/11</span></div>
+    <div class="hbars" id="graceful"></div>
+    <div class="stack-legend"><span><i style="background:var(--good)"></i>stream hoàn tất</span><span><i style="background:var(--bad)"></i>stream bị cắt</span></div>
+    <figcaption>Request không bị cắt là nhờ grace period 180 s. Đối chứng rút grace còn 5 s là mất cả 48 stream (16 đang sinh, 32 đang chờ). Cái giá: mỗi pod bị tắt giữ GPU đủ 180 s; ghi vào phần hạn chế (ADR-006 C8).</figcaption>
+  </figure>
+  <div class="two">
+    <figure>
+      <div class="fig-head"><span class="fig-title">Dựng lại từ VM trắng (VH5)</span><span class="prov measured">đo thật · 08/11</span></div>
+      <div class="hbars" id="vh5"></div>
+      <figcaption>Các bước chạy song song: tải model và kéo image bắt đầu ngay khi có thể, nên tổng từ lúc bootstrap tới pod vLLM đầu tiên Ready là <strong>12,5 phút</strong>, dưới chỉ tiêu 30 phút (vạch đứt). Kéo image dùng mirror vì Docker Hub hay bị chặn từ VM thuê.</figcaption>
+    </figure>
+    <figure>
+      <div class="fig-head"><span class="fig-title">Kịch bản vận hành trên simulator</span><span class="prov measured">đo thật · kind, không GPU</span></div>
+      <div class="tablewrap"><table id="t-vh"></table></div>
+      <figcaption>Kiểm logic vận hành dưới tải trên cluster kind. Số thời gian là của simulator, không thay cho số đo trên GPU thật ở V2.</figcaption>
+    </figure>
+  </div>
+  <div class="tablewrap">
+    <table>
+      <caption>Sáu kịch bản vận hành VH1–VH6 và trạng thái tới 13/11.</caption>
+      <thead><tr><th>Kịch bản</th><th>Câu hỏi nó trả lời</th><th>Trạng thái</th></tr></thead>
+      <tbody>
+        <tr><td>VH1 scale-down dưới tải</td><td>Bớt GPU có làm hỏng request không?</td><td><span class="pill ok">đạt ở nhà · 144/144</span></td></tr>
+        <tr><td>VH2 cập nhật phiên bản</td><td>Đổi phiên bản có gián đoạn không, kể cả khi chỉ 1 pod?</td><td><span class="pill ok">đạt trên kind</span> <span class="pill warn">GPU: V2</span></td></tr>
+        <tr><td>VH3 mất pod, mất node</td><td>Hệ thống tự hồi phục trong bao lâu?</td><td><span class="pill ok">đạt trên kind</span> <span class="pill warn">GPU: V2</span></td></tr>
+        <tr><td>VH4 mất Prometheus</td><td>Autoscaler mất tín hiệu thì sao?</td><td><span class="pill ok">fallback lên max 18,8 s</span></td></tr>
+        <tr><td>VH5 dựng lại từ đầu</td><td>Mất cả cluster thì dựng lại mất bao lâu?</td><td><span class="pill ok">12,5 phút</span> <span class="pill warn">bấm giờ chính thức: V2</span></td></tr>
+        <tr><td>VH6 cảnh báo</td><td>Có sự cố thì người trực biết sau bao lâu?</td><td><span class="pill warn">rule có test; Telegram đang làm</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="nang-cap">
+  <div class="sec-head"><span class="secno">15</span><h2>Hướng nâng cấp</h2></div>
+  <p>Ba hướng dưới đây chưa có trong hệ thống. Chúng đi thẳng vào hai điểm yếu V1 đã lộ ra (cold start và hàng đợi bị ghim), và đều đã có số liệu ước lượng từ mô hình ở mục 13.</p>
+
+  <h3>15.1 Lý thuyết hàng đợi: đặt tham số bằng công thức thay vì thử</h3>
+  <p>Một pod vLLM là một hệ thống hàng đợi: request đến với tốc độ λ, được phục vụ tối đa C mỗi giây, tối đa 64 cùng lúc. Ba công thức đơn giản giải thích gần hết số liệu đo được.</p>
+  <div class="formula"><code>B = λ × E2E   →   ngưỡng A2 = 0,8 × B* = 0,8 × 4,5 × 11,7 s ≈ 42</code><small>Định luật Little: số request trong hệ thống bằng tốc độ đến nhân thời gian mỗi request ở lại. Khớp trong 1 % ở mọi mức tải ổn định (mục 08).</small></div>
+  <div class="formula"><code>Q_đỉnh ≈ (λ − C) × min(T_phản_ứng, T_timeout) = (13,5 − 4,5) × 120 s ≈ 1.080 request</code><small>Hàng đợi tích luỹ bằng phần tải vượt năng lực nhân thời gian thiếu máy. Ở đây timeout 120 s của client là thứ chặn trần, vì request chờ quá 120 s bị huỷ. Đo được 1.041 (lệch 4 %).</small></div>
+  <div class="formula"><code>T_xả ≈ Q ÷ (C − λ/N) = 1.041 ÷ (4,5 − 13,5/4) ≈ 925 s</code><small>Pod cũ vẫn nhận 1/4 request mới nên chỉ xả được phần dư 1,1 req/s. Trên thực tế hàng đợi hết sau ~7 phút vì 855 request bị client huỷ khi quá 120 s, tức là thất bại SLO.</small></div>
+  <div class="callout">
+    <b>Hướng phát triển</b>
+    <p>Dùng mô hình hàng đợi nhiều server có giới hạn chỗ (M/G/c/K) để suy trực tiếp số GPU cần cho một λ và một SLO cho trước. Khi đó bước đo năng lực ĐG1 chỉ còn là kiểm chứng, và ngưỡng autoscaling có cơ sở toán học thay cho hệ số 0,8 chọn theo kinh nghiệm. Công thức Q_đỉnh cũng cho biết trước một đợt tải sẽ gây hàng đợi bao lớn, từ đó suy ra cold start tối đa chấp nhận được.</p>
+  </div>
+
+  <h3>15.2 Autoscaling dự báo: scale trước khi tải tới</h3>
+  <p>A2 hiện chỉ phản ứng: tải phải tới rồi mới thêm GPU, và GPU tới muộn đúng một khoảng cold start. Bản dự báo nhìn <em>xu hướng</em> của tín hiệu: nếu số request đang tăng 2 mỗi giây thì sau 110 s sẽ có thêm ~220, nên xin thêm pod ngay bây giờ.</p>
+  <div class="formula"><code>m_dự_báo = m + max(0, độ dốc 30 s gần nhất) × T_cold</code><code>desired  = ⌈m_dự_báo ÷ 42⌉</code><small>m là tổng request đang chạy + chờ (tín hiệu A2 hiện tại), T_cold = 110 s.</small></div>
+  <figure>
+    <div class="fig-head"><span class="fig-title">A2 gốc so với A2 dự báo, kịch bản KB3</span><span class="provs"><span class="prov sim">mô phỏng</span><span class="prov proposal">đề xuất</span></span></div>
+    <div class="legend"><span><i class="box" style="background:var(--load)"></i>số GPU cần (λ ÷ C)</span><span><i style="background:var(--s-a2)"></i>pod Ready, A2 gốc</span><span><i style="background:var(--accent)"></i>pod Ready, A2 dự báo</span></div>
+    <div class="chart" id="c-pred"></div>
+    <figcaption>Bản dự báo có pod thứ hai Ready sớm hơn khoảng một phút, nên đường năng lực bám sát nhu cầu trong pha tăng tải.</figcaption>
+  </figure>
+
+  <h3>15.3 Định tuyến theo hàng đợi ngắn nhất (JSQ)</h3>
+  <p>Service của Kubernetes chia request ngẫu nhiên, không biết pod nào đang ngập. JSQ (join-shortest-queue) gửi mỗi request tới pod có ít việc nhất, dựa trên chính metric vLLM đã có. Hướng này khớp với dự án Gateway API Inference Extension của cộng đồng Kubernetes, nơi một bộ định tuyến chọn pod theo hàng đợi và KV-cache.</p>
+  <figure>
+    <div class="fig-head"><span class="fig-title">Mỗi cải tiến mua được bao nhiêu SLO, tốn thêm bao nhiêu GPU</span><span class="provs"><span class="prov sim">mô phỏng · 5 seed</span><span class="prov proposal">đề xuất</span></span></div>
+    <div class="multiples" id="upgrades"></div>
+    <figcaption>"Cold 60 s" là đối chứng: giả sử rút được cold start còn một nửa (ví dụ bằng snapshot bộ nhớ GPU). Với KB3 (tăng dần), dự báo đưa SLO từ 89 % lên 97 % mà chỉ tốn thêm 4 % GPU-giờ. Với KB2 (nhảy trong 30 s), không dự báo nào kịp; kết hợp dự báo và JSQ đạt 88 %. Với KB1 (tải đều), dự báo hiểu nhầm nhiễu ngẫu nhiên thành xu hướng và tốn gấp đôi GPU, nên cần làm mượt tín hiệu trước khi dùng.</figcaption>
+  </figure>
+  <div class="tablewrap">
+    <table>
+      <caption>Lộ trình nếu có thêm thời gian sau khi nộp.</caption>
+      <thead><tr><th>Nâng cấp</th><th>Cần làm</th><th>Lợi ích ước lượng</th><th>Rủi ro</th></tr></thead>
+      <tbody>
+        <tr><td>A2 dự báo</td><td>Thêm thành phần độ dốc vào PromQL của KEDA (<code>deriv()</code>), làm mượt bằng cửa sổ dài hơn</td><td>KB3: 89 → 97 % SLO, +4 % GPU</td><td>Báo động giả khi tải nhiễu (KB1 tốn gấp đôi)</td></tr>
+        <tr><td>JSQ</td><td>Thay Service bằng bộ định tuyến đọc <code>vllm:num_requests_waiting</code></td><td>KB2: 72 → 84 % SLO, không tốn thêm GPU</td><td>Thêm một thành phần trên đường request</td></tr>
+        <tr><td>Giới hạn hàng đợi mỗi pod</td><td>Từ chối sớm (HTTP 429) khi pod đã chờ quá nhiều, client thử lại</td><td>Request thất bại nhanh thay vì chờ 120 s</td><td>Cần client biết thử lại</td></tr>
+        <tr><td>Công thức hàng đợi</td><td>Mô hình M/G/c/K suy ra số GPU và ngưỡng</td><td>Bớt một phần đo năng lực</td><td>Phải kiểm lại trên mỗi loại GPU</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="hoi-dap">
+  <div class="sec-head"><span class="secno">16</span><h2>Hỏi đáp khi bảo vệ</h2></div>
+  <p>Những câu hội đồng có khả năng hỏi, và câu trả lời dựa trên số liệu trong báo cáo này.</p>
+  <div class="faq">
+    <details><summary>Sao không scale theo GPU utilization như hướng dẫn trên mạng?</summary><p>Vì nó báo 100 % ở mọi mức tải từ 44 % năng lực trở lên (mục 09), nên không phân biệt được rảnh với quá tải. Hệ quả đo được: A1 lên 2 GPU khi tải mới bằng nửa một GPU, và theo mô phỏng tốn 86–93 % chi phí của việc giữ cố định 4 GPU.</p></details>
+    <details><summary>Ngưỡng 42 ở đâu ra?</summary><p>Từ đo năng lực: tại C = 4,5 req/s, mỗi pod có trung bình B* = 52,5 request đồng thời. Ngưỡng đặt ở 80 % để autoscaler hành động trước điểm gãy, vì từ C lên 1,11 C tỷ lệ đạt SLO rơi từ 99 % xuống 6 %. Định luật Little xác nhận cách đo B (lệch dưới 1 %).</p></details>
+    <details><summary>A2 chỉ đạt 72 % ở KB2, vậy có tốt hơn A1 không?</summary><p>Tốt hơn về chi phí, kém hơn khi tải nhảy đột ngột. Đồ án không giấu điều này: nó cho thấy giới hạn nằm ở cold start (80 % thời gian phản ứng) và hàng đợi bị ghim, không nằm ở tín hiệu. Mục 15 định lượng các cách khắc phục. Với tải tăng dần (KB3), A2 đạt ~89 % và bản dự báo đạt ~97 %.</p></details>
+    <details><summary>Sao dùng RTX A4000 và model 3B mà không phải GPU datacenter và model 7B?</summary><p>Vì ngân sách và vì có máy: tháng 11/2026 máy 4 × 4090 chế độ VM gần như không có dưới 2,4 USD/giờ, còn 4 × A4000 có ở 0,6 USD/giờ. Mọi kịch bản tính theo C, nên cơ chế (tín hiệu bão hoà, cold start, scale-down) không phụ thuộc loại GPU; con số cụ thể thì có, và được ghi vào hạn chế.</p></details>
+    <details><summary>Marketplace như Vast.ai có đủ tin cậy để đo không?</summary><p>Có, với điều kiện: thuê máy VM verified và thuê trọn máy; đo phần cứng và mạng thật trước khi giữ (<code>make probe</code>), vì cột mạng của Vast không tin được; toàn bộ số liệu chính từ một lần thuê trên cùng một máy; máy tạo tải nằm cùng VM nên không có nhiễu mạng; xáo thứ tự các lượt.</p></details>
+    <details><summary>Làm sao biết máy tạo tải không phải nút thắt?</summary><p>Mỗi lượt runner tự kiểm: độ lệch lịch gửi, CPU và throttle của máy tạo tải, độ trễ event loop, khoảng trống scrape của Prometheus. Hai lượt V1 bị đánh dấu không hợp lệ chính vì CPU máy tạo tải vượt 70 %; V2 thuê máy ≥ 20 vCPU để tránh.</p></details>
+    <details><summary>Số trong ma trận là mô phỏng, có tin được không?</summary><p>Mô hình được kiểm trước bằng hai lượt thật: lệch 1,9 điểm ở A2 và tối đa 8,7 điểm ở pha tăng tải của A1, theo hướng bi quan. Nó dùng để định hướng và để thấy thứ bậc giữa các cấu hình; kết luận cuối lấy từ V2.</p></details>
+    <details><summary>Tắt pod có làm mất câu trả lời đang sinh không?</summary><p>Không, nhờ grace period 180 s: 144/144 stream hoàn tất khi xoá pod. Đối chứng rút còn 5 s thì mất cả 48. Phát hiện kèm theo: vLLM 0.31.0 không dừng gọn khi nhận tín hiệu tắt như tài liệu mô tả, nên an toàn đến từ grace period chứ không từ vLLM.</p></details>
+  </div>
+</section>
+
+<section id="han-che">
+  <div class="sec-head"><span class="secno">17</span><h2>Hạn chế và việc còn lại</h2></div>
+  <ul class="points">
+    <li><strong>Một model, một loại GPU.</strong> Mọi con số gắn với Qwen2.5-3B trên RTX A4000. Cơ chế có tính khái quát; con số thì không.</li>
+    <li><strong>Mỗi ô chỉ 1–3 lượt.</strong> Đủ thấy các khác biệt lớn như trong mục 13, không đủ để khẳng định khác biệt nhỏ.</li>
+    <li><strong>Tối đa 4 GPU, một node.</strong> Chưa kiểm hành vi ở hàng chục replica, và chưa có autoscaling mức node (thuê thêm máy).</li>
+    <li><strong>Tải tổng hợp.</strong> Output cố định 256 token; tải thật đa dạng hơn.</li>
+    <li><strong>Grace period 180 s.</strong> Request dài hơn ~160 s sau lúc tắt pod vẫn bị cắt, và mỗi lần scale-down tốn thêm 3 phút GPU mỗi pod.</li>
+    <li><strong>Bảo mật tối thiểu.</strong> Chỉ có API key và API không mở ra Internet; không có rate limit, NetworkPolicy thường trực, bí mật mã hoá trong Git. Máy thuê cài bằng helm, không qua Argo CD (ADR-006 §3.1).</li>
+    <li><strong>Số trong báo cáo này là sơ bộ.</strong> ĐG1 và hai lượt V1 chạy trên máy 15 vCPU, máy tạo tải vượt ngưỡng CPU tự kiểm; ma trận ở mục 13 là mô phỏng. V2 trên máy ≥ 20 vCPU sẽ thay toàn bộ.</li>
+  </ul>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Việc</th><th>Hạn</th><th>Trạng thái</th></tr></thead>
+      <tbody>
+        <tr><td>Argo CD quản lý A2, cảnh báo, dashboard ở nhà; cảnh báo tới Telegram</td><td>13/11</td><td><span class="pill warn">đang làm</span></td></tr>
+        <tr><td>Phiên V2: ĐG1 → ADR-003, ma trận 17 lượt, cold start, VH1–VH5 trên GPU thật</td><td>14–15/11</td><td><span class="pill warn">chờ máy</span></td></tr>
+        <tr><td>Đóng băng dữ liệu</td><td>22/11</td><td><span class="pill warn">chưa tới</span></td></tr>
+        <tr><td>Bản thảo đủ 6 chương gửi giảng viên hướng dẫn</td><td>29/11</td><td><span class="pill warn">chưa tới</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<footer>
+  <p>Nguồn số liệu: <code>runs/v1-a4000/</code> (2 lượt V1), <code>runs/dg1-v1-a4000/</code> (ĐG1, gồm GPU util và request đang chạy ở mục 09), log phiên A4000 ngày 08/11 và <code>docs/nhat-ky/van-hanh.md</code> (cold start, benchmark, graceful shutdown, VH5), nhật ký Quang tuần 06 (kịch bản VH trên kind), <code>loadgen/scenarios.py</code> (hình dạng KB1–KB3). Mô hình mô phỏng và script trích dữ liệu đi kèm báo cáo trong <code>docs/bao-cao/</code>.</p>
+  <p>Thiết kế chi tiết: <code>docs/mo-ta-chi-tiet-do-an.md</code>. Quyết định: <code>docs/adr/</code>, mới nhất ADR-006.</p>
+</footer>
+</div>
+
+<script type="application/json" id="data">{"v1":{"A1-KB3-1":{"t":[0,15,30,45,60,75,90,105,120,135,150,165,180,195,210,225,240,255,270,285,300,315,330,345,360,375,390,405,420,435,450,465,480,495,510,525,540,555,570,585,600,615,630,645,660,675,690,705,720,735,750,765,780,795,810,825,840,855,870,885,900,915,930,945,960,975,990,1005,1020,1035,1050,1065,1080,1095,1110,1125,1140,1155,1170,1185,1200,1215,1230,1245,1260,1275,1290,1305,1320,1335,1350,1365,1380,1395,1410,1425,1440,1455,1470,1485,1500,1515,1530,1545,1560,1575,1590,1605,1620,1635],"rate":[2.13,3.13,3.67,4.13,4.73,4.67,5.73,6.4,7.33,6.6,8.0,7.8,10.33,10.6,8.33,10.33,10.87,11.53,12.87,13.2,14.27,13.53,13.27,12.8,14.27,13.07,13.27,13.07,12.93,12.73,11.27,13.73,14.13,14.53,14.2,12.73,13.67,14.0,13.13,13.47,15.0,13.67,13.87,13.07,11.53,13.07,13.07,14.73,14.47,14.47,13.2,12.2,13.73,14.13,13.53,14.33,14.07,12.47,12.13,14.07,14.47,13.53,11.6,14.2,12.27,14.0,14.4,12.6,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"slo":[1.0,1.0,1.0,1.0,1.0,1.0,0.756,0.135,0.7,1.0,1.0,1.0,1.0,0.579,0.704,0.871,1.0,1.0,1.0,1.0,1.0,1.0,0.965,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"ttft_p50":[0.18,0.21,0.22,0.25,0.29,0.27,1.25,4.37,1.13,0.23,0.23,0.22,0.32,1.39,0.58,0.42,0.21,0.23,0.24,0.28,0.31,0.37,0.31,0.26,0.21,0.2,0.23,0.21,0.21,0.21,0.18,0.22,0.22,0.22,0.22,0.21,0.21,0.22,0.22,0.22,0.24,0.22,0.23,0.21,0.21,0.21,0.21,0.22,0.23,0.24,0.21,0.21,0.21,0.21,0.22,0.22,0.24,0.21,0.21,0.21,0.23,0.22,0.2,0.22,0.22,0.21,0.23,0.22,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"hpa_desired":[2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,3.0,3.0,3.0,3.0,3.0,3.0,3.0,3.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,3.0,3.0,3.0,3.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0],"replicas_ready":[1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,3.0,3.0,3.0,3.0,3.0,3.0,3.0,3.0,3.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,3.0,3.0,3.0,3.0,3.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0],"gpu_sum":[100.0,100.0,100.0,100.0,100.0,100.0,105.0,100.0,200.0,200.0,200.0,200.0,200.0,200.0,213.0,300.0,300.0,300.0,300.0,300.0,300.0,300.0,300.0,319.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,100.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"wait_old":[0,0,0,0,0,0,7.0,28.0,28.0,10.0,0,0,8.0,3.0,4.0,15.0,3.0,0,0,0,0,5.0,0,3.0,4.0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"wait_new":[0,0,0,0,0,0,0,0,0,0,0,0,0,17.0,23.0,4.0,0,0,0,0,1.0,5.0,8.0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"phases":{"ramp":[0.0,300.0],"sustain":[300.0,1020.0]},"n_req":11975,"fail":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},"A2-KB2-1":{"t":[0,15,30,45,60,75,90,105,120,135,150,165,180,195,210,225,240,255,270,285,300,315,330,345,360,375,390,405,420,435,450,465,480,495,510,525,540,555,570,585,600,615,630,645,660,675,690,705,720,735,750,765,780,795,810,825,840,855,870,885,900,915,930,945,960,975,990,1005,1020,1035,1050,1065,1080,1095,1110,1125,1140,1155,1170,1185,1200,1215,1230,1245,1260,1275,1290,1305,1320,1335,1350,1365,1380,1395,1410,1425,1440,1455],"rate":[1.93,2.6,2.07,2.27,2.27,2.13,2.4,1.93,2.4,2.8,2.87,1.73,1.6,2.33,2.93,2.2,5.4,11.13,13.4,12.93,12.4,14.87,13.6,13.27,14.4,14.27,13.33,11.93,12.87,14.0,11.93,14.27,14.4,12.4,13.6,13.87,13.07,14.47,13.6,13.13,14.2,14.27,14.67,13.13,13.0,15.8,13.93,14.0,14.47,13.13,13.2,11.33,15.2,13.0,13.33,13.33,11.33,5.6,2.6,2.6,2.13,2.13,2.67,1.87,1.73,2.07,2.33,2.13,2.53,1.73,1.67,2.73,1.8,2.07,1.93,2.2,2.13,2.2,2.73,2.27,1.93,2.13,2.2,2.67,2.4,2.33,2.47,2.53,2.27,1.73,2.4,2.73,1.73,1.87,2.4,2.53,0.0,0.0],"slo":[1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,0.988,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.64,0.695,0.743,0.736,0.757,0.788,0.738,0.782,0.763,0.725,0.779,0.704,0.756,0.779,0.761,0.723,0.752,0.677,0.726,0.708,0.709,0.713,0.767,0.724,0.772,0.823,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,null,null],"ttft_p50":[0.18,0.19,0.18,0.18,0.2,0.17,0.19,0.18,0.19,0.21,0.21,0.16,0.19,0.19,0.22,0.17,0.31,12.6,34.83,60.43,84.97,112.28,118.6,119.54,119.96,0.28,0.23,0.21,0.21,0.25,0.22,0.24,0.26,0.23,0.26,0.23,0.23,0.25,0.23,0.24,0.25,0.27,0.25,0.24,0.25,0.27,0.25,0.24,0.26,0.24,0.25,0.22,0.23,0.24,0.22,0.21,0.21,0.17,0.13,0.17,0.16,0.13,0.16,0.15,0.14,0.15,0.15,0.15,0.17,0.15,0.15,0.14,0.15,0.13,0.15,0.13,0.15,0.17,0.18,0.17,0.15,0.16,0.18,0.22,0.17,0.17,0.19,0.19,0.18,0.18,0.2,0.2,0.18,0.19,0.2,0.2,null,null],"hpa_desired":[1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,2.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,3.0,3.0,3.0,3.0,2.0,2.0,2.0,2.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0],"replicas_ready":[1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,2.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,3.0,3.0,3.0,3.0,2.0,2.0,2.0,2.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0],"gpu_sum":[100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,152.0,121.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,400.0,300.0,300.0,300.0,239.0,300.0,200.0,200.0,200.0,162.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,0.0],"wait_old":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,68.0,177.0,293.0,419.0,564.0,693.0,831.0,956.0,1041.0,1020.0,1012.0,986.0,963.0,886.0,733.0,600.0,428.0,332.0,312.0,286.0,268.0,238.0,217.0,193.0,180.0,160.0,158.0,136.0,119.0,113.0,105.0,83.0,67.0,42.0,13.0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"wait_new":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"phases":{"pre":[120.0,240.0],"spike":[240.0,840.0],"drop":[840.0,1440.0]},"n_req":10058,"fail":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,77,208,24,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}},"sim":{"S1-KB1":{"slo":1.0,"slo_min":1.0,"slo_max":1.0,"gpu_h":0.2,"phase":{"steady":1.0}},"S1-KB2":{"slo":0.1467,"slo_min":0.1425,"slo_max":0.1507,"gpu_h":0.4,"phase":{"pre":1.0,"spike":0.0125,"drop":0.5421}},"S1-KB3":{"slo":0.0328,"slo_min":0.0291,"slo_max":0.0353,"gpu_h":0.283,"phase":{"ramp":0.1661,"sustain":0.0}},"S4-KB1":{"slo":1.0,"slo_min":1.0,"slo_max":1.0,"gpu_h":0.8,"phase":{"steady":1.0}},"S4-KB2":{"slo":1.0,"slo_min":1.0,"slo_max":1.0,"gpu_h":1.6,"phase":{"pre":1.0,"spike":1.0,"drop":1.0}},"S4-KB3":{"slo":1.0,"slo_min":1.0,"slo_max":1.0,"gpu_h":1.133,"phase":{"ramp":1.0,"sustain":1.0}},"A1-KB1":{"slo":1.0,"slo_min":1.0,"slo_max":1.0,"gpu_h":0.6862,"phase":{"steady":1.0}},"A1-KB2":{"slo":0.9981,"slo_min":0.9921,"slo_max":1.0,"gpu_h":1.487,"phase":{"pre":1.0,"spike":0.9976,"drop":1.0}},"A1-KB3":{"slo":0.9588,"slo_min":0.925,"slo_max":0.9832,"gpu_h":1.021,"phase":{"ramp":0.799,"sustain":0.9984}},"A2-KB1":{"slo":1.0,"slo_min":1.0,"slo_max":1.0,"gpu_h":0.2,"phase":{"steady":1.0}},"A2-KB2":{"slo":0.7188,"slo_min":0.7082,"slo_max":0.7324,"gpu_h":1.2924,"phase":{"pre":1.0,"spike":0.6458,"drop":1.0}},"A2-KB3":{"slo":0.8884,"slo_min":0.8735,"slo_max":0.9121,"gpu_h":1.0466,"phase":{"ramp":0.5164,"sustain":0.9798}},"A2pred-KB1":{"slo":1.0,"slo_min":1.0,"slo_max":1.0,"gpu_h":0.4018,"phase":{"steady":1.0}},"A2jsq-KB1":{"slo":1.0,"slo_min":1.0,"slo_max":1.0,"gpu_h":0.2,"phase":{"steady":1.0}},"A2cold60-KB1":{"slo":1.0,"slo_min":1.0,"slo_max":1.0,"gpu_h":0.2,"phase":{"steady":1.0}},"A2best-KB1":{"slo":1.0,"slo_min":1.0,"slo_max":1.0,"gpu_h":0.4518,"phase":{"steady":1.0}},"A2pred-KB2":{"slo":0.809,"slo_min":0.799,"slo_max":0.8196,"gpu_h":1.4008,"phase":{"pre":1.0,"spike":0.7595,"drop":1.0}},"A2jsq-KB2":{"slo":0.8355,"slo_min":0.8317,"slo_max":0.8399,"gpu_h":1.3106,"phase":{"pre":1.0,"spike":0.7921,"drop":1.0}},"A2cold60-KB2":{"slo":0.7871,"slo_min":0.7768,"slo_max":0.8007,"gpu_h":1.289,"phase":{"pre":1.0,"spike":0.7321,"drop":1.0}},"A2best-KB2":{"slo":0.8841,"slo_min":0.7944,"slo_max":1.0,"gpu_h":1.4292,"phase":{"pre":1.0,"spike":0.8537,"drop":1.0}},"A2pred-KB3":{"slo":0.9685,"slo_min":0.9586,"slo_max":0.9775,"gpu_h":1.0908,"phase":{"ramp":0.8398,"sustain":1.0}},"A2jsq-KB3":{"slo":0.8972,"slo_min":0.8891,"slo_max":0.9159,"gpu_h":1.0482,"phase":{"ramp":0.4756,"sustain":1.0}},"A2cold60-KB3":{"slo":0.9654,"slo_min":0.9542,"slo_max":0.9872,"gpu_h":1.0476,"phase":{"ramp":0.8247,"sustain":0.9998}},"A2best-KB3":{"slo":0.9761,"slo_min":0.9686,"slo_max":0.983,"gpu_h":1.0984,"phase":{"ramp":0.8784,"sustain":1.0}}},"simSeries":{"A2-KB3":{"t":[0,15,30,45,60,75,90,105,120,135,150,165,180,195,210,225,240,255,270,285,300,315,330,345,360,375,390,405,420,435,450,465,480,495,510,525,540,555,570,585,600,615,630,645,660,675,690,705,720,735,750,765,780,795,810,825,840,855,870,885,900,915,930,945,960,975,990,1005,1020,1035,1050,1065,1080,1095,1110,1125,1140,1155,1170,1185,1200,1215,1230,1245,1260,1275,1290,1305,1320,1335,1350,1365,1380,1395,1410,1425,1440,1455,1470,1485,1500,1515,1530,1545,1560,1575,1590,1605],"desired":[1,1,1,1,1,2,2,2,3,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,3,3,3,3,3,2,2,2,2,2,1,1,1,1,1,1,1,1,1,1,1,1,1],"ready":[1,1,1,1,1,1,1,1,1,1,1,1,1,2,2,2,3,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,3,3,3,3,3,2,2,2,2,2,1,1,1,1,1,1,1,1,1,1,1,1,1],"lam":[2.25,2.82,3.38,3.94,4.5,5.06,5.63,6.19,6.75,7.32,7.88,8.44,9.0,9.57,10.13,10.69,11.25,11.82,12.38,12.94,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"A2pred-KB3":{"t":[0,15,30,45,60,75,90,105,120,135,150,165,180,195,210,225,240,255,270,285,300,315,330,345,360,375,390,405,420,435,450,465,480,495,510,525,540,555,570,585,600,615,630,645,660,675,690,705,720,735,750,765,780,795,810,825,840,855,870,885,900,915,930,945,960,975,990,1005,1020,1035,1050,1065,1080,1095,1110,1125,1140,1155,1170,1185,1200,1215,1230,1245,1260,1275,1290,1305,1320,1335,1350,1365,1380,1395,1410,1425,1440,1455,1470,1485,1500,1515,1530,1545,1560,1575,1590,1605],"desired":[1,1,3,3,3,3,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,3,3,3,3,3,2,2,2,2,2,1,1,1,1,1,1,1,1,1,1,1,1],"ready":[1,1,1,1,1,1,1,1,1,1,3,3,3,3,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,3,3,3,3,3,2,2,2,2,2,1,1,1,1,1,1,1,1,1,1,1,1],"lam":[2.25,2.82,3.38,3.94,4.5,5.06,5.63,6.19,6.75,7.32,7.88,8.44,9.0,9.57,10.13,10.69,11.25,11.82,12.38,12.94,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"A2-KB2":{"t":[0,15,30,45,60,75,90,105,120,135,150,165,180,195,210,225,240,255,270,285,300,315,330,345,360,375,390,405,420,435,450,465,480,495,510,525,540,555,570,585,600,615,630,645,660,675,690,705,720,735,750,765,780,795,810,825,840,855,870,885,900,915,930,945,960,975,990,1005,1020,1035,1050,1065,1080,1095,1110,1125,1140,1155,1170,1185,1200,1215,1230,1245,1260,1275,1290,1305,1320,1335,1350,1365,1380,1395,1410,1425,1440,1455,1470,1485,1500,1515,1530,1545,1560,1575,1590,1605,1620,1635,1650,1665,1680,1695,1710,1725,1740,1755,1770,1785,1800,1815,1830,1845,1860,1875,1890,1905,1920,1935,1950,1965,1980,1995,2010,2025],"desired":[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,3,3,3,3,3,2,2,2,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],"ready":[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,3,3,3,3,3,2,2,2,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],"lam":[2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.29,7.91,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,7.87,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"A2best-KB2":{"t":[0,15,30,45,60,75,90,105,120,135,150,165,180,195,210,225,240,255,270,285,300,315,330,345,360,375,390,405,420,435,450,465,480,495,510,525,540,555,570,585,600,615,630,645,660,675,690,705,720,735,750,765,780,795,810,825,840,855,870,885,900,915,930,945,960,975,990,1005,1020,1035,1050,1065,1080,1095,1110,1125,1140,1155,1170,1185,1200,1215,1230,1245,1260,1275,1290,1305,1320,1335,1350,1365,1380,1395,1410,1425,1440,1455,1470,1485,1500,1515,1530,1545,1560,1575,1590,1605,1620,1635,1650,1665,1680,1695,1710,1725,1740,1755,1770,1785,1800,1815,1830,1845,1860,1875,1890,1905,1920,1935,1950,1965,1980,1995,2010,2025],"desired":[1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,3,3,3,3,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],"ready":[1,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,3,3,3,3,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],"lam":[2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.29,7.91,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,7.87,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]}},"kb":{"KB1":{"t":[0,15,30,45,60,75,90,105,120,135,150,165,180,195,210,225,240,255,270,285,300,315,330,345,360,375,390,405,420,435,450,465,480,495,510,525,540,555,570,585,600,615,630,645,660,675,690,705,720],"lam":[2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25],"phases":{"steady":[120.0,720.0]},"dur":720.0},"KB2":{"t":[0,15,30,45,60,75,90,105,120,135,150,165,180,195,210,225,240,255,270,285,300,315,330,345,360,375,390,405,420,435,450,465,480,495,510,525,540,555,570,585,600,615,630,645,660,675,690,705,720,735,750,765,780,795,810,825,840,855,870,885,900,915,930,945,960,975,990,1005,1020,1035,1050,1065,1080,1095,1110,1125,1140,1155,1170,1185,1200,1215,1230,1245,1260,1275,1290,1305,1320,1335,1350,1365,1380,1395,1410,1425,1440],"lam":[2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,7.875,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,7.875,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25,2.25],"phases":{"pre":[120.0,240.0],"spike":[240.0,840.0],"drop":[840.0,1440.0]},"dur":1440.0},"KB3":{"t":[0,15,30,45,60,75,90,105,120,135,150,165,180,195,210,225,240,255,270,285,300,315,330,345,360,375,390,405,420,435,450,465,480,495,510,525,540,555,570,585,600,615,630,645,660,675,690,705,720,735,750,765,780,795,810,825,840,855,870,885,900,915,930,945,960,975,990,1005,1020],"lam":[2.25,2.812,3.375,3.938,4.5,5.062,5.625,6.188,6.75,7.312,7.875,8.438,9.0,9.562,10.125,10.688,11.25,11.812,12.375,12.938,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5,13.5],"phases":{"ramp":[0.0,300.0],"sustain":[300.0,1020.0]},"dur":1020.0}},"req":{"2":{"ttft":0.177,"decode":5.96,"e2e":6.14,"n_in":669,"n":582},"4.5":{"ttft":0.297,"decode":11.04,"e2e":11.51,"n_in":674,"n":1337}},"dg1sig":[{"lam":2.0,"util":100.0,"running":12.1,"kv":4.3},{"lam":4.0,"util":100.0,"running":39.6,"kv":14.2},{"lam":4.5,"util":100.0,"running":51.6,"kv":18.5},{"lam":5.0,"util":100.0,"running":63.6,"kv":22.8},{"lam":6.0,"util":100.0,"running":63.4,"kv":22.7}]}</script>
+<script>
+(() => {
+  const D = JSON.parse(document.getElementById("data").textContent);
+  const NS = "http://www.w3.org/2000/svg";
+  const vi = (x, d = 1) => (x == null ? "–" : Number(x).toLocaleString("vi-VN", { minimumFractionDigits: d, maximumFractionDigits: d }));
+  const pct = (x, d = 1) => (x == null ? "–" : vi(x * 100, d) + " %");
+  const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
+  const el = (tag, attrs = {}, parent) => {
+    const e = document.createElementNS(NS, tag);
+    for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+    if (parent) parent.appendChild(e);
+    return e;
+  };
+  const txt = (parent, x, y, s, cls, anchor = "start") => { const t = el("text", { x, y, class: cls || "", "text-anchor": anchor }, parent); t.textContent = s; return t; };
+
+  function tipFor(fig) {
+    let t = fig.querySelector(":scope > .tip");
+    if (!t) { t = document.createElement("div"); t.className = "tip"; t.hidden = true; fig.appendChild(t); }
+    return t;
+  }
+  function placeTip(tip, fig, cx, cy) {
+    const r = fig.getBoundingClientRect(); tip.hidden = false;
+    const w = tip.offsetWidth, h = tip.offsetHeight;
+    let x = cx - r.left + 14, y = cy - r.top - h - 10;
+    if (x + w > r.width - 6) x = cx - r.left - w - 14;
+    if (y < 4) y = cy - r.top + 16;
+    tip.style.left = `${Math.max(4, x)}px`; tip.style.top = `${y}px`;
+  }
+
+  /* Biểu đồ đường/bậc/vùng, một trục y. */
+  function lineChart(o) {
+    const host = document.getElementById(o.id); const fig = host.closest("figure");
+    const W = o.w || 880, H = o.h || 200, m = { l: 46, r: 14, t: o.bands ? 18 : 10, b: 30 };
+    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": o.aria || "" }, host);
+    const xS = (x) => m.l + ((x - o.xMin) / (o.xMax - o.xMin)) * (W - m.l - m.r);
+    const ly = (v) => (o.log ? Math.log10(v) : v);
+    const yS = (y) => H - m.b - ((ly(y) - ly(o.yMin)) / (ly(o.yMax) - ly(o.yMin))) * (H - m.t - m.b);
+    for (const b of o.bands || []) {
+      el("rect", { class: "band", x: xS(b.x0), y: m.t, width: xS(b.x1) - xS(b.x0), height: H - m.t - m.b }, svg);
+      txt(svg, xS(b.x0) + 4, m.t - 5, b.label, "band-label");
+    }
+    for (const t of o.yTicks) {
+      el("line", { class: "grid", x1: m.l, x2: W - m.r, y1: yS(t), y2: yS(t) }, svg);
+      txt(svg, m.l - 6, yS(t) + 3.5, o.yFmt ? o.yFmt(t) : t, "", "end");
+    }
+    el("line", { class: "axis", x1: m.l, x2: W - m.r, y1: H - m.b, y2: H - m.b }, svg);
+    for (const t of o.xTicks) txt(svg, xS(t), H - m.b + 15, o.xFmt ? o.xFmt(t) : t, "", "middle");
+    if (o.xLabel) txt(svg, W - m.r, H - 3, o.xLabel, "axis-label", "end");
+    for (const r of o.refs || []) {
+      if (r.x != null) {
+        el("line", { class: "ref", x1: xS(r.x), x2: xS(r.x), y1: m.t, y2: H - m.b }, svg);
+        txt(svg, xS(r.x) + 4, H - m.b - 6, r.label, "ref-label");
+      } else {
+        el("line", { class: "ref", x1: m.l, x2: W - m.r, y1: yS(r.y), y2: yS(r.y) }, svg);
+        txt(svg, W - m.r - 2, yS(r.y) - 4, r.label, "ref-label", "end");
+      }
+    }
+    const clampY = (y) => Math.max(o.yMin, Math.min(o.yMax, y));
+    for (const s of o.series) {
+      const xs = s.xs || o.xs; let d = "", open = false;
+      xs.forEach((x, i) => {
+        const y = s.ys[i];
+        if (y == null) { open = false; return; }
+        const px = xS(x).toFixed(1), py = yS(clampY(y)).toFixed(1);
+        if (s.kind === "step" && open) { const prev = s.ys[i - 1]; d += ` L${px},${yS(clampY(prev)).toFixed(1)} L${px},${py}`; }
+        else d += `${open ? " L" : " M"}${px},${py}`;
+        open = true;
+      });
+      if (s.kind === "area") {
+        const base = yS(o.yMin).toFixed(1);
+        let a = `M${xS(xs[0]).toFixed(1)},${base}`;
+        xs.forEach((x, i) => { const y = s.ys[i] ?? 0; a += ` L${xS(x).toFixed(1)},${yS(clampY(y)).toFixed(1)}`; });
+        a += ` L${xS(xs[xs.length - 1]).toFixed(1)},${base} Z`;
+        el("path", { d: a, style: `fill:${s.color};opacity:0.55`, stroke: "none" }, svg);
+      } else {
+        el("path", { d, fill: "none", style: `stroke:${s.color}`, "stroke-width": s.width || 2, "stroke-linejoin": "round", "stroke-dasharray": s.dash ? "5 4" : "none" }, svg);
+      }
+      if (s.pts) xs.forEach((x, i) => { if (s.ys[i] != null) el("circle", { cx: xS(x), cy: yS(clampY(s.ys[i])), r: 4, style: `fill:${s.color}`, stroke: "var(--surface)", "stroke-width": 2 }, svg); });
+      if (s.label) { const t = txt(svg, xS(s.label.x) + (s.label.dx ?? 6), yS(s.label.y) - (s.label.dy ?? 6), s.label.text, "direct", s.label.anchor || "start"); t.setAttribute("style", "fill:var(--ink)"); }
+    }
+    const xh = el("line", { class: "xhair", y1: m.t, y2: H - m.b, visibility: "hidden" }, svg);
+    const hit = el("rect", { x: m.l, y: m.t, width: W - m.l - m.r, height: H - m.t - m.b, fill: "transparent" }, svg);
+    const tip = tipFor(fig); const xs = o.xs;
+    hit.addEventListener("pointermove", (ev) => {
+      const pt = svg.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY;
+      const p = pt.matrixTransform(svg.getScreenCTM().inverse());
+      let best = 0, bd = Infinity;
+      xs.forEach((x, i) => { const dd = Math.abs(xS(x) - p.x); if (dd < bd) { bd = dd; best = i; } });
+      xh.setAttribute("x1", xS(xs[best])); xh.setAttribute("x2", xS(xs[best])); xh.setAttribute("visibility", "visible");
+      const rows = o.series.filter((s) => !s.noTip).map((s) => `<div><span class="sw" style="background:${s.color}"></span>${s.name}: <b>${s.ys[best] == null ? "–" : (s.fmt ? s.fmt(s.ys[best]) : s.ys[best])}</b></div>`).join("");
+      tip.innerHTML = `<div>${o.tipX ? o.tipX(xs[best]) : xs[best]}</div>${rows}`;
+      placeTip(tip, fig, ev.clientX, ev.clientY);
+    });
+    hit.addEventListener("pointerleave", () => { xh.setAttribute("visibility", "hidden"); tip.hidden = true; });
+  }
+
+  function hbars(id, rows, { max, unit = "", ref } = {}) {
+    const host = document.getElementById(id); const fig = host.closest("figure"); const tip = tipFor(fig);
+    for (const r of rows) {
+      const row = document.createElement("div"); row.className = "hbar";
+      const w = Math.max(0, Math.min(1, r.v / max)) * 100;
+      row.innerHTML = `<span class="lab">${r.label}</span><span class="track"><span class="fill" style="width:${w}%;background:${r.color}"></span>${ref != null ? `<span class="tick" style="left:${Math.min(100, (ref / max) * 100)}%"></span>` : ""}</span><span class="val">${r.text ?? vi(r.v) + unit}</span>`;
+      row.addEventListener("pointermove", (ev) => { tip.innerHTML = r.tip || `${r.label}: <b>${r.text ?? vi(r.v) + unit}</b>`; placeTip(tip, fig, ev.clientX, ev.clientY); });
+      row.addEventListener("pointerleave", () => { tip.hidden = true; });
+      host.appendChild(row);
+    }
+  }
+  function stackRow(host, segs, total, fig) {
+    const tip = tipFor(fig);
+    const s = document.createElement("div"); s.className = "stack";
+    for (const g of segs) {
+      const d = document.createElement("div");
+      d.style.flex = `${g.v} 0 0`; d.style.background = g.color;
+      if (g.light) d.style.color = "var(--ink)";
+      if (g.v / total > 0.09) d.textContent = g.short ?? vi(g.v);
+      d.addEventListener("pointermove", (ev) => { tip.innerHTML = `${g.name}: <b>${g.full ?? vi(g.v)}</b>`; placeTip(tip, fig, ev.clientX, ev.clientY); });
+      d.addEventListener("pointerleave", () => { tip.hidden = true; });
+      s.appendChild(d);
+    }
+    host.appendChild(s);
+  }
+  function labeledStack(hostId, rows, maxT) {
+    const host = document.getElementById(hostId); const fig = host.closest("figure");
+    for (const r of rows) {
+      const lab = document.createElement("div"); lab.className = "rowlab"; lab.innerHTML = `<span>${r.label}</span><span class="num">${r.right}</span>`; host.appendChild(lab);
+      const wrap = document.createElement("div"); wrap.style.width = `${(r.total / maxT) * 100}%`; host.appendChild(wrap);
+      stackRow(wrap, r.segs, r.total, fig);
+    }
+  }
+  function legendInto(id, items) {
+    document.getElementById(id).innerHTML = items.map(([n, c]) => `<span><i style="background:${c}"></i>${n}</span>`).join("");
+  }
+  const arrowDefs = (svg, id) => { el("defs", {}, svg).innerHTML = `<marker id="${id}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="head" d="M0,0 L10,5 L0,10 z"/></marker>`; };
+
+  // ── 02: một ngày (minh hoạ) ──
+  {
+    const xs = []; for (let h = 0; h <= 24; h += 0.25) xs.push(h);
+    const need = (h) => 0.55 + 2.7 * Math.exp(-(((h - 20) / 2.2) ** 2)) + 1.5 * Math.exp(-(((h - 11.5) / 1.8) ** 2));
+    const auto = xs.map((h) => Math.min(4, Math.max(1, Math.ceil(need(Math.max(0, h - 0.5)) / 0.95))));
+    lineChart({ id: "c-day", h: 230, xs, xMin: 0, xMax: 24, xTicks: [0, 4, 8, 12, 16, 20, 24], xFmt: (v) => `${v}h`, yMin: 0, yMax: 4.8, yTicks: [0, 1, 2, 3, 4], yFmt: (v) => `${v} GPU`, xLabel: "giờ trong ngày",
+      tipX: (h) => `${Math.floor(h)}:${String(Math.round((h % 1) * 60)).padStart(2, "0")}`,
+      series: [{ name: "GPU cần", color: "var(--load)", kind: "area", ys: xs.map(need), fmt: (v) => vi(v, 1) },
+        { name: "Cố định 1", color: "var(--s-s1)", ys: xs.map(() => 1), width: 2.5, fmt: (v) => v, label: { x: 0.3, y: 1, text: "S1: thiếu lúc cao điểm" } },
+        { name: "Cố định 4", color: "var(--s-s4)", ys: xs.map(() => 4), width: 2.5, fmt: (v) => v, label: { x: 0.3, y: 4, text: "S4: thừa phần lớn ngày" } },
+        { name: "Tự co giãn", color: "var(--s-a2)", kind: "step", ys: auto, width: 2.5, fmt: (v) => v }], aria: "Minh hoạ tải trong ngày và ba cách cấp GPU" });
+  }
+
+  // ── 03: request + batching ──
+  {
+    const r2 = D.req["2"], rC = D.req["4.5"];
+    const seg = (r) => [{ name: "Chờ + prefill (TTFT)", v: r.ttft, color: "var(--s-a1)", full: `${vi(r.ttft, 2)} s` }, { name: "Decode", v: r.decode, color: "var(--s-a2)", short: `decode ${vi(r.decode)} s`, full: `${vi(r.decode, 2)} s` }];
+    labeledStack("req-tl", [
+      { label: `Tải nhẹ · 2 req/s · TTFT ${vi(r2.ttft, 2)} s`, right: `${vi(r2.e2e)} s`, total: r2.e2e, segs: seg(r2) },
+      { label: `Tại năng lực C · 4,5 req/s · TTFT ${vi(rC.ttft, 2)} s`, right: `${vi(rC.e2e)} s`, total: rC.e2e, segs: seg(rC) },
+    ], 12);
+  }
+  {
+    const svg = el("svg", { viewBox: "0 0 880 226", role: "img", "aria-label": "Không gộp: mỗi bước đọc weights cho 1 token. Gộp: một lần đọc weights cho 32 token." }, document.getElementById("d-batch"));
+    txt(svg, 20, 22, "Không gộp: mỗi bước 1 token", "t1");
+    for (let i = 0; i < 4; i++) {
+      const x = 20 + i * 100;
+      el("rect", { class: "box soft", x, y: 40, width: 88, height: 44, rx: 5 }, svg);
+      txt(svg, x + 44, 60, "đọc 6,2 GB", "t2", "middle"); txt(svg, x + 44, 76, "~17 ms", "t3", "middle");
+      el("rect", { class: "run", x: x + 34, y: 96, width: 20, height: 14, rx: 2 }, svg);
+    }
+    txt(svg, 20, 136, "4 bước ≈ 70 ms → 4 token cho 1 request", "t2");
+    txt(svg, 480, 22, "Gộp (continuous batching): 1 bước, 32 token", "t1");
+    el("rect", { class: "box em", x: 480, y: 40, width: 380, height: 44, rx: 5 }, svg);
+    txt(svg, 670, 60, "đọc 6,2 GB một lần", "t2", "middle"); txt(svg, 670, 76, "~25 ms", "t3", "middle");
+    for (let i = 0; i < 32; i++) el("rect", { class: "run", x: 482 + (i % 16) * 23.6, y: 96 + Math.floor(i / 16) * 18, width: 19, height: 14, rx: 2 }, svg);
+    txt(svg, 480, 152, "1 bước ≈ 25 ms → 1 token cho mỗi request trong 32 request", "t2");
+    txt(svg, 20, 194, "Thời gian một bước do việc đọc bộ nhớ quyết định, gần như không phụ thuộc số request.", "t2");
+    txt(svg, 20, 212, "vLLM gộp được tới 64 request mỗi pod; vượt 64 thì request mới phải xếp hàng (mục 08).", "t2");
+  }
+
+  // ── 05: phản ứng & scale-down ──
+  labeledStack("react", [{ label: "Tải nhảy (phút 4:00) → pod mới Ready (phút 6:30)", right: "150 s", total: 150, segs: [
+    { name: "Phát hiện + quyết định (scrape, KEDA, HPA)", v: 30, color: "var(--accent)", short: "30 s phát hiện", full: "30 s" },
+    { name: "Cold start pod mới", v: 120, color: "var(--s-a1)", short: "120 s cold start", full: "120 s" }] }], 150);
+  labeledStack("scaledown", [{ label: "Tải giảm (phút 14:00) → còn 1 pod (phút 20:30)", right: "390 s", total: 390, segs: [
+    { name: "Chờ cửa sổ ổn định", v: 270, color: "var(--band)", light: true, short: "chờ ổn định 270 s", full: "270 s (cửa sổ 300 s tính từ lúc nhu cầu bắt đầu giảm)" },
+    { name: "4 → 3, rồi 3 → 2", v: 60, color: "var(--s-a2)", short: "−1 pod", full: "60 s" },
+    { name: "2 → 1", v: 60, color: "var(--s-a2)", short: "−1 pod", full: "60 s" }] }], 390);
+
+  // ── 06: gitops ──
+  {
+    const svg = el("svg", { viewBox: "0 0 880 150", role: "img", "aria-label": "Sửa file, mở pull request, CI kiểm, merge vào main, Argo CD đồng bộ, cluster đổi theo" }, document.getElementById("d-gitops"));
+    arrowDefs(svg, "ag");
+    const steps = [["Sửa file", ["YAML trong repo"]], ["Pull request", ["người còn lại", "review"]], ["CI kiểm", ["yamllint, kustomize,", "promtool, pytest"]], ["Merge main", ["Git là nguồn", "sự thật"]], ["Argo CD", ["thấy main đổi,", "tự áp"]], ["Cluster", ["đúng như Git"]]];
+    steps.forEach(([a, lines], i) => {
+      const x = 8 + i * 146;
+      el("rect", { class: i === 4 ? "box em" : "box", x, y: 20, width: 126, height: 62, rx: 6 }, svg);
+      txt(svg, x + 63, 42, a, "t1", "middle");
+      lines.forEach((l, k) => txt(svg, x + 63, 60 + k * 13, l, "t3", "middle"));
+      if (i < steps.length - 1) el("path", { class: "lnk", d: `M${x + 126},51 L${x + 144},51`, "marker-end": "url(#ag)" }, svg);
+    });
+    el("path", { class: "lnk", d: "M817,82 L817,116 L525,116 L525,84", "marker-end": "url(#ag)", "stroke-dasharray": "4 4" }, svg);
+    txt(svg, 671, 138, "ai sửa tay trên cluster → Argo CD đưa về đúng Git (selfHeal)", "t3", "middle");
+  }
+
+  // ── 07: VRAM & benchmark ──
+  {
+    const host = document.getElementById("vram");
+    const segs = [
+      { name: "Weights Qwen2.5-3B", v: 5.75, color: "var(--s-a2)", short: "weights 5,8", full: "5,8 GiB" },
+      { name: "Activation + CUDA graph", v: 1.37, color: "var(--muted)", short: "1,4", full: "1,4 GiB" },
+      { name: "KV-cache", v: 7.28, color: "var(--accent)", short: "KV-cache 7,28 GiB", full: "7,28 GiB = 211.936 token" },
+      { name: "Chừa lại (10 %)", v: 1.6, color: "var(--load)", short: "1,6", full: "1,6 GiB", light: true },
+    ];
+    stackRow(host, segs, 16, host.closest("figure"));
+    legendInto("vram-legend", segs.map((g) => [`${g.name} · ${g.full}`, g.color]));
+  }
+  const bench = [[1, 17.2, 17.3, 97, 104, 57], [16, 21.3, 23.2, 632, 1014, 675], [32, 25.1, 27.9, 892, 1977, 1121], [64, 36.2, 40.4, 1243, 3980, 1562]];
+  lineChart({ id: "c-tpot", w: 420, h: 230, xs: bench.map((r) => r[0]), xMin: 0, xMax: 66, xTicks: [1, 16, 32, 64], yMin: 0, yMax: 40, yTicks: [0, 10, 20, 30, 40], yFmt: (v) => `${v} ms`, xLabel: "request đồng thời",
+    series: [{ name: "TPOT", color: "var(--s-a2)", ys: bench.map((r) => r[1]), pts: true, fmt: (v) => `${vi(v)} ms` }], refs: [{ y: 13.8, label: "13,8 ms" }], tipX: (x) => `${x} đồng thời`, aria: "TPOT 17,2 ms ở 1 request tới 36,2 ms ở 64 request" });
+  lineChart({ id: "c-thru", w: 420, h: 230, xs: bench.map((r) => r[0]), xMin: 0, xMax: 66, xTicks: [1, 16, 32, 64], yMin: 0, yMax: 1600, yTicks: [0, 400, 800, 1200, 1600], yFmt: (v) => v.toLocaleString("vi-VN"), xLabel: "request đồng thời",
+    series: [{ name: "Thông lượng", color: "var(--s-a2)", ys: bench.map((r) => r[5]), pts: true, fmt: (v) => `${v.toLocaleString("vi-VN")} token/s` }], tipX: (x) => `${x} đồng thời`, aria: "Thông lượng 57 token/s ở 1 request tới 1562 token/s ở 64" });
+  document.getElementById("t-bench").innerHTML = `<thead><tr><th class="n">Đồng thời</th><th class="n">TPOT TB</th><th class="n">TPOT p99</th><th class="n">TTFT TB</th><th class="n">TTFT p99</th><th class="n">token/s</th></tr></thead><tbody>` +
+    bench.map((r) => `<tr><td class="n">${r[0]}</td><td class="n">${vi(r[1])} ms</td><td class="n">${vi(r[2])} ms</td><td class="n">${r[3].toLocaleString("vi-VN")} ms</td><td class="n">${r[4].toLocaleString("vi-VN")} ms</td><td class="n">${r[5].toLocaleString("vi-VN")}</td></tr>`).join("") + "</tbody>";
+
+  // ── 08: ĐG1 ──
+  const dg1 = [[2, 1.0, 0.26, 26.5, 12.1, 12.3, 0], [4, 1.0, 0.47, 49.0, 39.7, 39.2, 0], [4.5, 0.991, 1.88, 52.8, 52.5, 52.6, 0.9], [5, 0.063, 12.1, 53.1, 93.7, 98.7, 30.1], [6, 0.0, 61.9, 52.6, 242.6, 303.3, 179.2]];
+  lineChart({ id: "c-dg1-slo", w: 420, h: 230, xs: dg1.map((r) => r[0]), xMin: 1.5, xMax: 6.3, xTicks: [2, 3, 4, 5, 6], xFmt: (v) => vi(v, 0), yMin: 0, yMax: 1, yTicks: [0, 0.25, 0.5, 0.75, 1], yFmt: (v) => `${v * 100} %`, xLabel: "λ (req/s)",
+    series: [{ name: "Đạt SLO", color: "var(--s-a2)", ys: dg1.map((r) => r[1]), pts: true, fmt: (v) => pct(v), label: { x: 4.5, y: 0.82, text: "C = 4,5", dx: -8, anchor: "end" } }], refs: [{ y: 0.95, label: "95 %" }], tipX: (x) => `λ = ${vi(x)} req/s`, aria: "Tỷ lệ đạt SLO 100 % tới λ=4, 99,1 % ở 4,5, 6,3 % ở 5, 0 % ở 6" });
+  lineChart({ id: "c-dg1-ttft", w: 420, h: 230, log: true, xs: dg1.map((r) => r[0]), xMin: 1.5, xMax: 6.3, xTicks: [2, 3, 4, 5, 6], xFmt: (v) => vi(v, 0), yMin: 0.1, yMax: 100, yTicks: [0.1, 1, 10, 100], yFmt: (v) => `${vi(v, v < 1 ? 1 : 0)} s`, xLabel: "λ (req/s)",
+    series: [{ name: "TTFT p95", color: "var(--s-a1)", ys: dg1.map((r) => r[2]), pts: true, fmt: (v) => `${vi(v, 2)} s` }], refs: [{ y: 2.5, label: "2,5 s" }], tipX: (x) => `λ = ${vi(x)} req/s`, aria: "TTFT p95 0,26 s ở λ=2 tới 61,9 s ở λ=6" });
+  document.getElementById("t-dg1").innerHTML = dg1.map((r) => `<tr${r[0] === 4.5 ? ' class="em"' : ""}><td class="n">${vi(r[0])}</td><td class="n">${pct(r[1])}</td><td class="n">${vi(r[2], 2)} s</td><td class="n">${vi(r[3])} ms</td><td class="n">${vi(r[4])}</td><td class="n">${vi(r[5])}</td><td class="n">${vi(r[6])}</td></tr>`).join("");
+
+  // ── 09: tín hiệu ──
+  {
+    const sig = D.dg1sig;
+    const host = document.getElementById("signals");
+    const cards = [
+      ["sig-util", "GPU utilization", "A1 đọc tín hiệu này", sig.map((s) => [s.lam, s.util, `${vi(s.util, 0)} %`]), 100, "var(--s-a1)", "Bão hoà: 100 % ở mọi mức tải."],
+      ["sig-run", "Request đang chạy", "A2 đọc tín hiệu này (+ request chờ)", sig.map((s) => [s.lam, s.running, vi(s.running)]), 64, "var(--s-a2)", "Tăng đều, chạm trần 64 đúng lúc gãy."],
+      ["sig-kv", "KV-cache đang dùng", "không dùng để scale", sig.map((s) => [s.lam, s.kv, `${vi(s.kv)} %`]), 100, "var(--muted)", "Có tăng, nhưng mới 23 % lúc đã sập."],
+    ];
+    for (const [id, title, who, rows, max, color, verdict] of cards) {
+      const m = document.createElement("figure"); m.className = "multiple";
+      m.innerHTML = `<div class="fig-head"><span class="fig-title">${title}</span></div><span class="sub">${who}</span><div class="hbars" id="${id}"></div><figcaption>${verdict}</figcaption>`;
+      host.appendChild(m);
+      hbars(id, rows.map(([lam, v, t]) => ({ label: `λ ${vi(lam)}`, v, color, text: t, tip: `${title} ở λ = ${vi(lam)} req/s: <b>${t}</b>` })), { max });
+    }
+    lineChart({ id: "c-signals", h: 230, xs: sig.map((s) => s.lam), xMin: 1.5, xMax: 6.3, xTicks: [2, 3, 4, 5, 6], xFmt: (v) => vi(v, 0), yMin: 0, yMax: 112, yTicks: [0, 25, 50, 75, 100], yFmt: (v) => `${v} %`, xLabel: "λ (req/s)",
+      refs: [{ x: 4.5, label: "C = 4,5" }], tipX: (x) => `λ = ${vi(x)} req/s`,
+      series: [{ name: "GPU util", color: "var(--s-a1)", ys: sig.map((s) => s.util), pts: true, fmt: (v) => `${vi(v, 0)} %`, label: { x: 2, y: 100, text: "GPU util: luôn 100 %", dy: 10 } },
+        { name: "Request chạy / 64", color: "var(--s-a2)", ys: sig.map((s) => (s.running / 64) * 100), pts: true, fmt: (v) => `${vi(v, 0)} % (${vi((v * 64) / 100)} request)`, label: { x: 2, y: 19, text: "request đang chạy", dx: 10, dy: -16 } }], aria: "GPU util 100 % mọi mức; request đang chạy tăng từ 19 % lên 99 % của 64" });
+  }
+
+  // ── 10: cold start ──
+  {
+    const C = { imp: "var(--muted)", init: "var(--load)", w: "var(--s-a2)", comp: "var(--s-a1)", graph: "var(--s-s4)", other: "var(--band)", probe: "var(--accent)" };
+    const mk = (segs) => segs.map(([n, v, c]) => ({ name: n, v, color: c, light: c === C.other || c === C.init, short: v >= 10 ? vi(v, 0) : "", full: `${vi(v, v % 1 ? 1 : 0)} s` }));
+    labeledStack("cold", [
+      { label: "Lần 1 · chưa có compile cache", right: "152 s (pod tạo → Ready)", total: 152, segs: mk([["Tạo pod → container chạy", 3, C.other], ["Import Python", 39, C.imp], ["Khởi tạo engine", 31, C.init], ["Khác", 7, C.other], ["Nạp weights", 11, C.w], ["torch.compile", 27.4, C.comp], ["CUDA graph", 8, C.graph], ["Khác", 19.6, C.other], ["Probe → Ready", 6, C.probe]]) },
+      { label: "Lần 2 · có compile cache", right: "108 s", total: 108, segs: mk([["Phần còn lại, log chưa tách", 98, C.other], ["torch.compile", 2, C.comp], ["CUDA graph", 8, C.graph]]) },
+    ], 152);
+    legendInto("cold-legend", [["Import Python", C.imp], ["Khởi tạo engine", C.init], ["Nạp weights", C.w], ["torch.compile", C.comp], ["CUDA graph", C.graph], ["Probe → Ready", C.probe], ["Khác / chưa tách", C.other]]);
+  }
+
+  // ── 11: kịch bản ──
+  {
+    const host = document.getElementById("kb");
+    const names = { KB1: "KB1 · thấp, đều", KB2: "KB2 · nhảy đột ngột", KB3: "KB3 · tăng dần, kéo dài" };
+    for (const k of ["KB1", "KB2", "KB3"]) {
+      const s = D.kb[k];
+      const m = document.createElement("div"); m.className = "multiple";
+      m.innerHTML = `<h4>${names[k]}</h4><span class="sub">${vi(s.dur / 60, 0)} phút</span><div class="chart narrow" id="kb-${k}"></div>`;
+      host.appendChild(m);
+      lineChart({ id: `kb-${k}`, w: 300, h: 170, xs: s.t, xMin: 0, xMax: 1440, xTicks: [0, 360, 720, 1080, 1440], xFmt: (v) => `${v / 60}′`, yMin: 0, yMax: 15, yTicks: [0, 4.5, 9, 13.5], yFmt: (v) => `${vi(v / 4.5, 0)} C`,
+        bands: Object.entries(s.phases).map(([n, [a, b]]) => ({ x0: a, x1: b, label: n })), tipX: (x) => `phút ${mmss(x)}`,
+        series: [{ name: "λ", color: "var(--s-a2)", kind: "area", ys: s.lam, fmt: (v) => `${vi(v, 2)} req/s` }], aria: `Hình dạng tải ${k}` });
+    }
+  }
+
+  // ── 12: V1 ──
+  function runCharts(key, pre, color) {
+    const r = D.v1[key];
+    const bands = Object.entries(r.phases).map(([n, [a, b]]) => ({ x0: a, x1: b, label: n }));
+    const xMax = r.t[r.t.length - 1] + 15; const xt = []; for (let x = 0; x <= xMax; x += 300) xt.push(x);
+    const cap = r.replicas_ready.map((v) => (v == null ? null : v * 4.5));
+    lineChart({ id: `c-${pre}-load`, h: 190, xs: r.t, xMin: 0, xMax, xTicks: xt, xFmt: (v) => `${v / 60}′`, yMin: 0, yMax: 20, yTicks: [0, 5, 10, 15, 20], bands, xLabel: "phút từ đầu lượt", tipX: (x) => `phút ${mmss(x)}`,
+      series: [{ name: "Tải gửi", color: "var(--load)", kind: "area", ys: r.rate, fmt: (v) => `${vi(v)} req/s` }, { name: "Năng lực Ready", color: "var(--accent)", kind: "step", ys: cap, fmt: (v) => `${vi(v)} req/s` }], aria: "Tải gửi và năng lực theo thời gian" });
+    lineChart({ id: `c-${pre}-rep`, h: 150, xs: r.t, xMin: 0, xMax, xTicks: xt, xFmt: (v) => `${v / 60}′`, yMin: 0, yMax: 4.5, yTicks: [0, 1, 2, 3, 4], tipX: (x) => `phút ${mmss(x)}`,
+      series: [{ name: "Ready", color, kind: "step", ys: r.replicas_ready, width: 2.5 }, { name: "Desired", color, kind: "step", dash: true, ys: r.hpa_desired }], aria: "Số pod theo thời gian" });
+    return { r, bands, xMax, xt };
+  }
+  {
+    const { r, bands, xMax, xt } = runCharts("A2-KB2-1", "a2", "var(--s-a2)");
+    lineChart({ id: "c-a2-slo", h: 160, xs: r.t, xMin: 0, xMax, xTicks: xt, xFmt: (v) => `${v / 60}′`, yMin: 0, yMax: 1, yTicks: [0, 0.5, 1], yFmt: (v) => `${v * 100} %`, bands, tipX: (x) => `phút ${mmss(x)}`,
+      series: [{ name: "Đạt SLO", color: "var(--s-a2)", ys: r.slo, fmt: (v) => pct(v, 0) }], refs: [{ y: 0.95, label: "95 %" }], aria: "Tỷ lệ đạt SLO theo thời gian" });
+    const i = r.wait_old.indexOf(Math.max(...r.wait_old));
+    lineChart({ id: "c-a2-wait", h: 200, xs: r.t, xMin: 0, xMax, xTicks: xt, xFmt: (v) => `${v / 60}′`, yMin: 0, yMax: 1100, yTicks: [0, 250, 500, 750, 1000], yFmt: (v) => v.toLocaleString("vi-VN"), bands, tipX: (x) => `phút ${mmss(x)}`, xLabel: "phút từ đầu lượt",
+      series: [{ name: "Chờ ở pod cũ", color: "var(--s-a1)", ys: r.wait_old, fmt: (v) => `${v.toLocaleString("vi-VN")} request`, label: { x: r.t[i], y: r.wait_old[i], text: `đỉnh ${r.wait_old[i].toLocaleString("vi-VN")}` } }, { name: "Chờ ở 3 pod mới", color: "var(--s-s4)", ys: r.wait_new, fmt: (v) => `${v.toLocaleString("vi-VN")} request` }], aria: "Số request chờ: pod cũ lên 1041, pod mới gần 0" });
+  }
+  {
+    const { r, bands, xMax, xt } = runCharts("A1-KB3-1", "a1", "var(--s-a1)");
+    lineChart({ id: "c-a1-gpu", h: 170, xs: r.t, xMin: 0, xMax, xTicks: xt, xFmt: (v) => `${v / 60}′`, yMin: 0, yMax: 420, yTicks: [0, 100, 200, 300, 400], yFmt: (v) => `${v} %`, bands, tipX: (x) => `phút ${mmss(x)}`, xLabel: "phút từ đầu lượt",
+      series: [{ name: "Σ GPU util", color: "var(--s-a1)", ys: r.gpu_sum, fmt: (v) => `${vi(v, 0)} %` }], refs: [{ y: 70, label: "70 %" }], aria: "Tổng GPU util theo thời gian" });
+  }
+  {
+    // Minh hoạ hàng đợi bị ghim; số chấm lấy từ dữ liệu V1 (pod cũ ~1.000 chờ lúc 3 pod mới Ready; 0 ở pod mới)
+    const svg = el("svg", { viewBox: "0 0 880 250", role: "img", "aria-label": "Quầy 1 có hàng dài, ba quầy mới gần như trống" }, document.getElementById("d-pinned"));
+    const panels = [[20, "Phút 6:30: 3 pod mới vừa Ready · pod 1 có 1.020 chờ", [26, 0, 0, 0]], [470, "Phút 9: pod 1 vẫn còn 286 chờ", [7, 0, 0, 0]]];
+    for (const [x0, title, queues] of panels) {
+      txt(svg, x0, 20, title, "t1");
+      queues.forEach((q, i) => {
+        const y = 36 + i * 46;
+        el("rect", { class: i === 0 ? "box" : "box em", x: x0, y, width: 80, height: 36, rx: 5 }, svg);
+        txt(svg, x0 + 40, y + 16, `pod ${i + 1}`, "t2", "middle");
+        txt(svg, x0 + 40, y + 29, i === 0 ? "64/64 bận" : "còn chỗ", "t3", "middle");
+        for (let k = 0; k < q; k++) el("circle", { class: "q", cx: x0 + 96 + k * 12, cy: y + 18, r: 4.2 }, svg);
+        if (i > 0) txt(svg, x0 + 94, y + 22, "không có hàng chờ", "t3");
+      });
+    }
+    txt(svg, 20, 236, "Mỗi chấm ≈ 40 request đang chờ. Request đã xếp hàng ở pod 1 không chuyển sang pod khác; chỉ request mới được chia đều.", "t2");
+  }
+
+  // ── 13: hiệu chỉnh + ma trận ──
+  const S = D.sim;
+  const calib = [["A2 × KB2", "spike", 0.627, S["A2-KB2"].phase.spike], ["A2 × KB2", "pre, drop", 1.0, S["A2-KB2"].phase.drop], ["A1 × KB3", "ramp", 0.886, S["A1-KB3"].phase.ramp], ["A1 × KB3", "sustain", 0.999, S["A1-KB3"].phase.sustain]];
+  document.getElementById("t-calib").innerHTML = calib.map(([a, b, real, sim]) => `<tr><td>${a}</td><td>${b}</td><td class="n">${pct(real)}</td><td class="n">${pct(sim)}</td><td class="n">${(sim - real >= 0 ? "+" : "−") + vi(Math.abs(sim - real) * 100)} điểm</td></tr>`).join("");
+  const CFG = [["S1", "var(--s-s1)"], ["S4", "var(--s-s4)"], ["A1", "var(--s-a1)"], ["A2", "var(--s-a2)"]];
+  const KBN = { KB1: "KB1 · tải đều 0,5 C", KB2: "KB2 · nhảy lên 3 C", KB3: "KB3 · tăng dần lên 3 C" };
+  {
+    const host = document.getElementById("matrix");
+    for (const kb of ["KB1", "KB2", "KB3"]) {
+      const m = document.createElement("div"); m.className = "multiple";
+      m.innerHTML = `<h4>${KBN[kb]}</h4><span class="sub">% đạt SLO</span><div class="hbars" id="m-slo-${kb}"></div><span class="sub">GPU-giờ</span><div class="hbars" id="m-gpu-${kb}"></div>`;
+      host.appendChild(m);
+      hbars(`m-slo-${kb}`, CFG.map(([c, col]) => { const x = S[`${c}-${kb}`]; return { label: c, v: x.slo, color: col, text: pct(x.slo, 0), tip: `${c} × ${kb}: <b>${pct(x.slo)}</b> (5 seed: ${pct(x.slo_min)}–${pct(x.slo_max)})` }; }), { max: 1, ref: 0.95 });
+      hbars(`m-gpu-${kb}`, CFG.map(([c, col]) => { const x = S[`${c}-${kb}`]; return { label: c, v: x.gpu_h, color: col, text: vi(x.gpu_h, 2), tip: `${c} × ${kb}: <b>${vi(x.gpu_h, 2)} GPU-giờ</b> ≈ ${vi(x.gpu_h * 0.153, 2)} USD` }; }), { max: 1.7 });
+    }
+    document.getElementById("t-matrix").innerHTML = `<thead><tr><th>Ô</th><th class="n">% đạt SLO</th><th class="n">khoảng 5 seed</th><th class="n">GPU-giờ</th></tr></thead><tbody>` +
+      ["KB1", "KB2", "KB3"].flatMap((kb) => CFG.map(([c]) => { const x = S[`${c}-${kb}`]; return `<tr><td>${c} × ${kb}</td><td class="n">${pct(x.slo)}</td><td class="n">${pct(x.slo_min)}–${pct(x.slo_max)}</td><td class="n">${vi(x.gpu_h, 2)}</td></tr>`; })).join("") + "</tbody>";
+    // KB1 dài 12 phút = 0,2 giờ → số GPU trung bình = GPU-giờ ÷ 0,2
+    const avgGpu = (c) => S[`${c}-KB1`].gpu_h / 0.2;
+    hbars("month", CFG.map(([c, col]) => { const usd = avgGpu(c) * 24 * 30 * 0.153; return { label: c, v: usd, color: col, text: `${Math.round(usd).toLocaleString("vi-VN")} USD`, tip: `${c}: trung bình ${vi(avgGpu(c), 2)} GPU × 720 giờ × 0,153 USD` }; }), { max: 460 });
+  }
+
+  // ── 14: vận hành ──
+  {
+    const svg = el("svg", { viewBox: "0 0 880 196", role: "img", "aria-label": "Dòng thời gian tắt pod: rút khỏi Service ở 0 s, preStop 20 s, tín hiệu tắt, stream xong ở 23 s, giết ở 180 s" }, document.getElementById("d-shutdown"));
+    const X = (s) => 40 + (s / 190) * 800;
+    el("line", { class: "axis", x1: X(0), x2: X(190), y1: 120, y2: 120 }, svg);
+    for (const s of [0, 20, 60, 120, 180]) txt(svg, X(s), 138, `${s} s`, "", "middle");
+    el("rect", { class: "box em", x: X(0), y: 86, width: X(20) - X(0), height: 28, rx: 3 }, svg); txt(svg, X(10), 104, "preStop", "t2", "middle");
+    el("rect", { class: "box soft", x: X(20), y: 86, width: X(23.2) - X(20), height: 28 }, svg);
+    el("rect", { class: "box", x: X(23.2), y: 86, width: X(180) - X(23.2), height: 28, rx: 3 }, svg); txt(svg, X(100), 104, "không còn request nào, nhưng pod vẫn giữ GPU", "t2", "middle");
+    el("rect", { class: "box bad", x: X(180), y: 86, width: X(186) - X(180), height: 28 }, svg);
+    const mark = (s, y, a, b, anchor = "start") => { el("line", { class: "ref", x1: X(s), x2: X(s), y1: y + 18, y2: 86 }, svg); const dx = anchor === "end" ? -4 : 4; txt(svg, X(s) + dx, y, a, "t1", anchor); txt(svg, X(s) + dx, y + 14, b, "t3", anchor); };
+    mark(0, 20, "Xoá pod", "rút khỏi Service ngay");
+    mark(20, 52, "Tín hiệu tắt (SIGTERM)", "vLLM không dừng, chạy tiếp");
+    mark(180, 20, "Giết hẳn", "hết grace 180 s", "end");
+    txt(svg, X(23.2) + 2, 162, "↑ 48 stream đang dở hoàn tất ở giây ~23", "t2");
+    txt(svg, X(0), 186, "Mốc đo: stream xong +23,1–23,3 s; pod biến mất +181,5–181,9 s (3 lần).", "t3");
+  }
+  hbars("graceful", [
+    { label: "Cấu hình chính ×3", v: 1, color: "var(--good)", text: "144/144", tip: "preStop 20 s + grace 180 s, 3 lần × 48 stream: <b>144 hoàn tất, 0 bị cắt</b>" },
+    { label: "Bỏ preStop", v: 1, color: "var(--good)", text: "48/48", tip: "Không preStop, grace 180 s: <b>48 hoàn tất</b>" },
+    { label: "Grace 5 s", v: 1, color: "var(--bad)", text: "0/48", tip: "Không preStop, grace 5 s: <b>48 bị cắt</b> (16 đang sinh, 32 đang chờ)" },
+  ], { max: 1 });
+  hbars("vh5", [
+    { label: "Tải model 3B", v: 27, color: "var(--s-a2)", text: "27 s", tip: "5,8 GB từ Hugging Face, song song bootstrap" },
+    { label: "Ansible k3s", v: 164, color: "var(--s-a2)", text: "164 s" },
+    { label: "Cài nền (helm)", v: 236, color: "var(--s-a2)", text: "236 s", tip: "device plugin, Prometheus, KEDA, GPU exporter; song song kéo image" },
+    { label: "Kéo image vLLM", v: 413, color: "var(--s-a2)", text: "413 s", tip: "9,04 GB qua mirror.gcr.io" },
+    { label: "Tổng tới Ready", v: 741, color: "var(--accent)", text: "12,5 phút" },
+  ], { max: 1900, ref: 1800 });
+  document.getElementById("t-vh").innerHTML = `<thead><tr><th>Kịch bản</th><th class="n">Thời gian</th><th class="n">Request</th><th>Lỗi</th></tr></thead><tbody>` +
+    [["VH2 rolling update 3 pod", "16,6 s", "831"], ["VH2 cập nhật khi chỉ 1 pod", "12,5 s", "87"], ["VH3 xoá pod", "10,1 s", "582"], ["VH3 drain node", "22,1 s", "68"], ["VH4 mất Prometheus → fallback", "18,8 s", "68"]]
+      .map(([a, b, c]) => `<tr><td>${a}</td><td class="n">${b}</td><td class="n">${c}</td><td><span class="pill ok">0 lỗi</span></td></tr>`).join("") + "</tbody>";
+
+  // ── 15: dự báo, JSQ ──
+  {
+    const a = D.simSeries["A2-KB3"], p = D.simSeries["A2pred-KB3"];
+    const xMax = 1020; const xs = a.t.filter((t) => t <= xMax); const n = xs.length; const xt = []; for (let x = 0; x <= xMax; x += 120) xt.push(x);
+    lineChart({ id: "c-pred", h: 220, xs, xMin: 0, xMax, xTicks: xt, xFmt: (v) => `${v / 60}′`, yMin: 0, yMax: 4.5, yTicks: [0, 1, 2, 3, 4], xLabel: "phút từ đầu lượt", tipX: (x) => `phút ${mmss(x)}`,
+      bands: [{ x0: 0, x1: 300, label: "ramp" }, { x0: 300, x1: 1020, label: "sustain" }],
+      series: [{ name: "GPU cần (λ ÷ C)", color: "var(--load)", kind: "area", ys: a.lam.slice(0, n).map((v) => v / 4.5), fmt: (v) => vi(v, 2) },
+        { name: "Ready, A2 gốc", color: "var(--s-a2)", kind: "step", ys: a.ready.slice(0, n), width: 2.5 },
+        { name: "Ready, A2 dự báo", color: "var(--accent)", kind: "step", ys: p.ready.slice(0, n), width: 2.5 }], aria: "Số pod Ready của A2 gốc và A2 dự báo so với nhu cầu" });
+    const host = document.getElementById("upgrades");
+    const VAR = [["A2", "A2 gốc", "var(--s-a2)"], ["A2cold60", "Cold 60 s", "var(--load)"], ["A2jsq", "JSQ", "var(--s-s4)"], ["A2pred", "Dự báo", "var(--accent)"], ["A2best", "Dự báo + JSQ", "var(--ink-2)"]];
+    for (const kb of ["KB1", "KB2", "KB3"]) {
+      const m = document.createElement("div"); m.className = "multiple";
+      m.innerHTML = `<h4>${KBN[kb]}</h4><span class="sub">% đạt SLO</span><div class="hbars" id="u-slo-${kb}"></div><span class="sub">GPU-giờ</span><div class="hbars" id="u-gpu-${kb}"></div>`;
+      host.appendChild(m);
+      hbars(`u-slo-${kb}`, VAR.map(([k, nm, c]) => { const x = S[`${k}-${kb}`]; return { label: nm, v: x.slo, color: c, text: pct(x.slo, 0), tip: `${nm} × ${kb}: <b>${pct(x.slo)}</b> (${pct(x.slo_min)}–${pct(x.slo_max)})` }; }), { max: 1, ref: 0.95 });
+      hbars(`u-gpu-${kb}`, VAR.map(([k, nm, c]) => { const x = S[`${k}-${kb}`]; return { label: nm, v: x.gpu_h, color: c, text: vi(x.gpu_h, 2) }; }), { max: 1.7 });
+    }
+  }
+})();
+
+</script>
