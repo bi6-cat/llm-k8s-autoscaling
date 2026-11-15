@@ -1,6 +1,6 @@
 # ADR-006: Chốt cloud, model, kịch bản tải và các điểm kỹ thuật trước phiên V2
 
-- **Trạng thái:** Đã chấp nhận ngày 10/11/2026. Gom lại các quyết định đã đưa ra trong khoảng 04–09/11/2026 (họp nhóm 04/11, rà tiến độ 08/11, phiên V0+V1 08/11, sửa A1 09/11) mà trước đó chỉ nằm rải rác trong [Thông số](../chi-tiet/00-thong-so.md) ("Sửa ngày 08/11"), [ADR-004 §7](004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md#7-cập-nhật-sau-ngày-08102026) và nhật ký.
+- **Trạng thái:** Đã chấp nhận ngày 10/11/2026; §3.1 bổ sung ngày 12/11/2026 (Quang đề xuất, Trình đồng ý cùng ngày). Gom lại các quyết định đã đưa ra trong khoảng 04–09/11/2026 (họp nhóm 04/11, rà tiến độ 08/11, phiên V0+V1 08/11, sửa A1 09/11) mà trước đó chỉ nằm rải rác trong [Thông số](../chi-tiet/00-thong-so.md) ("Sửa ngày 08/11"), [ADR-004 §7](004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md#7-cập-nhật-sau-ngày-08102026) và nhật ký.
 - **Người quyết định:** Nhóm (Quang và Trình). Việc nào Trình chưa review thì ghi rõ.
 - **Thay thế một phần:** [ADR-004](004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md) K4, K5, K6, K9 và [ADR-005](005-sua-thiet-ke-sau-review.md) T1 (phần "cần kiểm chứng"); chi tiết ở §4.
 - **Liên quan:** [Thông số §2, §7, §8, §9, §10, §11](../chi-tiet/00-thong-so.md), [Môi trường §3, §6](../chi-tiet/05-moi-truong-danh-gia.md), [Kế hoạch §1.1](../chi-tiet/06-ke-hoach-quan-ly.md#11-điều-chỉnh-ngày-04112026), [nhật ký vận hành](../nhat-ky/van-hanh.md) các mục 06/11 và 08/11, [nhật ký Quang tuần 05](../nhat-ky/lam-viec/quang/tuan-05.md) (08/11) và [tuần 06](../nhat-ky/lam-viec/quang/tuan-06.md) (09/11).
@@ -30,14 +30,14 @@ ADR-004 (08/10) giả định thuê 4 × RTX 4090 chế độ VM trên Vast.ai, 
 | C4 | N | **N = 4** làm mặc định; code và ma trận tham số hoá theo N để chạy được N = 2 nếu rơi vào C2(b) | Giữ đúng S4 và N3 như thiết kế |
 | C5 | Kịch bản tải | KB1 / KB2 / KB3 = **12 / 24 / 17 phút** (trước: 20 / 25 / 25); **đỉnh KB2 = 0,75 × N × C** (trước: cố định 3,0 C). Chi tiết và giới hạn khi rút ở [Thông số §7](../chi-tiet/00-thong-so.md#7-kịch-bản-tải) | Để V2 còn giờ cho lần lặp; đỉnh theo N để chạy được máy 2 GPU |
 | C6 | KEDA `timeout` | `timeout: "1000"` ms cho mọi trigger Prometheus (mặc định 3000) | Với 3000 ms, T4 trên kind 3/7 lần vượt N6 (30 s); với 1000 ms 8/8 lần đạt (07/11) |
-| C7 | Truy vấn A1 | `sum(avg_over_time(nvidia_smi_utilization_gpu_ratio[15s])) * 100` thay cho `sum(nvidia_smi_utilization_gpu_ratio) * 100` | Hạ một mẫu nhiễu 100 % của GPU vừa tắt xuống 33 %, khỏi kẹt replica; scale-up trễ thêm 5–20 s trên dữ liệu V1. **Quang làm thay phần TR2, Trình cần review**; chưa chạy với KEDA trên cluster, lần đầu là V2 |
+| C7 | Truy vấn A1 | `sum(avg_over_time(nvidia_smi_utilization_gpu_ratio[15s])) * 100` thay cho `sum(nvidia_smi_utilization_gpu_ratio) * 100` | Hạ một mẫu nhiễu 100 % của GPU vừa tắt xuống 33 %, khỏi kẹt replica; scale-up trễ thêm 5–20 s trên dữ liệu V1. **Quang làm thay phần TR2; Trình đồng ý qua tin nhắn ngày 12/11** (PR #29 không có review trên GitHub); chưa chạy với KEDA trên cluster, lần đầu là V2 |
 | C8 | Graceful shutdown | **Tạm chấp nhận** cấu hình hiện tại (preStop 20 s + `--shutdown-timeout 150` + grace 180 s): request an toàn nhờ grace period giữ pod sống tới 180 s. Không gỡ lỗi vLLM trước V2. Ghi vào Hạn chế: (1) request kéo dài quá ~160 s sau SIGTERM vẫn bị SIGKILL cắt; (2) mỗi lần tắt, pod giữ GPU đủ 180 s, nên scale-down và rolling update tốn thêm 3 phút mỗi pod | Thời gian tới V2 không đủ để tìm nguyên nhân trong vLLM; N4 vẫn đo được |
 | C9 | Lịch | V0+V1 gộp, **đã xong 08/11**; **V2 14–15/11**; không còn V3; đóng băng dữ liệu **22/11**, không lùi | Theo họp 04/11 |
 | C10 | Tiền | 800.000 VND đã nạp là tiền GCP, không dùng được cho Vast. Tiền Vast nạp riêng trước 13/11, đủ ≥ 1,3 × chi phí dự kiến V2 | – |
 
 ## 3. Tình trạng phạm vi tới 10/11 (không đổi mức Must/Should, chỉ ghi nhận)
 
-Các mục dưới đây có trong thiết kế nhưng **chưa có trong repo**. Nhóm chưa quyết định làm hay hạ mức; cần chốt ở buổi họp trước V2.
+Các mục dưới đây có trong thiết kế nhưng **chưa có trong repo**. Quyết định làm hay lược từng mục ở §3.1 (12/11).
 
 | Hạng mục | Thiết kế | Thực tế 10/11 |
 |---|---|---|
@@ -47,6 +47,21 @@ Các mục dưới đây có trong thiết kế nhưng **chưa có trong repo**.
 | Argo CD trên VM thuê (F3, [Vận hành §7](../chi-tiet/04-van-hanh.md#7-dựng-lại-từ-đầu-khôi-phục-sau-thảm-hoạ)) | `make bootstrap` cài Argo CD + root-app | Cloud cài nền bằng helm qua `make cloud-platform` (`argocd_enabled: false`); VH2 trên VM kích hoạt rollout bằng annotation, không qua Git |
 | Alertmanager → Telegram (F6) | 6 cảnh báo tới Telegram | Rule và runbook có, unit test đạt; chưa áp lên cluster, chưa có Telegram cho Alertmanager (Telegram của runner thì có) |
 | `make burnin`, `make capacity`, `make analysis`, gói `analysis/` (TR7) | [Môi trường §3.7](../chi-tiet/05-moi-truong-danh-gia.md#37-tự-động-hoá-bằng-makefile) | Chưa có; burn-in rút gọn làm bằng `make probe` + `vllm bench serve` tay; ĐG1 chạy bằng `make run MATRIX=experiments/matrix-dg1-*.yaml` |
+
+### 3.1. Quyết định ngày 12/11/2026
+
+Nhóm chốt theo tiêu chí Quang đề xuất, Trình đồng ý (nhắn tin 12/11): **hạng mục nào hội đồng không nhìn thấy được (trong luận văn, video demo, phần chạy trực tiếp, giao diện Argo CD, Grafana, Telegram) thì lược**.
+
+| Hạng mục | Quyết định | Lý do | Người làm |
+|---|---|---|---|
+| Argo CD app `autoscaling` và `observability` | **Làm trước V2** (ở nhà) | Hội đồng thấy mọi thành phần *Synced* trên giao diện Argo CD; F3 là Must | Trình (TR1) |
+| Alertmanager → Telegram | **Làm trước V2** | Cảnh báo tới điện thoại thấy được trong demo, ảnh chụp đưa vào luận văn; F6 là Must | Trình (TR4) |
+| Sealed Secrets | **Lược** | Chạy ngầm, không có gì để trình diễn; F7 là Should. Secret vẫn tạo tay từ `.env` (đã gitignore) | – |
+| NetworkPolicy thường trực, rate limit Traefik, route riêng cho máy tạo tải | **Lược** | Như trên (F7). Vẫn có API key, API không mở ra Internet; VH4 dùng một NetworkPolicy tạm thời làm ví dụ | – |
+| Argo CD trên VM thuê | **Lược** | VM bị huỷ sau V2, hội đồng không thấy. F4 vẫn đạt: VH5 dựng bằng `make bootstrap` + `make cloud-platform`, có bấm giờ | – |
+| `make burnin`, `make capacity`, `make analysis` | **Lược phần đóng gói thành lệnh `make`** | Hội đồng chỉ thấy kết quả. **Vẫn phải làm**: ĐG1 → C, B\*, threshold (ADR-003) và bảng, biểu đồ chương 5, bằng script chạy tay cũng được | – |
+
+Các mục bị lược được ghi vào Hạn chế ([Bài toán §12.3](../chi-tiet/01-bai-toan-yeu-cau.md#123-hạn-chế-sẽ-ghi-trong-luận-văn)).
 
 ## 4. Các mục bị thay thế
 
@@ -67,13 +82,12 @@ Các mục còn lại của ADR-004 và ADR-005 giữ nguyên.
 - Mọi số đo của chương 5 sẽ gắn với **RTX A4000 (card workstation Ampere, 16 GB) và model 3B**, không phải 4090 và 7B như bản mô tả 3.0. Phần Hạn chế của luận văn ghi rõ, kèm ước lượng ngoại suy theo kích thước weights cho cold start.
 - GPU-giờ của A2 ở KB2 cộng thêm 180 s mỗi pod bị tắt (C8); khi so với S4 ở N3 phải nói rõ phần này.
 - Không còn phiên dự phòng: V2 hỏng thì áp dụng các dòng còn lại của [Kế hoạch §8](../chi-tiet/06-ke-hoach-quan-ly.md#8-dự-phòng-và-cắt-giảm-phạm-vi), chấp nhận ô chỉ có 1 lượt.
-- C7 đổi tín hiệu A1 so với thiết kế gốc; nếu Trình không đồng ý thì đổi lại trước V2 và ghi vào ADR này.
+- C7 đổi tín hiệu A1 so với thiết kế gốc; Trình đã đồng ý ngày 12/11, nên V2 chạy A1 với truy vấn mới.
 
 ## 6. Việc còn mở
 
 | Việc | Hạn |
 |---|---|
-| Trình review C7 (truy vấn A1) | Trước V2 |
-| Họp chốt §3: làm hay hạ mức Sealed Secrets, NetworkPolicy/rate limit, Argo CD app `autoscaling`/`observability`, Telegram cho Alertmanager | Trước V2 (13/11) |
+| Argo CD app `autoscaling`/`observability`; Alertmanager → Telegram (§3.1) | Trước V2 (13/11) |
 | Chốt offer máy V2 bằng `make find MODE=v2` sáng 14/11; nạp tiền Vast | 13–14/11 |
 | ADR-003: C, B\*, threshold, ngưỡng N2b, N3 theo N | Trong V2 |

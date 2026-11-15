@@ -173,7 +173,7 @@ Viết chương 2–4 (W5–W7) ─► bản thảo (29/11) ─► bản cuối 
 
 | Mã | Tính năng | Gói | Người-giờ |
 |---|---|---|---|
-| TR1 | GitOps và CI: Argo CD core, App-of-Apps, CI, Sealed Secrets | WP2 | 12–18 |
+| TR1 | GitOps và CI: Argo CD core, App-of-Apps (thêm app `autoscaling`, `observability` trước V2), CI; ~~Sealed Secrets~~ (lược 12/11, [ADR-006 §3.1](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md#31-quyết-định-ngày-12112026)) | WP2 | 12–18 |
 | TR2 | Simulator và autoscaling: kind + simulator, ScaledObject A1–A4, `behavior`, T1–T7 (simulator và GPU nhà) | WP4 | 8–12 |
 | TR3 | Giám sát và SLO: kube-prometheus-stack, PodMonitor, recording rule, 3 dashboard | WP5 | 9–13 |
 | TR4 | Cảnh báo: 6 cảnh báo + `promtool`, Alertmanager → Telegram, 6 runbook | WP5, WP6 | 10–14 |
@@ -393,7 +393,7 @@ Quy ước chi tiết (thư mục thực tế, YAML, Python, cảnh báo, Git v�
 - **Nhánh:** `main` luôn chạy được; phát triển trên `feat/*`, `fix/*`; merge qua PR có review.
 - **Commit:** tiếng Anh hoặc tiếng Việt, thống nhất một kiểu, dạng `<phạm vi>: <mô tả>`, ví dụ `alerts: add LLMPodPending`.
 - **Ghim phiên bản:** image theo digest; chart theo phiên bản; Python bằng lockfile; model theo revision.
-- **Bí mật:** không có bí mật dạng rõ trong Git; dùng Sealed Secrets. Khoá riêng của controller được sao lưu ngoài Git ([Vận hành §7](04-van-hanh.md#7-dựng-lại-từ-đầu-khôi-phục-sau-thảm-hoạ)).
+- **Bí mật:** không có bí mật dạng rõ trong Git. Thiết kế dùng Sealed Secrets, nhưng đã lược ngày 12/11 ([ADR-006 §3.1](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md#31-quyết-định-ngày-12112026)): Secret tạo tay từ `.env` (đã gitignore). Nếu sau này làm thì khoá riêng của controller được sao lưu ngoài Git ([Vận hành §7](04-van-hanh.md#7-dựng-lại-từ-đầu-khôi-phục-sau-thảm-hoạ)).
 
 ### 10.4. CI (GitHub Actions)
 
