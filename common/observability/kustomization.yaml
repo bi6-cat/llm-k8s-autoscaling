@@ -3,8 +3,8 @@
 # Khái niệm: Kustomization = danh sách manifest mà `kubectl apply -k <thư mục>` (hoặc Argo CD) áp cùng lúc.
 # Mục đích:  Gom recording rule, cảnh báo và dashboard thành một đơn vị triển khai. Giống nhau ở mọi môi
 #            trường (home, cloud, sim) nên không có overlay.
-#            Chưa có Application Argo CD trỏ vào đây: thêm khi merge phần Argo CD (Kiến trúc §18.1,
-#            monitoring-extras). Trước đó áp tay: kubectl apply -k observability.
+#            `make sim-up` và `make cloud-platform` tự áp thư mục này. Ở nhà chưa có Application Argo CD
+#            trỏ vào đây (việc 6b, Kiến trúc §18.1); trước đó áp tay: kubectl apply -k common/observability.
 # Tham khảo: Kiến trúc §17.2–§17.3, §18.1; common/observability/dashboards/README.md
 # ──────────────────────────────────────────────────────────────────────────────
 apiVersion: kustomize.config.k8s.io/v1beta1

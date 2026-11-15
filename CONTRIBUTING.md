@@ -24,6 +24,7 @@ llm-k8s-autoscaling/
 │   │   ├── provision/            # vast.sh, probe.sh, install-platform.sh, vh5.sh, llm-runner.service;
 │   │   │                         #   CHỈ nơi này phụ thuộc nhà cung cấp
 │   │   ├── serving/              # overlay vLLM: model 3B, QoS Guaranteed, cache NVMe
+│   │   ├── platform/             # values kube-prometheus-stack riêng của cloud (nhãn env=cloud cho cảnh báo)
 │   │   └── experiments/          # matrix-v2.yaml (V2), matrix-dg1.yaml (ĐG1), matrix-v1.yaml (V1, lưu lại)
 │   └── sim/                      # kind + llm-d-inference-sim trên laptop, không cần GPU
 │       ├── README.md

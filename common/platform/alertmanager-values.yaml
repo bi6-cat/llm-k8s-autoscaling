@@ -1,0 +1,115 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# common/platform/alertmanager-values.yaml
+# Khái niệm: Alertmanager = thành phần nhận cảnh báo đang kêu từ Prometheus, gom nhóm, chặn trùng rồi gửi
+#            tin tới "receiver" (ở đây là Telegram). File này là lớp values THỨ HAI cho chart
+#            kube-prometheus-stack (sau kube-prometheus-stack-values.yaml, trước values riêng của môi
+#            trường), không phải một chart riêng. Chart ghi `alertmanager.config` thành Secret
+#            alertmanager-kps-alertmanager; Prometheus Operator kiểm cấu hình rồi nạp cho Alertmanager.
+# Mục đích:  Định tuyến theo nhãn severity: page → nhắc lại mỗi giờ và báo cả lúc hết; ticket → báo một
+#            lần. Token bot và chat id KHÔNG nằm trong Git: Alertmanager đọc chúng từ Secret
+#            alertmanager-telegram (tạo bằng alertmanager-secret.sh từ .env) ngay lúc gửi tin.
+#            Tách khỏi kube-prometheus-stack-values.yaml để bật được ở cloud và sim trước, còn ở nhà
+#            chỉ bật khi kiểm được trên cluster nhà (Application monitoring thêm file này, việc 6b).
+# Lưu ý:     Helm gộp map theo từng key, còn list thì THAY HẲN. Ví dụ `route` là map: key nào không ghi ở
+#            đây thì giữ giá trị của chart; nhưng `route.routes`, `route.group_by`, `receivers`,
+#            `templates` là list nên thay hẳn list của chart. `inhibit_rules` (list) không khai báo nên
+#            giữ nguyên mặc định của chart. Kiểm trước khi push: make alertmanager-check.
+# Tham khảo: Vận hành §3.4, Thông số §9.4; Alertmanager v0.34.1 notify/telegram/config.go (bot_token_file,
+#            chat_id_file); Prometheus Operator v0.94.1 pkg/alertmanager/amcfg.go (chat_id_file cần AM ≥ 0.31)
+# ──────────────────────────────────────────────────────────────────────────────
+alertmanager:
+  config:
+    route:
+      # Cây định tuyến: mỗi cảnh báo đi từ gốc xuống, gặp route con đầu tiên khớp thì dừng (không có
+      # `continue: true`). Không khớp route con nào thì về receiver của gốc.
+      # Gốc là "null" (bỏ đi): chart có sẵn 134 cảnh báo, trong đó 100 ở mức warning/info (đếm bằng
+      # `helm template` chart 92.1.1 với values của nhóm, 15/11). Nhiều cái trùng cảnh báo của nhóm
+      # (KubeHpaMaxedOut ≈ LLMAtMaxReplicas, KubePodNotReady ≈ LLMPodNotReady, đều warning) và sẽ kêu liên tục
+      # trong V2. Chúng vẫn hiện trên giao diện Alertmanager và Grafana, chỉ không gửi Telegram (Vận hành
+      # §3.1, nguyên tắc 1: mỗi tin nhắn phải dẫn tới hành động).
+      receiver: "null"
+      # Gom các cảnh báo cùng tên thành một tin: 3 pod cùng CrashLoopBackOff = 1 tin, không phải 3
+      group_by: [alertname]
+      group_wait: 30s          # chờ 30 s sau cảnh báo đầu của nhóm để gom các cảnh báo kêu gần nhau (§3.3: phát hiện 3–4 phút)
+      group_interval: 5m       # nhóm đã báo: có cảnh báo mới vào nhóm hoặc có cái hết thì chờ 5 m mới báo tiếp (= chart)
+      repeat_interval: 12h     # nhóm không đổi gì: nhắc lại sau 12 h (= chart); route con ghi đè bên dưới
+      routes:
+        # Watchdog luôn kêu, để chứng minh đường Prometheus → Alertmanager còn sống (Vận hành §3.5).
+        # Giữ như chart: không gửi đi đâu.
+        - receiver: "null"
+          matchers: ['alertname = "Watchdog"']
+        # page: người dùng đang bị ảnh hưởng (LLMSLOBurnFast, LLMErrorRateHigh, LLMPodNotReady…)
+        - receiver: page
+          matchers: ['severity = "page"']
+          repeat_interval: 1h  # chưa ai xử lý thì nhắc lại mỗi giờ (Vận hành §3.4)
+        # ticket: xử lý trong giờ làm việc. Thêm `critical` của chart: hiếm khi kêu và đáng biết ngay
+        # (đĩa VM sắp đầy, kubelet mất liên lạc, Prometheus lỗi tính rule); có runbook của upstream.
+        - receiver: ticket
+          matchers: ['severity =~ "ticket|critical"']
+          repeat_interval: 24h # "không nhắc lại" (§3.4): 24 h dài hơn cả một phiên V2
+    receivers:
+      - name: "null"           # receiver không có cấu hình gửi = bỏ tin
+      - name: page
+        telegram_configs:
+          # Đường dẫn tới hai key của Secret alertmanager-telegram, mount ở alertmanagerSpec bên dưới.
+          # Đọc lúc gửi tin (không phải lúc nạp cấu hình), nên Secret thiếu thì Alertmanager vẫn chạy và
+          # chỉ ghi lỗi "could not read …" khi gửi.
+          - bot_token_file: /etc/alertmanager/telegram/bot-token
+            chat_id_file: /etc/alertmanager/telegram/chat-id
+            send_resolved: true    # báo cả lúc cảnh báo hết, để người trực biết đã ổn (demo: "cảnh báo tự tắt")
+            parse_mode: HTML       # cho phép <b>, <a href>; template phải escape chữ có < > & (hàm html)
+            message: '{{ template "telegram.llm.message" . }}'
+      - name: ticket               # cùng bot và cùng nhóm chat với page
+        telegram_configs:
+          - bot_token_file: /etc/alertmanager/telegram/bot-token
+            chat_id_file: /etc/alertmanager/telegram/chat-id
+            send_resolved: false   # ticket không cần tin "đã hết"
+            parse_mode: HTML
+            message: '{{ template "telegram.llm.message" . }}'
+    # File template nạp vào Alertmanager. Chart đặt templateFiles (dưới) vào thư mục này.
+    templates: ['/etc/alertmanager/config/*.tmpl']
+
+  # Template Go (text/template) cho nội dung tin. Helm không xử lý `{{ }}` trong values (tplConfig: false
+  # là mặc định), nên viết thẳng được. Thay cho template mặc định, vốn in toàn bộ nhãn và annotation
+  # (khoảng 20 dòng mỗi cảnh báo). Một tin gồm:
+  #   dòng 1: [môi trường] (nhãn env, do Prometheus mỗi môi trường gắn qua externalLabels: sim, cloud…;
+  #           cùng một bot nên phải biết tin từ đâu), 🔥 (đang kêu) hoặc ✅ (đã hết), tên cảnh báo, mức,
+  #           số cảnh báo đang kêu trong nhóm;
+  #   mỗi cảnh báo một dòng `summary` (đã có tên pod nếu có), tối đa 8 dòng đang kêu và 8 dòng đã hết.
+  #           Telegram nhận tối đa 4096 ký tự; Alertmanager cắt tin dài hơn, có thể cắt giữa một thẻ HTML,
+  #           và khi đó Telegram từ chối cả tin;
+  #   `description` và runbook chung của nhóm (CommonAnnotations = annotation giống nhau ở mọi cảnh báo
+  #   trong nhóm; description khác nhau giữa các pod thì bỏ, để không in mô tả của pod này cho pod khác).
+  # `{{-` / `-}}` = xoá khoảng trắng và xuống dòng ngay trước / sau, để tin không có dòng trống thừa.
+  # `range $i, $a := …` = lặp kèm số thứ tự $i (từ 0); `lt` = nhỏ hơn, `gt` = lớn hơn.
+  # `| html` = escape < > & ' ": parse_mode HTML từ chối cả tin nếu gặp < không thuộc thẻ nào.
+  templateFiles:
+    telegram-llm.tmpl: |-
+      {{ define "telegram.llm.message" -}}
+      {{ with .CommonLabels.env }}[{{ . | html }}] {{ end -}}
+      {{ if eq .Status "firing" }}🔥 <b>{{ .CommonLabels.alertname | html }}</b> · {{ .CommonLabels.severity | html }} · đang kêu: {{ len .Alerts.Firing }}
+      {{- else }}✅ <b>{{ .CommonLabels.alertname | html }}</b> · {{ .CommonLabels.severity | html }} · đã hết{{ end }}
+      {{ range $i, $a := .Alerts.Firing }}{{ if lt $i 8 }}• {{ $a.Annotations.summary | html }}
+      {{ end }}{{ end -}}
+      {{ if gt (len .Alerts.Firing) 8 }}• … (in 8 trên {{ len .Alerts.Firing }} đang kêu)
+      {{ end -}}
+      {{ range $i, $a := .Alerts.Resolved }}{{ if lt $i 8 }}• (đã hết) {{ $a.Annotations.summary | html }}
+      {{ end }}{{ end -}}
+      {{ if gt (len .Alerts.Resolved) 8 }}• … (in 8 trên {{ len .Alerts.Resolved }} đã hết)
+      {{ end -}}
+      {{ with .CommonAnnotations.description }}{{ . | html }}
+      {{ end -}}
+      {{ with .CommonAnnotations.runbook_url }}<a href="{{ . | html }}">Runbook</a>{{ end }}
+      {{- end }}
+
+  alertmanagerSpec:
+    # Mount Secret alertmanager-telegram (key bot-token, chat-id) vào container alertmanager.
+    # Không dùng `alertmanagerSpec.secrets` (cách ngắn hơn của Operator) vì volume đó bắt buộc Secret phải
+    # có: thiếu Secret thì pod kẹt ở ContainerCreating, kéo theo mọi cảnh báo khác. `optional: true` =
+    # thiếu Secret thì thư mục rỗng, pod vẫn chạy; tạo Secret sau thì kubelet tự chép file vào, không cần
+    # khởi động lại pod (đo trên kind 15/11: 30 s).
+    volumes:
+      - name: telegram
+        secret: {secretName: alertmanager-telegram, optional: true}
+    volumeMounts:
+      - {name: telegram, mountPath: /etc/alertmanager/telegram, readOnly: true}

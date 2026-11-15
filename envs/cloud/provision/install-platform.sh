@@ -2,8 +2,9 @@
 # ──────────────────────────────────────────────────────────────────────────────
 # envs/cloud/provision/install-platform.sh
 # Khái niệm: Cài phần nền lên k3s của VM thuê bằng Helm (trình quản lý gói cho Kubernetes): device plugin
-#            (báo GPU cho scheduler), kube-prometheus-stack (Prometheus, Grafana), KEDA (autoscaler), GPU
-#            exporter, rồi vLLM. Chạy NGAY trên VM: `vast.sh platform` chép các file vào cùng thư mục này.
+#            (báo GPU cho scheduler), kube-prometheus-stack (Prometheus, Grafana, Alertmanager → Telegram),
+#            rule + cảnh báo + dashboard của nhóm, KEDA (autoscaler), GPU exporter, rồi vLLM.
+#            Chạy NGAY trên VM: `vast.sh platform` chép các file vào cùng thư mục này.
 # Mục đích:  Thay các bước làm tay ngày 08/11 (236 s cho phần nền). Trên cloud chưa dùng Argo CD
 #            (group_vars/cloud.yaml), nên đây là cách cài; cùng values với Application ở nhà. Chạy trên VM
 #            vì tunnel SSH từng đứt khi phản hồi lớn. Chạy lại an toàn: `helm upgrade --install`, `apply`.
@@ -40,9 +41,14 @@ ns monitoring
 $K -n monitoring get secret grafana-admin >/dev/null 2>&1 || \
   $K -n monitoring create secret generic grafana-admin \
     --from-literal=admin-user=admin --from-literal=admin-password="$(openssl rand -hex 12)"
+# `-f` sau ghi đè `-f` trước: values chung, định tuyến Alertmanager → Telegram, rồi phần riêng của cloud
+# (nhãn env=cloud). Secret token do vast.sh tạo trước bước này; thiếu Secret thì Alertmanager vẫn chạy, chỉ
+# không gửi được tin.
 helm upgrade --install kps prometheus-community/kube-prometheus-stack --version 92.1.1 -n monitoring \
-  -f kps-values.yaml --wait --timeout 10m
+  -f kps-values.yaml -f alertmanager-values.yaml -f kps-values-cloud.yaml --wait --timeout 10m
 $K apply -f kps-extras.yaml
+# Recording rule, 7 quy tắc cảnh báo, 3 dashboard (common/observability). Sau chart vì cần CRD PrometheusRule.
+$K apply -f observability.yaml
 
 step "KEDA 2.21.0"
 helm upgrade --install keda kedacore/keda --version 2.21.0 -n keda --create-namespace \

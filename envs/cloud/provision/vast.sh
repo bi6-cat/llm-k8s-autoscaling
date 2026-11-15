@@ -156,11 +156,17 @@ cmd_platform() {
   cp common/platform/device-plugin-values.yaml "$dir/"
   cp common/platform/kube-prometheus-stack-values.yaml "$dir/kps-values.yaml"
   cp common/platform/keda-values.yaml "$dir/keda-values.yaml"
+  cp common/platform/alertmanager-values.yaml "$dir/alertmanager-values.yaml"
+  cp envs/cloud/platform/kube-prometheus-stack-values.yaml "$dir/kps-values-cloud.yaml"
   kubectl kustomize common/platform/kube-prometheus-stack-extras > "$dir/kps-extras.yaml"
   kubectl kustomize common/platform/gpu-exporter > "$dir/gpu-exporter.yaml"
+  kubectl kustomize common/observability > "$dir/observability.yaml"
   kubectl kustomize "$overlay" > "$dir/serving.yaml"
   # tar qua ssh: chép cả thư mục bằng một kết nối, không cần rsync trên VM
   tar -C "$dir" -cf - . | ssh -p "$port" "root@$host" 'mkdir -p /root/platform && tar -C /root/platform -xf -'
+  # Secret bot Telegram của Alertmanager: từ .env đi thẳng vào kubectl trên VM qua stdin của ssh, không nằm
+  # trong thư mục vừa chép. Tạo trước chart để Alertmanager có file token ngay khi khởi động.
+  common/platform/alertmanager-secret.sh ssh -p "$port" "root@$host" k3s kubectl
   ssh -p "$port" "root@$host" bash /root/platform/install-platform.sh
 }
 

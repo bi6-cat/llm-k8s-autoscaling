@@ -28,9 +28,12 @@ MODE ?= v0
 PROMTOOL ?= promtool
 # yq (bản của mikefarah) = bộ xử lý YAML dòng lệnh, dùng ở alerts-coverage. Phiên bản ghim ở docs/phien-ban.md.
 YQ ?= yq
+# amtool = công cụ dòng lệnh đi kèm Alertmanager (kiểm cấu hình, render template). Cùng bản với Alertmanager
+# trong chart, ghim ở docs/phien-ban.md.
+AMTOOL ?= amtool
 
 # .PHONY: các target này không phải tên file, make luôn chạy chúng (kể cả khi có file trùng tên)
-.PHONY: help home-up sim-up sim-down sim-test-load sim-test find rent probe bootstrap prefetch cloud-platform run backup backup-check ops-tests vh5 release lint alerts-test alerts-coverage dashboards-check
+.PHONY: help home-up alertmanager-secret sim-up sim-down sim-test-load sim-test find rent probe bootstrap prefetch cloud-platform run backup backup-check ops-tests vh5 release lint alerts-test alerts-coverage alertmanager-check dashboards-check
 
 # In danh sách lệnh, chia nhóm theo môi trường. Hai loại dòng được in:
 #   `##@ <tiêu đề>`        = đầu một nhóm (in thành dòng tiêu đề);
@@ -49,6 +52,13 @@ help: ## In danh sách lệnh
 home-up: ## Dựng k3s + Argo CD trên PC và laptop (Ansible)
 	cd $(ANSIBLE_DIR) && ansible-playbook -i inventory/home.yaml site.yml
 
+# Secret token bot và chat id cho Alertmanager, lấy từ .env (common/platform/alertmanager-secret.sh).
+# sim-up và cloud-platform tự gọi script này; chạy tay khi đổi bot trong .env, hoặc ở nhà (Secret không nằm
+# trong Git nên Argo CD không tạo được). Ở nhà chỉ có tác dụng sau việc 6b, khi Application monitoring nạp
+# common/platform/alertmanager-values.yaml. CTX trống = context hiện tại của kubectl.
+alertmanager-secret: ## Tạo Secret bot Telegram của Alertmanager từ .env: make alertmanager-secret [CTX=…]
+	common/platform/alertmanager-secret.sh kubectl $(if $(CTX),--context $(CTX))
+
 # ── Simulator trên laptop (không cần GPU) ──────────────────────────────────────
 ##@ Simulator: kind + llm-d-inference-sim, không cần GPU (envs/sim/README.md)
 # Cluster kind tách biệt với cluster nhà. Ở đây cài thẳng bằng helm/kubectl (không qua Argo CD) vì
@@ -65,12 +75,18 @@ sim-up: ## Dựng kind + Prometheus + KEDA + simulator + A2 trên laptop
 	kubectl $(SIM) -n monitoring get secret grafana-admin >/dev/null 2>&1 || \
 	  kubectl $(SIM) -n monitoring create secret generic grafana-admin \
 	    --from-literal=admin-user=admin --from-literal=admin-password=$$(openssl rand -hex 12)
-#	4) Prometheus + Grafana. `-f` sau ghi đè `-f` trước: values chung rồi values riêng cho simulator.
+#	   Secret bot Telegram của Alertmanager, từ .env. .env chưa có bot thì script chỉ cảnh báo, không dừng.
+	common/platform/alertmanager-secret.sh kubectl $(SIM)
+#	4) Prometheus + Grafana + Alertmanager. `-f` sau ghi đè `-f` trước: values chung, định tuyến
+#	   Alertmanager, rồi values riêng cho simulator.
 #	   `upgrade --install` = cài nếu chưa có, nâng cấp nếu đã có. `--wait`: chờ mọi pod Ready.
 	helm --kube-context kind-$(KIND_CLUSTER) upgrade --install kps prometheus-community/kube-prometheus-stack \
 	  --version $(KPS_VERSION) -n monitoring \
-	  -f common/platform/kube-prometheus-stack-values.yaml -f envs/sim/platform/kube-prometheus-stack-values.yaml \
+	  -f common/platform/kube-prometheus-stack-values.yaml -f common/platform/alertmanager-values.yaml \
+	  -f envs/sim/platform/kube-prometheus-stack-values.yaml \
 	  --wait --timeout 10m
+#	   Recording rule, 7 quy tắc cảnh báo và 3 dashboard. Phải sau chart, vì chart cài CRD PrometheusRule.
+	kubectl $(SIM) apply -k common/observability
 #	5) KEDA: đọc metric từ Prometheus và điều khiển HPA
 	helm --kube-context kind-$(KIND_CLUSTER) upgrade --install keda kedacore/keda \
 	  --version $(KEDA_VERSION) -n keda --create-namespace -f common/platform/keda-values.yaml --wait
@@ -187,6 +203,52 @@ alerts-test: alerts-coverage ## Đủ severity/runbook/test, rồi promtool chec
 	cp -r common/observability/alerts/tests "$$tmp/common/observability/alerts/"; \
 	$(PROMTOOL) check rules "$$tmp"/common/observability/rules/*.yaml "$$tmp"/common/observability/alerts/*.yaml; \
 	$(PROMTOOL) test rules "$$tmp"/common/observability/alerts/tests/*.yaml
+
+# Cấu hình Alertmanager nằm trong values Helm (common/platform/alertmanager-values.yaml). Trên cluster, lỗi
+# chỉ lộ ra khi Operator nạp nó (Alertmanager giữ cấu hình cũ, lỗi nằm trong status của object Alertmanager),
+# và template sai chỉ lộ ra khi có cảnh báo thật. Target này kiểm trước, không cần cluster:
+#   1) yq tách từng file của `alertmanager.templateFiles` ra thư mục tạm;
+#   2) yq tách `alertmanager.config` và đổi `templates` thành '*.tmpl'. Alertmanager tính đường dẫn tương
+#      đối từ thư mục chứa file cấu hình. amtool chạy trong thư mục tạm (subshell `( cd … )`, để thư mục
+#      hiện tại của shell không nằm trong thư mục sắp xoá) với đường dẫn tương đối, vì trên Windows Git
+#      Bash không đổi glob kiểu /tmp/…/*.tmpl sang đường dẫn Windows cho amtool.exe. AMTOOL phải là
+#      đường dẫn tuyệt đối hoặc tên trong PATH;
+#   3) amtool check-config: cú pháp, receiver mà route nhắc tới có thật, template biên dịch được;
+#   4) amtool template render với ba bộ dữ liệu sinh từ common/platform/tests/alertmanager-telegram.json:
+#      firing (2 cảnh báo đang kêu, 1 đã hết, chữ < > & trong annotation); resolved (yq đổi mọi status
+#      thành resolved, để chạy cả nhánh "đã hết" của template); many (yq nhân 5 danh sách cảnh báo: 10 đang
+#      kêu, 5 đã hết, để chạy nhánh giới hạn số dòng). In từng tin ra để xem bằng mắt;
+#   5) với mỗi tin: bỏ các thẻ Telegram cho phép (<b>, </b>, <a href="…">, </a>) và entity (&lt; &#39;…),
+#      còn sót < > hay & thì báo lỗi (Telegram, parse_mode HTML, từ chối cả tin); tin dài quá 4096 ký tự
+#      (`wc -m` = đếm ký tự, không phải byte) thì báo lỗi; bộ many phải in đúng 8 dòng cho 10 cảnh báo
+#      đang kêu (pod …-abcde, …-fghij). Mẫu grep chỉ dùng ASCII: make.exe bản ezwinports trên Windows đổi mã
+#      chữ có dấu trong recipe, nên mẫu có dấu không khớp.
+# inhibit_rules lấy theo mặc định của chart, không nằm trong file này nên không được kiểm ở đây.
+alertmanager-check: ## Kiểm cấu hình Alertmanager và render thử tin Telegram (cần yq, amtool)
+	@set -euo pipefail; tmp=$$(mktemp -d); trap 'rm -rf "$$tmp"' EXIT; v=common/platform/alertmanager-values.yaml; \
+	command -v $(YQ) >/dev/null || { echo "::error::Cần yq (bản mikefarah); hoặc truyền YQ=/đường/dẫn/yq"; exit 1; }; \
+	command -v $(AMTOOL) >/dev/null || { echo "::error::Cần amtool (gói Alertmanager, bản ở docs/phien-ban.md); hoặc truyền AMTOOL=…"; exit 1; }; \
+	for name in $$($(YQ) '.alertmanager.templateFiles | keys | .[]' "$$v"); do \
+	  $(YQ) ".alertmanager.templateFiles[\"$$name\"]" "$$v" > "$$tmp/$$name"; \
+	done; \
+	$(YQ) '.alertmanager.config | .templates = ["*.tmpl"]' "$$v" > "$$tmp/alertmanager.yaml"; \
+	(cd "$$tmp" && $(AMTOOL) check-config alertmanager.yaml); \
+	d=common/platform/tests/alertmanager-telegram.json; cp "$$d" "$$tmp/firing.json"; \
+	$(YQ) -p json -o json '.status = "resolved" | .alerts[].status = "resolved"' "$$d" > "$$tmp/resolved.json"; \
+	$(YQ) -p json -o json '.alerts = .alerts + .alerts + .alerts + .alerts + .alerts' "$$d" > "$$tmp/many.json"; \
+	fail=0; \
+	for c in firing resolved many; do \
+	  out=$$(cd "$$tmp" && $(AMTOOL) template render --template.glob='*.tmpl' --template.data=$$c.json \
+	    --template.text='{{ template "telegram.llm.message" . }}'); \
+	  printf -- '--- Tin mẫu: %s ---\n%s\n' "$$c" "$$out"; \
+	  rest=$$(sed -E 's#</?b>##g; s#<a href="[^"<>]*">##g; s#</a>##g; s/&(lt|gt|amp|quot|#[0-9]+);//g' <<< "$$out"); \
+	  if grep -q '[<>&]' <<< "$$rest"; then echo "::error::$$c: tin còn < > hoặc & chưa escape (dùng | html)"; fail=1; fi; \
+	  n=$$(printf %s "$$out" | LC_ALL=C.UTF-8 wc -m); \
+	  [ "$$n" -le 4096 ] || { echo "::error::$$c: tin dài $$n ký tự, Telegram nhận tối đa 4096"; fail=1; }; \
+	  [ "$$c" != many ] || [ "$$(grep -cE 'vllm-7d9c6b5f4-(abcde|fghij)' <<< "$$out")" = 8 ] \
+	    || { echo "::error::many: phải in đúng 8 trên 10 cảnh báo đang kêu (giới hạn số dòng mỗi tin)"; fail=1; }; \
+	done; \
+	[ "$$fail" = 0 ] && echo "alertmanager-check: đạt"; exit $$fail
 
 # CONTRIBUTING §4: mỗi cảnh báo phải có nhãn `severity: page|ticket`, annotation runbook_url trỏ tới runbook
 # của chính nó, file runbook và unit test. promtool không bắt được việc thiếu test (không có test thì không có

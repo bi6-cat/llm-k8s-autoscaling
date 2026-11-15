@@ -7,7 +7,17 @@
 # ──────────────────────────────────────────────────────────────────────────────
 prometheus:
   prometheusSpec:
+    # Nhãn gắn vào mọi cảnh báo Prometheus gửi đi (không gắn vào kết quả truy vấn, nên không ảnh hưởng
+    # dashboard hay KEDA). Tin Telegram in [sim] ở đầu, để không lẫn với cảnh báo thật của V2 (chung bot).
+    externalLabels: {env: sim}
     retention: 1d
     resources:
       requests: {cpu: 100m, memory: 512Mi}
       limits: {memory: 1536Mi}
+defaultRules:
+  disabled:
+    # Báo giả trên kind chạy trong WSL2 (đo 15/11): container Alertmanager restarts=0, nhưng
+    # process_start_time_seconds có 16 giá trị khác nhau trong 15 phút, lệch tới 75 s (nghi do đồng hồ của
+    # WSL), nên rule tưởng Alertmanager khởi động lại > 4 lần / 10 phút và kêu critical tới Telegram.
+    # Đây là rule duy nhất của chart dùng metric này. Cluster thật (nhà, cloud) vẫn giữ rule.
+    AlertmanagerClusterCrashlooping: true

@@ -1,0 +1,52 @@
+{
+  "receiver": "page",
+  "status": "firing",
+  "alerts": [
+    {
+      "status": "firing",
+      "labels": {"alertname": "LLMPodNotReady", "severity": "page", "env": "cloud", "namespace": "llm-serving", "pod": "vllm-7d9c6b5f4-abcde"},
+      "annotations": {
+        "summary": "Pod vllm-7d9c6b5f4-abcde chạy hơn 15 phút mà chưa Ready",
+        "description": "Lâu hơn cold start tối đa. Thử escape: TTFT > 2,5 s & hàng đợi < 75, \"nháy\" 'đơn'.",
+        "runbook_url": "https://github.com/bi6-cat/llm-k8s-autoscaling/blob/main/docs/runbooks/LLMPodNotReady.md"
+      },
+      "startsAt": "2026-11-15T10:00:00Z",
+      "endsAt": "0001-01-01T00:00:00Z",
+      "generatorURL": "http://kps-prometheus.monitoring:9090/graph",
+      "fingerprint": "0000000000000001"
+    },
+    {
+      "status": "firing",
+      "labels": {"alertname": "LLMPodNotReady", "severity": "page", "env": "cloud", "namespace": "llm-serving", "pod": "vllm-7d9c6b5f4-fghij"},
+      "annotations": {
+        "summary": "Pod vllm-7d9c6b5f4-fghij chạy hơn 15 phút mà chưa Ready",
+        "description": "Lâu hơn cold start tối đa. Thử escape: TTFT > 2,5 s & hàng đợi < 75, \"nháy\" 'đơn'.",
+        "runbook_url": "https://github.com/bi6-cat/llm-k8s-autoscaling/blob/main/docs/runbooks/LLMPodNotReady.md"
+      },
+      "startsAt": "2026-11-15T10:01:00Z",
+      "endsAt": "0001-01-01T00:00:00Z",
+      "generatorURL": "http://kps-prometheus.monitoring:9090/graph",
+      "fingerprint": "0000000000000002"
+    },
+    {
+      "status": "resolved",
+      "labels": {"alertname": "LLMPodNotReady", "severity": "page", "env": "cloud", "namespace": "llm-serving", "pod": "vllm-7d9c6b5f4-klmno"},
+      "annotations": {
+        "summary": "Pod vllm-7d9c6b5f4-klmno chạy hơn 15 phút mà chưa Ready (thử escape: hàng đợi < 75 & TTFT > 2,5 s)",
+        "description": "Lâu hơn cold start tối đa. Thử escape: TTFT > 2,5 s & hàng đợi < 75, \"nháy\" 'đơn'.",
+        "runbook_url": "https://github.com/bi6-cat/llm-k8s-autoscaling/blob/main/docs/runbooks/LLMPodNotReady.md"
+      },
+      "startsAt": "2026-11-15T09:40:00Z",
+      "endsAt": "2026-11-15T10:05:00Z",
+      "generatorURL": "http://kps-prometheus.monitoring:9090/graph",
+      "fingerprint": "0000000000000003"
+    }
+  ],
+  "groupLabels": {"alertname": "LLMPodNotReady"},
+  "commonLabels": {"alertname": "LLMPodNotReady", "severity": "page", "env": "cloud", "namespace": "llm-serving"},
+  "commonAnnotations": {
+    "description": "Lâu hơn cold start tối đa. Thử escape: TTFT > 2,5 s & hàng đợi < 75, \"nháy\" 'đơn'.",
+    "runbook_url": "https://github.com/bi6-cat/llm-k8s-autoscaling/blob/main/docs/runbooks/LLMPodNotReady.md"
+  },
+  "externalURL": "http://kps-alertmanager.monitoring:9093"
+}

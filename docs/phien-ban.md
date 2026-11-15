@@ -27,6 +27,7 @@ Tra ngày 09/10/2026; các dòng của CI tra ngày 01/11/2026. Đổi phiên b�
 | Schema CRD cho kubeconform | `datreeio/CRDs-catalog` commit `5a706a68…` (01/11/2026) | `.github/workflows/ci.yaml` |
 | promtool (CI) | `3.15.0`, trùng Prometheus của chart kube-prometheus-stack 92.1.1 | `.github/workflows/ci.yaml` |
 | yq, bản của mikefarah (CI và `make alerts-coverage`) | `v4.54.1` | `.github/workflows/ci.yaml`; máy cá nhân cài cùng bản |
+| amtool (CI và `make alertmanager-check`) | `0.34.1`, trùng Alertmanager của chart kube-prometheus-stack 92.1.1 (tra 15/11) | `.github/workflows/ci.yaml`; máy cá nhân cài cùng bản |
 | yamllint (CI) | `1.38.0`; phụ thuộc giải theo mốc 01/11/2026 (PyYAML 6.0.3, pathspec 1.1.1) | `.github/workflows/ci.yaml` |
 | actionlint, shellcheck, lychee (CI) | `1.7.12`, `0.11.0`, `0.24.2` | `.github/workflows/ci.yaml` |
 | uv, Python (CI cho `loadgen/`) | `0.13.1`; Python `3.11` và `3.15` | `.github/workflows/ci.yaml` |

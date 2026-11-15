@@ -225,6 +225,7 @@ B\* và KV\* là số request đồng thời trung bình và mức KV-cache trê
 | Chu kỳ thu metric GPU (DCGM hoặc `nvidia_gpu_exporter`) | 5 s |
 | Retention Prometheus | Cloud: 15 ngày. Nhà: 3 ngày (RAM 16 GB) |
 | Số dashboard / số cảnh báo | 3 / 6 ([F5](#3-yêu-cầu-chức-năng), [F6](#3-yêu-cầu-chức-năng)) |
+| Định tuyến cảnh báo (Alertmanager → Telegram) | Gom theo `alertname`; `group_wait` 30 s, `group_interval` 5 phút. `page` nhắc lại mỗi 1 giờ, báo cả lúc hết; `ticket` của nhóm và `critical` của chart nhắc lại sau 24 giờ, không báo lúc hết; warning/info của chart không gửi. Tối đa 8 dòng mỗi danh sách trong một tin ([Vận hành §3.4](04-van-hanh.md#34-alertmanager-định-tuyến)) |
 
 ---
 
