@@ -38,10 +38,10 @@
 | **F1** | Phục vụ **một model mở cỡ 3–8B** qua API tương thích OpenAI (`/v1/chat/completions`), có streaming | vLLM, Traefik | Gọi API có streaming; chạy được ĐG1–ĐG3 | Must |
 | **F2** | Tự điều chỉnh số replica trong khoảng [1, N] theo tải (N = số GPU) | KEDA + HPA, cấu hình A2 | Bài kiểm thử T1–T7; ĐG2 | Must |
 | **F3** | Triển khai, cập nhật và rollback qua Git, không thao tác tay trên cluster | Argo CD (bản core, một App-of-Apps), Kustomize | VH2: cập nhật và rollback bằng `git revert` | Must |
-| **F4** | Dựng toàn bộ từ máy trắng bằng vài lệnh `make` | Ansible; script `vastai`; Argo CD | VH5 | Must |
+| **F4** | Dựng toàn bộ từ máy trắng bằng vài lệnh `make` | Ansible; `vast.sh`; Argo CD ở nhà, `make cloud-platform` (helm) trên VM thuê ([ADR-006 §3.1](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md#31-quyết-định-ngày-12112026)) | VH5 | Must |
 | **F5** | **3 dashboard**: Serving + GPU; Autoscaling; SLO + chi phí | Prometheus, Grafana | Kiểm tra trong mọi lượt; ảnh chụp đưa vào luận văn | Must |
 | **F6** | **6 cảnh báo** theo SLO và sức khoẻ nền tảng, gửi tới Telegram; **mỗi cảnh báo có runbook** | Alertmanager, `docs/runbooks/` | VH6 | Must |
-| **F7** | Bảo vệ tối thiểu: API key, giới hạn tốc độ, một NetworkPolicy, bí mật mã hoá trong Git | `--api-key` của vLLM, Traefik `rateLimit`, NetworkPolicy, Sealed Secrets | Checklist ở [Vận hành](04-van-hanh.md#8-bảo-mật-tối-thiểu) | Should |
+| **F7** | Bảo vệ tối thiểu: API key, giới hạn tốc độ, một NetworkPolicy, bí mật mã hoá trong Git | `--api-key` của vLLM, Traefik `rateLimit`, NetworkPolicy, Sealed Secrets. **Sửa 12/11:** chỉ làm API key và mạng riêng; rate limit, NetworkPolicy thường trực, Sealed Secrets bị lược ([ADR-006 §3.1](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md#31-quyết-định-ngày-12112026)) | Checklist ở [Vận hành](04-van-hanh.md#8-bảo-mật-tối-thiểu) | Should |
 
 Danh sách 6 cảnh báo nằm ở [Vận hành §3.2](04-van-hanh.md#32-danh-sách-cảnh-báo).
 
@@ -80,7 +80,7 @@ Danh sách 6 cảnh báo nằm ở [Vận hành §3.2](04-van-hanh.md#32-danh-s�
 
 Nếu chậm tiến độ thì cắt từ dưới lên theo thứ tự trên ([Kế hoạch §8](06-ke-hoach-quan-ly.md#8-dự-phòng-và-cắt-giảm-phạm-vi)).
 
-**Đã bỏ khỏi phạm vi** ([ADR-004](../adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md)): sync window của Argo CD; burn-in đầy đủ 1 giờ và kiểm tra trôi sau 30 phút; KB2 × A2 ở L0; quy trình vận hành định kỳ trong phần bàn giao (chỉ mô tả trong luận văn); demo trực tiếp trên cluster laptop; TensorDock.
+**Đã bỏ khỏi phạm vi** ([ADR-004](../adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md)): sync window của Argo CD; burn-in đầy đủ 1 giờ và kiểm tra trôi sau 30 phút; KB2 × A2 ở L0; quy trình vận hành định kỳ trong phần bàn giao (chỉ mô tả trong luận văn); demo trực tiếp trên cluster laptop; TensorDock. Ngày 12/11 bỏ thêm các hạng mục hội đồng không nhìn thấy ([ADR-006 §3.1](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md#31-quyết-định-ngày-12112026)): Sealed Secrets, rate limit và NetworkPolicy thường trực, Argo CD trên VM thuê, các lệnh `make burnin`/`capacity`/`analysis` (việc đo và phân tích vẫn làm).
 
 ---
 
