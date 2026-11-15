@@ -69,28 +69,32 @@ Cập nhật cấu hình (VH2) **đi qua Git**: sửa file trong `envs/home/` ho
 Runner và `make ops-tests` áp ScaledObject của từng lượt bằng `kubectl apply`. Nếu Application `autoscaling` còn auto-sync thì Argo CD áp lại A2 giữa lượt, nên runner kiểm trước và dừng ngay ([Kiến trúc §18.2](../../docs/chi-tiet/03-kien-truc-autoscaling.md#182-cấu-hình-autoscaling-trong-git-tạm-tách-khi-đánh-giá)).
 
 ```bash
-K="kubectl --context llm-home"
-# Trước phiên: tắt auto-sync của A2. Root-app bỏ qua trường này nên không bật lại.
-$K -n argocd patch application autoscaling --type json -p '[{"op":"remove","path":"/spec/syncPolicy/automated"}]'
-
-# Sau phiên: xoá mọi ScaledObject khác vllm-a2 (webhook của KEDA chặn hai ScaledObject cùng trỏ một
-# Deployment), rồi bật lại auto-sync. Argo CD đưa A2 về đúng Git (bỏ cả pause runner để lại) sau vài giây.
-$K -n llm-serving get scaledobject -o name | grep -v '/vllm-a2$' | xargs -r $K -n llm-serving delete
-$K -n argocd patch application autoscaling --type merge \
-  -p '{"spec":{"syncPolicy":{"automated":{"prune":true,"selfHeal":true}}}}'
+make home-eval-begin    # trước phiên: tắt auto-sync của A2 (root-app bỏ qua trường này nên không bật lại)
+# … chạy runner hoặc make ops-tests …
+make home-eval-end      # sau phiên: xoá ScaledObject khác vllm-a2, rồi bật lại auto-sync theo Git (cần yq)
 ```
 
-Trong lúc tắt, app `autoscaling` hiện `OutOfSync`, và `Suspended` khi ScaledObject đang pause. Đó là lệch có chủ đích. Đừng sync tay root kèm `--sync-option`, vì làm vậy auto-sync bị bật lại (comment trong `argocd/root-app.yaml`).
+- Sau `home-eval-end`, Argo CD đưa A2 về đúng Git sau vài giây, bỏ cả annotation pause mà runner để lại. Phải xoá ScaledObject khác trước, vì webhook của KEDA chặn hai ScaledObject cùng trỏ một Deployment.
+- Trong lúc tắt, app `autoscaling` hiện `OutOfSync`, và hiện `Suspended` khi ScaledObject đang pause. Đó là lệch có chủ đích.
+- Đừng sync tay root kèm `--sync-option`, vì làm vậy auto-sync bị bật lại (xem comment trong `argocd/root-app.yaml`).
+- Ma trận chạy A2 ở nhà phải ghi đè `threshold: 23` và `max_replicas: 2`, giá trị của overlay; nếu không, runner dùng giá trị của VM thuê trong file base.
 
-## Một lần sau khi thêm app `autoscaling` và `observability`
+## Một lần khi thêm app `autoscaling` và `observability`
 
-`root-app.yaml` có thêm `ignoreDifferences`, mà root không tự quản lý chính nó, nên phải áp lại một lần sau khi merge:
+Merge xong là root tạo ngay app `autoscaling` với auto-sync bật. Vì vậy ba việc đầu phải làm **trước khi merge**:
+
+1. Không có phiên runner hay `make ops-tests` nào đang chạy, vì A2 sẽ bị áp giữa lượt.
+2. Xoá ScaledObject khác A2 còn sót từ runner. Nếu còn, webhook của KEDA chặn A2, app `autoscaling` lỗi sync cho đến khi hết lượt `retry`.
+3. Áp `root-app.yaml` mới từ nhánh của PR. Root không tự quản lý chính nó. Bản mới chỉ thêm `ignoreDifferences` và `RespectIgnoreDifferences`, vẫn đọc `main`, nên áp trước khi merge cũng không đổi gì trên cluster.
+
+Rồi merge PR, tạo Secret và chờ đồng bộ:
 
 ```bash
 K="kubectl --context llm-home"
-# ScaledObject khác A2 còn sót từ runner sẽ làm webhook của KEDA chặn A2: xoá trước
-$K -n llm-serving get scaledobject -o name | grep -v '/vllm-a2$' | xargs -r $K -n llm-serving delete
+# Trước khi merge (bước 2, 3)
+$K -n llm-serving get scaledobject -o name | { grep -v '/vllm-a2$' || true; } | xargs -r $K -n llm-serving delete
 $K apply -f envs/home/argocd/root-app.yaml
+# Sau khi merge
 make alertmanager-secret CTX=llm-home
 $K -n argocd get applications -w        # autoscaling, observability, monitoring, keda: Synced / Healthy
 ```

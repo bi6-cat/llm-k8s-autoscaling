@@ -8,8 +8,8 @@
 #            trong lúc đánh giá (ADR-005 T7).
 #            Trước phiên đánh giá, phải tắt auto-sync của app này, nếu không Argo CD áp lại A2 giữa lượt
 #            (runner kiểm và dừng: experiments/runner/configs.py guard_argocd). Root-app bỏ qua trường
-#            syncPolicy.automated của app này nên tắt tay được mà không bị bật lại (root-app.yaml). Lệnh
-#            tắt và bật lại: envs/home/README.md, mục "Phiên đánh giá ở nhà".
+#            syncPolicy.automated của app này nên tắt tay được mà không bị bật lại (root-app.yaml). Tắt:
+#            make home-eval-begin; bật lại: make home-eval-end (envs/home/README.md, "Phiên đánh giá ở nhà").
 # Health:    Argo CD v3.5.4 có sẵn health check cho ScaledObject (resource_customizations/keda.sh/
 #            ScaledObject/health.lua): condition Fallback=True hoặc Ready=False → Degraded; Paused=True →
 #            Suspended (runner để A2 ở trạng thái pause sau mỗi phiên, experiments/runner/session.py).
@@ -28,6 +28,8 @@ spec:
     path: envs/home/autoscaling
   destination: {server: https://kubernetes.default.svc, namespace: llm-serving}
   syncPolicy:
+    # Root-app bỏ qua khối này (để tắt được khi đánh giá), nên sửa nó trong Git KHÔNG tự lên cluster.
+    # make home-eval-end chép khối này từ file lên cluster.
     automated: {prune: true, selfHeal: true}
     # Không có CreateNamespace: namespace llm-serving do app `serving` tạo (ScaledObject vô nghĩa khi chưa
     # có Deployment vllm). ScaledObject là CRD do app `keda` cài; lần sync đầu CRD có thể chưa có, nên bỏ
