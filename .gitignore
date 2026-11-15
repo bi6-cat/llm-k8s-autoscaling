@@ -27,10 +27,10 @@ runs/
 # --- Bí mật và trạng thái cục bộ ------------------------------------------------
 # Giá trị riêng từng người (mẫu ở .env.example)
 .env
-# Instance Vast đang thuê, giờ bắt đầu, cost.log (do infra/provision/vast.sh ghi)
+# Instance Vast đang thuê, giờ bắt đầu, cost.log (do envs/cloud/provision/vast.sh ghi)
 .vast/
 # Kubeconfig chứa chứng chỉ quản trị cluster: lộ ra là mất quyền kiểm soát cluster
 *.kubeconfig
 kubeconfig*
 # Inventory của VM thuê, do `vast.sh inventory` sinh, chứa IP công khai của máy
-infra/ansible/inventory/cloud.yaml
+ansible/inventory/cloud.yaml

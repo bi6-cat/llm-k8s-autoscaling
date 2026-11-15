@@ -163,7 +163,7 @@ TensorDock không còn là phương án dự phòng ([ADR-004](../adr/004-dieu-k
 
 ### 3.3. Lọc máy
 
-Tiêu chí ở [Thông số §10.2](00-thong-so.md#102-gpu-thuê), đã mã hoá trong `infra/provision/vast.sh` (gọi qua `uvx vastai@1.11.0`, không cần cài):
+Tiêu chí ở [Thông số §10.2](00-thong-so.md#102-gpu-thuê), đã mã hoá trong `envs/cloud/provision/vast.sh` (gọi qua `uvx vastai@1.11.0`, không cần cài):
 
 ```bash
 make find MODE=v2                               # mặc định RTX_A4000, 4 GPU, ≤ 2 USD/giờ cả máy, verified
@@ -234,19 +234,19 @@ Nếu máy chỉ có 32 vCPU: dùng 5 lõi cho mỗi pod vLLM; máy tạo tải 
 | `make find` | `vastai search offers` theo tiêu chí, in ra 5 máy rẻ nhất |
 | `make rent OFFER=<id>` | `vastai create instance` (template VM Ubuntu có driver NVIDIA), chờ SSH, ghi instance id |
 | `make probe` | Đo phần cứng, ổ và mạng thật của VM vừa thuê, để quyết định giữ hay trả máy (thay cho `make burnin` trong thiết kế, chưa làm) |
-| `make bootstrap` | Ansible: chrony, tắt tự nâng cấp, mirror registry, k3s (tham số §3.5), GPU, tải sẵn model và image; in tổng thời gian (dùng cho VH5). Trên VM **chưa** cài Argo CD và Sealed Secrets (`argocd_enabled: false`, ADR-006 §3) |
+| `make bootstrap` | Ansible: chrony, tắt tự nâng cấp, mirror registry, k3s (tham số §3.5), GPU, tải sẵn model và image; in tổng thời gian (dùng cho VH5). Trên VM **không** cài Argo CD và Sealed Secrets (`argocd_enabled: false`, [ADR-006 §3.1](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md#31-quyết-định-ngày-12112026)) |
 | `make prefetch` | Tải model, kéo image trên VM (`make bootstrap` đã gồm bước này, chạy nền) |
 | `make cloud-platform` | Cài device plugin, Prometheus, KEDA, GPU exporter, vLLM bằng Helm (trên cloud chưa dùng Argo CD) |
 | `make vh5` | Bấm giờ VH5: bootstrap, cloud-platform, gọi API có streaming |
-| `make run MATRIX=experiments/matrix-dg1-v1.yaml` | ĐG1: quét λ với 1 replica, runner sinh `capacity.json` (chưa có lệnh `make capacity` riêng) |
+| `make run MATRIX=envs/cloud/experiments/matrix-dg1.yaml` | ĐG1: quét λ với 1 replica, runner sinh `capacity.json` (chưa có lệnh `make capacity` riêng) |
 | `make run MATRIX=…` | Chạy ma trận đánh giá autoscaling |
 | `make ops-tests S=… MATRIX=… RATE=…` | Chạy một kịch bản vận hành dưới tải (VH2–VH4), chấm đạt/không đạt |
 | `make backup` | `rclone` lên R2, kiểm tra checksum |
 | `make release` | Huỷ instance; **từ chối chạy** nếu backup chưa xong |
-| `make analysis` | Tạo bảng, chạy notebook, xuất hình (**chưa làm**, TR7) |
+| `make analysis` | Tạo bảng, chạy notebook, xuất hình (**lược** lệnh `make`, [ADR-006 §3.1](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md#31-quyết-định-ngày-12112026); bảng và hình chương 5 vẫn làm bằng script, TR7) |
 | `make lint`, `make alerts-test`, `make dashboards-check` | Kiểm tra YAML, manifest, quy tắc cảnh báo, dashboard; Python chạy `pytest` và `ruff` trong từng gói |
 
-- Chỉ phần `find/rent/probe/release` (`infra/provision/vast.sh`) phụ thuộc Vast.ai. Đổi nhà cung cấp thì chỉ viết lại các lệnh này; toàn bộ Ansible trở đi giữ nguyên.
+- Chỉ phần `find/rent/probe/release` (`envs/cloud/provision/vast.sh`) phụ thuộc Vast.ai. Đổi nhà cung cấp thì chỉ viết lại các lệnh này; toàn bộ Ansible trở đi giữ nguyên.
 - **Đồng bộ giờ:** mọi thứ chạy trên cùng một máy nên không lo lệch đồng hồ. Vẫn cài chrony để timestamp đúng giờ UTC.
 
 ### 3.8. Sao lưu dữ liệu
@@ -490,7 +490,7 @@ Mỗi kịch bản có một mục trong `docs/nhat-ky/van-hanh.md`: ngày, môi
 
 | Bước | Việc làm | Lệnh hoặc chi tiết |
 |---|---|---|
-| **Áp cấu hình** | Tĩnh: xoá ScaledObject, đặt số replica. Autoscaling: xoá ScaledObject khác, áp ScaledObject đang tạm dừng ở 1 replica | Runner (`experiments/runner/configs.py`) đọc `autoscaling/eval/<ID>.yaml` (A2: `autoscaling/official/base/scaledobject-a2.yaml`), ghi đè threshold và max replica theo ma trận, thêm annotation `autoscaling.keda.sh/paused-replicas: "1"`, rồi `kubectl apply` |
+| **Áp cấu hình** | Tĩnh: xoá ScaledObject, đặt số replica. Autoscaling: xoá ScaledObject khác, áp ScaledObject đang tạm dừng ở 1 replica | Runner (`experiments/runner/configs.py`) đọc `common/autoscaling/eval/<ID>.yaml` (A2: `common/autoscaling/a2/scaledobject-a2.yaml`), ghi đè threshold và max replica theo ma trận, thêm annotation `autoscaling.keda.sh/paused-replicas: "1"`, rồi `kubectl apply` |
 | **Reset** | Chờ hệ thống yên | 1 pod Ready (S4: 4 pod Ready); hàng đợi trống; chờ thêm 60 s |
 | **Warm-up** | Làm ấm | 0,3C trong 2 phút, không tính |
 | **Chạy** | Bỏ tạm dừng, chạy kịch bản | Bỏ annotation; máy tạo tải chạy lịch; runner gửi annotation lên Grafana ở đầu mỗi pha |

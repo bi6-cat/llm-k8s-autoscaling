@@ -1,0 +1,56 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# envs/cloud/serving/patch-vllm.yaml
+# Khái niệm: JSON patch (cách đọc: envs/home/serving/patch-vllm.yaml): danh sách thao tác `add`/`replace`
+#            áp lên Deployment `vllm` của common/serving.
+# Mục đích:  Model Qwen2.5-3B trên GPU 16 GB, QoS Guaranteed (requests = limits, CPU nguyên) và cache
+#            model trên ổ NVMe của VM. Giá trị theo cột "Cloud" ở Thông số §9.1–§9.2.
+# Tham khảo: Thông số §9.1–§9.2; Kiến thức nền §1.3–§1.4 (KV-cache, ngân sách VRAM đo ngày 08/11)
+# ──────────────────────────────────────────────────────────────────────────────
+# Args của common/serving là 0 --port, 1 --no-enable-prefix-caching, 2 --shutdown-timeout; patch này nối
+# thêm vào CUỐI danh sách (`args/-`), nên không phụ thuộc thứ tự bên base.
+# Model tải từ Hugging Face ở lần khởi động đầu (mức L0); `make bootstrap` tải sẵn vào NVMe (mức L2).
+
+# Qwen2.5-3B-Instruct ở BF16: 2 file safetensors tổng ~6,2 GB (3,97 + 2,20 GB, tra HF 06/11).
+- op: add
+  path: /spec/template/spec/containers/0/args/-
+  value: --model=Qwen/Qwen2.5-3B-Instruct
+# Revision = mã commit trên Hugging Face, ghim để mọi lần tải ra đúng một bộ weights (N8). Tra 06/11/2026.
+# Phải trùng ansible/inventory/group_vars/cloud.yaml (bước tải sẵn model); test_cloud_prefetch.py kiểm.
+- op: add
+  path: /spec/template/spec/containers/0/args/-
+  value: --revision=aa8e72537993ba99e69dfaafa59ed015b17504d1
+# Tên model mà client gửi trong trường "model"; file ma trận của runner phải ghi đúng tên này.
+- op: add
+  path: /spec/template/spec/containers/0/args/-
+  value: --served-model-name=qwen2.5-3b
+# Prompt ≤ 1024 + output 256 token của bài đánh giá dư sức nằm trong 8192
+- op: add
+  path: /spec/template/spec/containers/0/args/-
+  value: --max-model-len=8192
+# Tối đa 64 request chạy cùng lúc mỗi pod. Đo 08/11: KV-cache 7,28 GiB = 211.936 token, đủ cho ~210
+# request 1.000 token, nên giới hạn đồng thời thật là con số 64 này, không phải KV-cache.
+- op: add
+  path: /spec/template/spec/containers/0/args/-
+  value: --max-num-seqs=64
+# VM không có màn hình nên được dùng 90% VRAM (16 GiB × 0,90 ≈ 14,4 GiB)
+- op: add
+  path: /spec/template/spec/containers/0/args/-
+  value: --gpu-memory-utilization=0.90
+# QoS Guaranteed: requests = limits và CPU là số nguyên. Kết hợp CPU manager static
+# (ansible/inventory/group_vars/cloud.yaml), mỗi pod được giữ riêng 3 lõi CPU → số đo ổn định.
+# Vì sao 3 lõi: lõi `reserved-cpus=0-3` KHÔNG tính vào allocatable, nên 4 pod × 3 lõi + máy tạo tải 3 lõi
+# + các pod khác ~0,4 lõi ≈ 16 lõi allocatable, tức máy ≥ 20 vCPU (ADR-006 C2). Máy V1 có 15 vCPU nên
+# phải hạ xuống 2 lõi bằng overlay tạm (nhật ký Quang tuần 05, 08/11).
+# RAM 16Gi: tiến trình vLLM 3B cộng /dev/shm (sizeLimit 8Gi, tính vào giới hạn RAM của pod).
+- op: replace
+  path: /spec/template/spec/containers/0/resources
+  value:
+    requests: {cpu: "3", memory: 16Gi, nvidia.com/gpu: 1}
+    limits: {cpu: "3", memory: 16Gi, nvidia.com/gpu: 1}
+# Cache trên NVMe: thư mục do role common tạo (type Directory = phải có sẵn, không tự tạo).
+# Bên trong: hf/ (model, HF_HOME) và vllm/ (compile cache, VLLM_CACHE_ROOT).
+- op: replace
+  path: /spec/template/spec/volumes/0
+  value:
+    name: cache
+    hostPath: {path: /mnt/nvme/cache, type: Directory}

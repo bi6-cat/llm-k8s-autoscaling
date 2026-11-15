@@ -8,21 +8,20 @@ Tra ngày 09/10/2026; các dòng của CI tra ngày 01/11/2026. Đổi phiên b�
 | Ubuntu (PC, laptop) | PC: 26.04.1 LTS (bản desktop, ghi ngày 23/10); laptop: 24.04 LTS | – |
 | NVIDIA driver PC / laptop | PC: `595.99.02` (open) / laptop: (điền từ `nvidia-smi`). **Cần ≥ 580** cho image vLLM CUDA 13 | – |
 | NVIDIA Container Toolkit | PC: `1.20.1` / laptop: (điền từ `nvidia-ctk --version`) | role `nvidia` |
-| k3s | `v1.36.5+k3s1` (kênh stable) | `infra/ansible/inventory/group_vars/all.yaml` |
+| k3s | `v1.36.5+k3s1` (kênh stable) | `ansible/inventory/group_vars/all.yaml` |
 | Argo CD | `v3.5.4` (`core-install.yaml`) | `group_vars/all.yaml` |
-| kube-prometheus-stack (chart) | `92.1.1` | `platform/argocd/apps/home/monitoring.yaml`, `Makefile` |
-| KEDA (chart) | `2.21.0` | `platform/argocd/apps/home/keda.yaml`, `Makefile` |
-| NVIDIA device plugin (chart) | `0.20.1`; ở nhà thêm time-slicing 2 GPU replica (`device-plugin-values-home.yaml`, từ 06/11) | `platform/argocd/apps/home/gpu-device-plugin.yaml`, `platform/gpu/` |
-| nvidia_gpu_exporter | `1.15.1` | `platform/gpu/exporter/daemonset.yaml` |
-| vLLM | `vllm/vllm-openai:v0.31.0@sha256:c1c9f6fd…c3` (CUDA 13.0, cần driver ≥ 580). Không dùng `-cu129`: hỏng lúc khởi động, xem [ADR-004 §7](adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md#7-cập-nhật-sau-ngày-08102026) | `serving/base/kustomization.yaml` |
-| Model nhà | `Qwen/Qwen2.5-0.5B-Instruct@7ae557604adf67be50417f59c2c2f167def9a775` (tra 06/11). Trước 06/11: `Qwen2.5-1.5B-Instruct@989aa798…06`, dùng cho LT1–LT3 và `capacity-home.json` | `serving/overlays/home` |
-| Model cloud (V2) | `Qwen/Qwen2.5-3B-Instruct@aa8e72537993ba99e69dfaafa59ed015b17504d1` (tra 06/11; chốt cho V2 ngày 08/11) | `serving/overlays/cloud-3b` |
-| Model cloud (7B, không dùng cho V2) | `Qwen/Qwen2.5-7B-Instruct@a09a35458c702b33eeacc393d103063234e8bc28` | `serving/overlays/cloud` |
-| vastai (CLI) | `vastai@1.11.0`, chạy qua `uvx --python 3.12` (Python 3.14 không build được pillow, 06/11) | `infra/provision/vast.sh` |
-| llm-d-inference-sim | `ghcr.io/llm-d/llm-d-inference-sim:v0.12.0@sha256:c6838d86…60` (linux/amd64, tra 04/11) | `serving/overlays/sim/kustomization.yaml` |
-| kind / node image | `v0.33.0` / `kindest/node:v1.37.0@sha256:a1ed56cf…0ae5` | máy simulator; image ở `infra/kind/kind-config.yaml` |
+| kube-prometheus-stack (chart) | `92.1.1` | `envs/home/argocd/apps/monitoring.yaml`, `Makefile` |
+| KEDA (chart) | `2.21.0` | `envs/home/argocd/apps/keda.yaml`, `Makefile` |
+| NVIDIA device plugin (chart) | `0.20.1`; ở nhà thêm time-slicing 2 GPU replica (`envs/home/platform/device-plugin-values.yaml`, từ 06/11) | `envs/home/argocd/apps/gpu-device-plugin.yaml`, `common/platform/device-plugin-values.yaml` |
+| nvidia_gpu_exporter | `1.15.1` | `common/platform/gpu-exporter/daemonset.yaml` |
+| vLLM | `vllm/vllm-openai:v0.31.0@sha256:c1c9f6fd…c3` (CUDA 13.0, cần driver ≥ 580). Không dùng `-cu129`: hỏng lúc khởi động, xem [ADR-004 §7](adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md#7-cập-nhật-sau-ngày-08102026) | `common/serving/kustomization.yaml` |
+| Model nhà | `Qwen/Qwen2.5-0.5B-Instruct@7ae557604adf67be50417f59c2c2f167def9a775` (tra 06/11). Trước 06/11: `Qwen2.5-1.5B-Instruct@989aa798…06`, dùng cho LT1–LT3 và `capacity-home.json` | `envs/home/serving` |
+| Model cloud (V2) | `Qwen/Qwen2.5-3B-Instruct@aa8e72537993ba99e69dfaafa59ed015b17504d1` (tra 06/11; chốt cho V2 ngày 08/11) | `envs/cloud/serving` |
+| vastai (CLI) | `vastai@1.11.0`, chạy qua `uvx --python 3.12` (Python 3.14 không build được pillow, 06/11) | `envs/cloud/provision/vast.sh` |
+| llm-d-inference-sim | `ghcr.io/llm-d/llm-d-inference-sim:v0.12.0@sha256:c6838d86…60` (linux/amd64, tra 04/11) | `envs/sim/serving/kustomization.yaml` |
+| kind / node image | `v0.33.0` / `kindest/node:v1.37.0@sha256:a1ed56cf…0ae5` | máy simulator; image ở `envs/sim/kind-config.yaml` |
 | Helm, kubectl (máy simulator) | `v4.3.1`, `v1.36.5` (= kubectl của CI) | `make sim-up` |
-| Helm, uv, huggingface_hub, rclone (VM thuê) | `v3.19.0`, `0.13.7`, `2.4.0`, `v1.71.2` | `infra/provision/install-platform.sh`, `group_vars/cloud.yaml`, `vast.sh` |
+| Helm, uv, huggingface_hub, rclone (VM thuê) | `v3.19.0`, `0.13.7`, `2.4.0`, `v1.71.2` | `envs/cloud/provision/install-platform.sh`, `group_vars/cloud.yaml`, `vast.sh` |
 | kubeconform (CI) | `v0.8.0` | `.github/workflows/ci.yaml` |
 | kubectl (CI) | `v1.36.5`, trùng k3s | `.github/workflows/ci.yaml` |
 | Schema CRD cho kubeconform | `datreeio/CRDs-catalog` commit `5a706a68…` (01/11/2026) | `.github/workflows/ci.yaml` |

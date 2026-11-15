@@ -16,7 +16,7 @@ Mục đích: Lặp lại được trên kind, nhà và VM thuê bằng một l�
 
 Chạy (KUBECONFIG/--context trỏ đúng cluster):
     uv run --project experiments python -m experiments.ops.vh vh3-delete \\
-        --matrix experiments/matrix-sim.yaml --rate 2 --context kind-llm-sim
+        --matrix envs/sim/experiments/matrix.yaml --rate 2 --context kind-llm-sim
 Kết quả: runs/ops-<kịch bản>-<thời điểm>/: summary.json, timeline.json, load/ (requests.csv của máy tạo tải).
 Mã thoát 0 = đạt, 1 = không đạt, 2 = không chạy được.
 """
@@ -45,8 +45,8 @@ from experiments.runner.loadjob import LoadJob, loadgen_args
 from experiments.runner.matrix import Target
 
 REPO = Path(__file__).resolve().parents[2]
-A2_FILE = "autoscaling/official/base/scaledobject-a2.yaml"
-BLOCK_FILE = REPO / "autoscaling" / "tests" / "t4-block-keda-to-prometheus.yaml"
+A2_FILE = "common/autoscaling/a2/scaledobject-a2.yaml"
+BLOCK_FILE = REPO / "common" / "autoscaling" / "tests" / "block-keda-to-prometheus.yaml"
 SO_NAME = "vllm-a2"
 LEAD_S = 60  # gửi tải 60 s trước khi gây sự cố, để có nền "trước sự cố" so sánh
 FALLBACK_LIMIT_S = 30  # N6: mất Prometheus thì fallback lên max trong ≤ 30 s

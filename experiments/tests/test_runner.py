@@ -158,14 +158,14 @@ def test_matrix_shuffle_seed_is_deterministic_and_ignores_row_order():
 
 
 def test_matrix_sim_file_is_valid():
-    m = matrix.load(REPO / "experiments" / "matrix-sim.yaml")
+    m = matrix.load(REPO / "envs" / "sim" / "experiments" / "matrix.yaml")
     assert {r.config.id for r in m.runs} == {"S1", "A2"}
     assert (REPO / m.runs[1].config.file).exists()
 
 
 def _v2_filled() -> matrix.Matrix:
     """matrix-v2.yaml điền thử hai số chờ ADR-003 (C = 5, threshold A2 = 24), như sẽ làm ở V2."""
-    text = (REPO / "experiments" / "matrix-v2.yaml").read_text(encoding="utf-8")
+    text = (REPO / "envs" / "cloud" / "experiments" / "matrix-v2.yaml").read_text(encoding="utf-8")
     filled = text.replace("&C null", "&C 5").replace("&A2_THRESHOLD null", "&A2_THRESHOLD 24")
     assert filled.count("null") == text.count("null") - 2
     return matrix.parse(yaml.safe_load(filled))
@@ -174,7 +174,7 @@ def _v2_filled() -> matrix.Matrix:
 def test_matrix_v2_draft_refuses_unfilled_values_then_matches_design():
     # Bản nháp còn `null` (chờ ADR-003): runner phải từ chối, kể cả --dry-run
     with pytest.raises(matrix.MatrixError, match="số dương"):
-        matrix.load(REPO / "experiments" / "matrix-v2.yaml")
+        matrix.load(REPO / "envs" / "cloud" / "experiments" / "matrix-v2.yaml")
     # Điền thử như ở V2 rồi kiểm cấu trúc theo Thông số §8.2
     m = _v2_filled()
     cells: dict[tuple[str, str], int] = {}
@@ -217,7 +217,13 @@ def test_selector_in_needs_whole_selector():
     assert _selector_in("nvidia_smi_utilization_gpu_ratio", "(sum(nvidia_smi_utilization_gpu_ratio) * 100)")
 
 
-@pytest.mark.parametrize("path", sorted((REPO / "experiments").glob("matrix-*.yaml")), ids=lambda p: p.name)
+# Mọi file ma trận của mọi môi trường (envs/<env>/experiments/matrix*.yaml). id = đường dẫn tương đối, vì
+# tên file trùng nhau giữa các môi trường (envs/home/… và envs/sim/… đều có matrix.yaml).
+@pytest.mark.parametrize(
+    "path",
+    sorted(REPO.glob("envs/*/experiments/matrix*.yaml")),
+    ids=lambda p: str(p.relative_to(REPO)),
+)
 def test_matrix_signal_is_what_the_trigger_reads(path):
     # `signal` khai báo trong ma trận phải là đúng một selector trong `query` của trigger, kể cả label. Đổi
     # query (ví dụ A1 sang DCGM) mà quên đổi signal thì runner kiểm nhầm chuỗi, và lượt mất tín hiệu thật
@@ -230,9 +236,7 @@ def test_matrix_signal_is_what_the_trigger_reads(path):
 
 
 def test_render_scaledobject_overrides_and_pause():
-    doc = yaml.safe_load(
-        (REPO / "autoscaling/official/base/scaledobject-a2.yaml").read_text(encoding="utf-8")
-    )
+    doc = yaml.safe_load((REPO / "common/autoscaling/a2/scaledobject-a2.yaml").read_text(encoding="utf-8"))
     so = configs.render_scaledobject(doc, {"threshold": 10, "max_replicas": 3}, paused=True)
     assert so["spec"]["triggers"][0]["metadata"]["threshold"] == "10"  # KEDA đòi string
     assert so["spec"]["maxReplicaCount"] == 3 and so["spec"]["fallback"]["replicas"] == 3

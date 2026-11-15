@@ -88,7 +88,7 @@ Việc gắn với máy: các bước cài đặt trên PC (driver, k3s server) 
 - [ ] Đủ 3 dashboard; 6 cảnh báo có unit test, tới được Telegram; **mỗi cảnh báo có runbook**. *(08/11: 3 dashboard và `make dashboards-check` (PR #23), kiểm trên kind. 04/11: 7 quy tắc cho 6 cảnh báo, 8 unit test `promtool`, 7 runbook (PR #3). Chưa có Telegram, chưa áp cảnh báo lên cluster.)*
 - [ ] Bảo mật tối thiểu đạt checklist ([Vận hành §8](04-van-hanh.md#8-bảo-mật-tối-thiểu)).
 - [ ] VH1, VH2 (gồm ca 1 replica), VH6 đạt ở nhà.
-- [x] ĐG1-mini xong; có `capacity-home.json`. *(06/11: đo lại với 0,5B bằng runner, 10 mức λ đều hợp lệ: C = 12,5 req/s, B\* = 28,4, threshold A2 tạm 23; chưa đối chiếu với `vllm bench serve` (bước 7). Bản 1,5B giữ ở `capacity-home-1.5b.json`.)* *(05/11: có bản tạm `experiments/capacity-home.json`: C = 6 req/s, B\* ≈ 27, threshold A2 tạm 21. Còn thiếu: quét bước 0,25 quanh λ = 6; lượt λ = 6 bị máy tạo tải đánh dấu không hợp lệ vì 1 chu kỳ CPU throttle.)*
+- [x] ĐG1-mini xong; có `capacity-home.json`. *(06/11: đo lại với 0,5B bằng runner, 10 mức λ đều hợp lệ: C = 12,5 req/s, B\* = 28,4, threshold A2 tạm 23; chưa đối chiếu với `vllm bench serve` (bước 7). Bản 1,5B giữ ở `capacity-home-1.5b.json`.)* *(05/11: có bản tạm `envs/home/experiments/capacity.json`: C = 6 req/s, B\* ≈ 27, threshold A2 tạm 21. Còn thiếu: quét bước 0,25 quanh λ = 6; lượt λ = 6 bị máy tạo tải đánh dấu không hợp lệ vì 1 chu kỳ CPU throttle.)*
 - [ ] LT1–LT8 có kết quả (dự đoán, số đo, giải thích) trong `docs/nhat-ky/van-hanh.md` ([Môi trường §19](05-moi-truong-danh-gia.md#19-kiểm-chứng-lý-thuyết-lt1lt8)). *(05/11: LT1 (5060), LT2, LT3 có kết quả trong `van-hanh.md`; dữ liệu ĐG1-mini đã có cho LT5, LT6 của Trình; LT1 trên 4050, LT4, LT7, LT8 chưa làm.)*
 - [x] Máy tạo tải đạt tiêu chí tự kiểm tra; runner chạy 2 lượt **không cần can thiệp** trên V1; `make bootstrap` dựng xong VM dưới 30 phút. *(08/11: runner chạy A1 × KB3, A2 × KB2 liền nhau không can thiệp; tự kiểm đánh dấu cả 2 invalid vì máy tạo tải 2 lõi vượt ngưỡng CPU, Quang chấp nhận sau xem xét (nhật ký tuần 05). Ansible dựng VM 164 s, tới vLLM phục vụ 12,5 phút; cài nền vẫn bằng script tay.)*
 
@@ -173,7 +173,7 @@ Viết chương 2–4 (W5–W7) ─► bản thảo (29/11) ─► bản cuối 
 
 | Mã | Tính năng | Gói | Người-giờ |
 |---|---|---|---|
-| TR1 | GitOps và CI: Argo CD core, App-of-Apps, CI, Sealed Secrets | WP2 | 12–18 |
+| TR1 | GitOps và CI: Argo CD core, App-of-Apps (thêm app `autoscaling`, `observability` trước V2), CI; ~~Sealed Secrets~~ (lược 12/11, [ADR-006 §3.1](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md#31-quyết-định-ngày-12112026)) | WP2 | 12–18 |
 | TR2 | Simulator và autoscaling: kind + simulator, ScaledObject A1–A4, `behavior`, T1–T7 (simulator và GPU nhà) | WP4 | 8–12 |
 | TR3 | Giám sát và SLO: kube-prometheus-stack, PodMonitor, recording rule, 3 dashboard | WP5 | 9–13 |
 | TR4 | Cảnh báo: 6 cảnh báo + `promtool`, Alertmanager → Telegram, 6 runbook | WP5, WP6 | 10–14 |
@@ -219,7 +219,7 @@ Các phần của hệ thống được làm song song (một phần trên GPU t
 |---|---|---|
 | **Hạ tầng** | Hạ tầng → serving | Kubeconfig, danh sách node và nhãn, đường dẫn NVMe, tham số k3s; cách thuê và huỷ máy |
 | **Metric** | Serving → giám sát, đánh giá | Tên metric vLLM và GPU (theo phiên bản đã ghim), label `namespace`, `pod`; **danh sách bucket** của histogram TTFT |
-| **Cấu hình** | Autoscaling → runner | Mỗi cấu hình autoscaling là một file ScaledObject đơn `autoscaling/eval/<ID>.yaml` với ID ∈ {A1, A3, A4}; A2 dùng thẳng file base chính thức `autoscaling/official/base/scaledobject-a2.yaml`; S1, S4 không có file (runner đặt `replicas`); tên ScaledObject `vllm-<id>`; cách tạm dừng và bỏ tạm dừng |
+| **Cấu hình** | Autoscaling → runner | Mỗi cấu hình autoscaling là một file ScaledObject đơn `common/autoscaling/eval/<ID>.yaml` với ID ∈ {A1, A3, A4}; A2 dùng thẳng file base chính thức `common/autoscaling/a2/scaledobject-a2.yaml`; S1, S4 không có file (runner đặt `replicas`); tên ScaledObject `vllm-<id>`; cách tạm dừng và bỏ tạm dừng |
 | **Tham số model** | Serving → đánh giá | `served-model-name`, `max-model-len`, tokenizer để sinh prompt |
 | **Cảnh báo và runbook** | Giám sát → vận hành | Tên cảnh báo, nhãn `severity`, đường dẫn runbook; mẫu runbook |
 | **Runner** | Đánh giá → mọi phần | `make run MATRIX=…`; runner đọc `capacity.json`; hook phân tích log vLLM là một hàm `parse_vllm_log(text) → dict` |
@@ -393,7 +393,7 @@ Quy ước chi tiết (thư mục thực tế, YAML, Python, cảnh báo, Git v�
 - **Nhánh:** `main` luôn chạy được; phát triển trên `feat/*`, `fix/*`; merge qua PR có review.
 - **Commit:** tiếng Anh hoặc tiếng Việt, thống nhất một kiểu, dạng `<phạm vi>: <mô tả>`, ví dụ `alerts: add LLMPodPending`.
 - **Ghim phiên bản:** image theo digest; chart theo phiên bản; Python bằng lockfile; model theo revision.
-- **Bí mật:** không có bí mật dạng rõ trong Git; dùng Sealed Secrets. Khoá riêng của controller được sao lưu ngoài Git ([Vận hành §7](04-van-hanh.md#7-dựng-lại-từ-đầu-khôi-phục-sau-thảm-hoạ)).
+- **Bí mật:** không có bí mật dạng rõ trong Git. Thiết kế dùng Sealed Secrets, nhưng đã lược ngày 12/11 ([ADR-006 §3.1](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md#31-quyết-định-ngày-12112026)): Secret tạo tay từ `.env` (đã gitignore). Nếu sau này làm thì khoá riêng của controller được sao lưu ngoài Git ([Vận hành §7](04-van-hanh.md#7-dựng-lại-từ-đầu-khôi-phục-sau-thảm-hoạ)).
 
 ### 10.4. CI (GitHub Actions)
 
@@ -408,7 +408,7 @@ Thực tế trong `.github/workflows/ci.yaml` (5 job, mọi công cụ ghim phi�
 | `docs` | lychee: link tương đối và anchor trong `docs/` và `*.md` |
 | `secrets` (Could) | `gitleaks`: chưa có |
 
-Chưa có job `helm template` cho `platform/`; values được kiểm khi Argo CD sync ở nhà.
+Chưa có job `helm template` cho values Helm (`common/platform/`, `envs/<env>/platform/`); values được kiểm khi Argo CD sync ở nhà.
 
 ### 10.5. Phiên bản và phát hành
 
@@ -436,8 +436,8 @@ dataset/
 ### 10.7. Hướng dẫn tái lập và vận hành (dàn ý README)
 
 1. **Yêu cầu:** phần cứng (máy có GPU NVIDIA, hoặc tài khoản Vast.ai), công cụ (vastai CLI, ansible, kubectl, helm, kubeseal, python, uv, tailscale).
-2. **Chạy nhanh ở nhà:** `make home-up`, rồi `make run MATRIX=experiments/matrix-home.yaml`, rồi `make analysis` (chưa có). Không có GPU: `make sim-up` rồi `make run MATRIX=experiments/matrix-sim.yaml`.
-3. **Chạy đầy đủ trên máy thuê:** cấu hình `.env` (template Vast, khoá R2, bot Telegram), rồi lần lượt `make find rent probe bootstrap cloud-platform`, ĐG1 bằng `make run MATRIX=experiments/matrix-dg1-v1.yaml`, sau đó `make run MATRIX=experiments/matrix-v2.yaml`, `make ops-tests`, `make backup`, `make release`.
+2. **Chạy nhanh ở nhà:** `make home-up`, rồi `make run MATRIX=envs/home/experiments/matrix.yaml`, rồi `make analysis` (chưa có). Không có GPU: `make sim-up` rồi `make run MATRIX=envs/sim/experiments/matrix.yaml`.
+3. **Chạy đầy đủ trên máy thuê:** cấu hình `.env` (template Vast, khoá R2, bot Telegram), rồi lần lượt `make find rent probe bootstrap cloud-platform`, ĐG1 bằng `make run MATRIX=envs/cloud/experiments/matrix-dg1.yaml`, sau đó `make run MATRIX=envs/cloud/experiments/matrix-v2.yaml`, `make ops-tests`, `make backup`, `make release`.
 4. **Vận hành:** cập nhật phiên bản và rollback ([Vận hành §5.3](04-van-hanh.md#53-quy-trình-cập-nhật-qua-gitops)); xử lý cảnh báo (`docs/runbooks/`); dựng lại từ đầu ([Vận hành §7](04-van-hanh.md#7-dựng-lại-từ-đầu-khôi-phục-sau-thảm-hoạ)).
 5. **Chỉ tái tạo hình và bảng từ dữ liệu đã công bố:** tải `dataset/`, rồi `make analysis DATA=dataset/`.
 6. **Phiên bản đã dùng:** bảng phiên bản kèm digest.

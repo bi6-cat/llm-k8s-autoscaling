@@ -1,7 +1,7 @@
-<!-- Mục đích: runbook cho cảnh báo LLMPodPending (observability/alerts/llm.yaml). Mẫu: Vận hành §4.1. -->
+<!-- Mục đích: runbook cho cảnh báo LLMPodPending (common/observability/alerts/llm.yaml). Mẫu: Vận hành §4.1. -->
 # LLMPodPending
 
-**Mức:** ticket · **Quy tắc:** [observability/alerts/llm.yaml](../../observability/alerts/llm.yaml)
+**Mức:** ticket · **Quy tắc:** [common/observability/alerts/llm.yaml](../../common/observability/alerts/llm.yaml)
 
 **Ý nghĩa.** Một pod vLLM ở trạng thái Pending hơn 10 phút: chưa được xếp lên node nào, hoặc đã có node nhưng container chưa chạy (đang tải image, chờ volume).
 

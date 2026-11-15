@@ -1,7 +1,7 @@
-<!-- Mục đích: runbook cho cảnh báo LLMAtMaxReplicas (observability/alerts/llm.yaml). Mẫu: Vận hành §4.1. -->
+<!-- Mục đích: runbook cho cảnh báo LLMAtMaxReplicas (common/observability/alerts/llm.yaml). Mẫu: Vận hành §4.1. -->
 # LLMAtMaxReplicas
 
-**Mức:** ticket · **Quy tắc:** [observability/alerts/llm.yaml](../../observability/alerts/llm.yaml)
+**Mức:** ticket · **Quy tắc:** [common/observability/alerts/llm.yaml](../../common/observability/alerts/llm.yaml)
 
 **Ý nghĩa.** HPA do KEDA tạo (`keda-hpa-vllm-<id>`) đã chạy bằng `maxReplicaCount` suốt 15 phút, mà vẫn có request nằm trong hàng đợi của vLLM. Autoscaling đã hết dư địa.
 
@@ -21,7 +21,7 @@
 | Nguyên nhân | Hành động |
 |---|---|
 | Tải thật vượt năng lực toàn cụm | Thắt giới hạn tốc độ ở Traefik nếu SLO đang bị vi phạm; đề xuất thêm GPU (Vận hành §9) |
-| `maxReplicaCount` < số GPU | Nâng max trong `autoscaling/official/overlays/<env>/` qua PR, không sửa tay trên cluster |
+| `maxReplicaCount` < số GPU | Nâng max trong `common/autoscaling/a2/` (hoặc overlay `envs/<env>/autoscaling/`) qua PR, không sửa tay trên cluster |
 | Đang chạy fallback của KEDA (giữ max) | Không phải tải thật; xử lý theo [KedaScalerErrors](KedaScalerErrors.md) |
 | Tải giả (vòng lặp từ một client) | Tìm client trong log Traefik, chặn hoặc giới hạn |
 

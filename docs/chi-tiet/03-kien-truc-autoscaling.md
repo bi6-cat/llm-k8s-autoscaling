@@ -86,7 +86,7 @@ Giá trị cụ thể nằm ở [Thông số §9.2](00-thong-so.md#92-deployment
 
 ### 3.2. Manifest mẫu
 
-Manifest thật nằm trong repo, mỗi dòng có comment giải thích: [serving/base/deployment.yaml](../../serving/base/deployment.yaml) (phần chung) và các overlay [home](../../serving/overlays/home/patch-vllm.yaml), [cloud](../../serving/overlays/cloud/patch-vllm.yaml), [sim](../../serving/overlays/sim/patch-sim.yaml). Giá trị theo [Thông số §9](00-thong-so.md#9-tham-số-triển-khai). Các điểm then chốt:
+Manifest thật nằm trong repo, mỗi dòng có comment giải thích: [common/serving/deployment.yaml](../../common/serving/deployment.yaml) (phần chung) và các overlay [home](../../envs/home/serving/patch-vllm.yaml), [cloud](../../envs/cloud/serving/patch-vllm.yaml), [sim](../../envs/sim/serving/patch-sim.yaml). Giá trị theo [Thông số §9](00-thong-so.md#9-tham-số-triển-khai). Các điểm then chốt:
 
 | Điểm | Giá trị | Vì sao |
 |---|---|---|
@@ -133,24 +133,18 @@ Các biện pháp bảo mật và checklist nằm ở [Vận hành §8](04-van-h
 ## 4. Cấu trúc manifest (Kustomize)
 
 ```text
-serving/
-├── base/
-│   ├── kustomization.yaml
-│   ├── deployment.yaml      # không có trường replicas
-│   ├── service.yaml
-│   ├── podmonitor.yaml
-│   ├── middleware.yaml      # rateLimit cho người dùng và cho máy tạo tải
-│   ├── networkpolicy.yaml
-│   ├── model-prefetch-job.yaml
-│   └── prepull-daemonset.yaml
-└── overlays/
-    ├── home/                # model 0,5B (trước 06/11: 1,5B), hostPath /var/lib/llm-cache, requests nhỏ, Ingress
-    ├── cloud/               # model 7B, hostPath NVMe, QoS Guaranteed (giữ tham khảo, không dùng cho V2)
-    ├── cloud-3b/            # chồng lên cloud: model 3B cho GPU 16 GB (chốt 08/11, ADR-006 C3)
-    └── sim/                 # llm-d-inference-sim thay cho vLLM, cùng Deployment và Service
+common/serving/             # base: giống nhau ở mọi môi trường
+├── kustomization.yaml
+├── deployment.yaml          # không có trường replicas
+├── service.yaml
+├── podmonitor.yaml
+└── namespace.yaml
+envs/home/serving/           # model 0,5B (trước 06/11: 1,5B), hostPath /var/lib/llm-cache, requests nhỏ, Ingress
+envs/cloud/serving/          # model 3B cho GPU 16 GB, hostPath NVMe, QoS Guaranteed (ADR-006 C3)
+envs/sim/serving/            # llm-d-inference-sim thay cho vLLM, cùng Deployment và Service
 ```
 
-Overlay `sim` cho phép simulator dùng **đúng** Deployment, Service và ScaledObject như vLLM thật, chỉ khác image và tham số. Các file `middleware.yaml`, `networkpolicy.yaml`, `model-prefetch-job.yaml`, `prepull-daemonset.yaml` **chưa có tới 10/11** (ADR-006 §3): trên VM thuê, model và image được tải sẵn bằng role Ansible `cloud-prefetch` thay cho Job và DaemonSet; máy tạo tải gọi thẳng Service nên chưa cần route riêng. Hai overlay `home` và `cloud` chỉ khác các giá trị trong [Thông số §9.1–§9.2](00-thong-so.md#91-vllm). Cấu trúc toàn bộ repository nằm ở [CONTRIBUTING §1](../../CONTRIBUTING.md#1-thư-mục).
+Overlay `sim` cho phép simulator dùng **đúng** Deployment, Service và ScaledObject như vLLM thật, chỉ khác image và tham số. Thiết kế ban đầu còn có `middleware.yaml` (rate limit), `networkpolicy.yaml`, `model-prefetch-job.yaml`, `prepull-daemonset.yaml` trong base. Hai file đầu đã lược ([ADR-006 §3.1](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md#31-quyết-định-ngày-12112026)); hai file sau được thay bằng role Ansible `cloud-prefetch`, tải sẵn model và image trên VM thuê. Trước 12/11 cloud có hai overlay (`cloud` cho 7B và `cloud-3b` chồng lên); nay gộp làm một. Hai overlay `home` và `cloud` chỉ khác các giá trị trong [Thông số §9.1–§9.2](00-thong-so.md#91-vllm). Cấu trúc toàn bộ repository nằm ở [CONTRIBUTING §1](../../CONTRIBUTING.md#1-thư-mục).
 
 ---
 
@@ -688,25 +682,26 @@ Có thể dựng từ dashboard mẫu của vLLM để tiết kiệm thời gian
 ### 18.1. Mô hình App-of-Apps
 
 ```text
-platform/argocd/
-├── root-app-<env>.yaml          # Application gốc, trỏ vào apps/<env>/ (env = home | cloud)
-└── apps/<env>/                  # mỗi file một Application con
+envs/home/argocd/                # chỉ ở nhà: VM thuê không chạy Argo CD (ADR-006 §3.1)
+├── root-app.yaml                # Application gốc, trỏ vào apps/
+├── project-default.yaml
+└── apps/                        # mỗi file một Application con
     ├── gpu-device-plugin.yaml   # chart NVIDIA device plugin
-    ├── gpu-exporter.yaml        # exporter GPU (kustomize)
+    ├── gpu-exporter.yaml        # exporter GPU (kustomize, common/platform/gpu-exporter)
     ├── monitoring.yaml          # kube-prometheus-stack
-    ├── monitoring-extras.yaml   # PodMonitor cho Traefik; sau thêm rules, dashboards
+    ├── monitoring-extras.yaml   # PodMonitor cho Traefik
     ├── keda.yaml
-    ├── serving.yaml             # serving/overlays/<env>
-    └── autoscaling.yaml         # (chưa có, 10/11) chỉ trỏ autoscaling/official/overlays/<env> (A2); rules, alerts,
-                                 # dashboards trong observability/ cũng chưa có Application (ADR-006 §3)
+    ├── serving.yaml             # envs/home/serving
+    ├── autoscaling.yaml         # (làm trước V2, TR1) A2: common/autoscaling/a2
+    └── observability.yaml       # (làm trước V2, TR1) rules, alerts, dashboards: common/observability
 ```
 
 Argo CD cài ở bản core (không có API server, UI và dex) để nhẹ trên máy nhà; xem giao diện bằng `argocd admin dashboard` khi cần. Cập nhật phiên bản được sync khi có người theo dõi; **không dùng sync window** ([ADR-005](../adr/005-sua-thiet-ke-sau-review.md) T2).
 
 ### 18.2. Cấu hình autoscaling: trong Git, tạm tách khi đánh giá
 
-- **Khi vận hành:** cấu hình chính thức (A2) nằm trong `autoscaling/official/` (`base/` + `overlays/<env>/`, vì `maxReplicaCount` và `threshold` khác nhau theo môi trường), là Application riêng `autoscaling` do Argo CD quản lý như mọi thứ khác. Application chỉ trỏ tới overlay của môi trường đó, không trỏ cả `autoscaling/` ([ADR-005](../adr/005-sua-thiet-ke-sau-review.md) T7).
-- **Khi đánh giá:** cấu hình phải đổi theo từng lượt (S1, S4, A1, A2). Runner **tắt auto-sync** của Application `autoscaling`, rồi áp từng cấu hình bằng `kubectl apply` từ `autoscaling/eval/` (A2 dùng thẳng file base chính thức, để lượt A2 đo đúng cấu hình đang vận hành). S1 và S4 dùng `kubectl scale`; Argo CD không đưa về, vì Git không có trường `replicas` [cần kiểm chứng với server-side diff].
+- **Khi vận hành:** cấu hình chính thức (A2) nằm trong `common/autoscaling/a2/`; môi trường nào cần `maxReplicaCount` hay `threshold` khác thì thêm overlay `envs/<env>/autoscaling/` (hiện chỉ simulator có). Ở nhà A2 là Application riêng `autoscaling` do Argo CD quản lý như mọi thứ khác; Application chỉ trỏ tới đúng thư mục A2, không trỏ cả `common/autoscaling/` (vì `eval/` không được để Argo CD áp) ([ADR-005](../adr/005-sua-thiet-ke-sau-review.md) T7).
+- **Khi đánh giá:** cấu hình phải đổi theo từng lượt (S1, S4, A1, A2). Runner **tắt auto-sync** của Application `autoscaling`, rồi áp từng cấu hình bằng `kubectl apply` từ `common/autoscaling/eval/` (A2 dùng thẳng file base chính thức, để lượt A2 đo đúng cấu hình đang vận hành). S1 và S4 dùng `kubectl scale`; Argo CD không đưa về, vì Git không có trường `replicas` [cần kiểm chứng với server-side diff].
 - **Hết đợt đánh giá:** runner **xoá mọi ScaledObject khác A2**, rồi mới bật lại auto-sync. Nếu không, admission webhook của KEDA sẽ chặn A2 và Application ở trạng thái Degraded.
 
 Cách này giữ đúng nguyên tắc "Git là nguồn sự thật" trong vận hành, mà vẫn đổi được cấu hình ngay lập tức khi đánh giá. Khi cluster đang lệch khỏi Git trong đợt đánh giá, đó là lệch có chủ đích.
