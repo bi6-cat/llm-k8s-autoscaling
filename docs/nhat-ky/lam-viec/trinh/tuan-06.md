@@ -116,3 +116,10 @@
 - **Deviations:** Vận hành §3.2 đổi điều kiện của `KedaScalerErrors` từ "≥ 3 lỗi trong 2 phút" sang condition `Fallback`/`Ready`.
 - **Links:** nhánh `fix/tr4-keda-metrics`; `common/platform/kube-state-metrics-values.yaml`, `common/observability/alerts/llm.yaml`, `docs/runbooks/KedaScalerErrors.md`.
 - **Thesis:** §4 (giám sát autoscaling), bài học "unit test đạt mà cảnh báo vẫn chết" kèm dòng thời gian T4 ở trên; nên chụp panel "KEDA: request lỗi và fallback" trong một lượt T4.
+
+## 2026-11-15 – TR4: merge PR #38 (`KedaScalerErrors` đọc condition Fallback)
+
+- **Task:** TR4 · **Environment:** none (GitHub)
+- **Done:** merge PR #38 vào `main` lúc 18:04 (giờ Việt Nam), merge commit `02fdd42`; xoá nhánh `fix/tr4-keda-metrics`. Trước khi mở PR, Trình gộp commit WIP (chưa push) với phần sửa thành một commit `15df7bc`.
+- **Results:** đủ 5 điều kiện merge (D35): CI 6/6 xanh (run 43707072307); kiểm cục bộ và `/code-review high` (7/7 đã xử lý); `MERGEABLE`/`CLEAN`, không có review hay bình luận; Application ở nhà không đọc file nào bị đổi (`kube-prometheus-stack-values.yaml`, `keda-values.yaml` giữ nguyên); base là `main`.
+- **Links:** PR #38.
