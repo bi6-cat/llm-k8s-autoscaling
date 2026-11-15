@@ -129,32 +129,39 @@ Viết `tổng − tốt` chứ không viết `1 − tốt/tổng` là có chủ
 ### 3.4. Alertmanager: định tuyến
 
 ```yaml
+# common/platform/alertmanager-values.yaml (trích; values cho chart kube-prometheus-stack)
 route:
-  receiver: ticket
+  receiver: "null"                   # cảnh báo warning/info của chart: chỉ hiện trên giao diện
   group_by: [alertname]
   group_wait: 30s
   routes:
-    - matchers: [severity="page"]
+    - matchers: ['alertname = "Watchdog"']
+      receiver: "null"
+    - matchers: ['severity = "page"']
       receiver: page
       repeat_interval: 1h
+    - matchers: ['severity =~ "ticket|critical"']
+      receiver: ticket
+      repeat_interval: 24h           # không nhắc lại trong một phiên
 receivers:
   - name: page                       # nhóm Telegram của người trực
     telegram_configs:
-      - chat_id: <id nhóm>
-        bot_token: <lấy từ Secret>   # không ghi thẳng vào Git (xem §8)
+      - bot_token_file: /etc/alertmanager/telegram/bot-token   # từ Secret alertmanager-telegram
+        chat_id_file: /etc/alertmanager/telegram/chat-id       # không ghi thẳng vào Git (xem §8)
         send_resolved: true
-  - name: ticket                     # cùng bot Telegram, không nhắc lại
+  - name: ticket                     # cùng bot Telegram
     telegram_configs:
-      - chat_id: <id nhóm>
-        bot_token: <lấy từ Secret>
+      - bot_token_file: /etc/alertmanager/telegram/bot-token
+        chat_id_file: /etc/alertmanager/telegram/chat-id
         send_resolved: false
-inhibit_rules:
-  - source_matchers: [alertname="LLMSLOBurnFast"]
-    target_matchers: [alertname="LLMSLOBurnSlow"]
 ```
 
+- **Chỉ gửi cảnh báo cần hành động:** gốc của cây định tuyến là `null`. Chart có sẵn 134 cảnh báo, 100 ở mức warning/info; nhiều cái trùng cảnh báo của nhóm (`KubeHpaMaxedOut` ≈ `LLMAtMaxReplicas`) và sẽ kêu liên tục khi đánh giá. Chỉ `page`, `ticket` của nhóm và `critical` của chart (hiếm, như đĩa sắp đầy) mới tới Telegram.
+- **Bí mật:** token bot và chat id nằm trong Secret `alertmanager-telegram`, tạo từ `.env` bằng `common/platform/alertmanager-secret.sh` (`make sim-up` và `make cloud-platform` tự gọi). Alertmanager đọc file lúc gửi tin; Secret được mount `optional`, nên thiếu Secret thì Alertmanager vẫn chạy, chỉ không gửi được.
+- **Ở nhà:** chưa bật. Application `monitoring` chỉ nạp file định tuyến này khi làm Argo CD app `observability` (việc 6b của Trình); khi đó chạy thêm `make alertmanager-secret CTX=<context nhà>`.
+- **Nội dung tin:** template `telegram.llm.message`. Dòng đầu có nhãn môi trường (`[sim]`, `[cloud]`, gắn qua `externalLabels` của Prometheus, vì các môi trường dùng chung một bot), tiếp theo là mỗi cảnh báo một dòng `summary` (tối đa 8 dòng, để không vượt 4096 ký tự của Telegram) và link runbook. `make alertmanager-check` kiểm cấu hình bằng `amtool`, render cả tin đang kêu, tin đã hết và tin nhiều cảnh báo, và chặn chữ chưa escape mà Telegram sẽ từ chối.
 - **Gom nhóm:** nhiều pod cùng lỗi chỉ tạo một tin nhắn.
-- **Chặn trùng (inhibit):** đã có cảnh báo nhanh thì không gửi thêm cảnh báo chậm cho cùng một vấn đề (khi có `LLMSLOBurnSlow`).
+- **Chặn trùng (inhibit):** giữ mặc định của chart (critical chặn warning cùng tên và namespace). Khi thêm `LLMSLOBurnSlow` thì thêm quy tắc: đã có cảnh báo nhanh thì không gửi cảnh báo chậm cho cùng một vấn đề.
 - **Im lặng khi bảo trì:** trước khi cập nhật có chủ đích, tạo silence bằng `amtool silence add` cho các cảnh báo về pod, kèm thời hạn.
 
 ### 3.5. Khi chính hệ thống giám sát hỏng

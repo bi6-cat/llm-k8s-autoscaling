@@ -6,7 +6,8 @@
 # Mục đích:  Bắt lỗi trước khi merge vào main (nhánh Argo CD đọc): YAML sai, manifest sai schema, rule
 #            Prometheus sai hoặc cảnh báo thiếu test/runbook, code Python lỗi, link tài liệu hỏng.
 #            Chỉ kiểm những gì đã có trên main. Chưa có job helm (values Helm được kiểm khi Argo CD sync
-#            ở nhà); gói Python mới thì thêm vào job python.
+#            ở nhà); riêng cấu hình Alertmanager trong values thì job alerts kiểm bằng amtool. Gói Python
+#            mới thì thêm vào job python.
 #            Job manifests và docs tự nhận thư mục mới, không phải sửa.
 # Ghim:      File chạy (kubectl, promtool, shellcheck…) tải đúng phiên bản và kiểm sha256 trước khi chạy.
 #            Công cụ Python cài bằng uv: loadgen ghim qua uv.lock; yamllint ghim phiên bản và ngày giải
@@ -54,6 +55,8 @@ env:
   PROMETHEUS_SHA256: "2a542df32eac02ee17b9d844fb2aa1de00dafa5476579ba8a3ba862e9d572ea0"
   YQ_VERSION: "4.54.1"            # bản của mikefarah; make alerts-coverage dùng để đọc YAML
   YQ_SHA256: "8e34fc298390875de416e6a4afcb8cabeceb25d9aa8506c1a2f9353cf702ea5f"
+  ALERTMANAGER_VERSION: "0.34.1"  # = Alertmanager trong chart kube-prometheus-stack 92.1.1; amtool nằm trong gói này
+  ALERTMANAGER_SHA256: "265b9d1e55ef0d5306a436018af6d2b686c2ce051f03d968f7464ecb1372a7e8"
   LYCHEE_VERSION: "0.24.2"
   LYCHEE_SHA256: "1f4e0ef7f6554a6ed33dd7ac144fb2e1bbed98598e7af973042fc5cd43951c9a"
   ACTIONLINT_VERSION: "1.7.12"
@@ -178,8 +181,9 @@ jobs:
             echo "::endgroup::"
           done
 
-  # ── alerts: rule Prometheus đúng cú pháp, unit test đạt, mỗi cảnh báo đủ test và runbook; dashboard hợp lệ ──
-  # Trên máy: make alerts-test dashboards-check   (Windows: chạy trong Git Bash, thêm SHELL=bash)
+  # ── alerts: rule Prometheus đúng cú pháp, unit test đạt, mỗi cảnh báo đủ test và runbook; cấu hình
+  #    Alertmanager và tin Telegram hợp lệ; dashboard hợp lệ ──
+  # Trên máy: make alerts-test alertmanager-check dashboards-check   (Windows: chạy trong Git Bash, thêm SHELL=bash)
   alerts:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -190,8 +194,9 @@ jobs:
 
       # promtool nằm trong gói phát hành của Prometheus. Dùng đúng bản Prometheus chạy trong cluster, để
       # PromQL được kiểm bằng cùng bộ phân tích cú pháp sẽ tính nó thật. yq (bộ xử lý YAML dòng lệnh) cho
-      # alerts-coverage; bản phát hành là một file chạy, không nén.
-      - name: Cài promtool và yq
+      # alerts-coverage; bản phát hành là một file chạy, không nén. amtool nằm trong gói phát hành của
+      # Alertmanager, cùng bản với Alertmanager trong chart.
+      - name: Cài promtool, yq và amtool
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/bin" && cd "$RUNNER_TEMP"
@@ -200,6 +205,10 @@ jobs:
           echo "${PROMETHEUS_SHA256}  ${f}" | sha256sum -c -
           # Chỉ lấy file promtool; --strip-components=1 bỏ thư mục prometheus-x.y.z.linux-amd64/ ở đầu đường dẫn
           tar -xzf "$f" -C bin --strip-components=1 "prometheus-${PROMETHEUS_VERSION}.linux-amd64/promtool"
+          f="alertmanager-${ALERTMANAGER_VERSION}.linux-amd64.tar.gz"
+          curl -fsSLo "$f" "https://github.com/prometheus/alertmanager/releases/download/v${ALERTMANAGER_VERSION}/${f}"
+          echo "${ALERTMANAGER_SHA256}  ${f}" | sha256sum -c -
+          tar -xzf "$f" -C bin --strip-components=1 "alertmanager-${ALERTMANAGER_VERSION}.linux-amd64/amtool"
           curl -fsSLo bin/yq "https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_linux_amd64"
           echo "${YQ_SHA256}  bin/yq" | sha256sum -c -
           chmod +x bin/yq
@@ -211,6 +220,11 @@ jobs:
       # thành file rule thuần, rồi chạy promtool check rules và promtool test rules. Chi tiết trong Makefile.
       - name: make alerts-test
         run: make alerts-test
+
+      # Cấu hình Alertmanager (common/platform/alertmanager-values.yaml): amtool check-config, rồi render tin
+      # Telegram với dữ liệu mẫu và chặn chữ < > & chưa escape (Telegram từ chối cả tin). Chi tiết trong Makefile.
+      - name: make alertmanager-check
+        run: make alertmanager-check
 
       # Dashboard JSON dùng chung promtool và yq ở trên: uid cố định và không trùng, không còn `id`,
       # datasource là biến ${datasource}, và mọi PromQL trong panel phân tích cú pháp được. Grafana chỉ báo

@@ -1,0 +1,13 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# envs/cloud/platform/kube-prometheus-stack-values.yaml
+# Khái niệm: Values ghi đè cho VM thuê, đi sau values chung và common/platform/alertmanager-values.yaml.
+#            install-platform.sh truyền file này cho Helm (`vast.sh platform` chép lên VM).
+# Mục đích:  Gắn nhãn env=cloud vào mọi cảnh báo, để tin Telegram có [cloud] ở đầu và không lẫn với tin
+#            từ simulator (các môi trường dùng chung một bot). Còn lại cloud dùng đúng values chung.
+# Tham khảo: Vận hành §3.4; envs/sim/platform/kube-prometheus-stack-values.yaml
+# ──────────────────────────────────────────────────────────────────────────────
+prometheus:
+  prometheusSpec:
+    # External label = nhãn Prometheus gắn vào dữ liệu khi gửi ra ngoài (cảnh báo tới Alertmanager), không
+    # gắn vào kết quả truy vấn, nên runner, dashboard và KEDA không thấy khác gì.
+    externalLabels: {env: cloud}

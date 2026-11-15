@@ -15,10 +15,11 @@ Môi trường đánh giá: một VM thuê theo giờ trên Vast.ai, dựng từ
 |---|---|
 | `provision/vast.sh` | Mọi thao tác với Vast: tìm, thuê, đo máy, sinh inventory, cài nền, tunnel, chạy runner, trả máy. **Chỉ nơi này phụ thuộc nhà cung cấp** |
 | `provision/probe.sh` | Chạy trên VM vừa thuê: GPU, PCIe, CPU, RAM, ổ, tải Hugging Face thật, Docker Hub → quyết định giữ hay trả máy |
-| `provision/install-platform.sh` | Chạy trên VM: helm cài device plugin, kube-prometheus-stack, KEDA; apply GPU exporter và vLLM |
+| `provision/install-platform.sh` | Chạy trên VM: helm cài device plugin, kube-prometheus-stack (Alertmanager → Telegram), KEDA; apply rule, cảnh báo, dashboard, GPU exporter và vLLM |
 | `provision/vh5.sh` | Kịch bản VH5: bấm giờ từng bước dựng lại từ máy trắng tới API trả lời |
 | `provision/llm-runner.service` | systemd chạy runner trên VM, không phụ thuộc SSH của laptop |
 | `serving/` | Overlay vLLM: model 3B, 3 lõi CPU riêng mỗi pod (QoS Guaranteed), cache model trên NVMe |
+| `platform/kube-prometheus-stack-values.yaml` | Values riêng của cloud: nhãn `env=cloud` để tin Telegram ghi `[cloud]` |
 | `experiments/matrix-dg1.yaml` | ĐG1: quét λ với 1 replica để tìm năng lực C |
 | `experiments/matrix-v2.yaml` | Ma trận 17 lượt của V2. **Bản nháp**: C và threshold để trống, điền từ kết quả ĐG1 (ADR-003); runner từ chối chạy khi còn trống |
 | `experiments/matrix-v1.yaml` | Ma trận 2 lượt đã chạy ở V1 (08/11), giữ để tái lập |
@@ -26,7 +27,7 @@ Môi trường đánh giá: một VM thuê theo giờ trên Vast.ai, dựng từ
 ## Trước phiên
 
 ```bash
-cp .env.example .env    # điền VAST_VM_TEMPLATE, API key Vast, khoá R2, bot Telegram
+cp .env.example .env    # điền VAST_VM_TEMPLATE, API key Vast, khoá R2, bot Telegram (runner và Alertmanager)
 make backup-check       # thử R2: không lỗi nghĩa là khoá đúng
 ```
 
