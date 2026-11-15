@@ -24,3 +24,26 @@ spec:
     # automated: tự sync khi Git đổi (không cần bấm). prune: xoá khỏi Git thì xoá khỏi cluster.
     # selfHeal: ai sửa tay trên cluster thì Argo CD đưa về đúng như Git (sau vài giây).
     automated: {prune: true, selfHeal: true}
+    # RespectIgnoreDifferences: khi sync, giữ nguyên giá trị trên cluster của các trường trong
+    # ignoreDifferences (mặc định Argo CD chỉ bỏ qua chúng lúc so sánh, còn lúc sync vẫn áp nguyên Git).
+    # Thiếu cờ này thì commit kế tiếp vào apps/ làm root sync lại và bật lại auto-sync của `autoscaling`.
+    syncOptions: [RespectIgnoreDifferences=true]
+  # Các trường của Application con mà root KHÔNG coi là lệch khỏi Git. Theo mẫu của upstream
+  # (Argo CD v3.5.4 docs/operator-manual/cluster-bootstrapping.md, "Ignoring differences in child
+  # applications").
+  ignoreDifferences:
+    # Trước phiên đánh giá, auto-sync của `autoscaling` phải tắt (Kiến trúc §18.2). Không có mục này thì
+    # selfHeal của root thấy app con lệch Git và bật lại auto-sync sau vài giây, rồi Argo CD áp lại A2
+    # giữa lượt. Chỉ mở cho app `autoscaling`: các app khác vẫn bị Git ép như cũ.
+    - group: argoproj.io
+      kind: Application
+      name: autoscaling
+      jsonPointers: [/spec/syncPolicy/automated]
+    # Hai trường Argo CD tự ghi lên mọi app con khi có người bấm refresh hay sync tay (argocd app sync,
+    # argocd app get --refresh). Không phải cấu hình nên không so với Git. `~1` là cách viết dấu `/`
+    # trong JSON pointer (RFC 6901): annotation tên argocd.argoproj.io/refresh.
+    - group: argoproj.io
+      kind: Application
+      jsonPointers:
+        - /metadata/annotations/argocd.argoproj.io~1refresh
+        - /operation

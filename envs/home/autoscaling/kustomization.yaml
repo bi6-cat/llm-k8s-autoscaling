@@ -1,0 +1,32 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# envs/home/autoscaling/kustomization.yaml
+# Khái niệm: Overlay nhà của A2 (cấu hình autoscaling vận hành chính thức). Base ghi giá trị cho VM thuê
+#            (max 4); overlay chỉ đổi 3 trường bằng JSON patch (giải thích cú pháp ở
+#            envs/sim/autoscaling/kustomization.yaml).
+# Mục đích:  Application `autoscaling` của Argo CD (envs/home/argocd/apps/autoscaling.yaml) sync thư mục
+#            này lên cluster nhà.
+#            - max 2 replica: PC chỉ có 1 RTX 5060, chia thành 2 GPU replica bằng time-slicing
+#              (envs/home/platform/device-plugin-values.yaml). Pod thứ 3 sẽ Pending mãi vì hết GPU.
+#            - fallback 2: fallback = lên max khi mất tín hiệu (Kiến trúc §13), nên đổi theo max.
+#            - threshold 23 = 0,8 × B* (28,4) đo ĐG1-mini ở nhà ngày 06/11 với Qwen2.5-0.5B
+#              (envs/home/experiments/capacity.json, trường threshold.A2_concurrency). Đây là target tạm cho
+#              vận hành và demo ở nhà, không dùng cho chương đánh giá.
+# Xem kết quả: kubectl kustomize envs/home/autoscaling
+# Tham khảo: Kiến trúc §18.2, Thông số §8.1, §9.3
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../../common/autoscaling/a2
+patches:
+  - target: {kind: ScaledObject, name: vllm-a2}
+    patch: |
+      - op: replace
+        path: /spec/maxReplicaCount
+        value: 2
+      - op: replace
+        path: /spec/fallback/replicas
+        value: 2
+      - op: replace
+        path: /spec/triggers/0/metadata/threshold
+        value: "23"
