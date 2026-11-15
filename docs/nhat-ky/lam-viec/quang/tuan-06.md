@@ -200,3 +200,11 @@
 - **Incidents:** SSH tới máy thuê timeout (cả trong và ngoài sandbox, Internet của máy nhà vẫn bình thường); chưa đo được TPOT trên 5060 Ti.
 - **Links:** `docs/bao-cao/de-xuat-v3/{do_chu_ky.py, du_bao_quy_mo.py, do_tpot.py, ket-qua-chu-ky.json, ket-qua-du-bao-quy-mo.json}` (chưa commit).
 - **Thesis:** chương Chính sách, mục proactive: bảng oracle; chương Mô hình: TPOT(n) trên hai loại GPU (khi đo xong).
+
+## 2026-11-15 – Commit phần V3, tách 3 PR xếp chồng, sửa CI link
+
+- **Task:** chung · **Environment:** none
+- **Done:** Commit phần việc 13–14/11 thành 5 commit nhỏ. Tách nhánh `refactor/split-home-cloud` (gộp 3 việc, 147 file) thành 3 PR xếp chồng: #34 refactor → `main`, #35 báo cáo kỹ thuật → #34, #36 V3 → #35. `make lint` đạt (yamllint chạy qua `uvx`).
+- **Incidents:** Job `docs` (lychee) của cả 3 PR lỗi. (1) `03-kien-truc-autoscaling.md` link tới ADR-006 §3.1, nhưng 5 commit thêm §3.1 nằm trên `docs/sync-after-v1` được push **sau khi** PR #33 đã merge nên chưa vào `main` → merge nhánh đó vào #34 (không conflict), truyền lên #35, #36 bằng merge; conflict ở `tuan-06.md` và `viec-sap-lam.md` (cả hai bên cùng thêm mục cuối file) → giữ cả hai, mục 12/11 đứng trước 13/11. (2) README ở #34 link tới `docs/bao-cao/`, thư mục chỉ có ở #35 → chuyển link sang #35. Sau khi sửa, CI của cả 3 PR đều đạt.
+- **Decision:** Dùng merge thay cho rebase để không phải force-push nhánh đã có PR. Khi merge, giữ merge commit (không squash) và merge theo thứ tự #34 → #35 → #36.
+- **Links:** PR #34, #35, #36.
