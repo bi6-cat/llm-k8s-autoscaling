@@ -78,18 +78,21 @@ sim-up: ## Dựng kind + Prometheus + KEDA + simulator + A2 trên laptop
 #	   Secret bot Telegram của Alertmanager, từ .env. .env chưa có bot thì script chỉ cảnh báo, không dừng.
 	common/platform/alertmanager-secret.sh kubectl $(SIM)
 #	4) Prometheus + Grafana + Alertmanager. `-f` sau ghi đè `-f` trước: values chung, định tuyến
-#	   Alertmanager, rồi values riêng cho simulator.
+#	   Alertmanager, kube-state-metrics đọc condition của ScaledObject (KedaScalerErrors cần), rồi values
+#	   riêng cho simulator.
 #	   `upgrade --install` = cài nếu chưa có, nâng cấp nếu đã có. `--wait`: chờ mọi pod Ready.
 	helm --kube-context kind-$(KIND_CLUSTER) upgrade --install kps prometheus-community/kube-prometheus-stack \
 	  --version $(KPS_VERSION) -n monitoring \
 	  -f common/platform/kube-prometheus-stack-values.yaml -f common/platform/alertmanager-values.yaml \
-	  -f envs/sim/platform/kube-prometheus-stack-values.yaml \
+	  -f common/platform/kube-state-metrics-values.yaml -f envs/sim/platform/kube-prometheus-stack-values.yaml \
 	  --wait --timeout 10m
 #	   Recording rule, 7 quy tắc cảnh báo và 3 dashboard. Phải sau chart, vì chart cài CRD PrometheusRule.
 	kubectl $(SIM) apply -k common/observability
-#	5) KEDA: đọc metric từ Prometheus và điều khiển HPA
+#	5) KEDA: đọc metric từ Prometheus và điều khiển HPA. Lớp values thứ hai bật PodMonitor cho metric của
+#	   KEDA (hàng KEDA của dashboard autoscaling); phải sau chart kps vì cần CRD PodMonitor.
 	helm --kube-context kind-$(KIND_CLUSTER) upgrade --install keda kedacore/keda \
-	  --version $(KEDA_VERSION) -n keda --create-namespace -f common/platform/keda-values.yaml --wait
+	  --version $(KEDA_VERSION) -n keda --create-namespace \
+	  -f common/platform/keda-values.yaml -f common/platform/keda-metrics-values.yaml --wait
 #	6) Simulator (overlay sim của serving) rồi ScaledObject A2. Phải chờ Deployment xong trước, vì
 #	   ScaledObject trỏ tới Deployment `vllm`.
 	kubectl $(SIM) apply -k envs/sim/serving

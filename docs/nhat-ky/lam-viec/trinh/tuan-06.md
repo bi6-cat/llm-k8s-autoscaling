@@ -68,3 +68,51 @@
   - Ở nhà chưa bật.
 - **Links:** nhánh `feat/tr4-alertmanager-telegram`; `common/platform/alertmanager-values.yaml`, `common/platform/alertmanager-secret.sh`, `Makefile` (`alertmanager-check`, `sim-up`), `envs/cloud/provision/`.
 - **Thesis:** §4 (vận hành: đường cảnh báo Prometheus → Alertmanager → Telegram, lý do chỉ đẩy page/ticket); hình: ảnh chụp tin Telegram thật (`[cloud] 🔥 …`, rồi `✅ … đã hết`), chụp khi có bot.
+
+## 2026-11-15 – TR4: `KedaScalerErrors` không thể kêu (đang sửa, chưa mở PR)
+
+- **Task:** TR4 · **Environment:** sim (kind `llm-sim`, KEDA 2.21.0)
+- **Done:**
+  1. Thử chuỗi thật (NetworkPolicy T4 → KEDA lỗi → `KedaScalerErrors` → Alertmanager → Telegram giả) và phát hiện Prometheus không có metric `keda_*` nào: `common/platform/keda-values.yaml` chưa bật `prometheus.operator.enabled` và `podMonitor.enabled` (chart mặc định tắt), dù comment trong `alerts/llm.yaml` ghi là cần.
+  2. Thêm `common/platform/keda-metrics-values.yaml` (lớp values thứ hai) cho `sim-up` và `install-platform.sh` (D53).
+- **Results:**
+  - Sau khi thêm: PodMonitor `keda/keda-operator` được tạo, target `up=1`.
+  - Áp NetworkPolicy T4 (ScaledObject đã bỏ pause): fallback 1 → 3 replica sau khoảng 28 s. Sau khoảng 4 phút, `numberOfFailures` lên 56–67, nhưng `keda_scaler_detail_errors_total` = 1 và `keda_scaled_object_errors_total` = 5, nên `increase(...[2m]) >= 3` không bao giờ đúng. **Rule sai cả về tín hiệu, không chỉ thiếu metric.**
+  - Mã nguồn KEDA v2.21.0 (`pkg/scaling/scale_handler.go`): bộ đếm ghi theo `result.record.ScalerError`, mà khi fallback đang bật thì `processMetricsWithFallback` trả giá trị fallback. Giả thuyết: lúc đó lỗi không còn được đếm. Chưa đọc `pkg/fallback/fallback.go` để xác nhận.
+  - Metric `keda_*` có trên kind: `keda_scaled_object_errors_total`, `keda_scaler_detail_errors_total`, `keda_scaler_active`, `keda_scaler_metrics_value`, `keda_scaler_metrics_latency_seconds`, `keda_scaler_http_requests_total`, `keda_scaler_http_request_duration_seconds_*`, `keda_scaled_object_paused`, `keda_internal_*`, `keda_build_info`.
+- **Incidents:**
+  - 2 lần đầu T4 không gây lỗi KEDA nào: ScaledObject `vllm-a2` đang `Paused=True` (annotation `paused-replicas: 1` do runner đặt sau lượt cuối, `session.py:236`), nên không có HPA và KEDA không hỏi Prometheus. Gỡ annotation thì HPA có lại và T4 chạy đúng.
+  - Image Prometheus không có `wget` → dùng `promtool query instant` trong pod. NetworkPolicy T4 chặn cả proxy của API server tới Prometheus.
+  - `kubectl debug` vào pod keda-operator không chạy được vì `runAsNonRoot`.
+  - `pkill -f chain-test.sh` tự giết chính lệnh đang chạy.
+  - `/code-review high` trên diff: 7 điểm, chưa sửa. Sẽ sửa cùng rule mới: comment trong `llm.yaml` ghi rõ môi trường; header `install-platform.sh`; `phien-ban.md` thêm `install-platform.sh` ở dòng kps và KEDA; điều kiện tiên quyết cho T4 là phải có PodMonitor `keda-operator`. Ở nhà và gộp 2 file values KEDA: làm ở 6b.
+- **Links:** nhánh `fix/tr4-keda-metrics` (chỉ commit ở máy, chưa push), xếp chồng trên PR #37; script thử ở `.work/tools/alertmanager-test/`.
+- **Thesis:** §4 hoặc §5, bài học "unit test đạt mà cảnh báo vẫn chết": unit test chỉ kiểm biểu thức với dữ liệu tự bơm, không kiểm metric có thật và hành vi của exporter.
+
+## 2026-11-15 – TR4: merge PR #37 (Alertmanager → Telegram)
+
+- **Task:** TR4 · **Environment:** none (GitHub)
+- **Done:** merge PR #37 vào `main` lúc 17:29 (giờ Việt Nam), merge commit `839c5e5`; xoá nhánh `feat/tr4-alertmanager-telegram` trên remote.
+- **Results:** đủ 5 điều kiện merge (D35): CI 6/6 xanh (run 43703913364, job `alerts` chạy `make alertmanager-check` trên Linux và in đủ 3 tin mẫu); `/code-review high` đã sửa 10/10; `MERGEABLE`/`CLEAN`, không có review hay bình luận; không file nào mà Application ở nhà đọc bị đổi; base là `main`.
+- **Links:** PR #37.
+
+## 2026-11-15 – TR4: `KedaScalerErrors` đọc condition `Fallback` của ScaledObject
+
+- **Task:** TR4 · **Environment:** sim (kind `llm-sim`, KEDA 2.21.0, kube-prometheus-stack 92.1.1)
+- **Done:**
+  1. Đọc mã nguồn KEDA v2.21.0 để xác nhận giả thuyết ở mục trước: `pkg/fallback/fallback.go` `GetMetricsWithFallback` trả giá trị fallback với `err = nil` khi `numberOfFailures > failureThreshold`; `pkg/scaling/scale_handler.go` gọi `RecordScalerError(..., err)` bằng lỗi **sau** khi xử lý fallback; `pkg/metricscollector/prommetrics.go` chỉ tăng bộ đếm khi `err != nil`. Kết luận: `keda_scaler_detail_errors_total` và `keda_scaled_object_errors_total` chỉ tăng ở vài lần lỗi đầu rồi đứng yên suốt thời gian fallback. Rule đếm lỗi kiểu nào cũng sai: `increase(...) >= 1` cũng tự hết sau 2 phút trong khi vẫn fallback.
+  2. Đọc thêm `pkg/scaling/executor/scale_scaledobjects.go`: khi có `fallback`, lỗi dưới ngưỡng lúc không active **không** làm `Ready=False`; `Ready=Unknown` khi trigger lỗi lúc active; `Ready=False` khi không đọc hoặc không scale được Deployment đích.
+  3. Thêm `common/platform/kube-state-metrics-values.yaml` (lớp values kps): kube-state-metrics custom resource state đọc `status.conditions` của ScaledObject thành `kube_scaledobject_status_condition{namespace, scaledobject, condition}`, kèm quyền `list/watch` `scaledobjects.keda.sh`. Nạp ở `sim-up` bước 4, `install-platform.sh`, `vast.sh platform`.
+  4. Viết lại rule: `(Fallback == 1 or Ready == 0) unless Paused == 1`, `for: 1m`. Unit test 4 ScaledObject: chuyển `Ready=Unknown` → `Fallback=True` (kiểm cảnh báo liền mạch, không đặt lại `for:`), `Ready=False`, đang pause với Fallback cũ, mới tạo.
+  5. Panel "Lỗi scaler trong 2 phút" (dashboard autoscaling) mắc cùng lỗi → đổi thành "KEDA: request lỗi và fallback": `keda_scaler_http_requests_total{status_code!~"2.."}` theo mã (trục trái) và condition Fallback (trục phải).
+  6. `/code-review high` trên phần chưa commit: 7 điểm, đều đã xử lý. Điểm "thiếu metric thì rule im lặng" chỉ ghi thành giới hạn (comment rule, runbook mục "Giới hạn", lệnh kiểm metric có mặt), chưa thêm cảnh báo `absent()`; Prometheus hoặc keda-operator sập cũng ghi vào giới hạn; summary bao cả ca `Ready=False`; runbook sửa thời gian hết cảnh báo theo số đo.
+  7. Sửa runbook, Vận hành §3.2 và §4.3, w2.md (điều kiện để T4 kích cảnh báo), comment của `keda-metrics-values.yaml`, Makefile, `install-platform.sh` (header), `phien-ban.md` (thêm `install-platform.sh`, KSM v2.20.0). Gồm 4 điểm review còn lại của mục trước.
+- **Decision:** Trình chọn tín hiệu condition qua kube-state-metrics (D54). Bỏ `keda_scaler_http_requests_total` làm tín hiệu cảnh báo: metric này vẫn đếm khi fallback, nhưng bỏ sót ca PromQL trả nhiều chuỗi (HTTP 200) và ca scaler không dựng được; giữ nó cho chẩn đoán. Không sửa `kube-prometheus-stack-values.yaml` vì Argo CD ở nhà đọc file đó (điều kiện merge 4).
+- **Results:**
+  - KSM v2.20.0 với `--resources=<danh sách có sẵn>` vẫn thu custom resource (log: `Active resources … keda.sh/v1alpha1, Resource=scaledobjects`); collector có sẵn vẫn chạy (`kube_pod_info` 26 chuỗi). Nhãn `namespace` giữ nguyên trong Prometheus (`namespace="llm-serving"`).
+  - Kiểm đột biến unit test: bỏ pha `Ready=Unknown` hoặc bỏ vế `unless Paused` thì test đỏ.
+  - Chuỗi thật trên kind. Cách làm: kps nâng cấp thêm một lớp values thử (chỉ ở máy Trình) trỏ `api_url` của hai receiver Telegram sang `tg-mock`, một HTTP server trong namespace `monitoring` ghi log mọi request; ScaledObject `vllm-a2` không pause; áp `common/autoscaling/tests/block-keda-to-prometheus.yaml`; cứ 10–15 s đọc condition (`kubectl get scaledobject -o jsonpath`), số cảnh báo trong Alertmanager (`amtool alert query`) và log `tg-mock`; gỡ policy khi có tin "đang kêu". Kết quả: áp policy 10:52:22 UTC → `Fallback=True`, replica 1 → 3 lúc +18 s → cảnh báo vào Alertmanager lúc +97 s → tin "đang kêu" tới `tg-mock` lúc +130 s (thêm `group_wait` 30 s). Trong 2 phút chặn: `keda_scaler_http_requests_total{status_code="error"}` 140 → 190, `keda_scaler_detail_errors_total` 1 → 2. Gỡ policy → `Fallback=False` sau ≤ 12 s, Alertmanager hết cảnh báo sau ≤ 28 s, tin "đã hết" tới `tg-mock` sau 273 s (chờ `group_interval` 5 phút). Hai tin có đủ nhãn `[sim]`, summary, description và link runbook.
+  - `make alerts-test`, `make dashboards-check`, `yamllint -s .`, `shellcheck` (2 script cloud), lychee (0 lỗi), kubeconform `common/observability` (6/6) đều đạt.
+- **Deviations:** Vận hành §3.2 đổi điều kiện của `KedaScalerErrors` từ "≥ 3 lỗi trong 2 phút" sang condition `Fallback`/`Ready`.
+- **Links:** nhánh `fix/tr4-keda-metrics`; `common/platform/kube-state-metrics-values.yaml`, `common/observability/alerts/llm.yaml`, `docs/runbooks/KedaScalerErrors.md`.
+- **Thesis:** §4 (giám sát autoscaling), bài học "unit test đạt mà cảnh báo vẫn chết" kèm dòng thời gian T4 ở trên; nên chụp panel "KEDA: request lỗi và fallback" trong một lượt T4.

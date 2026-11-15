@@ -1233,8 +1233,8 @@
     },
     {
       "type": "timeseries",
-      "title": "Lỗi scaler trong 2 phút",
-      "description": "Số lỗi khi KEDA hỏi Prometheus trong 2 phút qua. Đường gạch 3: ngưỡng của cảnh báo KedaScalerErrors. Lỗi liên tiếp quá failureThreshold (lần thứ 4) thì KEDA chuyển sang fallback: số replica tối đa.",
+      "title": "KEDA: request lỗi và fallback",
+      "description": "Trục trái: request KEDA → Prometheus không thành công mỗi giây, theo mã (keda_scaler_http_requests_total). `error` = không kết nối được (mạng, DNS, quá timeout 1 s); 4xx = PromQL sai; 5xx = Prometheus quá tải. Vẫn đếm khi đã fallback, khác keda_scaler_detail_errors_total (đứng yên khi fallback). PromQL trả nhiều chuỗi vẫn là HTTP 200 nên không hiện ở đây. Trục phải: 1 = ScaledObject đang fallback, chính tín hiệu của cảnh báo KedaScalerErrors (kube-state-metrics đọc condition Fallback). Trống trục trái khi chưa thu metric của KEDA operator; trống trục phải khi kube-state-metrics chưa đọc ScaledObject.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1247,15 +1247,27 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "sum by (scaledObject) (increase(keda_scaler_detail_errors_total{scaledObject=~\"vllm-.*\"}[2m]))",
-          "legendFormat": "{{scaledObject}}",
+          "expr": "sum by (scaled_resource, status_code) (rate(keda_scaler_http_requests_total{scaled_resource=~\"vllm-.*\", status_code!~\"2..\"}[$__rate_interval]))",
+          "legendFormat": "lỗi {{status_code}} · {{scaled_resource}}",
+          "range": true,
+          "instant": false
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "max by (scaledobject) (kube_scaledobject_status_condition{namespace=\"llm-serving\", scaledobject=~\"vllm-.*\", condition=\"Fallback\"})",
+          "legendFormat": "fallback · {{scaledobject}}",
           "range": true,
           "instant": false
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "none",
+          "unit": "reqps",
           "color": {
             "mode": "palette-classic"
           },
@@ -1274,7 +1286,7 @@
               "group": "A"
             },
             "thresholdsStyle": {
-              "mode": "dashed"
+              "mode": "off"
             }
           },
           "thresholds": {
@@ -1283,16 +1295,52 @@
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 3
               }
             ]
           },
           "min": 0
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "max",
+                "value": 1
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              },
+              {
+                "id": "custom.lineInterpolation",
+                "value": "stepAfter"
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 2
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "legend": {

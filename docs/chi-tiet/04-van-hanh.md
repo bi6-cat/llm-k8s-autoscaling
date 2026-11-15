@@ -93,7 +93,7 @@ Viết `tổng − tốt` chứ không viết `1 − tốt/tổng` là có chủ
 | `LLMAtMaxReplicas` | Số replica bằng max trong 15 phút **và** hàng đợi > 0 | ticket | Autoscaling đã hết dư địa; cần thêm GPU hoặc giới hạn tải |
 | `LLMPodPending` | Pod vLLM ở trạng thái Pending > 10 phút | ticket | Thường do hết GPU: rolling update bị kẹt, hoặc max replica lớn hơn số GPU |
 | `LLMPodNotReady` / `LLMPodCrashLooping` | Pod vLLM không Ready > 15 phút (lâu hơn cold start tối đa); hoặc container ở `CrashLoopBackOff` > 5 phút | page | Pod không khởi động được: OOM, sai tham số, lỗi CUDA |
-| `KedaScalerErrors` | Bộ đếm lỗi scaler của KEDA tăng: `keda_scaler_detail_errors_total` (tên trong KEDA 2.21; `keda_scaler_errors_total` là tên cũ), ≥ 3 lỗi trong 2 phút, `for: 1m` | page | Autoscaling bị "mù"; lỗi liên tiếp quá `failureThreshold` (lần thứ 4) thì vào chế độ fallback |
+| `KedaScalerErrors` | ScaledObject có condition `Fallback=True` hoặc `Ready` khác True, trừ lúc `Paused=True`; `for: 1m`. Đọc condition qua kube-state-metrics (`kube_scaledobject_status_condition`). Không dùng bộ đếm `keda_scaler_detail_errors_total`, vì KEDA 2.21 ngừng đếm khi đã fallback (đo 15/11) | page | Autoscaling bị "mù": lỗi liên tiếp quá `failureThreshold` (lần thứ 4) thì vào chế độ fallback, giữ số replica cố định |
 
 **Cảnh báo phụ** (Could, chỉ thêm nếu còn thời gian): `LLMSLOBurnSlow` (≥ 10% trên cả 30 phút và 5 phút, ticket); `LLMPreemptions` (`num_preemptions_total` tăng trong 5 phút, ticket); `GPUTemperatureHigh` (> 83 °C trong 5 phút, ticket); `GPUXidError` (lỗi XID, page). Có sẵn từ kube-prometheus-stack: `TargetDown`, `Watchdog`.
 
@@ -220,7 +220,7 @@ Runbook được dùng thật trong các kịch bản vận hành và trong ph�
 | `LLMAtMaxReplicas` | Xem đỉnh tải so với năng lực (§9); thắt giới hạn tốc độ nếu SLO đang bị vi phạm |
 | `LLMPodPending` | `kubectl describe pod`: nếu báo `Insufficient nvidia.com/gpu` và đang có rollout thì xem §5; nếu không thì kiểm tra `maxReplicaCount` |
 | `LLMPodNotReady` / `LLMPodCrashLooping` | `kubectl logs --previous`: OOM, thiếu `/dev/shm`, sai đường dẫn model, sai tham số sau cập nhật → rollback |
-| `KedaScalerErrors` | Kiểm tra Prometheus còn sống không, KEDA có tới được Prometheus không, PromQL có trả về giá trị không (`kubectl get hpa`) |
+| `KedaScalerErrors` | Xem condition của ScaledObject (`kubectl describe scaledobject`); kiểm tra Prometheus còn sống không, KEDA có tới được Prometheus không (mã lỗi trong `keda_scaler_http_requests_total`), PromQL có trả về giá trị không (`kubectl get hpa`) |
 | (Could) `LLMPreemptions` | Giảm `--max-num-seqs` hoặc `--max-model-len`, hoặc chấp nhận và theo dõi |
 | (Could) `GPUTemperatureHigh` | Kiểm tra quạt và nhiệt độ phòng (máy nhà); báo nhà cung cấp (máy thuê) |
 | (Could) `GPUXidError` | `kubectl cordon` node, xoá pod trên GPU đó để chuyển đi, báo nhà cung cấp |

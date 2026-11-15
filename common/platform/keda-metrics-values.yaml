@@ -1,0 +1,20 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# common/platform/keda-metrics-values.yaml
+# Khái niệm: Lớp values THỨ HAI cho chart KEDA 2.21.0, đi sau keda-values.yaml. PodMonitor = object của
+#            Prometheus Operator khai báo "scrape các pod có nhãn X ở cổng Y"; Prometheus của nhóm nhận mọi
+#            PodMonitor (podMonitorSelectorNilUsesHelmValues: false trong kube-prometheus-stack-values.yaml).
+# Mục đích:  Cho Prometheus thu metric của KEDA operator (keda_scaler_metrics_value, độ trễ truy vấn,
+#            keda_scaler_http_requests_total theo mã lỗi) cho hàng KEDA của dashboard autoscaling và cho bước
+#            chẩn đoán trong runbook KedaScalerErrors. Chart mặc định tắt cả hai cờ dưới, nên trước 15/11 các
+#            panel đó trống ở mọi môi trường. Cảnh báo KedaScalerErrors KHÔNG dùng metric này mà đọc condition
+#            của ScaledObject (kube-state-metrics-values.yaml): bộ đếm lỗi của KEDA đứng yên khi đã fallback.
+#            Tách khỏi keda-values.yaml vì file đó cũng là values của Argo CD ở nhà: bật ở sim và cloud
+#            trước, ở nhà thêm khi kiểm được trên cluster nhà (việc 6b, cùng alertmanager-values.yaml).
+# Tham khảo: chart kedacore/keda v2.21.0 values.yaml (prometheus.operator); KEDA v2.21.0
+#            pkg/metricscollector/prommetrics.go; common/observability/dashboards/autoscaling.json
+# ──────────────────────────────────────────────────────────────────────────────
+prometheus:
+  operator:
+    enabled: true          # khai báo cổng metrics (8080) trên pod keda-operator để PodMonitor trỏ tới
+    podMonitor:
+      enabled: true        # chart tạo PodMonitor; chu kỳ scrape để trống = 15 s của Prometheus (values chung)
