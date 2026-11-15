@@ -298,6 +298,7 @@ Bảng đối chiếu nội dung đề cương với bản mô tả nằm ở [P
 7. **Các kịch bản vận hành được dựng có chủ đích** (xoá pod, chặn Prometheus…). Chúng chưa bao quát mọi sự cố thật, ví dụ GPU hỏng dần hay mạng chập chờn.
 8. **Môi trường nhà chỉ là môi trường chức năng** (một RTX 5060 8 GB chia 2 GPU replica bằng time-slicing). Các kịch bản cần nhiều node chạy trên simulator.
 9. **Graceful shutdown dựa vào grace period, không phải vào drain của vLLM.** vLLM 0.31.0 không dừng khi nhận SIGTERM (đo 06/11); request an toàn vì pod sống tới 180 s, nên request dài hơn ~160 s sau SIGTERM vẫn bị cắt, và mỗi pod bị tắt giữ GPU thêm 180 s ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C8).
+10. **Bảo mật và GitOps trên máy thuê ở mức tối thiểu.** Chỉ có API key và API không mở ra Internet; chưa có giới hạn tốc độ, NetworkPolicy thường trực và bí mật mã hoá trong Git (Secret tạo tay từ `.env`). VM thuê cài nền bằng helm (`make cloud-platform`) thay vì Argo CD, nên kịch bản cập nhật trên VM kích hoạt bằng annotation, không qua Git; ở nhà vẫn đi qua Git và Argo CD ([ADR-006 §3.1](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md#31-quyết-định-ngày-12112026)).
 
 ### 12.4. Tiêu chí vào và ra phạm vi trong lúc làm
 

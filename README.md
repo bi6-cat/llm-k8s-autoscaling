@@ -4,8 +4,6 @@
 
 Trọng tâm: khoảng 70 % xây dựng và vận hành (IaC, GitOps, autoscaling, SLO, cảnh báo, runbook), 30 % đánh giá để nghiệm thu, kèm kiểm chứng lý thuyết LT1–LT8.
 
-**Đọc nhanh cho người không trực tiếp làm:** báo cáo kỹ thuật có hình và biểu đồ ở [docs/bao-cao/](docs/bao-cao/).
-
 ## Repo chia theo hai câu hỏi
 
 ```text
