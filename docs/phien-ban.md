@@ -10,8 +10,8 @@ Tra ngày 09/10/2026; các dòng của CI tra ngày 01/11/2026. Đổi phiên b�
 | NVIDIA Container Toolkit | PC: `1.20.1` / laptop: (điền từ `nvidia-ctk --version`) | role `nvidia` |
 | k3s | `v1.36.5+k3s1` (kênh stable) | `ansible/inventory/group_vars/all.yaml` |
 | Argo CD | `v3.5.4` (`core-install.yaml`) | `group_vars/all.yaml` |
-| kube-prometheus-stack (chart) | `92.1.1` | `envs/home/argocd/apps/monitoring.yaml`, `Makefile` |
-| KEDA (chart) | `2.21.0` | `envs/home/argocd/apps/keda.yaml`, `Makefile` |
+| kube-prometheus-stack (chart) | `92.1.1`; kèm chart con kube-state-metrics `8.6.0` (KSM `v2.20.0`) | `envs/home/argocd/apps/monitoring.yaml`, `Makefile`, `envs/cloud/provision/install-platform.sh` |
+| KEDA (chart) | `2.21.0` | `envs/home/argocd/apps/keda.yaml`, `Makefile`, `envs/cloud/provision/install-platform.sh` |
 | NVIDIA device plugin (chart) | `0.20.1`; ở nhà thêm time-slicing 2 GPU replica (`envs/home/platform/device-plugin-values.yaml`, từ 06/11) | `envs/home/argocd/apps/gpu-device-plugin.yaml`, `common/platform/device-plugin-values.yaml` |
 | nvidia_gpu_exporter | `1.15.1` | `common/platform/gpu-exporter/daemonset.yaml` |
 | vLLM | `vllm/vllm-openai:v0.31.0@sha256:c1c9f6fd…c3` (CUDA 13.0, cần driver ≥ 580). Không dùng `-cu129`: hỏng lúc khởi động, xem [ADR-004 §7](adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md#7-cập-nhật-sau-ngày-08102026) | `common/serving/kustomization.yaml` |

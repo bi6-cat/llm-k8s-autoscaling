@@ -209,26 +209,53 @@ tests:
               runbook_url: "https://github.com/bi6-cat/llm-k8s-autoscaling/blob/main/docs/runbooks/LLMPodCrashLooping.md"
 
   # ── KedaScalerErrors ───────────────────────────────────────────────────────────────────────
-  # vllm-a2: Prometheus hỏng từ phút 5, mỗi 15 s thêm 3 lỗi (KEDA hỏi mỗi 5 s) → phải kêu.
-  # vllm-a1: chỉ một lỗi lẻ ở phút 5 → không được kêu. Kiểm ở 6m45s, khi lỗi lẻ còn nằm trong cửa sổ
-  # 2 phút (kiểm muộn hơn thì lỗi đã ra khỏi cửa sổ, test không phân biệt được ngưỡng ≥ 3 với ≥ 1).
-  # Nhãn namespace của KEDA đã bị đổi thành exported_namespace như khi scrape thật.
-  - name: KedaScalerErrors kêu khi lỗi liên tục, bỏ qua lỗi lẻ
+  # Chuỗi kube_scaledobject_status_condition như kube-state-metrics xuất (1 = True, 0 = False/Unknown),
+  # mỗi 15 s một mẫu; mẫu thứ 20 = phút 5, mẫu 22 = 5m30s.
+  # vllm-a2: Prometheus hỏng từ phút 5 khi đang có tải: Ready=Unknown 30 s, rồi Fallback=True từ 5m30s.
+  #   Kiểm ở 6m: phải ĐANG KÊU. Nếu hai vế của `or` là hai chuỗi khác nhau thì `for: 1m` tính lại từ 5m30s
+  #   và lúc 6m mới pending 30 s, nên mốc này kiểm được tính liền mạch của cảnh báo.
+  # vllm-a3: Ready=False từ phút 5 (mất Deployment đích), không fallback → phải kêu.
+  # vllm-a1: đang Paused với Fallback=True còn sót từ trước → không được kêu.
+  # vllm-a4: mới tạo, Ready=Unknown 30 s đầu rồi True → không được kêu (nhờ for: 1m).
+  # Lúc 5m45s: a2 và a3 mới pending 45 s → chưa kêu.
+  - name: KedaScalerErrors kêu khi fallback hoặc không Ready, bỏ qua lúc pause và lúc mới tạo
     interval: 15s
     input_series:
-      - series: 'keda_scaler_detail_errors_total{namespace="keda", exported_namespace="llm-serving", scaledObject="vllm-a2", scaler="prometheusScaler", triggerIndex="0", metric="s0-prometheus", type="scaledobject"}'
-        values: '0x20 0+3x40'
-      - series: 'keda_scaler_detail_errors_total{namespace="keda", exported_namespace="llm-serving", scaledObject="vllm-a1", scaler="prometheusScaler", triggerIndex="0", metric="s0-prometheus", type="scaledobject"}'
-        values: '0x20 1x40'
+      - series: 'kube_scaledobject_status_condition{job="kube-state-metrics", namespace="llm-serving", scaledobject="vllm-a2", condition="Ready"}'
+        values: '1x19 0 0 1x20'
+      - series: 'kube_scaledobject_status_condition{job="kube-state-metrics", namespace="llm-serving", scaledobject="vllm-a2", condition="Fallback"}'
+        values: '0x21 1x20'
+      - series: 'kube_scaledobject_status_condition{job="kube-state-metrics", namespace="llm-serving", scaledobject="vllm-a2", condition="Paused"}'
+        values: '0x41'
+      - series: 'kube_scaledobject_status_condition{job="kube-state-metrics", namespace="llm-serving", scaledobject="vllm-a3", condition="Ready"}'
+        values: '1x19 0x21'
+      - series: 'kube_scaledobject_status_condition{job="kube-state-metrics", namespace="llm-serving", scaledobject="vllm-a3", condition="Fallback"}'
+        values: '0x41'
+      - series: 'kube_scaledobject_status_condition{job="kube-state-metrics", namespace="llm-serving", scaledobject="vllm-a1", condition="Ready"}'
+        values: '1x41'
+      - series: 'kube_scaledobject_status_condition{job="kube-state-metrics", namespace="llm-serving", scaledobject="vllm-a1", condition="Fallback"}'
+        values: '1x41'
+      - series: 'kube_scaledobject_status_condition{job="kube-state-metrics", namespace="llm-serving", scaledobject="vllm-a1", condition="Paused"}'
+        values: '1x41'
+      - series: 'kube_scaledobject_status_condition{job="kube-state-metrics", namespace="llm-serving", scaledobject="vllm-a4", condition="Ready"}'
+        values: '0 0 1x39'
     alert_rule_test:
       - eval_time: 4m
         alertname: KedaScalerErrors
         exp_alerts: []
-      - eval_time: 6m45s
+      - eval_time: 5m45s
+        alertname: KedaScalerErrors
+        exp_alerts: []
+      - eval_time: 6m
         alertname: KedaScalerErrors
         exp_alerts:
-          - exp_labels: {severity: page, scaledObject: vllm-a2}
+          - exp_labels: {severity: page, namespace: llm-serving, scaledobject: vllm-a2}
             exp_annotations:
-              summary: "KEDA không lấy được metric cho ScaledObject vllm-a2"
-              description: "KEDA lỗi liên tục khi hỏi Prometheus: autoscaling không thấy tải, và từ lần lỗi liên tiếp thứ 4 thì vào fallback (giữ số replica tối đa). Kiểm tra Prometheus và đường mạng KEDA → Prometheus."
+              summary: "KEDA không scale theo tải cho ScaledObject vllm-a2 (fallback hoặc không Ready)"
+              description: "Fallback: KEDA lỗi liên tiếp khi hỏi Prometheus nên giữ số replica cố định; thường do mạng KEDA → Prometheus bị chặn hoặc PromQL sai. Không Ready: KEDA không đọc hoặc không scale được Deployment đích. Xem condition: kubectl -n llm-serving describe scaledobject vllm-a2."
+              runbook_url: "https://github.com/bi6-cat/llm-k8s-autoscaling/blob/main/docs/runbooks/KedaScalerErrors.md"
+          - exp_labels: {severity: page, namespace: llm-serving, scaledobject: vllm-a3}
+            exp_annotations:
+              summary: "KEDA không scale theo tải cho ScaledObject vllm-a3 (fallback hoặc không Ready)"
+              description: "Fallback: KEDA lỗi liên tiếp khi hỏi Prometheus nên giữ số replica cố định; thường do mạng KEDA → Prometheus bị chặn hoặc PromQL sai. Không Ready: KEDA không đọc hoặc không scale được Deployment đích. Xem condition: kubectl -n llm-serving describe scaledobject vllm-a3."
               runbook_url: "https://github.com/bi6-cat/llm-k8s-autoscaling/blob/main/docs/runbooks/KedaScalerErrors.md"

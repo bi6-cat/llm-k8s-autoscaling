@@ -127,25 +127,46 @@ spec:
             description: "Xem log lần chạy trước: kubectl -n llm-serving logs {{ $labels.pod }} --previous."
             runbook_url: "https://github.com/bi6-cat/llm-k8s-autoscaling/blob/main/docs/runbooks/LLMPodCrashLooping.md"
 
-        # KEDA không lấy được metric từ Prometheus: autoscaling bị "mù". Khi lỗi quá 3 lần liên tiếp (lần thứ
-        # 4, ~20 s), ScaledObject chuyển sang fallback giữ 4 replica (common/autoscaling/a2/scaledobject-a2.yaml).
-        # keda_scaler_detail_errors_total: bộ đếm lỗi theo từng trigger, tên đúng cho KEDA 2.21
-        # (pkg/metricscollector/prommetrics.go). Thiết kế ghi keda_scaler_errors_total là tên cũ.
-        # increase(...[2m]) >= 3: ít nhất 3 lỗi trong 2 phút, tức sắp hoặc đã vào fallback; một lỗi lẻ do
-        # mạng chập chờn thì không page. KEDA hỏi mỗi 5 s, nên khi Prometheus hỏng thật có ~24 lỗi/2 phút.
-        # Cái bẫy: chỉ lọc theo scaledObject, KHÔNG lọc theo namespace. Metric của KEDA có sẵn nhãn
-        # `namespace` (namespace của ScaledObject), trùng với nhãn namespace Prometheus gắn theo pod KEDA,
-        # nên khi scrape không bật honorLabels thì nhãn gốc bị đổi tên thành `exported_namespace`.
-        # Cần bật metric của KEDA operator: prometheus.operator.enabled + podMonitor.enabled trong
-        # common/platform/keda-values.yaml (chart mặc định tắt).
+        # KEDA không lấy được metric từ Prometheus: autoscaling bị "mù". Khi lỗi quá failureThreshold = 3
+        # lần liên tiếp (lần thứ 4, ~20 s), ScaledObject chuyển sang fallback: giữ fallback.replicas (bằng
+        # maxReplicaCount, common/autoscaling/a2/scaledobject-a2.yaml) thay vì scale theo tải.
+        # Tín hiệu là CONDITION của ScaledObject (kube-state-metrics đọc status.conditions, cấu hình ở
+        # common/platform/kube-state-metrics-values.yaml), không phải bộ đếm lỗi của KEDA:
+        #   - Fallback = True: trạng thái bền suốt sự cố. Bộ đếm keda_scaler_detail_errors_total thì đứng
+        #     yên khi đã fallback (KEDA v2.21.0 pkg/fallback/fallback.go trả giá trị fallback với err = nil),
+        #     nên rule cũ `increase(...[2m]) >= 3` không bao giờ đúng (đo trên kind 15/11: bộ đếm = 1 trong
+        #     khi numberOfFailures = 67).
+        #   - Ready ≠ True: KEDA không làm được việc vì lý do khác fallback, ví dụ không đọc được Deployment
+        #     đích (Ready=False) hoặc trigger lỗi khi đang active (Ready=Unknown, KSM ghi 0). Lỗi dưới ngưỡng
+        #     lúc không active thì Ready vẫn True (pkg/scaling/executor/scale_scaledobjects.go).
+        #   `or` của hai vế cùng nhãn (namespace, scaledobject), nên khi Ready=Unknown chuyển sang Fallback=True
+        #   thì cảnh báo vẫn là một chuỗi liền, `for:` không bị đặt lại.
+        # unless … Paused == 1: runner pause ScaledObject sau mỗi phiên (experiments/runner/session.py). Lúc
+        # pause, KEDA dừng vòng scale và condition Fallback giữ giá trị cũ, nên không page.
+        # for: 1m: bỏ qua Ready=Unknown thoáng qua lúc mới tạo ScaledObject. Từ lúc mất Prometheus đến lúc
+        # kêu ≈ 20 s (vào fallback) + 1 phút + độ trễ scrape KSM (15 s) và chu kỳ tính rule (15 s).
+        # Môi trường: sim và cloud (Makefile sim-up, envs/cloud/provision/install-platform.sh). Ở nhà chưa
+        # có metric này cho tới khi Application monitoring thêm kube-state-metrics-values.yaml (việc 6b).
+        # Giới hạn: thiếu metric (chưa nạp lớp values, KSM lỗi quyền) thì rule im lặng, không báo gì; sau
+        # mỗi lần dựng môi trường, kiểm metric có mặt (runbook, mục "Giới hạn"). Prometheus sập hẳn hoặc
+        # keda-operator sập thì rule cũng không kêu: rule chạy trên chính Prometheus đó, còn condition
+        # của ScaledObject giữ giá trị cuối khi không còn ai cập nhật.
         - alert: KedaScalerErrors
           expr: |
-            sum by (scaledObject) (
-              increase(keda_scaler_detail_errors_total{scaledObject=~"vllm-.*"}[2m])
-            ) >= 3
+            (
+                max by (namespace, scaledobject) (
+                  kube_scaledobject_status_condition{namespace="llm-serving", scaledobject=~"vllm-.*", condition="Fallback"}
+                ) == 1
+              or
+                max by (namespace, scaledobject) (
+                  kube_scaledobject_status_condition{namespace="llm-serving", scaledobject=~"vllm-.*", condition="Ready"}
+                ) == 0
+            )
+            unless on (namespace, scaledobject)
+              kube_scaledobject_status_condition{namespace="llm-serving", condition="Paused"} == 1
           for: 1m
           labels: {severity: page}
           annotations:
-            summary: "KEDA không lấy được metric cho ScaledObject {{ $labels.scaledObject }}"
-            description: "KEDA lỗi liên tục khi hỏi Prometheus: autoscaling không thấy tải, và từ lần lỗi liên tiếp thứ 4 thì vào fallback (giữ số replica tối đa). Kiểm tra Prometheus và đường mạng KEDA → Prometheus."
+            summary: "KEDA không scale theo tải cho ScaledObject {{ $labels.scaledobject }} (fallback hoặc không Ready)"
+            description: "Fallback: KEDA lỗi liên tiếp khi hỏi Prometheus nên giữ số replica cố định; thường do mạng KEDA → Prometheus bị chặn hoặc PromQL sai. Không Ready: KEDA không đọc hoặc không scale được Deployment đích. Xem condition: kubectl -n {{ $labels.namespace }} describe scaledobject {{ $labels.scaledobject }}."
             runbook_url: "https://github.com/bi6-cat/llm-k8s-autoscaling/blob/main/docs/runbooks/KedaScalerErrors.md"
