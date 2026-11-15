@@ -5,7 +5,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@500;600;700;800&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
-/* Layout: tờ trình một cột ~74ch; quyết định cần duyệt đặt đầu trang, bằng chứng và kế hoạch theo sau. Cùng hệ token với báo cáo kỹ thuật. */
+/* Layout: tờ trình một cột ~74ch; quyết định cần duyệt đặt đầu trang, rồi bằng chứng từ tải thật, hạng mục, kế hoạch. Cùng hệ token với báo cáo kỹ thuật. */
 :root {
   --bg: #f6f8f9;
   --surface: #ffffff;
@@ -21,6 +21,7 @@
   --bad: #b2331d;
   --warn-soft: #fbf0dc;
   --base-mark: #8a99a2;
+  --line-2: #6a4fa3;
   --font-display: "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
   --font-body: "Literata", Georgia, "Times New Roman", serif;
   --font-data: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
@@ -36,14 +37,14 @@
     color-scheme: dark;
     --bg: #10171b; --surface: #162026; --ink: #e3eaed; --ink-2: #a7b5bc; --muted: #7d8c94; --rule: #263439;
     --band: #1a262c; --accent: #5db8b8; --accent-soft: #163233; --good: #52c27e; --warn: #e2a440; --bad: #f07b63;
-    --warn-soft: #33281a; --base-mark: #6c7c84;
+    --warn-soft: #33281a; --base-mark: #6c7c84; --line-2: #a98be0;
   }
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
   --bg: #10171b; --surface: #162026; --ink: #e3eaed; --ink-2: #a7b5bc; --muted: #7d8c94; --rule: #263439;
   --band: #1a262c; --accent: #5db8b8; --accent-soft: #163233; --good: #52c27e; --warn: #e2a440; --bad: #f07b63;
-  --warn-soft: #33281a; --base-mark: #6c7c84;
+  --warn-soft: #33281a; --base-mark: #6c7c84; --line-2: #a98be0;
 }
 body {
   margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: var(--step-0); line-height: 1.62;
@@ -52,6 +53,7 @@ body {
 .wrap { max-width: 980px; margin: 0 auto; padding-block: 40px 80px; display: flex; flex-direction: column; gap: 56px; }
 .prose { max-width: 74ch; display: flex; flex-direction: column; gap: 14px; }
 .prose p, .prose ul, .prose ol { margin: 0; }
+.prose ul { padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
 h1, h2, h3 { font-family: var(--font-display); color: var(--ink); text-wrap: balance; margin: 0; line-height: 1.2; }
 h1 { font-size: var(--step-4); font-weight: 800; letter-spacing: -0.02em; }
 h2 { font-size: var(--step-3); font-weight: 700; letter-spacing: -0.01em; }
@@ -65,10 +67,9 @@ section { display: flex; flex-direction: column; gap: 20px; }
 .secno { font-family: var(--font-data); font-size: var(--step--1); color: var(--muted); letter-spacing: 0.06em; }
 .sechead { display: flex; flex-direction: column; gap: 6px; }
 
-/* đầu trang kiểu tờ trình */
 header.memo { display: flex; flex-direction: column; gap: 18px; padding-bottom: 20px; border-bottom: 2px solid var(--ink); }
 .kicker { font-family: var(--font-data); font-size: var(--step--1); color: var(--accent); letter-spacing: 0.06em; text-transform: uppercase; }
-.lede { font-size: var(--step-1); color: var(--ink-2); max-width: 62ch; margin: 0; }
+.lede { font-size: var(--step-1); color: var(--ink-2); max-width: 64ch; margin: 0; }
 .memo-meta { display: grid; grid-template-columns: max-content 1fr; gap: 4px 18px; font-family: var(--font-data); font-size: 0.82rem; color: var(--ink-2); margin: 0; }
 .memo-meta dt { color: var(--muted); }
 .memo-meta dd { margin: 0; }
@@ -78,9 +79,8 @@ header.memo { display: flex; flex-direction: column; gap: 18px; padding-bottom: 
 .prov.measured { background: var(--ink); color: var(--bg); }
 .prov.sim { border: 1px dashed var(--ink-2); color: var(--ink-2); }
 .prov.est { border: 1px dotted var(--muted); color: var(--muted); }
-.prov.lit { border: 1px solid var(--accent); color: var(--accent); }
+.prov.data { border: 1px solid var(--accent); color: var(--accent); }
 
-/* hộp quyết định */
 .decide { background: var(--surface); border: 2px solid var(--accent); border-radius: 10px; padding: 22px 24px; display: flex; flex-direction: column; gap: 14px; }
 .decide h2 { font-size: var(--step-2); }
 .decide ol { margin: 0; padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 12px; counter-reset: d; }
@@ -89,19 +89,11 @@ header.memo { display: flex; flex-direction: column; gap: 18px; padding-bottom: 
 .decide li b { font-family: var(--font-display); font-weight: 600; }
 .decide .rec { font-size: 0.92rem; color: var(--ink-2); }
 
-.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
-.stat { background: var(--surface); padding: 16px; display: flex; flex-direction: column; gap: 4px; }
-.stat .v { font-family: var(--font-display); font-size: var(--step-2); font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
-.stat .v small { font-size: 0.55em; font-weight: 600; color: var(--ink-2); margin-left: 3px; }
-.stat .k { font-size: 0.88rem; color: var(--ink-2); line-height: 1.4; }
-
-/* vấn đề */
-.problems { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
-.problem { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; }
-.problem .tag { font-family: var(--font-data); font-size: 0.75rem; color: var(--bad); letter-spacing: 0.05em; text-transform: uppercase; }
-.problem h3 { font-size: 1.04rem; }
-.problem p { margin: 0; font-size: 0.93rem; color: var(--ink-2); line-height: 1.55; }
-.problem .fix { font-family: var(--font-data); font-size: 0.78rem; color: var(--accent); }
+.changes { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+.change { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; }
+.change .tag { font-family: var(--font-data); font-size: 0.74rem; color: var(--bad); letter-spacing: 0.05em; text-transform: uppercase; }
+.change h3 { font-size: 1.02rem; }
+.change p { margin: 0; font-size: 0.92rem; color: var(--ink-2); line-height: 1.55; }
 
 figure { margin: 0; background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
 figure .fig-title { font-family: var(--font-display); font-weight: 600; font-size: 1.02rem; display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
@@ -111,27 +103,27 @@ figcaption { font-size: 0.9rem; color: var(--ink-2); max-width: 76ch; line-heigh
 .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-family: var(--font-data); font-size: 0.78rem; color: var(--ink-2); }
 .legend span { display: inline-flex; align-items: center; gap: 6px; }
 .sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.sw.line { height: 3px; border-radius: 2px; width: 18px; }
 svg text { font-family: var(--font-data); font-size: 11px; fill: var(--ink-2); }
 svg .t-strong { fill: var(--ink); font-weight: 600; }
 svg .axis-label { fill: var(--muted); font-size: 10.5px; }
 svg .grid { stroke: var(--rule); stroke-width: 1; }
-svg .axis { stroke: var(--ink-2); stroke-width: 1; }
 
-/* bảng */
 .tbl { overflow-x: auto; border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); }
 table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
 th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
 th { font-family: var(--font-display); font-weight: 600; font-size: 0.82rem; color: var(--ink-2); background: var(--band); white-space: nowrap; }
 tr:last-child td { border-bottom: 0; }
 td.n { font-family: var(--font-data); font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
-td .sub { display: block; color: var(--muted); font-size: 0.82rem; }
+td .sub { display: block; color: var(--muted); font-size: 0.8rem; }
+tr.hl td { background: var(--accent-soft); }
+tr.grp td { background: var(--band); font-family: var(--font-display); font-size: 0.8rem; color: var(--ink-2); font-weight: 600; padding-block: 6px; }
 .prio { font-family: var(--font-data); font-size: 0.72rem; padding: 1px 7px; border-radius: 4px; white-space: nowrap; }
 .prio.must { background: var(--accent); color: var(--surface); }
+.prio.hard { background: var(--warn); color: var(--surface); }
 .prio.should { border: 1px solid var(--accent); color: var(--accent); }
-.prio.could { border: 1px dashed var(--muted); color: var(--muted); }
 .id { font-family: var(--font-data); font-weight: 600; color: var(--accent); white-space: nowrap; }
 
-/* thẻ hạng mục */
 .items { display: flex; flex-direction: column; gap: 16px; }
 details.item { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; }
 details.item[open] { border-color: var(--accent); }
@@ -148,9 +140,8 @@ details.item summary .one { display: block; font-family: var(--font-body); font-
 .item-body .wide { grid-column: 1 / -1; }
 pre { margin: 0; background: var(--band); border-radius: 6px; padding: 12px 14px; overflow-x: auto; font-family: var(--font-data); font-size: 0.78rem; line-height: 1.5; color: var(--ink); }
 
-/* lịch */
 .gantt { overflow-x: auto; border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); }
-.gantt-grid { display: grid; grid-template-columns: 210px repeat(9, minmax(44px, 1fr)); min-width: 680px; font-size: 0.82rem; }
+.gantt-grid { display: grid; grid-template-columns: 230px repeat(9, minmax(44px, 1fr)); min-width: 700px; font-size: 0.82rem; }
 .gantt-grid > div { padding: 7px 6px; border-bottom: 1px solid var(--rule); }
 .gantt-grid .h { font-family: var(--font-data); font-size: 0.74rem; color: var(--muted); text-align: center; background: var(--band); }
 .gantt-grid .h.first { text-align: left; }
@@ -159,21 +150,23 @@ pre { margin: 0; background: var(--band); border-radius: 6px; padding: 12px 14px
 .bar { border-radius: 4px; height: 18px; align-self: center; margin: 0 1px; }
 .bar.base { background: var(--base-mark); }
 .bar.new { background: var(--accent); }
+.bar.hard { background: repeating-linear-gradient(135deg, var(--accent) 0 5px, var(--accent-soft) 5px 9px); border: 1px solid var(--accent); }
 .bar.v3 { background: var(--warn); }
 .bar.opt { background: repeating-linear-gradient(135deg, var(--warn) 0 4px, transparent 4px 8px); border: 1px solid var(--warn); }
 .ms { text-align: center; color: var(--bad); font-weight: 700; }
 
-ol.seq { list-style: none; margin: 0; padding: 0; counter-reset: seq; }
-ol.seq li { counter-increment: seq; display: grid; grid-template-columns: 64px 1fr; gap: 12px; padding: 10px 0; border-top: 1px solid var(--rule); align-items: baseline; font-size: 0.94rem; }
+ol.seq { list-style: none; margin: 0; padding: 0; }
+ol.seq li { display: grid; grid-template-columns: 64px 1fr; gap: 12px; padding: 10px 0; border-top: 1px solid var(--rule); align-items: baseline; font-size: 0.94rem; }
 ol.seq .t { font-family: var(--font-data); font-size: 0.8rem; color: var(--accent); font-weight: 600; }
 ol.seq .who { font-family: var(--font-data); font-size: 0.76rem; color: var(--muted); }
 
-.callout { border-left: 3px solid var(--accent); padding: 4px 0 4px 16px; max-width: 74ch; color: var(--ink-2); font-size: 0.96rem; }
+.callout { border-left: 3px solid var(--accent); padding: 4px 0 4px 16px; max-width: 74ch; color: var(--ink-2); font-size: 0.96rem; margin: 0; }
 .callout b { color: var(--ink); font-family: var(--font-display); font-weight: 600; }
 .reject { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
 .reject > div { border: 1px dashed var(--rule); border-radius: 8px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; background: var(--surface); }
 .reject h3 { font-size: 0.98rem; }
 .reject p { margin: 0; font-size: 0.9rem; color: var(--ink-2); line-height: 1.5; }
+.reject .verdict { font-family: var(--font-data); font-size: 0.74rem; color: var(--bad); letter-spacing: 0.04em; text-transform: uppercase; }
 .sources { font-size: 0.86rem; color: var(--ink-2); columns: 2 320px; column-gap: 32px; padding-left: 18px; margin: 0; }
 .sources li { break-inside: avoid; margin-bottom: 6px; }
 @media (max-width: 560px) {
@@ -188,14 +181,14 @@ ol.seq .who { font-family: var(--font-data); font-size: 0.76rem; color: var(--mu
 <div class="wrap">
 
 <header class="memo">
-  <div class="kicker">Tờ trình · Dự án LLM autoscaling trên Kubernetes</div>
+  <div class="kicker">Tờ trình · bản 2 · Dự án LLM autoscaling trên Kubernetes</div>
   <h1>Nâng cấp V3 trên cloud</h1>
-  <p class="lede">Đề xuất 9 hạng mục để hệ thống tự co giãn GPU xử lý được ba điểm yếu đã đo ở V1, thêm phần demo trên cloud và bám sát cách ngành đang làm. Toàn bộ chạy trên máy Vast 4 × A4000, thêm một phiên đo V3 ngày 20/11, tổng chi dưới 10 USD.</p>
+  <p class="lede">Bản 1 đánh giá trên các kịch bản tải dạng đường thẳng nên kết quả đẹp hơn thực tế. Bản này chấm lại mọi phương án trên 61 ngày log thật của một dịch vụ GPT, có client thử lại và có kịch bản đỉnh ngắn. Kết luận đổi: điểm nghẽn thật là cold start 110–150 s, và chỉ rút được cold start mới nâng chất lượng mà không tốn thêm GPU.</p>
   <dl class="memo-meta">
     <dt>Người trình</dt><dd>Claude (phụ trách kỹ thuật cùng Quang)</dd>
     <dt>Người duyệt</dt><dd>Quang</dd>
-    <dt>Ngày</dt><dd>13/11/2026, trước phiên V2 (14–15/11)</dd>
-    <dt>Hạn duyệt</dt><dd>Tối 15/11, sau khi V2 xong. Việc bắt đầu 16/11</dd>
+    <dt>Ngày</dt><dd>13/11/2026, tối. Thay bản 1 cùng ngày</dd>
+    <dt>Hạn duyệt</dt><dd>Tối 15/11, sau V2. Việc bắt đầu 16/11</dd>
     <dt>Trạng thái</dt><dd><span class="pill pending">Chờ duyệt</span></dd>
   </dl>
 </header>
@@ -203,367 +196,300 @@ ol.seq .who { font-family: var(--font-data); font-size: 0.76rem; color: var(--mu
 <section class="decide" aria-labelledby="ask">
   <h2 id="ask">Cần anh quyết 4 việc</h2>
   <ol>
-    <li><div><b>Giữ nguyên V2 (14–15/11).</b> Không đổi cấu hình nào trước phiên. Mọi nâng cấp làm từ 16/11.<div class="rec">Đề xuất: đồng ý. V2 là dữ liệu chính của chương 5, không phiên dự phòng, không nên đánh cược.</div></div></li>
-    <li><div><b>Thêm một phiên đo V3 ngày 20/11</b> (khoảng 8 giờ thuê, ≈ 5 USD) và ghi thành ADR-007. Đóng băng dữ liệu vẫn là 22/11.<div class="rec">Đề xuất: đồng ý. Ngày 21/11 để chạy bù nếu 20/11 không có máy.</div></div></li>
-    <li><div><b>Duyệt 5 hạng mục bắt buộc:</b> Đ1 gateway định tuyến theo tải, Đ2 autoscaling dự báo (A3), Đ3 chặn quá tải, Đ7 lớp demo trên cloud, Đ9 kịch bản demo. Bốn hạng mục còn lại làm nếu còn thời gian.<div class="rec">Đề xuất: đồng ý. Ba hạng mục đầu sửa đúng ba điểm yếu đã đo ở V1, có mô phỏng ủng hộ.</div></div></li>
-    <li><div><b>Demo trước hội đồng bằng máy thuê thật,</b> có video quay ở V3 làm dự phòng. Bỏ demo ở nhà.<div class="rec">Đề xuất: đồng ý. Thuê khoảng 3 giờ quanh buổi bảo vệ, ≈ 2 USD.</div></div></li>
+    <li><div><b>Giữ nguyên V2 (14–15/11).</b> Không đổi cấu hình nào trước phiên.<div class="rec">Đề xuất: đồng ý. V2 là dữ liệu chính của chương 5 và không có phiên dự phòng.</div></div></li>
+    <li><div><b>Duyệt 4 hạng mục bắt buộc:</b> Đ1 gateway chia theo tải, Đ2 chặn quá tải có báo lại cho autoscaler, Đ4 tải thật trong máy tạo tải, Đ5 lớp demo.<div class="rec">Đề xuất: đồng ý. Đ1 và Đ2 cùng đưa SLO trên tải thật từ 80,7 % lên 90,3 %, GPU-giờ gần như giữ nguyên (87 → 89 % của S4, mô phỏng).</div></div></li>
+    <li><div><b>Duyệt Đ3, hạng mục khó: khôi phục vLLM từ snapshot</b> để cold start còn khoảng 15 s, có điểm dừng tối 18/11. Nếu dừng thì làm Đ3b (rút cold start bằng cách rẻ).<div class="rec">Đề xuất: đồng ý. Đây là thay đổi duy nhất trong mô phỏng đưa SLO lên 97,9 % mà GPU-giờ không tăng. Rủi ro cao, nên có điểm dừng và phương án lùi rõ.</div></div></li>
+    <li><div><b>Thuê thêm:</b> một VM 1 GPU khoảng 10 giờ (16–18/11) để thử Đ3, và phiên V3 khoảng 8 giờ ngày 20/11. Tổng khoảng 10 USD.<div class="rec">Đề xuất: đồng ý. Ngày 21/11 để chạy bù nếu 20/11 không có máy.</div></div></li>
   </ol>
 </section>
 
-<section aria-labelledby="s-tldr">
-  <div class="sechead"><span class="secno">01</span><h2 id="s-tldr">Tóm tắt</h2></div>
-  <div class="stats">
-    <div class="stat"><span class="v num">71,9 → 94,0<small>%</small></span><span class="k">Tỷ lệ request đạt SLO ở KB2 (tăng đột ngột), A2 hiện tại so với A2 có đủ ba nâng cấp <span class="prov sim">mô phỏng</span></span></div>
-    <div class="stat"><span class="v num">18,7 → 78,2<small>%</small></span><span class="k">Đạt SLO khi tải vượt 25 % năng lực 4 GPU, có và không có chặn quá tải <span class="prov sim">mô phỏng</span></span></div>
-    <div class="stat"><span class="v num">88<small>% của S4</small></span><span class="k">GPU-giờ ở KB2 khi bật đủ nâng cấp. Ở tải thấp còn 50 % <span class="prov sim">mô phỏng</span></span></div>
-    <div class="stat"><span class="v num">&lt; 10<small>USD</small></span><span class="k">Chi phí thêm: V3, tập demo và demo thật <span class="prov est">ước lượng</span></span></div>
+<section aria-labelledby="s-diff">
+  <div class="sechead"><span class="secno">Bối cảnh</span><h2 id="s-diff">Bản 1 sai ở đâu</h2></div>
+  <div class="changes">
+    <div class="change"><span class="tag">Kịch bản thiên lệch</span><h3>Đề trùng đáp án</h3><p>KB3 là đường dốc thẳng, còn A3 dùng <code>predict_linear</code> để kẻ đường thẳng, nên A3 đạt 96 % là đương nhiên. Tải thật không có dạng đó.</p></div>
+    <div class="change"><span class="tag">Thiếu kịch bản</span><h3>Không có đỉnh ngắn</h3><p>KB2 vọt lên rồi giữ đỉnh 10 phút. Ngoài thực tế, 84 % đỉnh tắt trước 2 phút, ngắn hơn cold start. Đây là chỗ scale sớm gây lãng phí.</p></div>
+    <div class="change"><span class="tag">Giả định lạc quan</span><h3>Request bị chặn thì biến mất</h3><p>Thực tế client tự thử lại. Request bị chặn cũng không còn nằm trong hàng đợi, nên autoscaler tưởng tải thấp. Bản 1 bỏ qua cả hai.</p></div>
   </div>
-  <div class="prose">
-    <p>Hệ thống đã chạy được trên cloud, nhưng dữ liệu V1 và mô phỏng cho thấy ba chỗ yếu. Thứ nhất, Kubernetes chia request ngẫu nhiên nên hàng đợi bị ghim ở pod cũ, pod mới gần như rảnh. Thứ hai, từ lúc tải tăng tới lúc có thêm GPU mất khoảng 150 s. Thứ ba, khi đã dùng hết 4 GPU mà tải còn tăng, mọi người dùng cùng chờ tới timeout. Ba chỗ này có lời giải phổ biến trong ngành, và cả ba đều cài được trên cụm hiện tại trong vài ngày.</p>
-    <p>Song song, phần demo cần chuyển hẳn sang cloud vì môi trường nhà bị bỏ. Hiện trên cloud chỉ có terminal và Grafana. Đề xuất đưa Argo CD, cảnh báo Telegram, một dashboard riêng cho demo và giao diện chat lên máy thuê, để hội đồng nhìn thấy từng bước của hệ thống.</p>
-  </div>
+  <p class="callout"><b>Đã sửa:</b> mô phỏng mới phát lại nhịp tải của trace BurstGPT. Tham số được chọn trên 40 ngày đầu (train) rồi chấm điểm trên 21 ngày sau (test). Mô phỏng có client thử lại 2 lần như SDK OpenAI, có kịch bản "đỉnh ngắn", và giữ nguyên các tham số đã hiệu chỉnh theo số đo 08/11 (so với V1: lệch 1,9 điểm ở pha spike, 8,7 điểm ở pha ramp).</p>
 </section>
 
-<section aria-labelledby="s-why">
-  <div class="sechead"><span class="secno">02</span><h2 id="s-why">Vì sao cần nâng cấp: bốn điểm yếu</h2></div>
-  <div class="problems">
-    <div class="problem">
-      <span class="tag">Đo ở V1 · 08/11</span>
-      <h3>Hàng đợi ghim vào pod cũ</h3>
-      <p>Ở lượt A2 × KB2, trong ~2,5 phút chờ pod mới, toàn bộ request dồn vào pod duy nhất. Pod mới Ready nhưng Service không chuyển hàng đợi cũ sang, nên SLO chỉ đạt 62,7 % và tới phút thứ 9 của pha tăng mới hồi phục.</p>
-      <span class="fix">→ Đ1 định tuyến theo tải</span>
-    </div>
-    <div class="problem">
-      <span class="tag">Đo ở V1 · 08/11</span>
-      <h3>Phản ứng chậm 150 giây</h3>
-      <p>Khoảng 30 s để KEDA và HPA thấy tải tăng, cộng 108–122 s cold start. Hệ thống luôn đuổi theo tải, không bao giờ đón trước.</p>
-      <span class="fix">→ Đ2 autoscaling dự báo</span>
-    </div>
-    <div class="problem">
-      <span class="tag">Mô phỏng</span>
-      <h3>Hết GPU thì ai cũng chờ</h3>
-      <p>vLLM nhận mọi request vào hàng đợi không giới hạn. Khi tải vượt 25 % năng lực 4 GPU, chỉ 18,7 % request đạt SLO, kể cả với S4 luôn bật đủ GPU.</p>
-      <span class="fix">→ Đ3 chặn quá tải</span>
-    </div>
-    <div class="problem">
-      <span class="tag">Phạm vi · 13/11</span>
-      <h3>Demo trên cloud quá ít thứ để xem</h3>
-      <p>Argo CD, GitOps và giao diện đều nằm ở môi trường nhà, nay đã bỏ. Trên máy thuê chỉ có lệnh trong terminal và Grafana.</p>
-      <span class="fix">→ Đ7, Đ8, Đ9</span>
-    </div>
-  </div>
+<section aria-labelledby="s-real">
+  <div class="sechead"><span class="secno">Bằng chứng 1</span><h2 id="s-real">Tải thật trông thế nào</h2></div>
+  <div class="prose"><p>BurstGPT là log 61 ngày (1,43 triệu request) của dịch vụ Azure OpenAI GPT ở một trường đại học, giấy phép CC-BY-4.0. Một "đỉnh" là đoạn tốc độ gửi vượt gấp đôi mức nền của 10 phút trước đó.</p></div>
+  <figure>
+    <div class="fig-title">Đỉnh ngắn thì nhiều, nhưng tải nằm ở đỉnh dài <span class="prov data">trace thật</span></div>
+    <div class="legend"><span><i class="sw" style="background:var(--base-mark)"></i>Tỷ lệ số đỉnh</span><span><i class="sw" style="background:var(--accent)"></i>Tỷ lệ phần tải vượt mức nền</span></div>
+    <div class="chart" id="dur"></div>
+    <figcaption>Đỉnh dưới 2 phút chiếm 84 % số đỉnh nhưng chỉ chở 5 % phần tải dư. Đỉnh từ 15 phút trở lên chỉ có 4 % số đỉnh nhưng chở 74 % tải dư. Autoscaling phải đón được đỉnh dài thật nhanh, và không được trả giá quá nhiều cho đỉnh ngắn.</figcaption>
+  </figure>
+
+  <figure>
+    <div class="fig-title">Đỉnh 60 giây rồi giảm ngay: vì sao không cấu hình nào đỡ được <span class="prov est">minh hoạ theo luật của mô phỏng</span></div>
+    <div class="legend"><span><i class="sw" style="background:var(--warn-soft);border:1px solid var(--warn)"></i>Tải gửi đến</span><span><i class="sw line" style="background:var(--base-mark)"></i>Năng lực phục vụ, cold start 110 s</span><span><i class="sw line" style="background:var(--accent)"></i>Năng lực phục vụ, snapshot 15 s</span></div>
+    <div class="chart" id="burst"></div>
+    <figcaption>Tải vọt từ 0,5 C lên 3 C trong 60 s (C = 4,5 req/s, năng lực một GPU). Một pod thiếu 2 C × 60 s ≈ 540 request, mà chỉ có khoảng 75 chỗ (64 đang chạy + 11 chờ). Với cold start 110 s, pod mới Ready ở giây khoảng 125, khi đỉnh đã tắt. Pod đó còn giữ GPU thêm cửa sổ 300 s. Có ba cách xử lý thật: giữ sẵn dư năng lực (tốn tiền), từ chối nhanh để người còn lại vẫn được phục vụ tốt (Đ2), hoặc rút cold start xuống ngắn hơn độ dài đỉnh (Đ3). Với snapshot, pod mới lên ở giây khoảng 30 và còn đỡ được nửa sau của đỉnh.</figcaption>
+  </figure>
 
   <figure>
     <div class="fig-title">Cold start 152 s gồm những gì <span class="prov measured">đo thật</span></div>
     <div class="chart" id="cold"></div>
-    <figcaption>Lần khởi động đầu trên A4000, ngày 08/11, image và model đã có sẵn trên ổ. Nạp weights chỉ mất 11 s (7 %). Phần lớn thời gian là CPU khởi động Python và engine của vLLM. Bài báo MLSys 2026 "Breaking the Ice" cũng kết luận khởi động vLLM chủ yếu bị giới hạn bởi CPU. Vì vậy tải model nhanh hơn không rút cold start được bao nhiêu. Cách thực tế là <b>bắt đầu khởi động sớm hơn</b> (Đ2). Có compile cache thì tổng còn 108 s; các pha của lần 108 s chưa được tách riêng.</figcaption>
+    <figcaption>Lần khởi động đầu trên A4000 ngày 08/11, image và model đã nằm sẵn trên ổ. Nạp weights chỉ mất 11 s (7 %). 77 s là CPU khởi động Python và engine vLLM trên Xeon E5-2620 v4 2,1 GHz đời 2016. Có compile cache thì tổng còn 108 s. Snapshot (Đ3) bỏ qua được cả bốn pha sau lập lịch, vì nó khôi phục tiến trình đã khởi động xong.</figcaption>
   </figure>
 </section>
 
-<section aria-labelledby="s-industry">
-  <div class="sechead"><span class="secno">03</span><h2 id="s-industry">Ngành đang làm gì</h2></div>
-  <div class="prose">
-    <p>Các hệ thống phục vụ LLM mã nguồn mở trên Kubernetes đã đi qua đúng những vấn đề trên. Bảng dưới cho thấy mỗi đề xuất là phiên bản thu nhỏ của một thành phần đã có ngoài thực tế. Nhờ vậy khi bảo vệ, nhóm nói được "chúng em làm theo hướng của X" thay vì tự nghĩ ra.</p>
-  </div>
-  <div class="tbl">
-    <table>
-      <thead><tr><th>Hệ thống ngoài thực tế</th><th>Họ giải quyết thế nào</th><th>Tương ứng trong đề xuất</th></tr></thead>
-      <tbody>
-        <tr><td><b>Gateway API Inference Extension</b><span class="sub">Kubernetes SIG, v1.0 từ 09/2025; endpoint picker chuyển sang llm-d năm 2026</span></td><td>Gateway chọn pod cho từng request theo độ dài hàng đợi, KV-cache và prefix cache, thay cho chia vòng tròn</td><td><span class="id">Đ1</span> bản đơn giản: chọn pod ít request đang xử lý nhất</td></tr>
-        <tr><td><b>vLLM production-stack router</b></td><td>Router riêng cho vLLM: roundrobin, session, prefix-aware, KV-aware</td><td><span class="id">Đ1</span></td></tr>
-        <tr><td><b>NVIDIA Dynamo, SLA planner</b></td><td>Dự báo tải (ARIMA, Prophet, Kalman) rồi tính số GPU cần để giữ TTFT và ITL</td><td><span class="id">Đ2</span> bản đơn giản: ngoại suy tuyến tính bằng <code>predict_linear</code></td></tr>
-        <tr><td><b>AIBrix</b> (vllm-project)</td><td>Autoscaler riêng cho LLM: cửa sổ "panic" để tăng nhanh khi tải vọt, dung sai để bớt dao động</td><td><span class="id">Đ2</span>; A2 hiện tại đã dùng ý tương tự (scale theo số request đồng thời)</td></tr>
-        <tr><td><b>KServe / Knative KPA</b></td><td>Scale theo số request đồng thời mỗi pod</td><td>Chính là ý tưởng của A2, xác nhận lựa chọn của nhóm</td></tr>
-        <tr><td><b>vLLM <code>--max-num-queued-reqs</code></b></td><td>Giới hạn số request trong pod, quá thì trả HTTP 503 để client thử chỗ khác. Có sẵn trong vLLM 0.31.0 nhóm đang dùng</td><td><span class="id">Đ3</span></td></tr>
-        <tr><td><b>Trace Azure LLM 2024, BurstGPT</b></td><td>Dữ liệu tải thật (thời điểm gửi, số token vào và ra) mà các bài báo dùng để đánh giá</td><td><span class="id">Đ4</span></td></tr>
-        <tr><td><b>Goodput</b> (DistServe, OSDI 2024)</td><td>Đo số request đạt SLO mỗi giây thay vì tổng throughput</td><td><span class="id">Đ3</span>, <span class="id">Đ5</span></td></tr>
-      </tbody>
-    </table>
-  </div>
+<section aria-labelledby="s-front">
+  <div class="sechead"><span class="secno">Bằng chứng 2</span><h2 id="s-front">Mọi cấu hình đều nằm trên một đường đánh đổi</h2></div>
+  <div class="prose"><p>Mỗi điểm dưới đây là trung bình của 8 cửa sổ 30 phút bận nhất trong 21 ngày test, mỗi cửa sổ 5 seed. Hạ ngưỡng (42 → 32 → 24 → 16 request mỗi pod) nghĩa là để dư năng lực nhiều hơn. Request bị chặn được tính là trượt SLO.</p></div>
+  <figure>
+    <div class="fig-title">Đạt SLO so với GPU-giờ trên tải thật <span class="prov sim">mô phỏng</span></div>
+    <div class="legend">
+      <span><i class="sw line" style="background:var(--base-mark)"></i>A2 + gateway, cold 110 s</span>
+      <span><i class="sw line" style="background:var(--line-2)"></i>P = A2 + Đ1 + Đ2, cold 110 s</span>
+      <span><i class="sw line" style="background:var(--accent)"></i>P, snapshot 15 s</span>
+    </div>
+    <div class="chart" id="front"></div>
+    <figcaption>Với cold start 110 s, muốn thêm SLO thì phải trả thêm GPU. A3 (dự báo của bản 1) nằm đúng trên đường của A2 + gateway, tức nó chỉ tương đương việc hạ ngưỡng. Đ2 đẩy đường lên 4–8 điểm. Rút cold start xuống 15 s đẩy đường lên thêm 5–8 điểm nữa, và ở ngưỡng 42 đã đạt 97,9 % với 88 % GPU-giờ của S4. S4 nằm ngoài khung: 98,9 % với 100 %.</figcaption>
+  </figure>
 </section>
 
 <section aria-labelledby="s-items">
-  <div class="sechead"><span class="secno">04</span><h2 id="s-items">Chín hạng mục đề xuất</h2></div>
+  <div class="sechead"><span class="secno">Đề xuất</span><h2 id="s-items">Năm hạng mục</h2></div>
   <div class="tbl">
     <table>
       <thead><tr><th>Mã</th><th>Hạng mục</th><th>Mức</th><th style="text-align:right">Công</th><th>Rủi ro</th><th>Hội đồng thấy gì</th></tr></thead>
       <tbody>
-        <tr><td class="id">Đ1</td><td>Gateway định tuyến theo tải</td><td><span class="prio must">Bắt buộc</span></td><td class="n">1,5 ngày</td><td>Vừa</td><td>Request chia đều các pod trên Grafana</td></tr>
-        <tr><td class="id">Đ2</td><td>Autoscaling dự báo (A3)</td><td><span class="prio must">Bắt buộc</span></td><td class="n">0,5 ngày</td><td>Thấp</td><td>Pod mới khởi động trước khi tải đỉnh tới</td></tr>
-        <tr><td class="id">Đ3</td><td>Chặn quá tải có tính toán</td><td><span class="prio must">Bắt buộc</span></td><td class="n">0,5 ngày</td><td>Thấp</td><td>Lúc quá tải, chat vẫn trả lời nhanh</td></tr>
-        <tr><td class="id">Đ4</td><td>KB4: tải thật từ trace Azure</td><td><span class="prio should">Nên</span></td><td class="n">1 ngày</td><td>Thấp</td><td>Hình tải thật, thay vì đường thẳng</td></tr>
-        <tr><td class="id">Đ5</td><td>Chi phí theo token và goodput</td><td><span class="prio should">Nên</span></td><td class="n">0,5 ngày</td><td>Thấp</td><td>Bảng USD / 1 triệu token, panel trực tiếp</td></tr>
-        <tr><td class="id">Đ6</td><td>Kho model trên R2 + kiểm checksum</td><td><span class="prio could">Tuỳ chọn</span></td><td class="n">0,5 ngày</td><td>Thấp</td><td>Khớp khối "Model preparation" trong sơ đồ của mentor</td></tr>
-        <tr><td class="id">Đ7</td><td>Lớp demo trên cloud: Argo CD, Telegram, dashboard</td><td><span class="prio must">Bắt buộc</span></td><td class="n">1 ngày</td><td>Thấp</td><td>GitOps, cảnh báo về điện thoại</td></tr>
-        <tr><td class="id">Đ8</td><td>Giao diện chat (Open WebUI)</td><td><span class="prio should">Nên</span></td><td class="n">0,5 ngày</td><td>Thấp</td><td>Gõ chat trong lúc tải chạy</td></tr>
-        <tr><td class="id">Đ9</td><td>Phiên V3, kịch bản demo, video dự phòng</td><td><span class="prio must">Bắt buộc</span></td><td class="n">1 ngày + V3</td><td>Vừa</td><td>Buổi demo 10 phút</td></tr>
+        <tr><td class="id">Đ1</td><td>Gateway chia request theo tải</td><td><span class="prio must">Bắt buộc</span></td><td class="n">1,5 ngày</td><td>Vừa</td><td>Hàng đợi chia đều các pod trên Grafana</td></tr>
+        <tr><td class="id">Đ2</td><td>Chặn quá tải và báo lại cho autoscaler</td><td><span class="prio must">Bắt buộc</span></td><td class="n">1 ngày</td><td>Thấp</td><td>Khi quá tải, chat vẫn trả lời nhanh; panel 429</td></tr>
+        <tr><td class="id">Đ3</td><td>Khôi phục vLLM từ snapshot</td><td><span class="prio hard">Khó, có điểm dừng</span></td><td class="n">2–3 ngày</td><td>Cao</td><td>Pod mới Ready trong vài chục giây thay vì 2,5 phút</td></tr>
+        <tr><td class="id">Đ3b</td><td>Rút cold start bằng cách rẻ (phương án lùi)</td><td><span class="prio should">Nên</span></td><td class="n">0,5 ngày</td><td>Thấp</td><td>Cold start trước và sau trên cùng biểu đồ</td></tr>
+        <tr><td class="id">Đ4</td><td>Tải thật trong máy tạo tải</td><td><span class="prio must">Bắt buộc</span></td><td class="n">1 ngày</td><td>Thấp</td><td>Đồ thị tải có hình thật, không phải đường thẳng</td></tr>
+        <tr><td class="id">Đ5</td><td>Lớp demo: Argo CD, Telegram, dashboard, chat</td><td><span class="prio must">Bắt buộc</span></td><td class="n">1,5 ngày</td><td>Thấp</td><td>Toàn bộ buổi demo</td></tr>
       </tbody>
     </table>
   </div>
-  <p class="callout"><b>Tổng công:</b> khoảng 7 ngày công cho cả 9 mục, 4,5 ngày cho 5 mục bắt buộc, chia cho 2 người trong 16–19/11. Bấm vào từng mục bên dưới để xem chi tiết: làm gì, kỳ vọng, đo thế nào, khi nào dừng.</p>
+  <p class="callout"><b>Tổng công:</b> khoảng 7,5–8,5 ngày công trong 16–19/11 cho 2 người cộng Claude. Thứ tự cắt nếu trễ: Đ3 trước (chuyển sang Đ3b), rồi tới giao diện chat trong Đ5.</p>
 
   <div class="items">
-
     <details class="item" open>
-      <summary><span class="id">Đ1</span><span><h3>Gateway định tuyến theo tải</h3><span class="one">Đặt Envoy Gateway trước vLLM, gửi mỗi request tới pod đang có ít request nhất, và tự thử pod khác khi một pod trả 503.</span></span><span class="prio must">Bắt buộc</span></summary>
+      <summary><span class="id">Đ1</span><span><h3>Gateway chia request theo tải</h3><span class="one">Đặt Envoy Gateway trước vLLM, gửi mỗi request tới pod đang có ít request nhất.</span></span><span class="prio must">Bắt buộc</span></summary>
       <div class="item-body">
-        <div><span class="lbl">Vấn đề</span><p>Service của Kubernetes chia request ngẫu nhiên theo kết nối, không biết pod nào đang bận. Pod mới Ready vẫn chỉ nhận 1/N request mới, còn hàng đợi cũ nằm nguyên ở pod cũ.</p></div>
-        <div><span class="lbl">Làm gì</span><ul><li>Cài Envoy Gateway bằng Helm, tạo <code>Gateway</code> và <code>HTTPRoute</code> (chuẩn Gateway API).</li><li><code>BackendTrafficPolicy</code>: cân bằng tải <code>LeastRequest</code>, retry khi gặp 503.</li><li>Máy tạo tải và Chat UI gọi qua gateway thay vì gọi thẳng Service.</li></ul></div>
-        <div><span class="lbl">Kỳ vọng</span><p>KB2: 71,9 % → 83,5 % đạt SLO, gần như không tốn thêm GPU <span class="prov sim">mô phỏng</span>. Đây là nâng cấp ổn định nhất: cả 5 seed đều nằm trong 83,2–84,0 %.</p></div>
-        <div><span class="lbl">Đo ở V3</span><p>A2 × KB2 qua gateway, so với A2 × KB2 gọi thẳng. Thêm 5 phút ở 0,5 C để đo độ trễ gateway thêm vào TTFT.</p></div>
-        <div><span class="lbl">Rủi ro, điểm dừng</span><p>Envoy Gateway chưa từng chạy trên k3s của nhóm. Nếu tới tối 18/11 chưa chạy được trên kind, chuyển sang HAProxy <code>balance leastconn</code> (một Deployment, nửa ngày).</p></div>
-        <div><span class="lbl">Bước tiếp theo (chỉ viết)</span><p>Bước kế tiếp là thay chính sách LeastRequest bằng endpoint picker của Inference Extension, chọn pod theo KV-cache. Phần này để vào chương "hướng phát triển".</p></div>
+        <div><span class="lbl">Vấn đề</span><p>Service của Kubernetes chia ngẫu nhiên. V1 đo được hàng đợi bị ghim ở pod cũ trong lúc pod mới gần như rảnh: pha spike của A2 × KB2 chỉ đạt 62,7 %.</p></div>
+        <div><span class="lbl">Làm gì</span><ul><li>Envoy Gateway (Helm), <code>Gateway</code> + <code>HTTPRoute</code>.</li><li><code>BackendTrafficPolicy</code>: <code>LeastRequest</code>.</li><li>Máy tạo tải và chat gọi qua gateway.</li></ul></div>
+        <div><span class="lbl">Kỳ vọng</span><p>KB2: 71,0 → 82,0 %. Trên tải thật chỉ thêm 2 điểm (80,7 → 82,7 %), vì đỉnh thật ngắn hơn KB2 <span class="prov sim">mô phỏng</span>. Đ1 cần cho Đ2: chặn theo pod chỉ công bằng khi gateway biết pod nào rảnh.</p></div>
+        <div><span class="lbl">Rủi ro, điểm dừng</span><p>Envoy Gateway chưa chạy trên k3s của nhóm. Tối 17/11 chưa qua kind thì đổi sang HAProxy <code>balance leastconn</code>.</p></div>
       </div>
     </details>
 
     <details class="item">
-      <summary><span class="id">Đ2</span><span><h3>Autoscaling dự báo (cấu hình A3)</h3><span class="one">Giữ nguyên A2, nhưng KEDA đọc giá trị tải ước lượng sau 110 giây nữa, tức đúng bằng cold start, thay vì giá trị hiện tại.</span></span><span class="prio must">Bắt buộc</span></summary>
+      <summary><span class="id">Đ2</span><span><h3>Chặn quá tải và báo lại cho autoscaler</h3><span class="one">Mỗi pod nhận tối đa 75 request, quá thì trả 429 ngay. Số request bị chặn được cộng vào tín hiệu scale, vì chúng là nhu cầu thật.</span></span><span class="prio must">Bắt buộc</span></summary>
       <div class="item-body">
-        <div><span class="lbl">Vấn đề</span><p>Cold start 110 s không rút được nhiều (mục 02). Muốn pod Ready đúng lúc tải tới thì phải bắt đầu tạo pod sớm hơn khoảng 110 s.</p></div>
-        <div><span class="lbl">Làm gì</span><p>Một ScaledObject mới. Không thêm thành phần nào, chỉ đổi câu PromQL. <code>predict_linear</code> hồi quy tuyến tính trên 2 phút gần nhất; ngưỡng chết 10 request để nhiễu nhỏ không gây scale.</p></div>
-        <div class="wide"><span class="lbl">Phác thảo truy vấn (kiểm trên kind trước)</span>
-<pre>cur  = sum(vllm:num_requests_running{namespace="llm-serving"})
-     + sum(vllm:num_requests_waiting{namespace="llm-serving"})
-pred = predict_linear((cur)[2m:5s], 110)           # giá trị dự kiến sau 110 s
-A3   = cur + clamp_min(pred - cur - 10, 0)          # chỉ cộng khi xu hướng tăng rõ
-threshold = 42                                       # giữ như A2 (0,8 × B*)</pre></div>
-        <div><span class="lbl">Kỳ vọng</span><p>KB3 (tải tăng dần): 88,8 % → 96,2 %. KB2 (tăng vọt trong 30 s): trung bình 79,7 % nhưng dao động 71–100 %, vì 30 s là quá nhanh để hồi quy kịp nhận ra. Giá: ở tải thấp tốn thêm 55 % GPU-giờ (0,20 → 0,31) do nhiễu <span class="prov sim">mô phỏng</span>.</p></div>
-        <div><span class="lbl">Đo ở V3</span><p>A3 × KB2, A3 × KB3 (cùng gateway Đ1). Ở KB1 không cần chạy riêng, lấy GPU-giờ từ pha nền của KB2.</p></div>
-        <div><span class="lbl">Lý thuyết để viết</span><p>Định lý Little và luật điều khiển "phản ứng theo xu hướng": mức hàng đợi đỉnh ≈ (λ − C) × thời gian chờ GPU, nên cắt 110 s chờ là cắt thẳng phần đỉnh này.</p></div>
+        <div><span class="lbl">Vấn đề</span><p>Không chặn thì khi hết chỗ, hàng đợi phình và gần như ai cũng trễ. Chặn mà không báo lại thì request bị chặn biến mất khỏi metric hàng đợi, autoscaler tưởng tải thấp và scale thiếu: KB2 tụt từ 82,0 xuống 77,5 %.</p></div>
+        <div><span class="lbl">Con số 75</span><p>64 chỗ chạy (<code>--max-num-seqs</code>) cộng 11 chỗ chờ. 11 lấy từ định lý Little: muốn chờ ≤ 2,5 s (SLO TTFT) với C = 4,5 req/s thì hàng chờ ≤ 4,5 × 2,5 ≈ 11.</p></div>
+        <div class="wide"><span class="lbl">Tín hiệu scale mới (một câu PromQL trong ScaledObject)</span>
+<pre>tải   = sum(vllm:num_requests_running) + sum(vllm:num_requests_waiting)
+bị_chặn = sum(rate(envoy_cluster_upstream_rq{envoy_response_code=~"429|503"}[1m]))   # tên metric kiểm lại trên kind
+nhu_cầu = tải + bị_chặn × 9      # định lý Little: tốc độ × thời gian một request (6–11 s đo 08/11)
+threshold = 42                     # giữ như A2</pre></div>
+        <div><span class="lbl">Làm gì</span><p>Giới hạn 75 bằng cờ <code>--max-num-queued-reqs</code> của vLLM hoặc circuit breaker của Envoy (cần kiểm cờ của vLLM đếm hàng chờ hay tổng). Máy tạo tải thử lại 2 lần như SDK OpenAI. Runner ghi thêm cột "bị chặn".</p></div>
+        <div><span class="lbl">Kỳ vọng <span class="prov sim">mô phỏng</span></span><p>Tải thật: 82,7 → 90,3 %, GPU 88,5 → 88,6 %, 6 % request bị chặn hẳn. KB2: 86,2 %. Trọn một ngày: 93,0 → 95,7 %.</p></div>
       </div>
     </details>
 
     <details class="item">
-      <summary><span class="id">Đ3</span><span><h3>Chặn quá tải có tính toán</h3><span class="one">Mỗi pod nhận tối đa 75 request. Quá mức đó thì trả 503 ngay, gateway thử pod khác; hết chỗ thì báo người dùng thử lại, không để họ chờ tới timeout.</span></span><span class="prio must">Bắt buộc</span></summary>
+      <summary><span class="id">Đ3</span><span><h3>Khôi phục vLLM từ snapshot</h3><span class="one">Chụp lại tiến trình vLLM đã khởi động xong (CPU bằng CRIU, GPU bằng <code>cuda-checkpoint</code>). Pod mới khôi phục từ ảnh chụp thay vì khởi động lại từ đầu.</span></span><span class="prio hard">Khó</span></summary>
       <div class="item-body">
-        <div><span class="lbl">Vấn đề</span><p>Khi đã hết GPU, mỗi request mới làm chậm mọi request khác. Đến một mức thì gần như không ai đạt SLO (mục 05).</p></div>
-        <div><span class="lbl">Làm gì</span><p>Thêm cờ <code>--max-num-queued-reqs=75</code> vào overlay cloud. Gateway (Đ1) retry 503 sang pod khác. Thêm cột "bị từ chối" vào runner và chỉ số goodput.</p></div>
-        <div><span class="lbl">Con số 75 từ đâu</span><p>Định lý Little: muốn chờ trong hàng ≤ 2,5 s (SLO TTFT) thì số request chờ ≤ C × 2,5 ≈ 11. Cộng 64 chỗ đang chạy (<code>--max-num-seqs</code>) ra 75. Mô phỏng cho thấy khi quá tải nặng nên hạ xuống 68–70 để còn biên; V3 thử cả 68 và 75.</p></div>
-        <div><span class="lbl">Kỳ vọng</span><p>Quá tải 25 %: S4 từ 18,7 % lên 78,2 % đạt SLO. Đủ ba nâng cấp ở KB2: 94,0 %, trong đó 3,6 % request bị từ chối có chủ đích <span class="prov sim">mô phỏng</span>.</p></div>
-        <div><span class="lbl">Đo ở V3</span><p>Kịch bản mới KB3+ (đỉnh 5 C, vượt năng lực 4 GPU): S4 có và không có chặn; A3 + Đ1 + Đ3.</p></div>
-        <div><span class="lbl">Rủi ro</span><p>Cờ có trong mã nguồn vLLM 0.31.0 nhưng nhóm chưa chạy thử. Nếu lỗi, đặt giới hạn tương tự ở gateway (Envoy circuit breaker <code>maxPendingRequests</code>).</p></div>
+        <div><span class="lbl">Vì sao đáng làm</span><p>Trong mô phỏng, đây là thay đổi duy nhất nâng chất lượng mà không tốn thêm GPU. Tải thật: 90,3 → 97,9 %. Đỉnh ngắn: 77,1 → 95,7 %. Trọn một ngày: 99,2 % với 41 % GPU-giờ của S4 <span class="prov sim">mô phỏng, cold start giả định 15 s</span>.</p></div>
+        <div><span class="lbl">Ngoài thực tế</span><p>NVIDIA Dynamo Snapshot (11/2026) khôi phục replica vLLM trong 4,7–39,6 s. Cerebrium: vLLM 50 s → 2,25–9 s. Modal và RFC #34303 của vLLM cùng hướng. Cách này hiện còn thử nghiệm.</p></div>
+        <div><span class="lbl">Làm gì</span><ul><li><b>16–17/11, VM 1 × A4000 (driver 580):</b> chạy vLLM 0.31 trong container, cho ngủ (sleep mode) để bỏ KV-cache, chụp, khôi phục, bấm giờ.</li><li><b>18/11:</b> nếu chạy được thì đưa vào pod: entrypoint khôi phục nếu có ảnh chụp trên NVMe, không có thì khởi động thường rồi tự chụp.</li></ul></div>
+        <div><span class="lbl">Điểm dừng</span><p>20:00 ngày 18/11 chưa khôi phục được trong pod thì dừng. Giữ số đo ngoài Kubernetes nếu có, viết thành mục thử nghiệm trong luận văn, chuyển sang Đ3b.</p></div>
+        <div><span class="lbl">Rủi ro đã biết</span><p>Container phải chạy privileged. Ảnh chụp chỉ dùng được trên cùng loại GPU và cùng driver. Kết nối TCP và socket nội bộ của vLLM không sống sót qua khôi phục (Cerebrium phải chuyển chúng về loopback). Ảnh chụp cỡ 6–10 GB.</p></div>
+        <div><span class="lbl">Hội đồng thấy gì</span><p>Hai pod scale cùng lúc trên Grafana: một khởi động thường mất 2,5 phút, một khôi phục chỉ mất vài chục giây.</p></div>
       </div>
     </details>
 
     <details class="item">
-      <summary><span class="id">Đ4</span><span><h3>KB4: tải thật từ trace Azure 2024</h3><span class="one">Phát lại một đoạn trace hội thoại công khai của Azure (thời điểm gửi, số token vào và ra), co giãn theo năng lực C của máy mình.</span></span><span class="prio should">Nên</span></summary>
+      <summary><span class="id">Đ3b</span><span><h3>Rút cold start bằng cách rẻ</h3><span class="one">Giữ compile cache giữa các pod, giảm số kích thước CUDA graph phải chụp, và chọn máy V3 có CPU mới.</span></span><span class="prio should">Nên</span></summary>
       <div class="item-body">
-        <div><span class="lbl">Vì sao</span><p>KB1–KB3 là đường thẳng và bậc thang. Hội đồng dễ hỏi: "tải thật đâu có như vậy". Trace Azure có độ dài prompt và output thay đổi, có những đợt tải vọt tự nhiên.</p></div>
-        <div><span class="lbl">Làm gì</span><p>Thêm kịch bản <code>trace</code> vào <code>loadgen/scenarios.py</code>: đọc CSV, chọn đoạn 30 phút nhiều biến động, co thời gian để trung bình ≈ 0,4 × N × C, giới hạn token theo context 8192. Mỗi request mang <code>max_tokens</code> riêng.</p></div>
-        <div><span class="lbl">Đo ở V3</span><p>A2 và A3 + Đ1 + Đ3 trên cùng đoạn trace, mỗi cấu hình 30 phút.</p></div>
-        <div><span class="lbl">Rủi ro</span><p>Thấp. Kiểm toàn bộ trên kind và mô phỏng trước. Cần trích dẫn giấy phép CC BY của dataset.</p></div>
+        <div><span class="lbl">Cơ sở</span><p>Compile cache đã đo được 152 → 108 s. CUDA graph và warmup mất 28 s, giảm được nếu chỉ chụp các batch 1–64 hay dùng. Phần CPU 77 s phụ thuộc xung nhịp, mà máy V1 chỉ có 2,1 GHz.</p></div>
+        <div><span class="lbl">Kỳ vọng <span class="prov est">ước lượng, chưa đo</span></span><p>Nếu xuống khoảng 60 s: tải thật 93,9 %, đỉnh ngắn 86,4 %, trọn ngày 97,4 % <span class="prov sim">mô phỏng</span>. Được khoảng nửa lợi ích của Đ3 với rủi ro thấp.</p></div>
+        <div><span class="lbl">Đánh đổi</span><p>Ít CUDA graph hơn thì TPOT ở batch lẻ có thể tăng. Đo lại ở 1 và 32 request trước khi chốt.</p></div>
       </div>
     </details>
 
     <details class="item">
-      <summary><span class="id">Đ5</span><span><h3>Chi phí theo token và goodput</h3><span class="one">Quy mọi kết quả về hai con số người làm sản phẩm hiểu ngay: USD cho 1 triệu token, và số request đạt SLO mỗi giây.</span></span><span class="prio should">Nên</span></summary>
+      <summary><span class="id">Đ4</span><span><h3>Tải thật trong máy tạo tải</h3><span class="one">Kịch bản <code>trace</code> phát lại nhịp gửi của một cửa sổ BurstGPT 30 phút, co giãn để phút bận nhất bằng 0,9 × năng lực 4 GPU.</span></span><span class="prio must">Bắt buộc</span></summary>
       <div class="item-body">
-        <div class="wide"><span class="lbl">Ước lượng từ số đo 08/11 <span class="prov est">ước lượng</span></span>
-          <div class="tbl" style="margin-top:6px"><table>
-            <thead><tr><th>Trường hợp</th><th style="text-align:right">GPU đang thuê</th><th style="text-align:right">USD / giờ</th><th style="text-align:right">USD / 1 triệu token ra</th></tr></thead>
-            <tbody>
-              <tr><td>1 GPU chạy đầy ở năng lực C (trần lý thuyết)</td><td class="n">1</td><td class="n">0,153</td><td class="n">0,037</td></tr>
-              <tr><td>Tải thấp 0,5 C, A2 giữ 1 GPU</td><td class="n">1</td><td class="n">0,153</td><td class="n">0,074</td></tr>
-              <tr><td>Tải thấp 0,5 C, A1 (trung bình 3,4 GPU)</td><td class="n">3,4</td><td class="n">0,524</td><td class="n">0,253</td></tr>
-              <tr><td>Tải thấp 0,5 C, S4 luôn 4 GPU</td><td class="n">4</td><td class="n">0,611</td><td class="n">0,295</td></tr>
-            </tbody>
-          </table></div>
-        </div>
-        <div><span class="lbl">Cách tính</span><p>Máy 0,611 USD/giờ cho 4 GPU. Một GPU ở C = 4,5 req/s × 256 token ra = 1.152 token/s ≈ 4,15 triệu token/giờ. Ở tải thấp, A2 rẻ hơn S4 khoảng 4 lần cho mỗi token.</p></div>
-        <div><span class="lbl">Làm gì</span><p>Thêm panel "USD / 1 triệu token" và "goodput" vào dashboard (recording rule), thêm hai cột vào bảng kết quả chương 5. Có thể đặt cạnh giá API thương mại của model cỡ tương đương, tra lúc viết.</p></div>
+        <div><span class="lbl">Làm gì</span><p>Đọc <code>cua-so-trace.json</code> (đã sinh, 135 KB), dựng λ(t) theo thùng 10 s, giữ nguyên kích thước request của bộ đo. Thêm kịch bản <code>KB-ngắn</code>: ba lần vọt lên 3 C trong 60 s, cách nhau 6 phút.</p></div>
+        <div><span class="lbl">Vì sao chỉ lấy nhịp</span><p>Request trong BurstGPT ngắn hơn nhiều (trung vị 34 token ra). Mô hình hiệu chỉnh ở 256 token. Thời điểm và độ dài đỉnh mới là thứ quyết định autoscaling có kịp hay không.</p></div>
+        <div><span class="lbl">Người làm</span><p>Trình, 16–17/11. Kiểm trên kind và bằng mô phỏng trước V3.</p></div>
       </div>
     </details>
 
     <details class="item">
-      <summary><span class="id">Đ6</span><span><h3>Kho model trên R2 và kiểm checksum</h3><span class="one">Sao model vào bucket R2 của nhóm, kiểm sha256 trước khi dùng, vLLM chạy ở chế độ offline.</span></span><span class="prio could">Tuỳ chọn</span></summary>
+      <summary><span class="id">Đ5</span><span><h3>Lớp demo trên cloud</h3><span class="one">Argo CD, cảnh báo Telegram, dashboard "Demo" và giao diện chat Open WebUI trên máy thuê.</span></span><span class="prio must">Bắt buộc</span></summary>
       <div class="item-body">
-        <div><span class="lbl">Vì sao</span><p>Khớp khối Model Registry → Integrity Check → Model Store trong sơ đồ tham chiếu của mentor. Bỏ phụ thuộc Hugging Face lúc dựng máy: máy Trung Quốc ngày 08/11 chỉ tải được 8 MB/s.</p></div>
-        <div><span class="lbl">Không hứa gì</span><p>Không rút cold start: weights chỉ chiếm 11 s và đã nằm sẵn trên NVMe. Lợi ích là tái lập được và an toàn chuỗi cung ứng, không phải tốc độ.</p></div>
-        <div><span class="lbl">Làm gì</span><p>Bước <code>cloud-prefetch</code> lấy từ R2, chạy <code>sha256sum -c</code> với manifest lưu trong Git, đặt <code>HF_HUB_OFFLINE=1</code>, mount cache chỉ đọc.</p></div>
-      </div>
-    </details>
-
-    <details class="item">
-      <summary><span class="id">Đ7</span><span><h3>Lớp demo trên cloud</h3><span class="one">Đưa Argo CD, Alertmanager → Telegram và một dashboard Grafana riêng cho demo lên máy thuê.</span></span><span class="prio must">Bắt buộc</span></summary>
-      <div class="item-body">
-        <div><span class="lbl">Vì sao</span><p>Bỏ môi trường nhà thì mất phần GitOps (Argo CD) và Chat, hai thứ dễ nhìn nhất. ADR-006 §3.1 bỏ Argo CD trên VM vì máy chỉ sống khoảng 22 giờ. Với demo thì ngược lại: Argo CD là thứ hội đồng thấy được.</p></div>
-        <div><span class="lbl">Làm gì</span><ul><li>Bật vai trò Ansible <code>argocd-bootstrap</code> cho cloud, tạo <code>envs/cloud/argocd/</code> theo mẫu của nhà.</li><li>Áp rule cảnh báo đã có unit test và gửi về Telegram.</li><li>Dashboard "Demo": số pod, hàng đợi từng pod, TTFT p95, % đạt SLO, USD/giờ, số request bị từ chối.</li></ul></div>
-        <div><span class="lbl">Không ảnh hưởng số đo</span><p>Các lượt đo V3 vẫn chạy bằng runner như V2. Argo CD chỉ bật trên máy demo và trong khoảng 1 giờ cuối V3.</p></div>
-      </div>
-    </details>
-
-    <details class="item">
-      <summary><span class="id">Đ8</span><span><h3>Giao diện chat (Open WebUI)</h3><span class="one">Một trang chat trên trình duyệt, gọi vLLM qua gateway, để hội đồng tự gõ câu hỏi trong lúc tải chạy.</span></span><span class="prio should">Nên</span></summary>
-      <div class="item-body">
-        <div><span class="lbl">Làm gì</span><p>Helm chart Open WebUI trên máy thuê (RAM dư nhiều), trỏ vào API OpenAI-compatible của gateway, mở qua SSH tunnel như Grafana.</p></div>
-        <div><span class="lbl">Giá trị demo</span><p>Người xem cảm nhận được độ trễ trực tiếp: lúc tăng vọt, câu trả lời chậm hẳn; khi pod mới lên, câu trả lời nhanh trở lại. Khi quá tải, chat vẫn mượt vì Đ3 chặn bớt tải nền.</p></div>
-      </div>
-    </details>
-
-    <details class="item">
-      <summary><span class="id">Đ9</span><span><h3>Phiên V3, kịch bản demo, video dự phòng</h3><span class="one">Một phiên thuê khoảng 8 giờ ngày 20/11 để đo Đ1–Đ4 và quay video demo. Thêm lệnh <code>make demo</code> chạy kịch bản 10 phút.</span></span><span class="prio must">Bắt buộc</span></summary>
-      <div class="item-body">
-        <div class="wide"><span class="lbl">Ma trận V3 (mỗi ô 1 lượt; ô có * chạy lặp nếu còn giờ)</span>
-          <div class="tbl" style="margin-top:6px"><table>
-            <thead><tr><th>#</th><th>Lượt</th><th>Để trả lời</th><th style="text-align:right">Phút</th></tr></thead>
-            <tbody>
-              <tr><td class="n">0</td><td>A2 × KB2, gọi thẳng Service (lặp lại ô V2)</td><td>Mốc nối V2 với V3 vì khác máy</td><td class="n">24</td></tr>
-              <tr><td class="n">1*</td><td>A2 × KB2 qua gateway</td><td>Riêng Đ1 được bao nhiêu</td><td class="n">24</td></tr>
-              <tr><td class="n">2*</td><td>A3 × KB2 qua gateway</td><td>Đ1 + Đ2</td><td class="n">24</td></tr>
-              <tr><td class="n">3*</td><td>A3 + chặn 75 × KB2 qua gateway</td><td>Đ1 + Đ2 + Đ3</td><td class="n">24</td></tr>
-              <tr><td class="n">4</td><td>A3 + chặn × KB3</td><td>Tải tăng dần</td><td class="n">17</td></tr>
-              <tr><td class="n">5–6</td><td>S4 × KB3+ (đỉnh 5 C), không chặn và chặn 68</td><td>Giá trị của Đ3 khi hết GPU</td><td class="n">34</td></tr>
-              <tr><td class="n">7–8</td><td>A2 và A3 + Đ1 + Đ3 × KB4 trace</td><td>Tải thật</td><td class="n">60</td></tr>
-              <tr><td class="n">9</td><td>Gateway và gọi thẳng ở 0,5 C</td><td>Độ trễ gateway thêm vào</td><td class="n">10</td></tr>
-            </tbody>
-          </table></div>
-        </div>
-        <div><span class="lbl">Thời gian</span><p>Khoảng 3,6 giờ chạy lượt, cộng 3 phút reset mỗi lượt, 0,5 giờ dựng máy, 1 giờ quay demo, phần còn lại để lặp các ô có *. Tổng 7–8 giờ.</p></div>
-        <div><span class="lbl">Vì sao cần lượt 0</span><p>V2 và V3 chạy trên hai máy Vast khác nhau. Lặp lại một ô V2 cho biết chênh lệch là do nâng cấp hay do máy.</p></div>
+        <div><span class="lbl">Dashboard Demo</span><p>Số pod theo trạng thái (đang khởi động, Ready), hàng đợi từng pod, tốc độ 429, TTFT p95, % đạt SLO, USD/giờ và USD cho 1 triệu token.</p></div>
+        <div><span class="lbl">Làm gì</span><ul><li>Vai trò Ansible <code>argocd-bootstrap</code> cho cloud, thư mục <code>envs/cloud/argocd/</code>.</li><li>Rule cảnh báo đã có unit test, gửi qua Telegram.</li><li>Open WebUI gọi qua gateway, mở bằng SSH tunnel.</li></ul></div>
+        <div><span class="lbl">Không ảnh hưởng số đo</span><p>Các lượt đo V3 vẫn chạy bằng runner. Argo CD và chat chỉ bật trong giờ cuối V3 và lúc demo.</p></div>
       </div>
     </details>
   </div>
 </section>
 
-<section aria-labelledby="s-sim">
-  <div class="sechead"><span class="secno">05</span><h2 id="s-sim">Bằng chứng từ mô phỏng</h2></div>
-  <div class="prose"><p>Dùng lại mô hình mô phỏng của báo cáo kỹ thuật (hiệu chỉnh theo số đo 08/11; trên A2 × KB2 mô phỏng ra 64,6 %, đo thật 62,7 %), thêm ba nâng cấp, mỗi biến thể chạy 5 seed. Đây là dự báo để quyết có đáng làm hay không; con số chính thức sẽ lấy từ V3.</p></div>
-
-  <figure>
-    <div class="fig-title">Đổi chi phí lấy chất lượng: các cấu hình nằm ở đâu <span class="prov sim">mô phỏng</span></div>
-    <div class="legend"><span><i class="sw" style="background:var(--base-mark)"></i>Cấu hình hiện có</span><span><i class="sw" style="background:var(--accent)"></i>Sau nâng cấp</span></div>
-    <div class="chart" id="pareto"></div>
-    <figcaption>Trục ngang: tổng GPU-giờ của ba kịch bản KB1 + KB2 + KB3, tính theo % của S4 (luôn bật 4 GPU). Trục dọc: trung bình % request đạt SLO ở KB2 và KB3; request bị chặn tính là trượt. Càng lên trên và sang trái càng tốt. Ba nâng cấp đưa A2 từ 80 % lên 96 % đạt SLO, đổi lại tốn thêm 10 điểm GPU-giờ. A1 đạt SLO cao vì GPU util luôn 100 % nên A1 gần như luôn bật đủ GPU, tốn 90 % chi phí S4. Riêng ở tải thấp, A1 tốn 0,69 GPU-giờ so với 0,40 của A2 đã nâng cấp. S1 (1 GPU cố định) nằm ngoài khung: 9 % đạt SLO.</figcaption>
-  </figure>
-
-  <figure>
-    <div class="fig-title">Chặn quá tải khi đã hết GPU <span class="prov sim">mô phỏng</span></div>
-    <div class="legend"><span><i class="sw" style="background:var(--base-mark)"></i>Không chặn</span><span><i class="sw" style="background:var(--accent)"></i>Chặn ở 75 request mỗi pod</span></div>
-    <div class="chart" id="shed"></div>
-    <figcaption>KB3 với đỉnh tải bằng 100 % và 125 % năng lực 4 GPU. Không chặn thì khi vượt 25 %, hàng đợi phình mãi và gần như mọi request trễ quá SLO. Chặn sớm thì từ chối khoảng 9–16 % request, nhưng phần được nhận phần lớn đạt SLO: 86 % với S4. Đây là đánh đổi "từ chối ít để phục vụ tốt phần còn lại" mà các API thương mại đều làm (HTTP 429 hoặc 503).</figcaption>
-  </figure>
-
+<section aria-labelledby="s-res">
+  <div class="sechead"><span class="secno">Bằng chứng 3</span><h2 id="s-res">Kết quả đầy đủ</h2></div>
   <div class="tbl">
     <table>
-      <thead><tr><th>Biến thể (5 seed)</th><th style="text-align:right">KB1 GPU-giờ</th><th style="text-align:right">KB2 đạt SLO</th><th style="text-align:right">KB2 GPU-giờ</th><th style="text-align:right">KB3 đạt SLO</th><th style="text-align:right">KB3 GPU-giờ</th></tr></thead>
+      <thead><tr><th>Cấu hình</th><th style="text-align:right">Tải thật (test)</th><th style="text-align:right">KB2</th><th style="text-align:right">KB3</th><th style="text-align:right">Đỉnh ngắn</th><th style="text-align:right">Trọn 1 ngày</th></tr></thead>
       <tbody>
-        <tr><td>S4 (luôn 4 GPU)</td><td class="n">0,80</td><td class="n">100 %</td><td class="n">1,60</td><td class="n">100 %</td><td class="n">1,13</td></tr>
-        <tr><td>A1 (GPU util)</td><td class="n">0,69</td><td class="n">99,8 %</td><td class="n">1,49</td><td class="n">95,9 %</td><td class="n">1,02</td></tr>
-        <tr><td>A2 hiện tại</td><td class="n">0,20</td><td class="n">71,9 %</td><td class="n">1,29</td><td class="n">88,8 %</td><td class="n">1,05</td></tr>
-        <tr><td>A2 + Đ1 (gateway)</td><td class="n">0,20</td><td class="n">83,5 %</td><td class="n">1,31</td><td class="n">89,7 %</td><td class="n">1,05</td></tr>
-        <tr><td>A3 = A2 + Đ2 (dự báo)</td><td class="n">0,31</td><td class="n">79,7 %<span class="sub">71–100 %</span></td><td class="n">1,34</td><td class="n">96,2 %</td><td class="n">1,08</td></tr>
-        <tr><td>A3 + Đ1</td><td class="n">0,40</td><td class="n">88,4 %</td><td class="n">1,41</td><td class="n">97,0 %</td><td class="n">1,09</td></tr>
-        <tr><td><b>A3 + Đ1 + Đ3 (chặn 75)</b></td><td class="n">0,40</td><td class="n"><b>94,0 %</b><span class="sub">từ chối 3,6 %</span></td><td class="n">1,41</td><td class="n"><b>98,8 %</b><span class="sub">từ chối 0,6 %</span></td><td class="n">1,09</td></tr>
+        <tr class="grp"><td colspan="6">Đang có</td></tr>
+        <tr><td>S4, luôn 4 GPU</td><td class="n">98,9 %<span class="sub">100 % GPU</span></td><td class="n">100 %</td><td class="n">100 %</td><td class="n">100 %</td><td class="n">100 %<span class="sub">100 % GPU</span></td></tr>
+        <tr><td>A2 hiện tại</td><td class="n">80,7 %<span class="sub">87 % GPU</span></td><td class="n">71,0 %</td><td class="n">89,0 %</td><td class="n">71,7 %</td><td class="n">92,3 %<span class="sub">42 % GPU</span></td></tr>
+        <tr class="grp"><td colspan="6">Bản 1 đề xuất</td></tr>
+        <tr><td>A3 + Đ1 (dự báo tuyến tính)</td><td class="n">88,0 %<span class="sub">90 % GPU</span></td><td class="n">84,7 %</td><td class="n">97,5 %</td><td class="n">86,2 %</td><td class="n">95,2 %<span class="sub">47 % GPU</span></td></tr>
+        <tr class="grp"><td colspan="6">Bản 2 đề xuất</td></tr>
+        <tr><td>A2 + Đ1</td><td class="n">82,7 %<span class="sub">89 % GPU</span></td><td class="n">82,0 %</td><td class="n">89,1 %</td><td class="n">70,5 %</td><td class="n">93,0 %<span class="sub">42 % GPU</span></td></tr>
+        <tr><td>A2 + Đ1 + chặn, không báo lại</td><td class="n">88,0 %<span class="sub">83 % GPU</span></td><td class="n">77,5 %</td><td class="n">91,4 %</td><td class="n">75,8 %</td><td class="n">96,3 %<span class="sub">38 % GPU</span></td></tr>
+        <tr><td>P = A2 + Đ1 + Đ2</td><td class="n">90,3 %<span class="sub">89 % GPU</span></td><td class="n">86,2 %</td><td class="n">95,6 %</td><td class="n">77,1 %</td><td class="n">95,7 %<span class="sub">43 % GPU</span></td></tr>
+        <tr><td>P + Đ3b <span class="prov est">cold 60 s ước lượng</span></td><td class="n">93,9 %<span class="sub">88 % GPU</span></td><td class="n">92,1 %</td><td class="n">98,5 %</td><td class="n">86,4 %</td><td class="n">97,4 %<span class="sub">42 % GPU</span></td></tr>
+        <tr class="hl"><td><b>P + Đ3</b> <span class="prov est">cold 15 s giả định</span></td><td class="n"><b>97,9 %</b><span class="sub">88 % GPU</span></td><td class="n"><b>97,7 %</b></td><td class="n"><b>99,9 %</b></td><td class="n"><b>95,7 %</b></td><td class="n"><b>99,2 %</b><span class="sub">41 % GPU</span></td></tr>
       </tbody>
     </table>
   </div>
-  <p class="callout"><b>Phát hiện phụ khi làm tờ trình:</b> mô phỏng "dự báo" trong báo cáo kỹ thuật bản 2 có lỗi: giá trị đã ngoại suy bị ghi ngược vào lịch sử metric. Sửa xong, số thay đổi ít (KB3 96,9 → 96,2 %; KB2 80,9 → 79,7 %; KB1 0,40 → 0,31 GPU-giờ), kết luận giữ nguyên. Sẽ cập nhật báo cáo cùng đợt này.</p>
+  <div class="prose">
+    <p>Ô là tỷ lệ request đạt SLO (TTFT ≤ 2,5 s, TPOT ≤ 100 ms); GPU-giờ tính theo % của S4. "Tải thật" gồm 8 cửa sổ bận nhất của phần test, nên GPU-giờ cao. "Trọn 1 ngày" là ngày 41 và 59, hai ngày bận nhất phần test, có cả giờ vắng: đây là chỗ autoscaling tiết kiệm được 57–62 % GPU-giờ.</p>
+    <p>Cấu hình "chặn, không báo lại" rẻ nhất trong trọn ngày, nhưng tụt ở KB2 khi quá tải kéo dài. Đ2 chọn báo lại vì tờ trình ưu tiên chất lượng.</p>
+  </div>
+
+  <div class="prose">
+    <h3>Mô phỏng này tin được tới đâu</h3>
+    <ul>
+      <li>Hiệu chỉnh bằng 2 lượt V1: lượt spike lệch 1,9 điểm, lượt ramp lệch 8,7 điểm. Chênh lệch dưới khoảng 5 điểm giữa hai cấu hình chưa đủ để kết luận.</li>
+      <li>Chưa mô hình hoá: prefill tranh GPU ở tải rất cao, độ dài output thay đổi, prefix cache.</li>
+      <li>Cold start 15 s và 60 s là giả định. Đ3 và Đ3b sẽ cho số thật.</li>
+      <li>Kết quả giữa các cửa sổ test dao động mạnh, ví dụ A2 từ 60,7 đến 95,6 %. Vì vậy V3 chạy cùng một cửa sổ cho mọi cấu hình.</li>
+    </ul>
+  </div>
+</section>
+
+<section aria-labelledby="s-no">
+  <div class="sechead"><span class="secno">Đã thử và loại</span><h2 id="s-no">Ý tưởng bị dữ liệu bác bỏ</h2></div>
+  <div class="reject">
+    <div><span class="verdict">Loại · A3 của bản 1</span><h3>Dự báo bằng <code>predict_linear</code></h3><p>Trên tải thật, A3 + Đ1 được 88,0 % với 90 % GPU, ngang A2 + Đ1 hạ ngưỡng xuống 24 (87,3 % với 91 %). Nó chỉ là cách bật GPU sớm hơn, không đón được đỉnh nào mà cách khác bỏ lỡ.</p></div>
+    <div><span class="verdict">Loại · học trên train</span><h3>Chờ đỉnh kéo dài τ giây rồi mới scale</h3><p>Dữ liệu train: đỉnh đã kéo dài 90 s thì 52 % khả năng còn đủ lâu để pod mới có ích. Nhưng chờ tốn SLO: τ = 0 → 30 s thì SLO 90,5 → 84,3 % còn GPU 94,4 → 84,6 %. Mỗi điểm GPU tiết kiệm đổi gần một điểm SLO.</p></div>
+    <div><span class="verdict">Loại · học trên train</span><h3>Huỷ pod đang khởi động khi đỉnh tắt</h3><p>SLO 90,5 → 83,9 %, GPU chỉ bớt 4 điểm. Trong giờ bận, đỉnh thường quay lại trong vài phút, nên pod vừa huỷ lại cần ngay.</p></div>
+    <div><span class="verdict">Giữ · học trên train</span><h3>Cửa sổ giữ pod 300 s</h3><p>Rút xuống 120 s còn tốn thêm GPU (98,0 % so với 94,4 %), vì pod bị tắt rồi bật lại liên tục, mỗi lần mất một cold start. Giữ mặc định của HPA.</p></div>
+    <div><span class="verdict">Loại</span><h3>Pool pod ngủ sẵn (sleep mode)</h3><p>Pod ngủ vẫn được cấp nguyên một GPU, nên về chi phí không khác gì để dư một pod. Snapshot cho tốc độ lên tương tự mà không giữ GPU.</p></div>
+    <div><span class="verdict">Loại · không ai thấy</span><h3>Kho model trên R2 + checksum</h3><p>Không đổi con số nào và không hiện trên màn hình. Weights chỉ chiếm 11 s cold start. Chi phí theo token gộp vào dashboard Đ5.</p></div>
+    <div><span class="verdict">Hướng phát triển</span><h3>Dự báo bằng mô hình học</h3><p>Cần mô hình train trên nhiều tuần tải (như SLA planner của NVIDIA Dynamo). BurstGPT có sẵn dữ liệu cho việc này, nhưng nó là một bài toán ML riêng và không kịp trước 22/11.</p></div>
+    <div><span class="verdict">Loại</span><h3>KServe, rate limit theo token, tách prefill/decode</h3><p>Phải dựng lại phần serving, chặn mất chính tải cần đo, hoặc không có lợi với model 3B trên một máy.</p></div>
+  </div>
 </section>
 
 <section aria-labelledby="s-arch">
-  <div class="sechead"><span class="secno">06</span><h2 id="s-arch">Kiến trúc sau nâng cấp</h2></div>
+  <div class="sechead"><span class="secno">Kiến trúc</span><h2 id="s-arch">Hệ thống sau nâng cấp</h2></div>
   <figure>
     <div class="fig-title">Thành phần mới tô màu, ghi mã hạng mục <span class="prov est">đề xuất</span></div>
     <div class="chart" id="arch"></div>
-    <figcaption>Luồng request đi từ trái sang phải. Thay đổi lớn nhất nằm ở giữa: request không còn qua Service chia ngẫu nhiên mà qua gateway biết pod nào đang rảnh. Phía dưới, KEDA đọc tải dự báo thay vì tải hiện tại. Các khối xám đã có và giữ nguyên. Bố cục này phủ đủ các khối trong sơ đồ tham chiếu của mentor (Model preparation, API Gateway, Serving & Autoscaling, Observability), chỉ không làm rate limit theo token vì nó chặn mất chính tải mà nhóm cần đo.</figcaption>
+    <figcaption>Request đi từ trái sang phải qua gateway. Gateway chọn pod rảnh nhất và trả 429 khi mọi pod đầy. KEDA đọc cả tải trong pod lẫn tốc độ 429. Pod mới khôi phục từ ảnh chụp trên NVMe. Bố cục phủ các khối trong sơ đồ tham chiếu của mentor: API Gateway, Serving &amp; Autoscaling, Observability, Chat UI. Hai khối không làm là Rate-Limit Store và Model Registry, lý do ở mục trên.</figcaption>
   </figure>
 </section>
 
 <section aria-labelledby="s-plan">
-  <div class="sechead"><span class="secno">07</span><h2 id="s-plan">Lịch và chi phí</h2></div>
+  <div class="sechead"><span class="secno">Kế hoạch</span><h2 id="s-plan">Lịch, phiên V3 và chi phí</h2></div>
   <div class="gantt" role="table" aria-label="Lịch 14 đến 22 tháng 11">
     <div class="gantt-grid" id="gantt"></div>
   </div>
-  <div class="legend"><span><i class="sw" style="background:var(--base-mark)"></i>Việc đã có trong kế hoạch</span><span><i class="sw" style="background:var(--accent)"></i>Việc mới của đề xuất</span><span><i class="sw" style="background:var(--warn)"></i>Thuê máy</span><span><i class="sw" style="background:repeating-linear-gradient(135deg,var(--warn) 0 3px,transparent 3px 6px);border:1px solid var(--warn)"></i>Thuê dự phòng</span></div>
+  <div class="legend"><span><i class="sw" style="background:var(--base-mark)"></i>Việc đã có trong kế hoạch</span><span><i class="sw" style="background:var(--accent)"></i>Việc mới</span><span><i class="sw bar hard" style="height:12px;margin:0"></i>Việc mới, rủi ro cao</span><span><i class="sw" style="background:var(--warn)"></i>Thuê máy</span><span><i class="sw" style="background:repeating-linear-gradient(135deg,var(--warn) 0 3px,transparent 3px 6px);border:1px solid var(--warn)"></i>Thuê dự phòng</span></div>
 
   <div class="tbl">
     <table>
-      <thead><tr><th>Khoản chi thêm</th><th style="text-align:right">Giờ thuê</th><th style="text-align:right">4 × A4000 (0,611 USD/giờ)</th><th style="text-align:right">Nếu phải dùng 4 × 4090 (≈ 2,5 USD/giờ)</th></tr></thead>
+      <thead><tr><th>#</th><th>Lượt V3 (cùng máy, mỗi ô 1 lượt)</th><th>Để trả lời</th><th style="text-align:right">Phút</th></tr></thead>
       <tbody>
-        <tr><td>V3 ngày 20/11</td><td class="n">8</td><td class="n">4,9</td><td class="n">20,0</td></tr>
-        <tr><td>Tập demo một lần</td><td class="n">2</td><td class="n">1,2</td><td class="n">5,0</td></tr>
-        <tr><td>Demo trước hội đồng</td><td class="n">3</td><td class="n">1,8</td><td class="n">7,5</td></tr>
-        <tr><td><b>Cộng</b></td><td class="n"><b>13</b></td><td class="n"><b>≈ 8 USD</b></td><td class="n"><b>≈ 33 USD</b></td></tr>
+        <tr><td class="n">0</td><td>A2 × KB2, gọi thẳng Service</td><td>Mốc nối V2 với V3 vì khác máy</td><td class="n">24</td></tr>
+        <tr><td class="n">1–2</td><td>A2 + Đ1 và P × KB2</td><td>Riêng gateway, rồi thêm chặn có báo lại</td><td class="n">48</td></tr>
+        <tr><td class="n">3–4</td><td>A2 + Đ1 và P × KB-ngắn</td><td>Câu hỏi "đỉnh lên rồi tắt ngay"</td><td class="n">44</td></tr>
+        <tr><td class="n">5–6</td><td>A2 và P × cửa sổ trace test 7 (ngày 51,5, 5 đỉnh)</td><td>Trên tải thật</td><td class="n">60</td></tr>
+        <tr><td class="n">7</td><td>P × quá tải (đỉnh 5 C, vượt 4 GPU)</td><td>Chặn giữ được chất lượng khi hết GPU</td><td class="n">17</td></tr>
+        <tr><td class="n">8–9</td><td>P + Đ3 (hoặc Đ3b) × KB-ngắn và × cửa sổ 7</td><td>Lợi ích thật của cold start ngắn</td><td class="n">52</td></tr>
       </tbody>
     </table>
   </div>
-  <p class="callout"><b>Ngân sách:</b> trần đã duyệt là 150 USD. Cả trường hợp xấu nhất (V2 phải dùng 4090, khoảng 60 USD, cộng 33 USD ở trên) vẫn dưới trần.</p>
-</section>
+  <p class="callout"><b>Thời gian V3:</b> khoảng 4,1 giờ chạy lượt, 30 phút reset, 30 phút dựng máy, 1 giờ quay video demo. Tổng 6,5–8 giờ.</p>
 
-<section aria-labelledby="s-risk">
-  <div class="sechead"><span class="secno">08</span><h2 id="s-risk">Rủi ro và điểm dừng</h2></div>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Khoản chi thêm</th><th style="text-align:right">Giờ thuê</th><th style="text-align:right">USD</th></tr></thead>
+      <tbody>
+        <tr><td>VM 1 × A4000 thử Đ3, 16–18/11 <span class="prov est">giá ước lượng</span></td><td class="n">10</td><td class="n">≈ 2</td></tr>
+        <tr><td>V3 ngày 20/11, 4 × A4000 (0,611 USD/giờ)</td><td class="n">8</td><td class="n">4,9</td></tr>
+        <tr><td>Tập demo và demo trước hội đồng</td><td class="n">5</td><td class="n">3,1</td></tr>
+        <tr><td><b>Cộng</b></td><td class="n"><b>23</b></td><td class="n"><b>≈ 10</b></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="callout"><b>Ngân sách:</b> trần đã duyệt là 150 USD. Nếu phải thuê 4 × 4090 (khoảng 2,5 USD/giờ) cho V3 và demo thì khoảng 35 USD, vẫn dưới trần.</p>
+
   <div class="tbl">
     <table>
       <thead><tr><th>Rủi ro</th><th>Dấu hiệu</th><th>Xử lý</th></tr></thead>
       <tbody>
-        <tr><td>V2 hỏng hoặc thiếu ô</td><td>Sau V2 còn ô ma trận chưa có dữ liệu</td><td>V3 ưu tiên chạy bù ô V2. Nâng cấp chỉ còn số mô phỏng, viết vào chương "hướng phát triển"</td></tr>
-        <tr><td>Envoy Gateway không chạy trên k3s</td><td>Tối 18/11 chưa qua được thử trên kind</td><td>Đổi sang HAProxy <code>leastconn</code>; nếu vẫn hỏng thì bỏ Đ1, giữ Đ2 và Đ3</td></tr>
-        <tr><td>Không có máy 4 × A4000 ngày 20/11</td><td><code>make find MODE=v2</code> trống</td><td>Thử lại 21/11; sau đó dùng 4090 (ngân sách đủ). Lượt 0 giữ được khả năng so sánh</td></tr>
-        <tr><td>Chậm viết luận văn</td><td>Bản thảo chương 5 chưa có khung ngày 19/11</td><td>Viết phần V2 trong 16–19/11 song song. Phần nâng cấp là một mục riêng §5.x, thiếu thì chương 5 vẫn đủ</td></tr>
-        <tr><td>Phát sinh với Trình</td><td>Trình đang làm TR1, TR4 trong app Argo CD</td><td>Đ7 chỉ thêm <code>envs/cloud/argocd/</code>, không đụng <code>envs/home/</code>. Anh báo Trình trước 16/11</td></tr>
+        <tr><td>Đ3 không khôi phục được trong pod</td><td>20:00 ngày 18/11</td><td>Dừng, giữ số đo ngoài Kubernetes nếu có, làm Đ3b</td></tr>
+        <tr><td><code>cuda-checkpoint</code> không chạy với vLLM 0.31 hoặc A4000</td><td>Ngay ngày 16/11 trên VM thử</td><td>Như trên. Lỗi gặp được ghi vào luận văn làm kết quả thử nghiệm</td></tr>
+        <tr><td>Envoy Gateway không chạy trên k3s</td><td>Tối 17/11 chưa qua kind</td><td>HAProxy <code>leastconn</code>; giới hạn 75 đặt bằng cờ vLLM</td></tr>
+        <tr><td>Quá tải việc: 5 hạng mục cùng viết chương 5</td><td>Tối 18/11 chưa xong Đ1 + Đ2 trên kind</td><td>Cắt Đ3, rồi tới chat trong Đ5. Đ1, Đ2, Đ4 là phần giữ lại</td></tr>
+        <tr><td>V2 hỏng hoặc thiếu ô</td><td>Sau 15/11</td><td>V3 ưu tiên chạy bù ô V2; nâng cấp chỉ còn số mô phỏng</td></tr>
+        <tr><td>Không có máy 4 × A4000 ngày 20/11</td><td><code>make find</code> trống</td><td>Thử 21/11, rồi dùng 4090. Lượt 0 giữ khả năng so sánh</td></tr>
       </tbody>
     </table>
   </div>
 </section>
 
 <section aria-labelledby="s-demo">
-  <div class="sechead"><span class="secno">09</span><h2 id="s-demo">Buổi demo 10 phút sẽ trông thế nào</h2></div>
-  <div class="prose"><p>Máy được thuê và dựng sẵn trước buổi bảo vệ bằng <code>make vh5</code> (12,5 phút từ máy trắng, đo ngày 08/11). Trên màn hình có ba cửa sổ: Grafana dashboard Demo, Open WebUI, và Argo CD. Lệnh <code>make demo</code> chạy kịch bản tải dưới đây.</p></div>
+  <div class="sechead"><span class="secno">Demo</span><h2 id="s-demo">Buổi demo 10 phút</h2></div>
+  <div class="prose"><p>Máy dựng sẵn bằng <code>make vh5</code>. Trên màn hình có Grafana dashboard Demo, Open WebUI và Argo CD. Lệnh <code>make demo</code> phát một đoạn tải thật rồi một đỉnh ngắn.</p></div>
   <ol class="seq">
-    <li><span class="t">0:00</span><span>Tải nền 0,5 C, 1 pod. Mời hội đồng gõ một câu vào chat: trả lời gần như tức thì. <span class="who">· Open WebUI</span></span></li>
-    <li><span class="t">1:00</span><span>Sửa threshold trong Git, merge; Argo CD tự áp, không ai gõ <code>kubectl</code>. <span class="who">· Argo CD</span></span></li>
-    <li><span class="t">2:00</span><span>Tải bắt đầu tăng. Đường "tải dự báo" của A3 vượt ngưỡng trước đường tải thật; pod thứ 2, 3 được tạo sớm. <span class="who">· Grafana</span></span></li>
-    <li><span class="t">4:00</span><span>Pod mới Ready. Panel hàng đợi từng pod cho thấy gateway dồn request vào pod mới, không còn cảnh pod cũ ôm hết. <span class="who">· Grafana</span></span></li>
-    <li><span class="t">5:30</span><span>Đẩy tải lên 5 C, vượt năng lực 4 GPU. Cảnh báo về Telegram trên điện thoại. Panel "bị từ chối" tăng, nhưng chat vẫn trả lời trong 2–3 s. <span class="who">· Telegram, Open WebUI</span></span></li>
-    <li><span class="t">7:30</span><span>Tải giảm. Sau cửa sổ 5 phút, HPA bớt từng pod; stream đang chạy không bị cắt (graceful shutdown). <span class="who">· Grafana</span></span></li>
-    <li><span class="t">9:00</span><span>Panel chi phí: USD/giờ và USD cho 1 triệu token so với S4. Chốt bằng bảng kết quả V2/V3. <span class="who">· Grafana, slide</span></span></li>
+    <li><span class="t">0:00</span><span>Tải nền, 1 pod. Mời hội đồng gõ một câu vào chat. <span class="who">· Open WebUI</span></span></li>
+    <li><span class="t">1:00</span><span>Sửa threshold trong Git, merge; Argo CD tự áp. <span class="who">· Argo CD</span></span></li>
+    <li><span class="t">2:00</span><span>Phát đoạn trace thật. Tải tăng, gateway dồn request vào pod rảnh, hàng đợi các pod đều nhau. <span class="who">· Grafana</span></span></li>
+    <li><span class="t">3:30</span><span>Pod mới khôi phục từ snapshot và Ready sau vài chục giây; đặt cạnh số đo cold start thường 152 s. <span class="who">· Grafana</span></span></li>
+    <li><span class="t">5:30</span><span>Đỉnh vượt 4 GPU. Panel 429 tăng, cảnh báo về Telegram, chat vẫn trả lời trong 2–3 s. <span class="who">· Telegram, chat</span></span></li>
+    <li><span class="t">7:30</span><span>Tải giảm. Sau 5 phút HPA bớt từng pod; stream đang chạy không bị cắt. <span class="who">· Grafana</span></span></li>
+    <li><span class="t">9:00</span><span>Bảng kết quả V2/V3 và USD cho 1 triệu token so với S4. <span class="who">· slide</span></span></li>
   </ol>
-  <p class="callout"><b>Dự phòng:</b> video quay toàn bộ kịch bản này ở cuối V3. Mất mạng hay không thuê được máy thì chiếu video.</p>
-</section>
-
-<section aria-labelledby="s-no">
-  <div class="sechead"><span class="secno">10</span><h2 id="s-no">Đã cân nhắc nhưng không đề xuất</h2></div>
-  <div class="reject">
-    <div><h3>Pool pod ngủ sẵn (vLLM sleep mode)</h3><p>Đánh thức chỉ mất dưới 1 s, nhưng pod ngủ vẫn giữ GPU. Mô phỏng với 1 pod chờ sẵn: KB2 chỉ tăng từ 71,9 lên 74,7 %, KB1 tốn gấp đôi. Lợi ít hơn Đ1 và Đ2 cộng lại.</p></div>
-    <div><h3>Tải model nhanh hơn (Run:ai streamer, Tensorizer)</h3><p>Weights chỉ chiếm 11 trong 152 s cold start; phần lớn là CPU khởi động engine.</p></div>
-    <div><h3>Chuyển sang KServe</h3><p>Phải dựng lại toàn bộ phần serving ngay trước khi đóng băng. A2 đã dùng cùng ý tưởng scale theo số request đồng thời; nêu điều này trong luận văn là đủ.</p></div>
-    <div><h3>Endpoint picker đầy đủ (llm-d)</h3><p>Cần thêm CRD InferencePool và một dịch vụ chọn pod riêng. Để làm bước tiếp theo sau Đ1 trong chương hướng phát triển.</p></div>
-    <div><h3>Rate limit theo token (Redis)</h3><p>Giới hạn đầu vào che mất chính hiện tượng autoscaling cần đo. Đ3 xử lý quá tải ở đúng chỗ: khi đã hết GPU.</p></div>
-    <div><h3>Tách prefill/decode, nhiều node, LoRA nhiều tenant</h3><p>Không có lợi với model 3B trên GPU 16 GB và một máy duy nhất. Chỉ viết như hướng mở rộng.</p></div>
-  </div>
+  <p class="callout"><b>Dự phòng:</b> video quay toàn bộ kịch bản ở cuối V3. Nếu Đ3 dừng, bước 3:30 dùng Đ3b và nói rõ cold start còn bao nhiêu.</p>
 </section>
 
 <section aria-labelledby="s-qa">
-  <div class="sechead"><span class="secno">11</span><h2 id="s-qa">Câu hỏi khó mà đề xuất giúp trả lời</h2></div>
+  <div class="sechead"><span class="secno">Bảo vệ</span><h2 id="s-qa">Câu hỏi khó và câu trả lời</h2></div>
   <div class="tbl">
     <table>
-      <thead><tr><th>Hội đồng hỏi</th><th>Trả lời được nhờ</th></tr></thead>
+      <thead><tr><th>Hội đồng hỏi</th><th>Trả lời</th></tr></thead>
       <tbody>
-        <tr><td>"Pod mới lên rồi sao người dùng vẫn chờ?"</td><td>Đ1: số đo trước và sau gateway, cùng máy, cùng kịch bản</td></tr>
-        <tr><td>"Cold start 2 phút thì autoscaling có ích gì?"</td><td>Đ2: không rút được cold start thì khởi động sớm hơn; phân rã cold start cho thấy vì sao</td></tr>
-        <tr><td>"Tải vượt 4 GPU thì sao?"</td><td>Đ3: con số 75 tính từ định lý Little; goodput trước và sau khi chặn</td></tr>
-        <tr><td>"Tải thật đâu có đều như vậy?"</td><td>Đ4: kết quả trên trace Azure</td></tr>
-        <tr><td>"Tiết kiệm được bao nhiêu tiền?"</td><td>Đ5: USD cho 1 triệu token theo từng cấu hình</td></tr>
-        <tr><td>"Thuê nguyên máy 4 GPU thì giảm GPU-giờ có nghĩa gì?"</td><td>Máy thuê đóng vai một cụm 4 node 1 GPU. Trên cloud tính tiền theo GPU hoặc cụm dùng chung, GPU trả về là tiền tiết kiệm thật hoặc chạy được việc khác. Nói thẳng điều này trong phần Hạn chế</td></tr>
+        <tr><td>"Tải vọt lên rồi tắt ngay thì sao?"</td><td>Đỉnh ngắn hơn cold start thì không autoscaler nào đỡ được bằng cách thêm pod. Hệ thống chặn nhanh để giữ chất lượng cho phần còn lại (Đ2), và rút cold start để đỡ được cả đỉnh 60 s (Đ3). Trong log thật, đỉnh dưới 2 phút chỉ chở 5 % tải dư.</td></tr>
+        <tr><td>"Phần dự báo train trên dữ liệu nào?"</td><td>Không dùng mô hình dự báo. Tham số chọn trên 40 ngày đầu của BurstGPT, chấm trên 21 ngày sau. Chính dữ liệu cho thấy chờ hay dự báo tuyến tính không hơn việc để dư năng lực.</td></tr>
+        <tr><td>"Sao không giữ sẵn pod dư cho chắc?"</td><td>Hạ ngưỡng 42 → 16 tốn thêm 4,6 điểm GPU để được 7,9 điểm SLO. Rút cold start được 7,6 điểm SLO mà không tốn thêm GPU.</td></tr>
+        <tr><td>"Chặn request có phải làm đẹp số liệu?"</td><td>Không. Request bị chặn tính là trượt SLO, và tỷ lệ bị chặn được báo riêng.</td></tr>
+        <tr><td>"Thuê nguyên máy 4 GPU thì giảm GPU-giờ có ý nghĩa gì?"</td><td>Máy thuê đóng vai một cụm 4 node 1 GPU. Trên cloud tính theo GPU, GPU trả về là tiền tiết kiệm thật hoặc chạy được việc khác. Ghi rõ trong phần Hạn chế.</td></tr>
       </tbody>
     </table>
   </div>
 </section>
 
 <section aria-labelledby="s-src">
-  <div class="sechead"><span class="secno">12</span><h2 id="s-src">Nguồn</h2></div>
+  <div class="sechead"><span class="secno">Nguồn</span><h2 id="s-src">Nguồn và dữ liệu</h2></div>
   <ul class="sources">
-    <li><a href="https://github.com/kubernetes-sigs/gateway-api-inference-extension">Gateway API Inference Extension</a> (Kubernetes SIG); <a href="https://aigateway.envoyproxy.io/blog/endpoint-picker-for-inference-routing/">Envoy AI Gateway: endpoint picker</a></li>
-    <li><a href="https://github.com/vllm-project/production-stack">vLLM production-stack</a>, router và các chế độ định tuyến</li>
-    <li><a href="https://docs.nvidia.com/dynamo/latest/planner/sla_planner.html">NVIDIA Dynamo SLA-based planner</a></li>
-    <li><a href="https://aibrix.readthedocs.io/latest/designs/aibrix-autoscaler.html">AIBrix autoscaler</a>; <a href="https://arxiv.org/abs/2504.03648">bài báo AIBrix</a></li>
-    <li><a href="https://raw.githubusercontent.com/vllm-project/vllm/v0.31.0/vllm/config/scheduler.py">vLLM 0.31.0 SchedulerConfig</a>: <code>max_num_queued_reqs</code></li>
-    <li><a href="https://arxiv.org/abs/2606.07362">Breaking the Ice: Analyzing Cold Start Latency in vLLM</a> (MLSys 2026)</li>
-    <li><a href="https://docs.vllm.ai/en/latest/features/sleep_mode/">vLLM sleep mode</a>; <a href="https://vllm.ai/blog/2025-10-26-sleep-mode">bài blog đo thời gian đánh thức</a></li>
-    <li><a href="https://github.com/Azure/AzurePublicDataset/blob/master/AzureLLMInferenceDataset2024.md">Azure LLM inference trace 2024</a>; <a href="https://github.com/HPMLL/BurstGPT">BurstGPT</a></li>
-    <li>DistServe (OSDI 2024): khái niệm goodput</li>
-    <li>Số đo nội bộ: log phiên A4000 08/11 (<code>docs/nhat-ky/lam-viec/quang/phien-2026-11-08-a4000.md</code>), báo cáo kỹ thuật bản 2, ADR-006</li>
-    <li>Mô phỏng: <code>docs/bao-cao/de-xuat-v3/mo_phong_v3.py</code>, kết quả <code>ket-qua-mo-phong.json</code></li>
+    <li><a href="https://github.com/HPMLL/BurstGPT">BurstGPT</a> (HPMLL), file <code>BurstGPT_1.csv</code>, CC-BY-4.0</li>
+    <li><a href="https://developer.nvidia.com/blog/nvidia-dynamo-snapshot-fast-startup-for-inference-workloads-on-kubernetes/">NVIDIA Dynamo Snapshot trên Kubernetes</a>; <a href="https://developer.nvidia.com/blog/start-and-restore-gpu-workloads-in-seconds-with-nvidia-snapshot">NVIDIA Snapshot</a></li>
+    <li><a href="https://cerebrium.ai/blog/reducing-gpu-cold-starts-with-memory-snapshots-restoring-cuda-workloads-in-second">Cerebrium: GPU memory snapshot cho vLLM</a></li>
+    <li><a href="https://github.com/vllm-project/vllm/issues/34303">vLLM RFC #34303: CUDA checkpoint/restore</a></li>
+    <li><a href="https://llm-d.ai/docs/architecture/Components/workload-variant-autoscaler">llm-d Workload Variant Autoscaler</a>: planner xuất số replica thành metric để KEDA đọc</li>
+    <li><a href="https://github.com/kubernetes-sigs/gateway-api-inference-extension">Gateway API Inference Extension</a>; Envoy Gateway <code>LeastRequest</code></li>
+    <li><a href="https://arxiv.org/abs/2606.07362">Breaking the Ice: cold start của vLLM</a> (MLSys 2026)</li>
+    <li><a href="https://docs.vllm.ai/en/latest/features/sleep_mode/">vLLM sleep mode</a></li>
+    <li>DistServe (OSDI 2024): goodput; SDK OpenAI: tự thử lại 2 lần, backoff mũ</li>
+    <li>Nội bộ: log phiên A4000 08/11, ADR-006, báo cáo kỹ thuật bản 2</li>
+    <li>Mô phỏng: <code>docs/bao-cao/de-xuat-v3/mo_phong_thuc_te.py</code>, <code>chuan_bi_trace.py</code>, kết quả <code>ket-qua-thuc-te.json</code></li>
   </ul>
 </section>
 
@@ -578,13 +504,62 @@ threshold = 42                                       # giữ như A2 (0,8 × B*)
     if (text !== undefined) e.textContent = text;
     return e;
   }
-  function svg(w, h, label) {
-    const s = el("svg", { viewBox: `0 0 ${w} ${h}`, role: "img", "aria-label": label });
-    return s;
-  }
+  const svg = (w, h, label) => el("svg", { viewBox: `0 0 ${w} ${h}`, role: "img", "aria-label": label });
   const fmt = (v, d = 1) => v.toFixed(d).replace(".", ",");
 
-  /* 1. cold start: một thanh xếp chồng, số đo 08/11 lần 1 */
+  /* 1. độ dài đỉnh: hai thanh mỗi nhóm */
+  (function () {
+    const rows = [["< 2 phút", 83.8, 5.3], ["2–5 phút", 6.7, 4.1], ["5–15 phút", 6.0, 17.1], ["≥ 15 phút", 3.6, 73.6]];
+    const W = 900, rowH = 50, T = 10, L = 110, R = 60, H = T + rows.length * rowH + 34;
+    const xs = v => L + v / 100 * (W - L - R);
+    const s = svg(W, H, "Tỷ lệ số đỉnh và phần tải dư theo độ dài đỉnh");
+    [0, 25, 50, 75, 100].forEach(v => {
+      s.appendChild(el("line", { x1: xs(v), x2: xs(v), y1: T, y2: H - 26, class: "grid" }));
+      s.appendChild(el("text", { x: xs(v), y: H - 8, "text-anchor": "middle" }, v + " %"));
+    });
+    rows.forEach(([n, a, b], i) => {
+      const y = T + i * rowH;
+      s.appendChild(el("text", { x: L - 12, y: y + 27, "text-anchor": "end", class: "t-strong" }, n));
+      s.appendChild(el("rect", { x: L, y: y + 8, width: Math.max(xs(a) - L, 2), height: 14, rx: 3, fill: "var(--base-mark)" }));
+      s.appendChild(el("text", { x: xs(a) + 6, y: y + 19 }, fmt(a) + " %"));
+      s.appendChild(el("rect", { x: L, y: y + 25, width: Math.max(xs(b) - L, 2), height: 14, rx: 3, fill: "var(--accent)" }));
+      s.appendChild(el("text", { x: xs(b) + 6, y: y + 36, class: "t-strong" }, fmt(b) + " %"));
+    });
+    document.getElementById("dur").appendChild(s);
+  })();
+
+  /* 2. đỉnh 60 s: tải và năng lực theo thời gian */
+  (function () {
+    const W = 900, H = 300, L = 54, R = 20, T = 20, B = 44, tmax = 480, vmax = 3.4;
+    const xs = t => L + t / tmax * (W - L - R);
+    const ys = v => T + (vmax - v) / vmax * (H - T - B);
+    const s = svg(W, H, "Tải đỉnh 60 giây và năng lực phục vụ theo thời gian");
+    [0, 1, 2, 3].forEach(v => {
+      s.appendChild(el("line", { x1: L, x2: W - R, y1: ys(v), y2: ys(v), class: "grid" }));
+      s.appendChild(el("text", { x: L - 8, y: ys(v) + 4, "text-anchor": "end" }, v + " C"));
+    });
+    [0, 60, 120, 180, 240, 300, 360, 420, 480].forEach(t => s.appendChild(el("text", { x: xs(t), y: H - B + 18, "text-anchor": "middle" }, t + " s")));
+    s.appendChild(el("text", { x: (L + W - R) / 2, y: H - 6, "text-anchor": "middle", class: "axis-label" }, "thời gian từ lúc đỉnh bắt đầu →"));
+    // tải: 0,5 C, lên 3 C trong 10 s, giữ tới 70 s, về 0,5 C ở 80 s
+    const load = [[0, .5], [10, 3], [70, 3], [80, .5], [480, .5]];
+    let d = `M${xs(0)},${ys(0)} ` + load.map(([t, v]) => `L${xs(t)},${ys(v)}`).join(" ") + ` L${xs(480)},${ys(0)} Z`;
+    s.appendChild(el("path", { d, fill: "var(--warn-soft)", stroke: "var(--warn)", "stroke-width": 1.2 }));
+    // năng lực: 1 pod = 1 C; HPA thấy ở ~15 s (tick + trễ metric), pod Ready sau cold start
+    function cap(ready, color, dash) {
+      const pts = [[0, 1], [ready, 1], [ready, 3], [375, 3], [375, 2], [435, 2], [435, 1], [480, 1]];
+      const p = pts.map(([t, v], i) => `${i ? "L" : "M"}${xs(t)},${ys(v) + (dash ? 2 : -2)}`).join(" ");
+      s.appendChild(el("path", { d: p, fill: "none", stroke: color, "stroke-width": 2.6, "stroke-dasharray": dash ? "6 4" : "none" }));
+    }
+    cap(125, "var(--base-mark)", false);
+    cap(30, "var(--accent)", true);
+    s.appendChild(el("text", { x: xs(125) + 6, y: ys(3) - 10, class: "t-strong" }, "pod mới Ready ở 125 s: đỉnh đã tắt"));
+    s.appendChild(el("text", { x: xs(30) + 4, y: ys(3.25), style: "fill:var(--accent);font-weight:600" }, "snapshot: Ready ở 30 s"));
+    s.appendChild(el("text", { x: xs(200), y: ys(2.55), class: "axis-label" }, "giữ GPU tới hết cửa sổ 300 s"));
+    s.appendChild(el("text", { x: xs(12), y: ys(1.6), class: "axis-label" }, "thiếu ≈ 540 request"));
+    document.getElementById("burst").appendChild(s);
+  })();
+
+  /* 3. cold start: thanh xếp chồng, số đo 08/11 */
   (function () {
     const segs = [
       ["Lập lịch, probe", 9, "var(--base-mark)"],
@@ -603,8 +578,7 @@ threshold = 42                                       # giữ như A2 (0,8 × B*)
       const cx = i === 0 ? x : last ? x + bw : x + bw / 2;
       const anc = i === 0 ? "start" : last ? "end" : "middle";
       const above = i % 2 === 0;
-      const ty = above ? 30 : 92;
-      s.appendChild(el("text", { x: cx, y: ty, "text-anchor": anc, class: "t-strong" }, `${v} s`));
+      s.appendChild(el("text", { x: cx, y: above ? 30 : 92, "text-anchor": anc, class: "t-strong" }, `${v} s`));
       s.appendChild(el("text", { x: cx, y: above ? 16 : 106, "text-anchor": anc }, name));
       x += bw;
     });
@@ -613,79 +587,47 @@ threshold = 42                                       # giữ như A2 (0,8 × B*)
     document.getElementById("cold").appendChild(s);
   })();
 
-  /* 2. pareto */
+  /* 4. đường đánh đổi trên tải thật (test) */
   (function () {
-    const pts = [
-      { n: "S4", x: 100, y: 100, base: true, dx: -8, dy: -10, a: "end" },
-      { n: "A1", x: 90.4, y: 97.85, base: true, dx: 10, dy: 4, a: "start" },
-      { n: "A2 hiện tại", x: 71.9, y: 80.35, base: true, dx: 10, dy: 4, a: "start" },
-      { n: "A2 + Đ1", x: 72.5, y: 86.6, base: false, dx: -10, dy: 4, a: "end" },
-      { n: "A3 (Đ2)", x: 77.3, y: 87.95, base: false, dx: 10, dy: 14, a: "start" },
-      { n: "A3 + Đ1", x: 82.1, y: 92.7, base: false, dx: 10, dy: 4, a: "start" },
-      { n: "A3 + Đ1 + Đ3", x: 82.1, y: 96.4, base: false, dx: -12, dy: -20, a: "end" },
+    const lines = [
+      { n: "A2 + Đ1, 110 s", c: "var(--base-mark)", p: [[88.1, 82.5], [89.7, 85.4], [90.9, 87.3], [92.7, 90.4]] },
+      { n: "P, 110 s", c: "var(--line-2)", p: [[88.9, 90.3], [90.8, 91.9], [91.5, 93.4], [92.3, 94.0]] },
+      { n: "P, 15 s", c: "var(--accent)", p: [[88.3, 97.9], [89.0, 98.2], [90.5, 98.5], [91.9, 98.7]] },
     ];
-    const W = 900, H = 400, L = 60, R = 30, T = 40, B = 50;
-    const xs = v => L + (v - 65) / (102 - 65) * (W - L - R);
-    const ys = v => T + (101 - v) / (101 - 75) * (H - T - B);
-    const s = svg(W, H, "Biểu đồ GPU-giờ so với tỷ lệ đạt SLO");
-    [75, 80, 85, 90, 95, 100].forEach(v => {
+    const W = 900, H = 420, L = 60, R = 40, T = 24, B = 52;
+    const xs = v => L + (v - 85) / (94 - 85) * (W - L - R);
+    const ys = v => T + (100 - v) / (100 - 78) * (H - T - B);
+    const s = svg(W, H, "Đạt SLO so với GPU-giờ trên tải thật");
+    [80, 85, 90, 95, 100].forEach(v => {
       s.appendChild(el("line", { x1: L, x2: W - R, y1: ys(v), y2: ys(v), class: "grid" }));
       s.appendChild(el("text", { x: L - 8, y: ys(v) + 4, "text-anchor": "end" }, v + " %"));
     });
-    [70, 80, 90, 100].forEach(v => {
+    [86, 88, 90, 92, 94].forEach(v => {
       s.appendChild(el("line", { x1: xs(v), x2: xs(v), y1: T, y2: H - B, class: "grid" }));
       s.appendChild(el("text", { x: xs(v), y: H - B + 18, "text-anchor": "middle" }, v + " %"));
     });
-    s.appendChild(el("text", { x: (L + W - R) / 2, y: H - 8, "text-anchor": "middle", class: "axis-label" }, "Tổng GPU-giờ KB1 + KB2 + KB3, % của S4 →"));
-    s.appendChild(el("text", { x: 14, y: 14, class: "axis-label" }, "Đạt SLO (KB2, KB3) ↑"));
-    // mũi tên từ A2 tới bản đầy đủ
-    const a = pts[2], b = pts[6];
-    s.appendChild(el("path", { d: `M${xs(a.x) + 6},${ys(a.y) - 8} Q ${xs(76)},${ys(95)} ${xs(b.x) - 8},${ys(b.y) + 4}`, fill: "none", stroke: "var(--accent)", "stroke-width": 1.5, "stroke-dasharray": "4 4" }));
-    pts.forEach(p => {
-      const g = el("g", {});
-      const c = el("circle", { cx: xs(p.x), cy: ys(p.y), r: 7, fill: p.base ? "var(--base-mark)" : "var(--accent)", stroke: "var(--surface)", "stroke-width": 2 });
-      const tt = el("title", {}, `${p.n}: ${fmt(p.x)} % GPU-giờ, ${fmt(p.y)} % đạt SLO`);
-      c.appendChild(tt);
-      g.appendChild(c);
-      g.appendChild(el("text", { x: xs(p.x) + p.dx, y: ys(p.y) + p.dy, "text-anchor": p.a, class: "t-strong" }, p.n));
-      g.appendChild(el("text", { x: xs(p.x) + p.dx, y: ys(p.y) + p.dy + 13, "text-anchor": p.a }, `${fmt(p.y)} % · ${fmt(p.x, 0)} %`));
-      s.appendChild(g);
+    s.appendChild(el("text", { x: (L + W - R) / 2, y: H - 10, "text-anchor": "middle", class: "axis-label" }, "GPU-giờ, % của S4 →"));
+    s.appendChild(el("text", { x: 12, y: 14, class: "axis-label" }, "Đạt SLO ↑"));
+    lines.forEach(ln => {
+      s.appendChild(el("path", { d: ln.p.map(([x, y], i) => `${i ? "L" : "M"}${xs(x)},${ys(y)}`).join(" "), fill: "none", stroke: ln.c, "stroke-width": 2.4 }));
+      ln.p.forEach(([x, y], i) => {
+        const c = el("circle", { cx: xs(x), cy: ys(y), r: 5, fill: ln.c, stroke: "var(--surface)", "stroke-width": 1.5 });
+        c.appendChild(el("title", {}, `${ln.n}, ngưỡng ${[42, 32, 24, 16][i]}: ${fmt(y)} % SLO, ${fmt(x)} % GPU`));
+        s.appendChild(c);
+      });
+      const [lx, ly] = ln.p[ln.p.length - 1];
+      s.appendChild(el("text", { x: xs(lx) + 10, y: ys(ly) + 4, class: "t-strong" }, ln.n));
     });
-    document.getElementById("pareto").appendChild(s);
+    ["42", "32", "24", "16"].forEach((t, i) => s.appendChild(el("text", { x: xs(lines[0].p[i][0]), y: ys(lines[0].p[i][1]) + 18, "text-anchor": "middle", class: "axis-label" }, "ngưỡng " + t)));
+    // điểm đơn
+    [["A2 hiện tại", 87.1, 80.7, "end", -10, 4], ["A3 + Đ1 (bản 1)", 90.2, 88.0, "end", -10, -8]].forEach(([n, x, y, a, dx, dy]) => {
+      s.appendChild(el("rect", { x: xs(x) - 5, y: ys(y) - 5, width: 10, height: 10, fill: "var(--surface)", stroke: "var(--ink-2)", "stroke-width": 1.6 }));
+      s.appendChild(el("text", { x: xs(x) + dx, y: ys(y) + dy, "text-anchor": a, class: "t-strong" }, n));
+    });
+    document.getElementById("front").appendChild(s);
   })();
 
-  /* 3. chặn quá tải: thanh ngang theo cặp */
-  (function () {
-    const rows = [
-      { g: "Tải = 100 % năng lực 4 GPU", n: "S4", a: 98.6, b: 99.4 },
-      { g: "", n: "A2", a: 72.6, b: 89.5 },
-      { g: "", n: "A3 + Đ1", a: null, b: 98.0 },
-      { g: "Tải = 125 % năng lực 4 GPU", n: "S4", a: 18.7, b: 78.2 },
-      { g: "", n: "A2", a: 7.8, b: 67.5 },
-    ];
-    const W = 900, rowH = 46, T = 10, L = 230, R = 70;
-    const H = T + rows.length * rowH + 40;
-    const xs = v => L + v / 100 * (W - L - R);
-    const s = svg(W, H, "Tỷ lệ đạt SLO khi quá tải, có và không chặn");
-    [0, 25, 50, 75, 100].forEach(v => {
-      s.appendChild(el("line", { x1: xs(v), x2: xs(v), y1: T, y2: H - 30, class: "grid" }));
-      s.appendChild(el("text", { x: xs(v), y: H - 12, "text-anchor": "middle" }, v + " %"));
-    });
-    rows.forEach((r, i) => {
-      const y = T + i * rowH;
-      if (r.g) s.appendChild(el("text", { x: 0, y: y + 14, class: "axis-label" }, r.g));
-      s.appendChild(el("text", { x: L - 10, y: y + 30, "text-anchor": "end", class: "t-strong" }, r.n));
-      if (r.a !== null) {
-        s.appendChild(el("rect", { x: L, y: y + 18, width: Math.max(xs(r.a) - L, 2), height: 10, rx: 3, fill: "var(--base-mark)" }));
-        s.appendChild(el("text", { x: xs(r.a) + 6, y: y + 27 }, fmt(r.a) + " %"));
-      }
-      s.appendChild(el("rect", { x: L, y: y + 31, width: xs(r.b) - L, height: 10, rx: 3, fill: "var(--accent)" }));
-      s.appendChild(el("text", { x: xs(r.b) + 6, y: y + 40, class: "t-strong" }, fmt(r.b) + " %"));
-    });
-    document.getElementById("shed").appendChild(s);
-  })();
-
-  /* 4. kiến trúc */
+  /* 5. kiến trúc */
   (function () {
     const W = 960, H = 470;
     const s = svg(W, H, "Kiến trúc sau nâng cấp");
@@ -704,56 +646,49 @@ threshold = 42                                       # giữ như A2 (0,8 × B*)
         s.appendChild(el("text", { x: x + w - tw / 2 - 8, y: y + 21, "text-anchor": "middle", style: "fill:var(--surface);font-weight:600;font-size:10.5px" }, tag));
       }
     }
-    function arrow(x1, y1, x2, y2, label, dashed, lx, ly) {
+    function arrow(x1, y1, x2, y2, dashed) {
       s.appendChild(el("line", { x1, y1, x2, y2, stroke: "var(--ink-2)", "stroke-width": 1.4, "marker-end": "url(#ar)", "stroke-dasharray": dashed ? "5 4" : "none" }));
-      if (label) s.appendChild(el("text", { x: lx ?? (x1 + x2) / 2, y: ly ?? (y1 + y2) / 2 - 6, "text-anchor": "middle", class: "axis-label" }, label));
     }
-    // cột trái: người dùng
-    box(20, 70, 170, 64, "Chat UI", ["Open WebUI"], true, "Đ8");
-    box(20, 160, 170, 80, "Máy tạo tải", ["KB1–KB3, KB3+", "KB4 trace Azure"], true, "Đ4");
-    // gateway
-    box(250, 100, 190, 110, "Envoy Gateway", ["LeastRequest:", "pod ít việc nhất", "retry khi 503"], true, "Đ1");
-    // vLLM
-    box(500, 60, 200, 190, "vLLM × 1–4 pod", ["1 GPU A4000 mỗi pod", "Qwen2.5-3B", "", "--max-num-queued-reqs", "= 75 (định lý Little)"], false, "Đ3");
-    // model registry
-    box(500, 300, 200, 70, "Kho model R2", ["sha256 → NVMe → mount"], true, "Đ6");
-    // KEDA
-    box(250, 290, 190, 90, "KEDA + HPA", ["A3 = A2 + predict_linear", "(tải sau 110 s)"], true, "Đ2");
-    // Prometheus
+    box(20, 70, 170, 64, "Chat UI", ["Open WebUI"], true, "Đ5");
+    box(20, 160, 170, 80, "Máy tạo tải", ["trace BurstGPT,", "KB-ngắn, thử lại 429"], true, "Đ4");
+    box(250, 90, 190, 130, "Envoy Gateway", ["LeastRequest:", "pod ít việc nhất", "mọi pod đầy → 429", "đếm số bị chặn"], true, "Đ1 Đ2");
+    box(500, 60, 200, 190, "vLLM × 1–4 pod", ["1 A4000 mỗi pod", "Qwen2.5-3B", "tối đa 75 request", "(64 chạy + 11 chờ)", "", "khởi động: khôi phục", "từ snapshot"], false, "Đ2 Đ3");
+    box(500, 300, 200, 70, "Ảnh chụp vLLM", ["NVMe của node, 6–10 GB"], true, "Đ3");
+    box(250, 290, 190, 90, "KEDA + HPA", ["nhu cầu = tải trong pod", "+ tốc độ 429 × 9 s"], true, "Đ2");
     box(760, 60, 180, 64, "Prometheus", ["scrape 5 s"], false);
-    box(760, 150, 180, 72, "Grafana", ["dashboard Demo", "USD / 1 triệu token"], true, "Đ5 Đ7");
-    box(760, 250, 180, 64, "Alertmanager", ["→ Telegram"], true, "Đ7");
-    box(760, 340, 180, 64, "Argo CD", ["Git main → cluster"], true, "Đ7");
-    // arrows
-    arrow(190, 102, 248, 135, "", false);
-    arrow(190, 200, 248, 175, "", false);
-    arrow(440, 155, 498, 155, "request", false);
-    arrow(758, 92, 702, 92, "", true);
+    box(760, 150, 180, 72, "Grafana", ["dashboard Demo"], true, "Đ5");
+    box(760, 250, 180, 64, "Alertmanager", ["→ Telegram"], true, "Đ5");
+    box(760, 340, 180, 64, "Argo CD", ["Git main → cluster"], true, "Đ5");
+    arrow(190, 102, 248, 130);
+    arrow(190, 200, 248, 180);
+    arrow(440, 155, 498, 155);
+    s.appendChild(el("text", { x: 469, y: 147, "text-anchor": "middle", class: "axis-label" }, "request"));
+    arrow(758, 92, 702, 92, true);
     s.appendChild(el("text", { x: 730, y: 84, "text-anchor": "middle", class: "axis-label" }, "scrape"));
-    // Prometheus → KEDA: đi vòng phía dưới để không cắt khối vLLM
     s.appendChild(el("path", { d: "M760,116 L745,116 L745,420 L345,420 L345,384", fill: "none", stroke: "var(--ink-2)", "stroke-width": 1.4, "stroke-dasharray": "5 4", "marker-end": "url(#ar)" }));
     s.appendChild(el("text", { x: 545, y: 412, "text-anchor": "middle", class: "axis-label" }, "KEDA hỏi Prometheus mỗi 5 s"));
-    arrow(440, 310, 498, 230, "", false);
+    arrow(440, 310, 498, 230);
     s.appendChild(el("text", { x: 452, y: 252, "text-anchor": "end", class: "axis-label" }, "scale"));
-    arrow(600, 298, 600, 252, "", false);
-    s.appendChild(el("text", { x: 608, y: 282, class: "axis-label" }, "mount"));
-    arrow(850, 124, 850, 148, "", false);
-    arrow(850, 222, 850, 248, "", false);
-    s.appendChild(el("text", { x: 20, y: 458, class: "axis-label" }, "Khung xanh: thành phần mới hoặc thay đổi · khung xám: đã có, giữ nguyên · nét đứt: luồng metric"));
+    arrow(600, 298, 600, 252);
+    s.appendChild(el("text", { x: 608, y: 282, class: "axis-label" }, "khôi phục"));
+    arrow(850, 124, 850, 148);
+    arrow(850, 222, 850, 248);
+    s.appendChild(el("text", { x: 20, y: 458, class: "axis-label" }, "Khung xanh: thành phần mới hoặc thay đổi · khung xám: đã có · nét đứt: luồng metric"));
     document.getElementById("arch").appendChild(s);
   })();
 
-  /* 5. lịch */
+  /* 6. lịch */
   (function () {
     const days = ["14/11", "15/11", "16/11", "17/11", "18/11", "19/11", "20/11", "21/11", "22/11"];
     const rows = [
       ["V2 (như kế hoạch)", "cả hai", [[0, 1, "v3"]]],
       ["Phân tích V2, viết chương 5", "Trình + Quang", [[2, 5, "base"]]],
-      ["Đ1 gateway, Đ3 chặn, thử trên kind", "Quang + Claude", [[2, 4, "new"]]],
-      ["Đ2 A3, Đ5 chi phí", "Quang + Claude", [[2, 3, "new"]]],
-      ["Đ4 trace Azure", "Trình", [[3, 5, "new"]]],
-      ["Đ7 Argo CD, Telegram, dashboard; Đ8 chat", "Quang + Claude", [[4, 5, "new"]]],
-      ["Kiểm tổng trên kind, chốt ma trận V3", "cả hai", [[5, 5, "new"]]],
+      ["Đ1 gateway, Đ2 chặn, thử trên kind", "Quang + Claude", [[2, 3, "new"]]],
+      ["Đ3 snapshot trên VM 1 GPU", "Quang + Claude", [[2, 4, "hard"]]],
+      ["Đ3b nếu Đ3 dừng", "Quang + Claude", [[4, 4, "new"]]],
+      ["Đ4 kịch bản trace, KB-ngắn", "Trình", [[2, 3, "new"]]],
+      ["Đ5 Argo CD, Telegram, dashboard, chat", "Trình + Quang", [[4, 5, "new"]]],
+      ["Kiểm tổng trên kind, chốt ma trận", "cả hai", [[5, 5, "new"]]],
       ["V3 + quay video demo", "cả hai", [[6, 6, "v3"], [7, 7, "opt"]]],
     ];
     const g = document.getElementById("gantt");
