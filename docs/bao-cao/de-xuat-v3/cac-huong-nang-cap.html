@@ -1,0 +1,411 @@
+<meta charset="utf-8">
+<title>Bốn hướng nâng cấp bài toán</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@500;600;700;800&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: một cột ~74ch, cùng hệ token với tờ trình V3. Khung duyệt đặt đầu trang; mỗi hướng là một mục có cùng 5 nhãn (Ý tưởng, Cơ sở, Làm gì, Đã có số, Trình bày). */
+:root {
+  --bg: #f6f8f9; --surface: #ffffff; --ink: #12202a; --ink-2: #44535d; --muted: #74838c; --rule: #dbe3e7; --band: #eaf0f2;
+  --accent: #0b6870; --accent-soft: #dcefef; --good: #1d7a3b; --warn: #9a5b00; --bad: #b2331d; --warn-soft: #fbf0dc;
+  --base-mark: #8a99a2; --line-2: #6a4fa3;
+  --font-display: "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Literata", Georgia, "Times New Roman", serif;
+  --font-data: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --step--1: 0.84rem; --step-0: 1.02rem; --step-1: 1.22rem; --step-2: 1.55rem; --step-3: 2.0rem; --step-4: 2.7rem;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #10171b; --surface: #162026; --ink: #e3eaed; --ink-2: #a7b5bc; --muted: #7d8c94; --rule: #263439; --band: #1a262c;
+    --accent: #5db8b8; --accent-soft: #163233; --good: #52c27e; --warn: #e2a440; --bad: #f07b63; --warn-soft: #33281a;
+    --base-mark: #6c7c84; --line-2: #a98be0;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #10171b; --surface: #162026; --ink: #e3eaed; --ink-2: #a7b5bc; --muted: #7d8c94; --rule: #263439; --band: #1a262c;
+  --accent: #5db8b8; --accent-soft: #163233; --good: #52c27e; --warn: #e2a440; --bad: #f07b63; --warn-soft: #33281a;
+  --base-mark: #6c7c84; --line-2: #a98be0;
+}
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: var(--step-0); line-height: 1.62;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 980px; margin: 0 auto; padding-block: 40px 80px; display: flex; flex-direction: column; gap: 52px; }
+.prose { max-width: 74ch; display: flex; flex-direction: column; gap: 14px; }
+.prose p, .prose ul, .prose ol { margin: 0; }
+.prose ul, .prose ol { padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+h1, h2, h3 { font-family: var(--font-display); color: var(--ink); text-wrap: balance; margin: 0; line-height: 1.2; }
+h1 { font-size: var(--step-4); font-weight: 800; letter-spacing: -0.02em; }
+h2 { font-size: var(--step-3); font-weight: 700; letter-spacing: -0.01em; }
+h3 { font-size: var(--step-1); font-weight: 600; }
+.eyebrow { font-family: var(--font-display); font-size: var(--step--1); letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
+.meta { color: var(--muted); font-size: var(--step--1); font-family: var(--font-display); }
+header { display: flex; flex-direction: column; gap: 12px; }
+.lead { font-size: var(--step-1); color: var(--ink-2); max-width: 70ch; }
+code, .num { font-family: var(--font-data); font-size: 0.92em; }
+code { background: var(--band); padding: 1px 5px; border-radius: 3px; }
+.decide { background: var(--surface); border: 1px solid var(--rule); border-left: 4px solid var(--accent); border-radius: 6px; padding: 22px 26px; display: flex; flex-direction: column; gap: 12px; }
+.decide ol { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 8px; }
+.decide strong { font-family: var(--font-display); }
+section { display: flex; flex-direction: column; gap: 20px; }
+.card { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 24px 28px; display: flex; flex-direction: column; gap: 16px; }
+.card h3 { font-size: var(--step-2); }
+.tag { display: inline-block; font-family: var(--font-display); font-size: var(--step--1); font-weight: 600; padding: 2px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+.tag.free { background: #e4f3e9; color: var(--good); }
+.tag.work { background: var(--warn-soft); color: var(--warn); }
+:root[data-theme="dark"] .tag.free { background: #16301f; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .tag.free { background: #16301f; } }
+dl { margin: 0; display: grid; grid-template-columns: 9ch 1fr; gap: 10px 18px; }
+dt { font-family: var(--font-display); font-weight: 600; color: var(--ink-2); font-size: var(--step--1); letter-spacing: 0.04em; text-transform: uppercase; padding-top: 3px; }
+dd { margin: 0; max-width: 70ch; }
+dd ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+@media (max-width: 560px) { dl { grid-template-columns: 1fr; gap: 4px 0; } dd { margin-bottom: 8px; } }
+.formula { font-family: var(--font-data); background: var(--band); border-radius: 6px; padding: 12px 16px; font-size: 0.95em; line-height: 1.7; overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); font-family: var(--font-display); }
+.tablewrap { overflow-x: auto; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { color: var(--ink-2); font-weight: 600; background: var(--band); }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--font-data); }
+figure { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+figcaption { color: var(--muted); font-size: var(--step--1); font-family: var(--font-display); max-width: 74ch; }
+svg text { font-family: var(--font-display); fill: var(--ink-2); font-size: 12px; }
+svg .axis { stroke: var(--rule); }
+svg .grid { stroke: var(--rule); stroke-dasharray: 2 4; }
+.note { border-left: 3px solid var(--warn); background: var(--warn-soft); padding: 12px 16px; border-radius: 4px; max-width: 74ch; }
+.drop { color: var(--ink-2); }
+.drop li::marker { color: var(--bad); }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Đồ án autoscaling vLLM trên Kubernetes · tài liệu nội bộ để duyệt</div>
+  <h1>Bốn hướng nâng cấp bài toán</h1>
+  <p class="lead">Mục tiêu: đổi luận văn từ “cài KEDA và chỉnh tham số” thành “mô hình hiệu năng đo thật → chính sách suy ra từ mô hình → đánh giá trace-driven trên tải thật”. Không hướng nào ở đây cần giải bài đỉnh ngắn; không hướng nào chặn người dùng.</p>
+  <div class="meta">Quang soạn, 13/11/2026 · Mọi phần trăm trong trang là <strong>mô phỏng</strong> đã hiệu chỉnh với V1 (sai số tới 8,7 điểm SLO), chưa phải số đo trên cụm.</div>
+</header>
+
+<div class="decide">
+  <div class="eyebrow">Cần bạn duyệt</div>
+  <ol>
+    <li><strong>Khung luận văn lồng nhau</strong> (đã duyệt 13/11): 3 lớp Mô hình → Chính sách → Đánh giá, trong đó ma trận V2/V3 đo trên cụm là lớp Đánh giá và là nguồn hiệu chỉnh cho mô phỏng; mô phỏng chỉ quét những ô không có tiền chạy. Chương kết quả xoay quanh đường frontier SLO–GPU-giờ, bảng ma trận S1/S4/A1/A2 giữ lại làm điểm xác nhận.</li>
+    <li><strong>Làm ngay, không tốn GPU:</strong> hướng 1 (ngưỡng suy từ lý thuyết hàng đợi) và hướng 2 (cửa sổ scale-down theo ski-rental, đã mô phỏng xong 13/11, kết quả bên dưới). Chỉ cần viết lại lý luận và vẽ hình từ số đã có.</li>
+    <li><strong>Hướng 3 (planner hybrid dự báo chu kỳ ngày):</strong> đã mô phỏng 13/11, <strong>không đạt ngưỡng</strong> (lợi 0,1 điểm SLO, 0,1 điểm GPU-giờ): chu kỳ ngày của BurstGPT quá yếu và nền tải chỉ cần 1 pod. Đề xuất: không đưa vào V3; viết thành kết luận âm có phương pháp trong luận văn, kèm điều kiện để hướng này có lợi.</li>
+    <li><strong>Hướng 4 (định tuyến LeastRequest)</strong> giữ nguyên như Đ1 của tờ trình V3, nhưng trình bày như một kết quả thuật toán (cùng GPU, SLO cao hơn), không chỉ là bước cài gateway.</li>
+    <li><strong>Loại khỏi tờ trình V3:</strong> Đ2 “chặn 429 và báo lại autoscaler”. Lý do ở cuối trang.</li>
+  </ol>
+</div>
+
+<section class="prose">
+  <h2>Bài hiện tại đang yếu ở đâu</h2>
+  <p>Ba con số điều khiển toàn bộ hệ là <code>42</code> (ngưỡng request mỗi pod), <code>300 s</code> (cửa sổ scale-down của HPA) và <code>60 s</code> (tầm ngoại suy của <code>predict_linear</code>). Cả ba đều là giá trị chọn tay hoặc mặc định. Hội đồng hỏi “tại sao 42?” thì câu trả lời hiện giờ là “thử thấy ổn”. Đó là điểm làm bài có cảm giác thuần cài đặt.</p>
+  <p>Điều may là ta đã có hai thứ mà phần lớn đồ án không có: một <strong>mô hình hiệu năng đo thật</strong> trên A4000 (TPOT theo số request đang chạy) và một <strong>bộ trace tải thật 61 ngày</strong> (BurstGPT) đã chia train/test. Bốn hướng dưới đây chỉ là dùng hai thứ đó để suy ra ba con số kia, rồi chứng minh bằng đánh giá.</p>
+</section>
+
+<section>
+  <h2>Hướng 1 · Ngưỡng scale suy từ lý thuyết hàng đợi</h2>
+  <div class="card">
+    <div><span class="tag free">Không tốn GPU</span> <span class="tag">Đã mô phỏng 13/11</span></div>
+    <dl>
+      <dt>Ý tưởng</dt>
+      <dd>Thay “42” bằng một công thức có ba đầu vào: SLO, mô hình hiệu năng đo được, và thời gian phản ứng của hệ. SLO đổi thì ngưỡng đổi theo; cold start rút ngắn thì ngưỡng nới ra. Người đọc thấy con số là <em>hệ quả</em>, không phải lựa chọn.</dd>
+      <dt>Cơ sở</dt>
+      <dd>Định luật Little (1961): số request trong hệ L = λ·W. Lý do TPOT tăng tuyến tính theo số request đang chạy là continuous batching (Orca, OSDI 2022; vLLM, SOSP 2023): mỗi bước decode phục vụ mọi request đang chạy, nên bước càng đông càng chậm.</dd>
+      <dt>Làm gì</dt>
+      <dd>
+        <div class="formula">TPOT(n) = 18,5 + 0,49·n  ms            (đo ĐG1 08/11, n = request đang chạy)<br>
+X(n)    = n ÷ (256 · TPOT(n))         req/s mỗi pod   → X(64) ≈ 5,0 req/s<br>
+chờ TB  = 1 ÷ X(n) ≈ 0,2 s mỗi chỗ trong hàng đợi<br>
+TTFT ≤ 2,5 s  ⇒  hàng chờ ≤ ~10        ⇒  sức chứa mỗi pod ≈ 64 + 10 = 74<br>
+ngưỡng  = 74 − (độ dốc tải lên) × (thời gian phản ứng ≈ 5 + 15 + cold start)</div>
+        <p>Vế cuối cho thấy điều cần nói với hội đồng: ngưỡng không phải một hằng số, nó là <strong>sức chứa trừ đi phần tải sẽ dồn tới trong lúc pod mới chưa Ready</strong>. Cold start 110 s thì phải chừa nhiều; rút cold start xuống thì ngưỡng được đẩy lên gần 74 và tiết kiệm GPU. Hai hướng (giảm cold start và tối ưu ngưỡng) nối với nhau bằng một công thức.</p>
+      </dd>
+      <dt>Đã có số</dt>
+      <dd>
+        <p>Quét ngưỡng 16…64 cho ba mức cold start, planner thuần (H = 300 s, không chặn 429), 8 cửa sổ test × 3 seed và 2 ngày trọn (<code>mo_phong_nguong.py</code> → <code>ket-qua-nguong.json</code>). Ba điều rút ra:</p>
+        <ul>
+          <li><strong>Công thức đúng về chiều và gần đúng về số.</strong> Cùng SLO ≈ 90 % trên test, cold 110 s cần ngưỡng 16 (92,5 % GPU-giờ), cold 60 s cần ≈ 30, cold 15 s chỉ cần 64 (79,2 %). Khớp dữ liệu cho độ dốc tải ≈ 0,5 request/s mỗi pod: <span class="num">thr ≈ 74 − 0,5 × (cold + 12)</span> → 13 / 38 / 60 cho ba mức cold start, sát các điểm đo 16 / 32 / 64.</li>
+          <li><strong>Rút cold start là cách tiết kiệm GPU, không chỉ là cách nâng SLO.</strong> Giữ SLO 90 % mà đi từ cold 110 → 15 s thì GPU-giờ giảm 92,5 → 79,2 % trên test; trên ngày trọn, giữ SLO ≈ 96,5 % thì giảm 55,3 → 36,8 %. Đây là lý lẽ kinh tế cho Đ3.</li>
+          <li><strong>Một ngưỡng tĩnh không tối ưu cho cả hai loại tải.</strong> Trên cửa sổ đỉnh, hạ 42 → 16 mua 9,8 điểm SLO với 3,8 điểm GPU; trên ngày trọn chỉ được 4,5 điểm SLO mà tốn 12,8 điểm GPU, vì ngưỡng thấp giữ pod dư cả lúc vắng. Đó chính là chỗ cần hướng 3: ngưỡng hoặc số pod phải thay đổi theo thời điểm trong ngày.</li>
+        </ul>
+      </dd>
+      <dt>Trình bày</dt>
+      <dd>Hình ba đường frontier (dưới) và bảng “SLO mục tiêu → ngưỡng”. Câu kết: “Chúng tôi không chọn ngưỡng; chúng tôi chọn SLO và ngân sách, ngưỡng là hệ quả của mô hình, và mô hình nói đúng chiều khi cold start thay đổi.”</dd>
+    </dl>
+    <figure>
+      <svg viewBox="0 0 640 300" width="100%" style="max-width:640px" role="img" aria-label="Ba đường frontier SLO theo GPU-giờ khi quét ngưỡng, cho cold start 110, 60 và 15 giây">
+        <line class="axis" x1="70" y1="20" x2="70" y2="250"/>
+        <line class="axis" x1="70" y1="250" x2="610" y2="250"/>
+        <!-- y: SLO 75–100 %, 9,2 px/điểm; x: GPU 78–94 %, 33,75 px/điểm -->
+        <g>
+          <line class="grid" x1="70" y1="250" x2="610" y2="250"/><text x="60" y="254" text-anchor="end">75 %</text>
+          <line class="grid" x1="70" y1="204" x2="610" y2="204"/><text x="60" y="208" text-anchor="end">80 %</text>
+          <line class="grid" x1="70" y1="158" x2="610" y2="158"/><text x="60" y="162" text-anchor="end">85 %</text>
+          <line class="grid" x1="70" y1="112" x2="610" y2="112"/><text x="60" y="116" text-anchor="end">90 %</text>
+          <line class="grid" x1="70" y1="66" x2="610" y2="66"/><text x="60" y="70" text-anchor="end">95 %</text>
+          <line class="grid" x1="70" y1="20" x2="610" y2="20"/><text x="60" y="24" text-anchor="end">100 %</text>
+        </g>
+        <g>
+          <text x="70" y="272" text-anchor="middle">78 %</text>
+          <text x="205" y="272" text-anchor="middle">82 %</text>
+          <text x="340" y="272" text-anchor="middle">86 %</text>
+          <text x="475" y="272" text-anchor="middle">90 %</text>
+          <text x="610" y="272" text-anchor="middle">94 %</text>
+          <text x="340" y="294" text-anchor="middle">GPU-giờ so với 4 pod cố định (S4) · điểm trái nhất của mỗi đường là ngưỡng 64, phải nhất là 16</text>
+        </g>
+        <text transform="translate(16,135) rotate(-90)" text-anchor="middle">SLO trên cửa sổ test</text>
+        <polyline fill="none" stroke="var(--accent)" stroke-width="2" points="242,240 327,215 431,199 451,145 499,122 559,108"/>
+        <polyline fill="none" stroke="var(--line-2)" stroke-width="2" points="212,189 347,168 421,148 472,122 489,85 559,72"/>
+        <polyline fill="none" stroke="var(--good)" stroke-width="2" points="111,113 286,84 394,69 431,53 492,38 546,35"/>
+        <g fill="var(--accent)"><circle cx="242" cy="240" r="4"/><circle cx="327" cy="215" r="4"/><circle cx="431" cy="199" r="4"/><circle cx="451" cy="145" r="4"/><circle cx="499" cy="122" r="4"/><circle cx="559" cy="108" r="4"/></g>
+        <g fill="var(--line-2)"><circle cx="212" cy="189" r="4"/><circle cx="347" cy="168" r="4"/><circle cx="421" cy="148" r="4"/><circle cx="472" cy="122" r="4"/><circle cx="489" cy="85" r="4"/><circle cx="559" cy="72" r="4"/></g>
+        <g fill="var(--good)"><circle cx="111" cy="113" r="4"/><circle cx="286" cy="84" r="4"/><circle cx="394" cy="69" r="4"/><circle cx="431" cy="53" r="4"/><circle cx="492" cy="38" r="4"/><circle cx="546" cy="35" r="4"/></g>
+        <g font-weight="600">
+          <text x="120" y="100" fill="var(--good)">cold 15 s</text>
+          <text x="150" y="182" fill="var(--line-2)">cold 60 s</text>
+          <text x="180" y="236" fill="var(--accent)">cold 110 s</text>
+        </g>
+      </svg>
+      <figcaption>Mỗi đường là một mức cold start, mỗi điểm một ngưỡng (64 → 16 từ trái sang phải). Rút cold start dịch cả đường lên trên và sang trái: cùng SLO, ít GPU hơn. Planner thuần, 8 cửa sổ test × 3 seed. Mô phỏng.</figcaption>
+    </figure>
+    <div class="tablewrap">
+    <table>
+      <thead><tr><th>SLO mục tiêu (test)</th><th>Cold 110 s</th><th>Cold 60 s</th><th>Cold 15 s</th><th>Công thức 74 − 0,5·(cold + 12)</th></tr></thead>
+      <tbody>
+        <tr><td>≈ 90 %</td><td>thr 16 · GPU 92,5 %</td><td>thr ≈ 30 · GPU ≈ 90 %</td><td>thr 64 · GPU 79,2 %</td><td class="num">13 / 38 / 60</td></tr>
+        <tr><td>≈ 86 %</td><td>thr 32 · GPU 89,3 %</td><td>thr 42 · GPU 88,4 %</td><td>thr &gt; 64 (hết thang)</td><td></td></tr>
+        <tr><td>≈ 80 %</td><td>thr 42 · GPU 88,7 %</td><td>thr 64 · GPU 82,2 %</td><td>—</td><td></td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p class="meta">Ngưỡng 42 hiện tại tương đương SLO ≈ 80 % trên cửa sổ đỉnh và 92 % trên ngày trọn (cold 110 s). Khoảng min–max giữa các cửa sổ test rộng, chênh dưới 3 điểm không có ý nghĩa.</p>
+    <figure>
+      <svg viewBox="0 0 640 300" width="100%" style="max-width:640px" role="img" aria-label="Frontier SLO theo GPU-giờ khi quét ngưỡng 42, 32, 24, 16">
+        <line class="axis" x1="70" y1="20" x2="70" y2="250"/>
+        <line class="axis" x1="70" y1="250" x2="610" y2="250"/>
+        <!-- trục y: SLO 80–92 %, mỗi 2 điểm 38,3 px; trục x: GPU 87–94 %, mỗi 1 điểm 77 px -->
+        <g>
+          <line class="grid" x1="70" y1="250" x2="610" y2="250"/><text x="60" y="254" text-anchor="end">80 %</text>
+          <line class="grid" x1="70" y1="173" x2="610" y2="173"/><text x="60" y="177" text-anchor="end">84 %</text>
+          <line class="grid" x1="70" y1="97" x2="610" y2="97"/><text x="60" y="101" text-anchor="end">88 %</text>
+          <line class="grid" x1="70" y1="20" x2="610" y2="20"/><text x="60" y="24" text-anchor="end">92 %</text>
+        </g>
+        <g>
+          <text x="70" y="272" text-anchor="middle">87 %</text>
+          <text x="224" y="272" text-anchor="middle">89 %</text>
+          <text x="378" y="272" text-anchor="middle">91 %</text>
+          <text x="532" y="272" text-anchor="middle">93 %</text>
+          <text x="340" y="294" text-anchor="middle">GPU-giờ so với 4 pod cố định (S4)</text>
+        </g>
+        <text transform="translate(16,135) rotate(-90)" text-anchor="middle">SLO (TTFT và TPOT đạt)</text>
+        <!-- điểm: (gpu, slo) → x = 70 + (gpu−87)·77, y = 250 − (slo−80)·19,17 -->
+        <polyline fill="none" stroke="var(--accent)" stroke-width="2" points="153,202 278,147 371,110 506,51"/>
+        <g fill="var(--accent)">
+          <circle cx="153" cy="202" r="5"/><text x="153" y="226" text-anchor="middle">ngưỡng 42</text>
+          <circle cx="278" cy="147" r="5"/><text x="278" y="140" text-anchor="middle">32</text>
+          <circle cx="371" cy="110" r="5"/><text x="371" y="103" text-anchor="middle">24</text>
+          <circle cx="506" cy="51" r="5"/><text x="506" y="44" text-anchor="middle">16</text>
+        </g>
+      </svg>
+      <figcaption>Frontier SLO–GPU-giờ của A2 + gateway LeastRequest, cold start 110 s, 8 cửa sổ test × 5 seed (từ <code>ket-qua-thuc-te.json</code>, mục <code>frontier</code>; A2 dùng cửa sổ HPA cố định, nên số lệch nhẹ so với planner ở bảng trên). Mô phỏng.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section>
+  <h2>Hướng 2 · Cửa sổ scale-down theo bài toán ski-rental</h2>
+  <div class="card">
+    <div><span class="tag free">Không tốn GPU</span> <span class="tag">Đã mô phỏng 13/11</span></div>
+    <dl>
+      <dt>Ý tưởng</dt>
+      <dd>“Giữ pod rỗi thêm bao lâu rồi tắt” (cửa sổ H) là đúng bài <em>rent-or-buy</em>: mỗi giây giữ tốn 1 giây GPU, tắt rồi phải bật lại tốn cả cold start. Cửa sổ 300 s không còn là mặc định HPA mà là giá trị có chứng minh và có vùng tối ưu đo được.</dd>
+      <dt>Cơ sở</dt>
+      <dd>Ski-rental (Karlin, Manasse, Rudolph, Sleator 1988): thuật toán deterministic tối ưu là giữ đúng bằng chi phí mua lại, đạt tỉ số cạnh tranh 2; randomized đạt e/(e−1) ≈ 1,58. Google Autopilot (Rzadca et al., EuroSys 2020) dùng cùng lập luận cho scale-down. Đây là thuật toán online có bảo đảm cận trên, ngược với heuristic.</dd>
+      <dt>Làm gì</dt>
+      <dd>
+        <div class="formula">thuê      = giữ pod không còn cần: 1 GPU-giây mỗi giây<br>
+mua lại   = tắt rồi tải quay lại: cold start (110 s GPU không phục vụ) + SLO mất trong lúc chờ<br>
+grace     = tắt pod là trả ngay 180 s GPU (vLLM bỏ qua SIGTERM, ADR-006 C8)<br>
+⇒ H &lt; 180 s bị trội hoàn toàn: tốn GPU bằng giữ mà không phục vụ ai<br>
+⇒ H* nằm trong [grace, grace + cold start + SLO quy đổi] ≈ [180, 300+] s   (Karlin 1988: tỉ số cạnh tranh 2)</div>
+        <p>Điểm hay để trình: cận dưới của cửa sổ không đến từ cold start mà từ <strong>grace period</strong>, một tham số tưởng là chuyện vận hành. Rút cold start (Đ3/Đ3b) không hạ cận dưới này, chỉ làm phần SLO phía trên ít nhạy hơn.</p>
+      </dd>
+      <dt>Đã có số</dt>
+      <dd>
+        <p>Quét H = 0…900 s cho ba mức cold start, planner thuần (không chặn 429, không chờ τ), 8 cửa sổ test × 3 seed và 2 ngày trọn (<code>mo_phong_cua_so.py</code> → <code>ket-qua-cua-so.json</code>). Dữ liệu đồng ý với lý thuyết:</p>
+        <ul>
+          <li>GPU-giờ thấp nhất ở <strong>H = 180 s</strong> với cả ba mức cold start (87,3 / 86,8 / 85,3 % trên test; 42,3 / 41,1 / 38,9 % trên ngày trọn), đúng bằng grace. H = 0 vừa tệ nhất về SLO (66,8 %) vừa tốn GPU nhất (95,4 %) vì bật tắt 12 lần mỗi cửa sổ.</li>
+          <li>Từ 180 đến 600 s, GPU-giờ gần phẳng (± 1,5 điểm) nhưng SLO tăng tiếp: cold 110 s đi từ 80,1 lên 84,4 %. Vùng này là “mua SLO gần miễn phí”. Quá 600 s mới bắt đầu tốn (ngày trọn 43,8 → 46,2 %).</li>
+          <li>Cold start càng ngắn thì H càng ít quan trọng: SLO chênh giữa H = 180 và 600 là 4,3 điểm ở cold 110 s, 2,8 ở 60 s, 1,1 ở 15 s. Đúng như lý thuyết: chi phí mua lại nhỏ thì thuê hay mua không khác nhiều.</li>
+          <li>Mặc định 300 s của HPA nằm trong vùng tối ưu, cách điểm tốt nhất ≤ 1,5 điểm GPU và ≤ 4 điểm SLO. Nếu ưu tiên SLO: chọn 450–600 s; nếu ưu tiên tiền: 180 s.</li>
+        </ul>
+      </dd>
+      <dt>Trình bày</dt>
+      <dd>Hình dưới và bảng kèm theo; nửa trang chứng minh. Câu kết: “Cửa sổ scale-down là tham số duy nhất có bảo đảm lý thuyết; mô phỏng trên tải thật cho đúng cận dưới mà lý thuyết dự đoán, và chỉ ra grace period mới là thứ quyết định nó.”</dd>
+    </dl>
+    <figure>
+      <svg viewBox="0 0 640 310" width="100%" style="max-width:640px" role="img" aria-label="SLO theo cửa sổ scale-down H cho ba mức cold start, cửa sổ test">
+        <line class="axis" x1="70" y1="20" x2="70" y2="250"/>
+        <line class="axis" x1="70" y1="250" x2="610" y2="250"/>
+        <!-- y: SLO 65–100 %, 6,571 px/điểm; x: H 0–900 s, 0,6 px/s -->
+        <g>
+          <line class="grid" x1="70" y1="250" x2="610" y2="250"/><text x="60" y="254" text-anchor="end">65 %</text>
+          <line class="grid" x1="70" y1="184" x2="610" y2="184"/><text x="60" y="188" text-anchor="end">75 %</text>
+          <line class="grid" x1="70" y1="119" x2="610" y2="119"/><text x="60" y="123" text-anchor="end">85 %</text>
+          <line class="grid" x1="70" y1="53" x2="610" y2="53"/><text x="60" y="57" text-anchor="end">95 %</text>
+        </g>
+        <g>
+          <text x="70" y="272" text-anchor="middle">0</text>
+          <text x="178" y="272" text-anchor="middle">180</text>
+          <text x="250" y="272" text-anchor="middle">300</text>
+          <text x="430" y="272" text-anchor="middle">600</text>
+          <text x="610" y="272" text-anchor="middle">900 s</text>
+          <text x="340" y="296" text-anchor="middle">Cửa sổ scale-down H</text>
+        </g>
+        <text transform="translate(16,135) rotate(-90)" text-anchor="middle">SLO trên cửa sổ test</text>
+        <rect x="178" y="20" width="252" height="230" fill="var(--accent-soft)" opacity="0.55"/>
+        <text x="304" y="36" text-anchor="middle" fill="var(--accent)">vùng GPU-giờ gần phẳng (180–600 s)</text>
+        <!-- cold 15: 88.4 93.6 94.4 94.7 94.7 95.7 95.8 95.6 -->
+        <polyline fill="none" stroke="var(--good)" stroke-width="2" points="70,96 106,62 142,57 178,55 250,55 340,48 430,48 610,49"/>
+        <!-- cold 60: 77.0 82.3 85.5 85.9 86.1 87.8 88.7 88.5 -->
+        <polyline fill="none" stroke="var(--line-2)" stroke-width="2" points="70,171 106,136 142,115 178,113 250,111 340,100 430,94 610,96"/>
+        <!-- cold 110: 66.8 76.4 78.4 80.1 80.6 83.2 84.4 84.2 -->
+        <polyline fill="none" stroke="var(--accent)" stroke-width="2" points="70,238 106,175 142,162 178,151 250,148 340,130 430,123 610,124"/>
+        <g font-weight="600">
+          <text x="614" y="52" fill="var(--good)">cold 15 s</text>
+          <text x="614" y="99" fill="var(--line-2)">cold 60 s</text>
+          <text x="614" y="128" fill="var(--accent)">cold 110 s</text>
+        </g>
+      </svg>
+      <figcaption>SLO theo cửa sổ scale-down H, planner thuần, 8 cửa sổ test BurstGPT × 3 seed. Vùng tô là nơi GPU-giờ thay đổi dưới 1,5 điểm. Mô phỏng.</figcaption>
+    </figure>
+    <div class="tablewrap">
+    <table>
+      <thead><tr><th>H (s)</th><th class="num">SLO test</th><th class="num">GPU test</th><th class="num">SLO ngày trọn</th><th class="num">GPU ngày trọn</th><th class="num">Lần bật/ngày</th></tr></thead>
+      <tbody>
+        <tr><td>0</td><td class="num">66,8 %</td><td class="num">95,4 %</td><td class="num">77,0 %</td><td class="num">47,2 %</td><td class="num">202</td></tr>
+        <tr><td>120</td><td class="num">78,4 %</td><td class="num">87,5 %</td><td class="num">90,1 %</td><td class="num">42,4 %</td><td class="num">94</td></tr>
+        <tr><td>180 = grace</td><td class="num">80,1 %</td><td class="num"><strong>87,3 %</strong></td><td class="num">92,1 %</td><td class="num"><strong>42,3 %</strong></td><td class="num">80</td></tr>
+        <tr><td>300 (HPA mặc định)</td><td class="num">80,6 %</td><td class="num">88,7 %</td><td class="num">92,0 %</td><td class="num">42,5 %</td><td class="num">62</td></tr>
+        <tr><td>450</td><td class="num">83,2 %</td><td class="num">88,6 %</td><td class="num">94,8 %</td><td class="num">42,9 %</td><td class="num">51</td></tr>
+        <tr><td>600</td><td class="num"><strong>84,4 %</strong></td><td class="num">88,6 %</td><td class="num">94,8 %</td><td class="num">43,8 %</td><td class="num">44</td></tr>
+        <tr><td>900</td><td class="num">84,2 %</td><td class="num">89,2 %</td><td class="num"><strong>95,2 %</strong></td><td class="num">46,2 %</td><td class="num">42</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p class="meta">Cold start 110 s. GPU = GPU-giờ so với 4 pod cố định. Khoảng min–max giữa các cửa sổ test rộng (tới 35 điểm), nên chênh dưới 3 điểm giữa hai H kề nhau không có ý nghĩa; xu hướng cả dãy thì có.</p>
+  </div>
+</section>
+
+<section>
+  <h2>Hướng 3 · Planner hybrid: dự báo chu kỳ ngày + reactive làm sàn</h2>
+  <div class="card">
+    <div><span class="tag work">Cần code + mô phỏng</span> <span class="tag">Phần “thông minh” rõ nhất khi thuyết trình</span></div>
+    <dl>
+      <dt>Ý tưởng</dt>
+      <dd>Thay <code>predict_linear</code> (ngoại suy 60 s, trên tải thật chỉ tương đương hạ ngưỡng) bằng dự báo mùa vụ 24 giờ. Một planner nhỏ chạy trong cụm, xuất metric <code>planner_desired_replicas</code>; KEDA đọc metric đó (đúng mẫu Workload-Variant-Autoscaler của llm-d). Reactive A2 vẫn chạy song song: <code>desired = max(reactive, proactive)</code>.</dd>
+      <dt>Cơ sở</dt>
+      <dd>Phân loại reactive / proactive / hybrid của Lorido-Botran et al. (2014); Holt-Winters (1960) hoặc STL cho chuỗi có mùa vụ; Autopilot (2020) kết hợp cửa sổ lịch sử với ML. Điểm học thuật quan trọng: dự báo chỉ được <strong>bật sớm</strong>, không được tắt sớm, nên sai dự báo không phá SLO mà chỉ tốn GPU; đây là thiết kế “fail-safe” có thể chứng minh.</dd>
+      <dt>Làm gì</dt>
+      <dd>
+        <ul>
+          <li>Dữ liệu train: 40 ngày đầu BurstGPT (cụm mình chưa có lịch sử; nói thẳng điều này và coi việc chuyển từ trace sang cụm là một thí nghiệm). Test: 21 ngày sau, đặc biệt 2 ngày bận nhất đã có trong <code>cua-so-trace.json</code>.</li>
+          <li>Báo cả sai số dự báo (MAPE theo giờ) lẫn SLO / GPU-giờ, để tách “dự báo đúng không” khỏi “dự báo giúp gì”.</li>
+          <li>Mô phỏng trước; chỉ mang lên V3 nếu đạt ngưỡng ở mục duyệt 3.</li>
+        </ul>
+      </dd>
+      <dt>Đã có số</dt>
+      <dd>
+        <p><strong>Đã mô phỏng 13/11, kết quả âm trên BurstGPT</strong> (<code>du_bao_mua_vu.py</code> → <code>ket-qua-du-bao.json</code>). Holt-Winters cộng tính, khung 10 phút, chọn α = 0,4, γ = 0,05 trên ngày 30–39, dự báo ngày 41 và 59:</p>
+        <ul>
+          <li>Dự báo gần như <strong>phẳng</strong> (1,6–2,1 req/s cả ngày cho ngày 41; 3,7–4,3 cho ngày 59) trong khi tải thật theo giờ dao động 0 → 10,7 req/s. WAPE 108 % và 140 %; dự báo ngây thơ (cùng khung hôm qua) còn tệ hơn. Chu kỳ ngày của trace này quá yếu so với độ nhiễu từng ngày.</li>
+          <li>Vì nền tải trung bình chỉ ≈ 0,4 C (vừa 1 pod), proactive = ⌈λ̂ × 9 ÷ 42⌉ = 1 ở mọi khung, nên hybrid trùng với A2+G: SLO 92,4 → 92,5 %, GPU 42,7 → 42,6 % (cold 110 s); cold 15 s không đổi.</li>
+          <li>Kết luận để viết: <strong>dự báo mùa vụ chỉ có giá trị khi nền tải theo giờ tự nó vượt ranh giới số pod</strong> (cụm lớn hơn, hoặc dịch vụ có nhịp ngày đêm rõ). Trong quy mô 4 GPU với trace này, mọi pod thêm là để đỡ đỉnh, mà đỉnh thì không dự báo được bằng chu kỳ ngày. Đây là kết luận âm có phương pháp, đưa vào luận văn thay cho việc cài <code>predict_linear</code>.</li>
+        </ul>
+        <p><strong>Định lượng thêm (14/11).</strong> Độ mạnh mùa vụ theo Hyndman (FPP3 §4.3), trên chuỗi số request theo giờ, 60 ngày (<code>do_chu_ky.py</code>): F<sub>s</sub> chu kỳ 24 h = <span class="num">0,05</span> (0 = không chu kỳ, 1 = hoàn hảo), chu kỳ tuần = <span class="num">0,15</span>. ACF ở độ trễ 1 h = <span class="num">0,70</span>, 24 h = <span class="num">0,07</span>. Hình dạng trung bình có ngày đêm rõ (07:00 thấp hơn 14:00 khoảng 13 lần), nhưng từng ngày lệch khỏi hình dạng đó quá mạnh (CV theo giờ 1,4–5): tải nhớ một giờ trước, không nhớ hôm qua.</p>
+        <p><strong>Cận trên oracle</strong> (<code>du_bao_quy_mo.py</code>): planner biết trước tốc độ thật trung bình 10 phút tới, chạy ở hai quy mô, 2 ngày test × 2 seed.</p>
+        <div class="tablewrap"><table>
+          <thead><tr><th>Quy mô</th><th>Cold</th><th class="num">A2+G</th><th class="num">hybrid Holt-Winters</th><th class="num">hybrid oracle</th></tr></thead>
+          <tbody>
+            <tr><td>4 GPU, nền ≈ 1 pod</td><td>110 s</td><td class="num">92,4 % · 42,7 %</td><td class="num">92,5 % · 42,6 %</td><td class="num">95,2 % · 41,4 %</td></tr>
+            <tr><td>4 GPU</td><td>15 s</td><td class="num">99,0 % · 39,7 %</td><td class="num">99,0 % · 39,7 %</td><td class="num">99,2 % · 39,4 %</td></tr>
+            <tr><td>16 GPU, tải ×4, nền ≈ 2–3 pod</td><td>110 s</td><td class="num">92,9 % · 35,2 %</td><td class="num">93,1 % · 39,4 %</td><td class="num">94,0 % · 33,7 %</td></tr>
+            <tr><td>16 GPU, tải ×4</td><td>15 s</td><td class="num">98,0 % · 31,7 %</td><td class="num">98,5 % · 34,6 %</td><td class="num">98,4 % · 30,3 %</td></tr>
+          </tbody>
+        </table></div>
+        <p class="meta">Mỗi ô: SLO · GPU-giờ so với cụm cố định đủ GPU. Mô phỏng.</p>
+        <p>Kết luận hướng 3, đủ chặt để bảo vệ: <strong>ngay cả bộ dự báo hoàn hảo ở độ phân giải 10 phút cũng chỉ thêm tối đa 2,8 điểm SLO và bớt 1,5 điểm GPU-giờ</strong>; Holt-Winters không lấy được phần nào trong khoảng đó, và ở quy mô 16 GPU còn tốn thêm 3–4 điểm GPU vì bật pod theo những đỉnh không lặp lại. Rút cold start (110 → 15 s) lợi hơn oracle 2–3 lần. Thứ tự ưu tiên vì thế có cơ sở định lượng: giảm cold start trước, dự báo sau.</p>
+      </dd>
+      <dt>Trình bày</dt>
+      <dd>Hình tải thật 24 h với đường dự báo và số replica của hai chính sách chồng lên. Nếu kết quả tốt: “tiết kiệm X GPU-giờ mỗi ngày với SLO không giảm”. Nếu không tốt: vẫn là một thí nghiệm có phương pháp, kết luận âm cũng có giá trị.</dd>
+    </dl>
+  </div>
+</section>
+
+<section>
+  <h2>Hướng 4 · Định tuyến là một phần của autoscaling</h2>
+  <div class="card">
+    <div><span class="tag free">Không tốn GPU</span> <span class="tag">Đã là Đ1 của tờ trình V3</span></div>
+    <dl>
+      <dt>Ý tưởng</dt>
+      <dd>Service mặc định của Kubernetes chia request ngẫu nhiên, nên một pod có thể xếp hàng dài trong khi pod kia rỗi. Gateway với LeastRequest (JSQ) gửi request tới pod ít việc nhất. Cùng số GPU, SLO cao hơn: đây là kết quả thuật toán sạch nhất trong bài.</dd>
+      <dt>Cơ sở</dt>
+      <dd>Join-the-shortest-queue trong lý thuyết hàng đợi; power-of-two-choices (Mitzenmacher 2001) giải thích vì sao chỉ cần so 2 pod ngẫu nhiên đã giảm hàng chờ theo cấp số mũ so với chia ngẫu nhiên. Envoy cài đúng biến thể này (P2C) cho LeastRequest.</dd>
+      <dt>Đã có số</dt>
+      <dd>A2 → A2 + gateway: KB2 71,0 → 82,0 %, cửa sổ test 80,7 → 82,7 %, GPU-giờ đổi dưới 2 điểm. Ít hơn mong đợi trên tải thật vì khi tất cả pod đều đầy thì định tuyến không cứu được; cần nói rõ giới hạn này.</dd>
+      <dt>Trình bày</dt>
+      <dd>Một hình hàng đợi theo pod, random vs LeastRequest, cùng một lượt KB2. Giữ nguyên kế hoạch Đ1.</dd>
+    </dl>
+  </div>
+</section>
+
+<section>
+  <h2>So sánh công sức và giá trị</h2>
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>Hướng</th><th>Thay gì</th><th>Công sức</th><th>Cần GPU thuê</th><th>Đã có số</th><th>Giá trị khi thuyết trình</th></tr></thead>
+    <tbody>
+      <tr><td>1 · Ngưỡng từ Little</td><td>“42 chọn tay”</td><td>Đã mô phỏng; còn ½ ngày viết</td><td>Không</td><td>Có (quét thr × cold 13/11)</td><td>Trả lời được “tại sao 42”; nối ngưỡng với cold start bằng một công thức</td></tr>
+      <tr><td>2 · Ski-rental</td><td>“300 s mặc định”</td><td>Đã mô phỏng; còn ½ ngày viết</td><td>Không</td><td>Có (quét H 13/11)</td><td>Tham số duy nhất có bảo đảm lý thuyết; dữ liệu khớp</td></tr>
+      <tr><td>3 · Planner hybrid</td><td><code>predict_linear</code></td><td>Xong mô phỏng (14/11); còn ½ ngày viết</td><td>Không (không lên V3)</td><td>Có, kết quả âm + cận oracle</td><td>Kết luận âm có cận trên: dự báo hoàn hảo cũng chỉ +2,8 điểm SLO</td></tr>
+      <tr><td>4 · LeastRequest</td><td>Service ngẫu nhiên</td><td>Đã trong Đ1</td><td>Đã tính trong V3</td><td>Có</td><td>Kết quả sạch: cùng GPU, SLO hơn</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section class="prose">
+  <h2>Khung luận văn đề xuất</h2>
+  <ol>
+    <li><strong>Mô hình:</strong> đo TPOT(n), cold start theo pha, kiểm chứng mô phỏng với V1 (sai số ≤ 8,7 điểm, nói rõ).</li>
+    <li><strong>Chính sách:</strong> ngưỡng (hướng 1), cửa sổ scale-down (hướng 2), định tuyến (hướng 4), và planner hybrid (hướng 3) nếu đạt.</li>
+    <li><strong>Đánh giá, theo thứ tự:</strong> đo thật V1/V2 trên cụm → hiệu chỉnh mô phỏng (báo sai số) → quét rộng bằng mô phỏng trace-driven trên BurstGPT với train/test tách bạch, nhiều seed, khoảng min–max → V3 trên cụm xác nhận lại các điểm đã chọn trên frontier.</li>
+  </ol>
+  <p>Kịch bản KB1–KB3 và ma trận V2 vẫn giữ nguyên: đó là chỗ bịt nhược điểm lớn nhất của khung mới (phần lớn số là mô phỏng). Kế hoạch trong <code>docs/chi-tiet/</code> không đổi về việc chạy, chỉ đổi cách kể và thêm một chương mô hình; cần nói lại với giáo viên hướng dẫn và ghi Deviations.</p>
+</section>
+
+<section class="prose">
+  <h2>Loại khỏi tờ trình V3</h2>
+  <ul class="drop">
+    <li><strong>Đ2 “chặn 429 và báo lại autoscaler”.</strong> Có tồn tại trong thực tế (OpenAI trả 429, Anthropic trả 529 khi quá tải), nhưng là lớp bảo vệ cuối, không phải đóng góp để thuyết trình; với người dùng thật là một lỗi, không phải một dịch vụ. Cách đúng hơn nếu sau này cần: xếp hàng ở gateway có hạn chót và ưu tiên (mẫu Gateway API Inference Extension), nhưng ngoài phạm vi 20/11.</li>
+    <li><strong>A3 <code>predict_linear</code>.</strong> Trên tải thật chỉ tương đương hạ ngưỡng. Hướng 3 thay thế nó bằng dự báo có mùa vụ, có train/test.</li>
+    <li><strong>Bài đỉnh ngắn (&lt; 2 phút).</strong> Không giải bằng autoscaling được với cold start 110 s; ghi thành giới hạn của phương pháp. Đ3 snapshot vẫn giữ trong tờ trình V3 với điểm dừng 18/11 như đã duyệt.</li>
+  </ul>
+  <div class="note">Mọi số trong trang là mô phỏng. Chênh lệch dưới 5 điểm SLO giữa hai cấu hình chưa đủ để kết luận; V3 trên cụm mới là số dùng cho luận văn.</div>
+</section>
+
+<section class="prose">
+  <h2>Nguồn</h2>
+  <ul>
+    <li>Little, J. D. C. (1961). A proof for the queuing formula L = λW. <em>Operations Research</em>.</li>
+    <li>Yu et al. (2022). Orca: a distributed serving system for transformer-based generative models. <em>OSDI</em>.</li>
+    <li>Kwon et al. (2023). Efficient memory management for LLM serving with PagedAttention (vLLM). <em>SOSP</em>.</li>
+    <li>Karlin, Manasse, Rudolph, Sleator (1988). Competitive snoopy caching (bài toán ski-rental). <em>Algorithmica</em>.</li>
+    <li>Rzadca et al. (2020). Autopilot: workload autoscaling at Google. <em>EuroSys</em>.</li>
+    <li>Lorido-Botran, Miguel-Alonso, Lozano (2014). A review of auto-scaling techniques for elastic applications in cloud environments. <em>J. Grid Computing</em>.</li>
+    <li>Hyndman, Athanasopoulos (2021). <em>Forecasting: Principles and Practice</em>, 3rd ed., §4.3 (độ mạnh mùa vụ); Holt (1957), Winters (1960).</li>
+    <li>Mitzenmacher (2001). The power of two choices in randomized load balancing. <em>IEEE TPDS</em>.</li>
+    <li>BurstGPT (HPMLL, CC-BY-4.0); llm-d Workload-Variant-Autoscaler; Gateway API Inference Extension (kubernetes-sigs).</li>
+  </ul>
+</section>
+</div>

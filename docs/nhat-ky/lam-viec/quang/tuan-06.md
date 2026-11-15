@@ -130,3 +130,81 @@
 - **Deviations:** CONTRIBUTING §1 đổi từ chia theo thành phần sang chia theo môi trường; overlay 7B mà ADR-006 C3 ghi "giữ tham khảo" đã xoá (còn trong lịch sử Git).
 - **Links:** nhánh `refactor/split-home-cloud`; `CONTRIBUTING.md`, `envs/*/README.md`, `docs/bao-cao/`.
 - **Thesis:** §3–§4 (cấu trúc repo, ba môi trường); §5 (mô phỏng có hiệu chỉnh, chỉ dùng làm ước lượng); Hướng phát triển (lý thuyết hàng đợi, autoscaling dự báo, JSQ).
+
+## 2026-11-13 – Tờ trình nâng cấp V3 trên cloud (chờ duyệt)
+
+- **Task:** chung · **Environment:** none (mô phỏng trên laptop)
+- **Done:**
+  1. Quang quyết định từ nay chỉ tập trung cloud và yêu cầu nghiên cứu nâng cấp để có thêm phần làm và demo. Nghiên cứu hệ sinh thái: Gateway API Inference Extension (endpoint picker, nay ở llm-d), vLLM production-stack router, NVIDIA Dynamo SLA planner, AIBrix, sleep mode của vLLM, Run:ai streamer, bài MLSys 2026 "Breaking the Ice" về cold start, trace Azure 2024 và BurstGPT. Kiểm mã nguồn vLLM v0.31.0: có `max_num_queued_reqs` (quá giới hạn trả 503).
+  2. Phân rã cold start 152 s (log 08/11): lập lịch + probe 9 s, import Python + khởi tạo engine 77 s, nạp weights 11 s, torch.compile 27 s, CUDA graph + KV-cache + warmup 28 s → tăng tốc nạp model gần như không rút được cold start.
+  3. Mở rộng mô phỏng (`docs/bao-cao/de-xuat-v3/mo_phong_v3.py`): chặn quá tải mỗi pod, pool pod ngủ sẵn, dự báo bằng hồi quy 120 s + ngưỡng chết, kịch bản quá tải (đỉnh 4 C và 5 C).
+  4. Viết tờ trình 9 hạng mục Đ1–Đ9 (`docs/bao-cao/de-xuat-v3/to-trinh.html`, đăng artifact riêng tư), kèm lịch 14–22/11, ma trận V3, chi phí, rủi ro, kịch bản demo 10 phút.
+- **Decision:** (đề xuất, **chưa duyệt**) giữ nguyên V2; thêm phiên V3 20/11 (~8 giờ, ≈ 5 USD) và ADR-007; bắt buộc Đ1 gateway LeastRequest, Đ2 A3 = A2 + `predict_linear`, Đ3 `--max-num-queued-reqs=75` (định lý Little: 64 + C × 2,5 s), Đ7 Argo CD + Telegram + dashboard demo trên cloud, Đ9 V3 + demo. Loại: pool pod ngủ sẵn (KB2 chỉ 71,9 → 74,7 %, KB1 tốn gấp đôi), Run:ai streamer, KServe, endpoint picker đầy đủ, rate limit theo token.
+- **Results:** mô phỏng, 5 seed mỗi biến thể (không phải số đo):
+  - KB2 đạt SLO: A2 71,9 %; + gateway (JSQ) 83,5 %; A3 79,7 % (dao động 71–100 %); A3 + gateway 88,4 %; A3 + gateway + chặn 75 là 94,0 % (từ chối 3,6 %), GPU-giờ 1,41 so với S4 1,60.
+  - KB3: A2 88,8 % → A3 96,2 % → đủ ba nâng cấp 98,8 %. KB1 GPU-giờ: A2 0,20, A3 0,31, A3 + gateway 0,40.
+  - Quá tải đỉnh 5 C: S4 18,7 % → 78,2 % khi chặn 75; chặn 68 thì phần được nhận đạt ~100 %, từ chối 10–18 %.
+- **Incidents:** mô phỏng "dự báo" của báo cáo kỹ thuật bản 2 có lỗi: giá trị đã ngoại suy bị ghi vào lịch sử metric (vòng phản hồi). Sửa xong: KB3 96,9 → 96,2 %, KB2 80,9 → 79,7 %, KB1 0,40 → 0,31 GPU-giờ; kết luận không đổi. **Chưa** cập nhật báo cáo kỹ thuật.
+- **Links:** nhánh `refactor/split-home-cloud`; `docs/bao-cao/de-xuat-v3/`.
+- **Thesis:** §5 (phân rã cold start), Hướng phát triển (gateway, autoscaling dự báo, admission control, goodput); nếu V3 chạy thì thành mục §5.x "Cải tiến".
+
+## 2026-11-13 – Tờ trình V3 bản 2: đánh giá lại trên tải thật BurstGPT
+
+- **Task:** chung · **Environment:** none (mô phỏng trên laptop)
+- **Done:**
+  1. Quang nhận xét bản 1 "đơn giản nhưng hiệu quả có vẻ không sát thực tế", hỏi đỉnh tải lên rồi xuống ngay thì sao, và yêu cầu ưu tiên chất lượng, bỏ phần hội đồng không thấy được.
+  2. Tải trace BurstGPT_1 (HPMLL, CC-BY-4.0; 61 ngày, 1,43 triệu request). Trace Azure 2024 không tải được (blob bị chặn DNS). Viết `chuan_bi_trace.py`: thống kê độ dài đỉnh, chọn 8 cửa sổ 30 phút train (ngày 0–39), 8 test (ngày 40–60), 2 ngày trọn (41, 59); chỉ lấy nhịp thời gian, co để phút bận nhất = 0,9 × 4 × C.
+  3. Viết `mo_phong_thuc_te.py` (kế thừa tham số hiệu chỉnh của `mo_phong_v3.py`): client thử lại 2 lần như SDK OpenAI, kịch bản KB-ngắn (3 C trong 60 s, ba lần), planner P (chặn 75 + cộng nhu cầu bị chặn theo định lý Little + tham số τ, hold, huỷ pod chưa Ready), biến thể cold start 60 s và 15 s, quét ngưỡng để vẽ đường đánh đổi.
+  4. Tìm hiểu ngoài thực tế: NVIDIA Dynamo Snapshot, Cerebrium (cuda-checkpoint + CRIU khôi phục vLLM trong vài giây), llm-d WVA (planner xuất `wva_desired_replicas` cho KEDA).
+  5. Viết lại tờ trình (`to-trinh.html`, đăng lại cùng link): 5 hạng mục Đ1 gateway, Đ2 chặn + báo lại cho autoscaler, Đ3 snapshot (khó, điểm dừng 18/11 20:00), Đ3b rút cold start rẻ, Đ4 trace trong loadgen, Đ5 lớp demo.
+- **Decision:** (đề xuất, **chưa duyệt**) bỏ A3 `predict_linear`, bỏ kho model R2, gộp chi phí theo token vào dashboard. Chọn tham số planner trên train theo luật "rẻ nhất trong các bộ có SLO cách tốt nhất ≤ 1 điểm": τ = 0, hold = 300 s, không huỷ pod.
+- **Results:** (BurstGPT là dữ liệu thật; mọi % SLO, GPU-giờ là **mô phỏng**, 5 seed)
+  - Độ dài đỉnh (vượt 2 × nền 10 phút): < 2 phút chiếm 83,8 % số đỉnh nhưng 5,3 % tải dư; ≥ 15 phút chiếm 3,6 % số đỉnh, 73,6 % tải dư. Train: đỉnh đã kéo dài 90 s thì 52 % khả năng còn đủ lâu cho pod mới (cold 110 s); test cao hơn (68 %), phân bố thay đổi theo thời gian.
+  - Train (cold 110 s): τ 0 → 30 s: SLO 90,5 → 84,3 %, GPU 94,4 → 84,6 %; hold 120 s: 86,8 % và GPU 98,0 % (tắt bật liên tục); huỷ pod: 83,9 %.
+  - Test (8 cửa sổ, SLO / GPU % của S4): A2 80,7/87; A2 + gateway 82,7/89; A3 + gateway 88,0/90; P 90,3/89 (bị chặn 6 %); P cold 60 s 93,9/88; P cold 15 s 97,9/88.
+  - Trọn ngày: A2 92,3 % / 42 %; P 95,7 / 43; P cold 15 s 99,2 / 41. KB-ngắn: A2 71,7 %, P 77,1 %, P cold 15 s 95,7 %.
+  - Chặn mà không báo lại cho autoscaler: KB2 77,5 % (thấp hơn A2 + gateway 82,0 %), vì request bị chặn biến mất khỏi metric hàng đợi.
+- **Incidents:** lần đầu co trace theo token ra (request BurstGPT trung vị 34 token) cho cửa sổ tới 44 req/s, vượt phạm vi hiệu chỉnh → đổi sang co theo số request, giữ kích thước request của bộ đo. Lỗi trùng tên biến `mt` trong nhánh A3 làm vỡ lượt chạy đầu; sửa và chạy lại. Bản nháp tờ trình so 71,0 % (cả lượt) với 62,7 % (pha spike) → sửa trước khi đăng.
+- **Deviations:** tờ trình bản 1 cùng ngày bị thay toàn bộ. Báo cáo kỹ thuật bản 2 **chưa** cập nhật theo kết quả mới. Chưa kiểm cờ `--max-num-queued-reqs` đếm hàng chờ hay tổng, chưa kiểm tên metric 429 của Envoy.
+- **Links:** nhánh `refactor/split-home-cloud` (chưa commit); `docs/bao-cao/de-xuat-v3/chuan_bi_trace.py`, `mo_phong_thuc_te.py`, `cua-so-trace.json`, `ket-qua-thuc-te.json`, `to-trinh.html`.
+- **Thesis:** §5 (đánh giá trên trace thật, đường đánh đổi SLO–GPU, đỉnh ngắn hơn cold start), Hạn chế (mô phỏng, chỉ lấy nhịp trace), Hướng phát triển (dự báo bằng mô hình học trên BurstGPT); nếu Đ3 chạy thì thành mục riêng về snapshot.
+
+## 2026-11-13 – Bốn hướng nâng cấp bài toán; quét cửa sổ scale-down theo ski-rental
+
+- **Task:** chung · **Environment:** sim
+- **Done:** Viết trang `cac-huong-nang-cap.html` (4 hướng: ngưỡng từ Little's law, cửa sổ scale-down theo ski-rental, planner hybrid dự báo chu kỳ ngày, định tuyến LeastRequest) để duyệt trước khi sửa tờ trình V3. Viết `mo_phong_cua_so.py` quét H ∈ {0, 60, 120, 180, 300, 450, 600, 900} s × cold start {110, 60, 15} s, planner thuần (adm=None, τ=0, không huỷ pod), 8 cửa sổ test × 3 seed + 2 ngày trọn; kết quả `ket-qua-cua-so.json`.
+- **Decision:** Khung luận văn "lồng nhau": Mô hình → Chính sách → Đánh giá, trong đó ma trận V2/V3 đo trên cụm là lớp Đánh giá và nguồn hiệu chỉnh; mô phỏng chỉ quét ô không có tiền chạy. Loại Đ2 "chặn 429 + báo lại autoscaler" khỏi tờ trình (là lớp bảo vệ cuối, không phải đóng góp; với người dùng là lỗi). Loại A3 `predict_linear`. Bài đỉnh ngắn ghi thành giới hạn, không giải. Hướng 3 chỉ đưa vào V3 nếu mô phỏng cho ≥ 2 điểm SLO hoặc ≥ 3 điểm GPU-giờ trên 2 ngày test.
+- **Results:** (mô phỏng) GPU-giờ thấp nhất ở H = 180 s với cả ba cold start (test 87,3 / 86,8 / 85,3 %), đúng bằng grace 180 s; H = 0: SLO 66,8 %, GPU 95,4 %, 12 lần bật mỗi cửa sổ. 180–600 s GPU gần phẳng (± 1,5 điểm) trong khi SLO cold 110 tăng 80,1 → 84,4 %; quá 600 s ngày trọn tốn thêm (43,8 → 46,2 %). Cold start ngắn làm H ít nhạy: chênh SLO 180↔600 s là 4,3 / 2,8 / 1,1 điểm cho cold 110 / 60 / 15. Mặc định 300 s nằm trong vùng tối ưu.
+- **Incidents:** Chạy đầu bị người dùng dừng khi mình định tra web; viết từ kiến thức sẵn, chưa kiểm lại nguồn trực tuyến. Số "hold 120 s → GPU 98 %" ở lưới train hôm trước không lặp lại trong quét thuần (87,5 %): lưới train có kèm chặn 429 và τ, không tách riêng hiệu ứng H; dùng số quét mới.
+- **Deviations:** Cận dưới của cửa sổ scale-down đến từ grace period, không từ cold start như mình đoán ban đầu; đã sửa lý luận trên trang.
+- **Links:** `docs/bao-cao/de-xuat-v3/cac-huong-nang-cap.html`, `mo_phong_cua_so.py`, `ket-qua-cua-so.json` (chưa commit).
+- **Thesis:** chương Chính sách, mục cửa sổ scale-down (hình SLO theo H, bảng H); phần giới hạn phương pháp (đỉnh ngắn).
+
+## 2026-11-13 – Hướng 1 (quét ngưỡng × cold start) và hướng 3 (dự báo Holt-Winters): kết quả
+
+- **Task:** chung · **Environment:** sim
+- **Done:** `mo_phong_nguong.py` quét thr ∈ {16…64} × cold {110, 60, 15} s, planner thuần H = 300 (→ `ket-qua-nguong.json`). Thêm hook `_pro` vào `mo_phong_thuc_te.simulate` (chuỗi proactive chỉ được nâng desired). `du_bao_mua_vu.py`: Holt-Winters cộng tính khung 10 phút trên BurstGPT ngày 0–39 (chọn α, γ trên ngày 30–39), dự báo ngày 41 và 59, mô phỏng hybrid vs A2+G (→ `ket-qua-du-bao.json`). Cập nhật `cac-huong-nang-cap.html` bản 5.
+- **Decision:** Hướng 3 không đưa vào V3 (không đạt ngưỡng ≥ 2 điểm SLO hoặc ≥ 3 điểm GPU-giờ); viết thành kết luận âm có phương pháp. Hướng 1 giữ: công thức thr ≈ 74 − 0,5·(cold + 12) khớp dữ liệu.
+- **Results:** (mô phỏng) Cùng SLO ≈ 90 % trên test: cold 110 cần thr 16 (GPU 92,5 %), cold 15 cần thr 64 (GPU 79,2 %); ngày trọn cùng SLO ≈ 96,5 %: 55,3 → 36,8 % GPU. Ngưỡng tĩnh không tối ưu cho cả hai loại tải: hạ 42 → 16 trên test +9,8 SLO / +3,8 GPU, trên ngày trọn +4,5 SLO / +12,8 GPU. Holt-Winters dự báo gần phẳng (1,6–2,1 và 3,7–4,3 req/s) trong khi tải thật theo giờ 0 → 10,7 req/s; WAPE 108 % / 140 %; nền ≈ 0,4 C nên proactive = 1 pod mọi khung; hybrid 92,5 % / 42,6 % so với A2+G 92,4 % / 42,7 % (cold 110).
+- **Incidents:** `python3 -I` bỏ thư mục script khỏi `sys.path` → `ModuleNotFoundError: mo_phong_thuc_te`; sửa bằng `sys.path.insert(0, dirname(__file__))`. MAPE vô nghĩa (hàng trăm %) vì nhiều khung đêm gần 0; chuyển sang WAPE.
+- **Deviations:** Ban đầu kỳ vọng hướng 3 có lợi ở ramp buổi sáng; dữ liệu cho thấy BurstGPT không có nhịp ngày đủ mạnh ở quy mô 4 GPU. Chưa kiểm định lượng độ mạnh chu kỳ trên 61 ngày và chưa chạy ở quy mô nền 2–3 pod (việc tiếp theo, ~1 giờ).
+- **Links:** `docs/bao-cao/de-xuat-v3/{mo_phong_nguong.py, du_bao_mua_vu.py, ket-qua-nguong.json, ket-qua-du-bao.json, cac-huong-nang-cap.html, mo_phong_thuc_te.py}` (chưa commit). Dừng phiên 00:00 theo yêu cầu.
+- **Thesis:** chương Chính sách: mục ngưỡng (hình ba frontier, bảng SLO mục tiêu → ngưỡng); mục proactive: kết luận âm và điều kiện có lợi.
+
+## 2026-11-14 – Hướng 3 xong (độ mạnh chu kỳ, cận oracle); chuẩn bị đo TPOT trên 5060 Ti cho hướng 1
+
+- **Task:** chung · **Environment:** sim (máy thuê 4 × 5060 Ti chưa vào được)
+- **Done:** `do_chu_ky.py` đo độ mạnh mùa vụ của BurstGPT (60 ngày, theo giờ). `du_bao_quy_mo.py` so A2+G / hybrid Holt-Winters / hybrid oracle (biết trước λ trung bình 10 phút tới) ở 4 GPU và 16 GPU (tải ×4), cold 110 / 15 s, 2 ngày test × 2 seed. Sửa `mo_phong_thuc_te.simulate` nhận `_N` theo job (Python 3.14 dùng forkserver nên worker không kế thừa biến module đã đổi). Viết `do_tpot.py` (closed-loop, n ∈ {1…96}, đo TTFT/TPOT/throughput, fit a + b·n, suy sức chứa). Cập nhật `cac-huong-nang-cap.html` bản 6.
+- **Decision:** Kết luận hướng 3 chốt bằng cận trên oracle thay vì chỉ một bộ dự báo: kết luận âm không phụ thuộc chất lượng Holt-Winters.
+- **Results:** (mô phỏng) F_s chu kỳ 24 h = 0,05, tuần = 0,15; ACF 1 h = 0,70, 24 h = 0,07; hình dạng trung bình 07:00 thấp hơn 14:00 ~13 lần nhưng CV theo giờ 1,4–5. Oracle: 4 GPU cold 110 s 92,4 → 95,2 % SLO, 42,7 → 41,4 % GPU; 16 GPU 92,9 → 94,0 %, 35,2 → 33,7 %. Holt-Winters: 4 GPU không đổi; 16 GPU +0,2 SLO nhưng +4,2 điểm GPU. Cold 110 → 15 s lợi hơn oracle 2–3 lần.
+- **Incidents:** SSH tới máy thuê timeout (cả trong và ngoài sandbox, Internet của máy nhà vẫn bình thường); chưa đo được TPOT trên 5060 Ti.
+- **Links:** `docs/bao-cao/de-xuat-v3/{do_chu_ky.py, du_bao_quy_mo.py, do_tpot.py, ket-qua-chu-ky.json, ket-qua-du-bao-quy-mo.json}` (chưa commit).
+- **Thesis:** chương Chính sách, mục proactive: bảng oracle; chương Mô hình: TPOT(n) trên hai loại GPU (khi đo xong).
+
+## 2026-11-15 – Commit phần V3, tách 3 PR xếp chồng, sửa CI link
+
+- **Task:** chung · **Environment:** none
+- **Done:** Commit phần việc 13–14/11 thành 5 commit nhỏ. Tách nhánh `refactor/split-home-cloud` (gộp 3 việc, 147 file) thành 3 PR xếp chồng: #34 refactor → `main`, #35 báo cáo kỹ thuật → #34, #36 V3 → #35. `make lint` đạt (yamllint chạy qua `uvx`).
+- **Incidents:** Job `docs` (lychee) của cả 3 PR lỗi. (1) `03-kien-truc-autoscaling.md` link tới ADR-006 §3.1, nhưng 5 commit thêm §3.1 nằm trên `docs/sync-after-v1` được push **sau khi** PR #33 đã merge nên chưa vào `main` → merge nhánh đó vào #34 (không conflict), truyền lên #35, #36 bằng merge; conflict ở `tuan-06.md` và `viec-sap-lam.md` (cả hai bên cùng thêm mục cuối file) → giữ cả hai, mục 12/11 đứng trước 13/11. (2) README ở #34 link tới `docs/bao-cao/`, thư mục chỉ có ở #35 → chuyển link sang #35. Sau khi sửa, CI của cả 3 PR đều đạt.
+- **Decision:** Dùng merge thay cho rebase để không phải force-push nhánh đã có PR. Khi merge, giữ merge commit (không squash) và merge theo thứ tự #34 → #35 → #36.
+- **Links:** PR #34, #35, #36.
