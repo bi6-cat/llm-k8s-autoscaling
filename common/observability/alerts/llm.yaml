@@ -145,8 +145,8 @@ spec:
         # pause, KEDA dừng vòng scale và condition Fallback giữ giá trị cũ, nên không page.
         # for: 1m: bỏ qua Ready=Unknown thoáng qua lúc mới tạo ScaledObject. Từ lúc mất Prometheus đến lúc
         # kêu ≈ 20 s (vào fallback) + 1 phút + độ trễ scrape KSM (15 s) và chu kỳ tính rule (15 s).
-        # Môi trường: sim và cloud (Makefile sim-up, envs/cloud/provision/install-platform.sh). Ở nhà chưa
-        # có metric này cho tới khi Application monitoring thêm kube-state-metrics-values.yaml (việc 6b).
+        # Metric có ở mọi môi trường nạp kube-state-metrics-values.yaml: sim (Makefile sim-up), cloud
+        # (envs/cloud/provision/install-platform.sh), nhà (Application monitoring).
         # Giới hạn: thiếu metric (chưa nạp lớp values, KSM lỗi quyền) thì rule im lặng, không báo gì; sau
         # mỗi lần dựng môi trường, kiểm metric có mặt (runbook, mục "Giới hạn"). Prometheus sập hẳn hoặc
         # keda-operator sập thì rule cũng không kêu: rule chạy trên chính Prometheus đó, còn condition

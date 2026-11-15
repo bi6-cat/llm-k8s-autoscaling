@@ -4,7 +4,12 @@
 #            Application gốc này trỏ vào một thư mục mà mỗi file trong đó lại là một Application con.
 # Mục đích:  Đây là thứ DUY NHẤT áp bằng tay (qua role argocd-bootstrap). Thêm một thành phần mới vào
 #            cluster nhà = thêm một file Application vào envs/home/argocd/apps/ rồi merge vào main.
-# Tham khảo: docs/huong-dan/w2.md §4.1, §4.3
+#            Root không tự quản lý chính nó (file này nằm ngoài apps/), nên sửa file này phải áp lại:
+#            kubectl --context llm-home apply -f envs/home/argocd/root-app.yaml (hoặc make home-up).
+# Lưu ý:     Sync tay root kèm `--sync-option …` thì danh sách đó THAY HẲN syncOptions dưới đây (Argo CD
+#            v3.5.4 server/application/application.go), mất RespectIgnoreDifferences, và auto-sync của
+#            `autoscaling` bị bật lại. Sync tay không kèm cờ đó thì an toàn (đã thử trên kind 15/11).
+# Tham khảo: docs/huong-dan/w2.md §4.1, §4.3; Kiến trúc §18.2
 # ──────────────────────────────────────────────────────────────────────────────
 apiVersion: argoproj.io/v1alpha1
 kind: Application

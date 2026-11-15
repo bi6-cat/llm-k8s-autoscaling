@@ -498,7 +498,7 @@ Mỗi kịch bản có một mục trong `docs/nhat-ky/van-hanh.md`: ngày, môi
 | **Cooldown** | Về trạng thái đầu | Chờ còn 1 replica (tối đa 10 phút) |
 | **Kiểm tra, sao lưu** | | Ghi `checks.json` (§17); đẩy thư mục lượt lên R2; cập nhật `progress.json` |
 
-**Trước phiên đánh giá**, runner **tắt auto-sync** của Application `autoscaling` trên Argo CD. **Sau phiên**, runner xoá mọi ScaledObject khác A2, rồi mới bật lại auto-sync ([Kiến trúc §18.2](03-kien-truc-autoscaling.md#182-cấu-hình-autoscaling-trong-git-tạm-tách-khi-đánh-giá)).
+**Trước phiên đánh giá** ở nhà, tắt auto-sync của Application `autoscaling` trên Argo CD; runner chỉ kiểm (`guard_argocd`) và dừng ngay nếu còn bật. **Sau phiên**, xoá mọi ScaledObject khác A2, rồi mới bật lại auto-sync ([Kiến trúc §18.2](03-kien-truc-autoscaling.md#182-cấu-hình-autoscaling-trong-git-tạm-tách-khi-đánh-giá); lệnh ở [envs/home/README.md](../../envs/home/README.md#phiên-đánh-giá-ở-nhà)). VM thuê không chạy Argo CD nên không có bước này.
 
 ### 14.2. Dữ liệu của một lượt
 

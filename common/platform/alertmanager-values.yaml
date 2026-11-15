@@ -8,8 +8,8 @@
 # Mục đích:  Định tuyến theo nhãn severity: page → nhắc lại mỗi giờ và báo cả lúc hết; ticket → báo một
 #            lần. Token bot và chat id KHÔNG nằm trong Git: Alertmanager đọc chúng từ Secret
 #            alertmanager-telegram (tạo bằng alertmanager-secret.sh từ .env) ngay lúc gửi tin.
-#            Tách khỏi kube-prometheus-stack-values.yaml để bật được ở cloud và sim trước, còn ở nhà
-#            chỉ bật khi kiểm được trên cluster nhà (Application monitoring thêm file này, việc 6b).
+#            Tách khỏi kube-prometheus-stack-values.yaml để bật ở cloud và sim trước khi kiểm được ở nhà.
+#            Ở nhà: Application monitoring nạp file này (envs/home/argocd/apps/monitoring.yaml).
 # Lưu ý:     Helm gộp map theo từng key, còn list thì THAY HẲN. Ví dụ `route` là map: key nào không ghi ở
 #            đây thì giữ giá trị của chart; nhưng `route.routes`, `route.group_by`, `receivers`,
 #            `templates` là list nên thay hẳn list của chart. `inhibit_rules` (list) không khai báo nên

@@ -13,9 +13,10 @@ Môi trường demo và vận hành thử trên GPU thật, chi phí bằng 0. M
 
 | Đường dẫn | Là gì |
 |---|---|
-| `argocd/root-app.yaml` | Application gốc (App-of-Apps): trỏ vào `argocd/apps/`, Ansible áp một lần khi dựng |
-| `argocd/apps/*.yaml` | Mỗi file một thành phần: GPU device plugin, GPU exporter, kube-prometheus-stack, KEDA, vLLM |
+| `argocd/root-app.yaml` | Application gốc (App-of-Apps): trỏ vào `argocd/apps/`, Ansible áp một lần khi dựng. Bỏ qua auto-sync của app `autoscaling`, để tắt được khi đánh giá |
+| `argocd/apps/*.yaml` | Mỗi file một thành phần: GPU device plugin, GPU exporter, kube-prometheus-stack (kèm Alertmanager → Telegram), KEDA, vLLM, A2 (`autoscaling`), rule + cảnh báo + dashboard (`observability`) |
 | `serving/` | Overlay vLLM của nhà: model 0,5B, RAM giới hạn, cache trên ổ, Ingress `llm.home` |
+| `autoscaling/` | Overlay A2 của nhà: tối đa 2 replica (2 GPU replica), threshold 23 |
 | `platform/*-values.yaml` | Values Helm riêng của nhà, chồng lên values chung ở `common/platform/` |
 | `experiments/` | Ma trận chạy thử (`matrix.yaml`, `matrix-dg1.yaml`) và năng lực đo được (`capacity*.json`) |
 
@@ -33,6 +34,9 @@ Thứ dùng chung (Deployment vLLM, A2, cảnh báo, dashboard) nằm ở `commo
    $K -n monitoring create secret generic grafana-admin \
      --from-literal=admin-user=admin --from-literal=admin-password="$(openssl rand -hex 12)"
    $K -n llm-serving create secret generic vllm-api-key --from-literal=key="$(openssl rand -hex 24)"
+   # Bot Telegram của Alertmanager, đọc từ .env (mẫu: .env.example). .env chưa có bot thì chỉ cảnh báo;
+   # Alertmanager vẫn chạy, chỉ không gửi được tin.
+   make alertmanager-secret CTX=llm-home
    ```
 
 3. **Dựng cluster:** `make home-up` (Ansible: OS, NVIDIA toolkit, k3s, Argo CD, áp `root-app.yaml`). Chạy lại bao nhiêu lần cũng được.
@@ -59,6 +63,44 @@ make ops-tests S=vh3-delete MATRIX=envs/home/experiments/matrix.yaml RATE=6 CTX=
 ```
 
 Cập nhật cấu hình (VH2) **đi qua Git**: sửa file trong `envs/home/` hoặc `common/`, mở PR, merge; Argo CD tự rollout. Rollback = `git revert`.
+
+## Phiên đánh giá ở nhà
+
+Runner và `make ops-tests` áp ScaledObject của từng lượt bằng `kubectl apply`. Nếu Application `autoscaling` còn auto-sync thì Argo CD áp lại A2 giữa lượt, nên runner kiểm trước và dừng ngay ([Kiến trúc §18.2](../../docs/chi-tiet/03-kien-truc-autoscaling.md#182-cấu-hình-autoscaling-trong-git-tạm-tách-khi-đánh-giá)).
+
+```bash
+K="kubectl --context llm-home"
+# Trước phiên: tắt auto-sync của A2. Root-app bỏ qua trường này nên không bật lại.
+$K -n argocd patch application autoscaling --type json -p '[{"op":"remove","path":"/spec/syncPolicy/automated"}]'
+
+# Sau phiên: xoá mọi ScaledObject khác vllm-a2 (webhook của KEDA chặn hai ScaledObject cùng trỏ một
+# Deployment), rồi bật lại auto-sync. Argo CD đưa A2 về đúng Git (bỏ cả pause runner để lại) sau vài giây.
+$K -n llm-serving get scaledobject -o name | grep -v '/vllm-a2$' | xargs -r $K -n llm-serving delete
+$K -n argocd patch application autoscaling --type merge \
+  -p '{"spec":{"syncPolicy":{"automated":{"prune":true,"selfHeal":true}}}}'
+```
+
+Trong lúc tắt, app `autoscaling` hiện `OutOfSync`, và `Suspended` khi ScaledObject đang pause. Đó là lệch có chủ đích. Đừng sync tay root kèm `--sync-option`, vì làm vậy auto-sync bị bật lại (comment trong `argocd/root-app.yaml`).
+
+## Một lần sau khi thêm app `autoscaling` và `observability`
+
+`root-app.yaml` có thêm `ignoreDifferences`, mà root không tự quản lý chính nó, nên phải áp lại một lần sau khi merge:
+
+```bash
+K="kubectl --context llm-home"
+# ScaledObject khác A2 còn sót từ runner sẽ làm webhook của KEDA chặn A2: xoá trước
+$K -n llm-serving get scaledobject -o name | grep -v '/vllm-a2$' | xargs -r $K -n llm-serving delete
+$K apply -f envs/home/argocd/root-app.yaml
+make alertmanager-secret CTX=llm-home
+$K -n argocd get applications -w        # autoscaling, observability, monitoring, keda: Synced / Healthy
+```
+
+Kiểm sau khi sync xong:
+- ScaledObject `vllm-a2` có `maxReplicaCount` 2 và threshold 23.
+- PromQL `kube_scaledobject_status_condition{namespace="llm-serving"}` có 5 chuỗi.
+- Alertmanager nhận cảnh báo `Watchdog` mang nhãn `env="home"`. Prometheus chỉ gắn `externalLabels` khi gửi sang Alertmanager, nên chuỗi `ALERTS` trong Prometheus không có nhãn này:
+  `$K -n monitoring exec alertmanager-kps-alertmanager-0 -c alertmanager -- amtool alert query alertname=Watchdog --alertmanager.url=http://localhost:9093 -o extended`
+- Grafana có 3 dashboard của nhóm.
 
 ## Một lần sau khi đổi cấu trúc repo (12/11/2026)
 

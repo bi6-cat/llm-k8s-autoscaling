@@ -54,8 +54,8 @@ home-up: ## Dựng k3s + Argo CD trên PC và laptop (Ansible)
 
 # Secret token bot và chat id cho Alertmanager, lấy từ .env (common/platform/alertmanager-secret.sh).
 # sim-up và cloud-platform tự gọi script này; chạy tay khi đổi bot trong .env, hoặc ở nhà (Secret không nằm
-# trong Git nên Argo CD không tạo được). Ở nhà chỉ có tác dụng sau việc 6b, khi Application monitoring nạp
-# common/platform/alertmanager-values.yaml. CTX trống = context hiện tại của kubectl.
+# trong Git nên Argo CD không tạo được): make alertmanager-secret CTX=llm-home. CTX trống = context hiện
+# tại của kubectl.
 alertmanager-secret: ## Tạo Secret bot Telegram của Alertmanager từ .env: make alertmanager-secret [CTX=…]
 	common/platform/alertmanager-secret.sh kubectl $(if $(CTX),--context $(CTX))
 
