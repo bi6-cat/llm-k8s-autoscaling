@@ -507,7 +507,7 @@ runs/<run-id>/
 ├── metadata.json     # cấu hình, kịch bản, seed, session_id, phiên bản (digest), tham số vLLM, máy, thời gian
 ├── requests.csv      # một dòng cho mỗi request: id, t_sched, t_send, t_first, t_last, n_in_target, n_in, n_out, status, error
 ├── loadgen.json      # tham số và seed của máy tạo tải, số tiến trình, mốc t0_unix, các pha, tự kiểm tra (§9)
-├── metrics.parquet   # chuỗi Prometheus trong cửa sổ lượt (replicas, hàng đợi, KV-cache, GPU, CPU/RAM pod…)
+├── metrics.csv.gz    # chuỗi Prometheus trong cửa sổ lượt (replicas, hàng đợi, KV-cache, GPU, CPU/RAM pod…), dạng dài: ts, name, labels, value
 ├── events.jsonl      # sự kiện Kubernetes trong namespace: Scheduled, Pulling/Pulled (pha 3), Killing, HPA
 ├── alerts.jsonl      # cảnh báo firing trong cửa sổ lượt (từ chuỗi ALERTS, cho VH6)
 ├── pods_start.json   # ảnh chụp pod vLLM sau reset; pods_end.json: cuối pha chính (kiểm hợp lệ, §17)
@@ -534,7 +534,7 @@ Các cột của `requests.csv`. Thời gian tính bằng giây kể từ `t0_un
 | `status` | Mã HTTP của phần đầu câu trả lời. Stream bị cắt giữa chừng vẫn có `status` 200 |
 | `error` | **Rỗng nghĩa là request thành công.** Khác rỗng là lỗi: `HTTPStatus` (mã khác 200), `Timeout` (quá 120 s), `IncompleteStream` (không có chunk `usage`), `StreamError` (vLLM báo lỗi giữa stream), hoặc tên exception (lỗi mạng). Mọi chỉ số lỗi ở §15 lọc theo cột này, không theo `status` |
 
-Một script `analysis/build_tables.py` (có unit test) đọc các thư mục này và tạo một bảng mỗi lượt một dòng. Notebook vẽ biểu đồ từ bảng đó. (Tới 10/11 gói `analysis/` chưa có, TR7.)
+Script `analysis/build_tables.py` (công thức ở `analysis/metrics.py`, có unit test) đọc các thư mục này và ghi 4 bảng CSV: `runs.csv` mỗi lần thử một dòng (cột `valid`; `counted` = lần thử hợp lệ cuối cùng của lượt), `phases.csv` mỗi lần thử × pha một dòng, `cells.csv` mỗi ô môi trường × cấu hình × kịch bản một dòng (trung bình, min, max, §16), `alerts.csv` mỗi chuỗi cảnh báo firing một dòng. Notebook vẽ biểu đồ từ các bảng đó. Chạy từ gốc repo: `uv run --project analysis python -m analysis.build_tables runs/<phiên> [--baseline S4]`.
 
 ---
 
@@ -561,6 +561,15 @@ Một script `analysis/build_tables.py` (có unit test) đọc các thư mục n
 **Hai nguyên tắc tính:**
 - Phân vị (p95, p99) tính trên **tất cả request** của pha, không lấy trung bình các p95 theo phút hay theo pod. Pha nào có ít hơn khoảng 200 request thì chỉ báo cáo p95 kèm số mẫu.
 - Số liệu độ trễ trong luận văn lấy từ **log máy tạo tải** (chính xác tới từng request). Histogram của Prometheus nội suy theo bucket nên chỉ dùng cho dashboard và cảnh báo.
+
+**Chi tiết cách tính** (chốt 15/11 khi viết `analysis/metrics.py`, chỗ bảng trên chưa nói rõ):
+- Request được xếp vào pha theo **lịch gửi** `t_sched`. Pha được chấm SLO: KB1 `steady`, KB3 `sustain`, KB2 cả `pre`, `spike`, `drop` (KB2 chỉ báo cáo, bỏ 2 phút đầu như KB1).
+- Phân vị TTFT, TPOT tính trên request **thành công**, giống `vllm bench serve` và `capacity.py` (ĐG1). Request lỗi được đếm riêng và vẫn là "không đạt" trong SLO attainment.
+- **GPU-giờ** tính trong pha chính, mỗi pod từ mốc `scheduled` tới `gone_at` (cận trên, sai số ≤ 5 s mỗi pod). Ước lượng này hơi cao cho cấu hình autoscaling, nên kết luận "A2 tiết kiệm" không bị thổi phồng. Cột `gpu_s_ksm` (từ `kube_deployment_status_replicas`) chỉ để đối chiếu.
+- **N2a:** phần phát hiện = lúc tải tăng → pod mới đầu tiên được tạo (ReplicaSet tạo pod ngay khi HPA đổi `desiredReplicas`; mốc API chính xác tới 1 s, mịn hơn mẫu kube-state-metrics); phần cold start = pod đó tạo → Ready.
+- **N2b:** chỉ tìm trong pha `spike` (hồi phục nhờ tải giảm ở pha `drop` không tính). Request lỗi tính như TTFT vô hạn; không vi phạm lần nào thì ra 0.
+- **N7:** "SLO bắt đầu bị vi phạm" = mốc đầu tiên mà tỷ lệ request xấu trong 1 phút trước đó (theo log client) vượt 20 %, cùng ngưỡng và cửa sổ ngắn của `LLMSLOBurnFast`; chỉ xét khi cửa sổ đã đủ 1 phút. Page giả được chấm trên cửa sổ dài 5 phút kết thúc lúc firing. Mốc firing lấy từ chuỗi `ALERTS` của Prometheus, chưa gồm `group_wait` 30 s của Alertmanager.
+- **Flapping:** số lần `replicas` (spec của Deployment, do HPA đặt) đổi chiều cách lần đổi trước ≤ 5 phút.
 
 ---
 
