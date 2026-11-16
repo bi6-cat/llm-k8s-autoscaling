@@ -68,13 +68,17 @@ def test_band(load: float, slo: float, expected: str) -> None:
     assert lt.band(load, slo) == expected
 
 
+def _row(band: str, util: float, conc: float, valid: bool = True) -> dict:
+    return {"band": band, "valid": valid, "gpu_util": util, "L": conc}
+
+
 def test_separation() -> None:
     rows = [
-        {"band": "vừa", "gpu_util": 0.96, "L": 4.0},
-        {"band": "vừa", "gpu_util": 1.0, "L": 9.0},
-        {"band": "khác", "gpu_util": 1.0, "L": 27.0},
-        {"band": "quá tải", "gpu_util": 0.9996, "L": 68.0},
-        {"band": "quá tải", "gpu_util": 1.0, "L": 182.0},
+        _row("vừa", 0.96, 4.0),
+        _row("vừa", 1.0, 9.0),
+        _row("khác", 1.0, 27.0),
+        _row("quá tải", 0.9996, 68.0),
+        _row("quá tải", 1.0, 182.0, valid=False),
     ]
     util = lt.separation(rows, "gpu_util")
     assert util["separable"] is False
@@ -83,7 +87,23 @@ def test_separation() -> None:
     conc = lt.separation(rows, "L")
     assert conc["separable"] is True
     assert conc["gap"] == pytest.approx(68.0 / 9.0)
+    assert conc["overload"] == (68.0, 182.0)
+    assert lt.separation(rows, "L", valid_only=True)["overload"] == (68.0, 68.0)  # bỏ mức không hợp lệ
     assert lt.separation(rows[:2], "L")["separable"] is None  # thiếu nhóm quá tải
+
+
+def test_separation_skips_missing_values_and_zero_over_zero() -> None:
+    nan = float("nan")
+    # Thiếu số liệu ở đầu hay cuối danh sách đều cho cùng kết quả (min/max của Python với NaN phụ thuộc thứ
+    # tự phần tử)
+    pair = [_row("vừa", nan, 0.0), _row("vừa", 0.5, 0.0)]
+    for rows in (pair, pair[::-1]):
+        s = lt.separation([*rows, _row("quá tải", 1.0, 0.0)], "gpu_util")
+        assert s["moderate"] == (0.5, 0.5) and s["separable"] is True and s["n_missing"] == 1
+    # waiting = 0 ở cả hai nhóm: không tách được, và khoảng hở 0 ÷ 0 là NaN chứ không phải ∞
+    s = lt.separation([_row("vừa", 1.0, 0.0), _row("quá tải", 1.0, 0.0)], "L")
+    assert s["separable"] is False and math.isnan(s["gap"])
+    assert lt.separation([_row("vừa", 1.0, 0.0), _row("quá tải", 1.0, 5.0)], "L")["gap"] == math.inf
 
 
 def _curve(lam: float, n: int, b: float, wait: float, util: float, slo: float) -> dict:
@@ -125,6 +145,23 @@ def test_from_capacity(capacity_file: Path) -> None:
     # Mức đã xếp hàng: M/G/∞ không đúng nữa, nên không dự đoán util và số replica
     for key in ("util_pred", "util_z", "a1_replicas", "a2_replicas"):
         assert math.isnan(over[key])
+
+
+def test_from_capacity_missing_signals(tmp_path: Path) -> None:
+    # Thiếu waiting (file cũ) hoặc null: coi như không biết có hàng đợi hay không, nên không dự đoán.
+    # Cửa sổ ngắn hơn một bước lấy mẫu: SE để trống thay vì chia cho 0.
+    c1 = {**_curve(3.0, 360, 2.0, 0.0, None, 1.0), "waiting_mean": None, "kv_cache_usage": None}
+    c2 = {**_curve(3.0, 12, 2.0, 0.0, 0.9, 1.0), "window_s": 4.0}
+    del c1["waiting_mean"]
+    doc = {"C": 6.0, "threshold": {"A2_concurrency": 21}, "curves": [c1, c2]}
+    p = tmp_path / "capacity-old.json"
+    p.write_text(json.dumps(doc), encoding="utf-8")
+    r1, r2 = lt.from_capacity(p, window_s=120.0, max_replicas=4)
+    for key in ("util_pred", "a1_replicas", "a2_replicas", "a1_desired_1", "kv_cache_usage", "waiting_mean"):
+        assert math.isnan(r1[key])
+    assert r1["a2_desired_1"] == 1  # B_server có số liệu thì vẫn tính được quyết định của A2
+    assert r2["lambda_real"] == pytest.approx(3.0) and math.isnan(r2["util_se"])
+    assert lt.summary([r1, r2])  # in được bảng dù thiếu số liệu
 
 
 def test_main_writes_csv_and_summary(

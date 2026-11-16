@@ -218,19 +218,19 @@ Cùng mẫu với LT1–LT4. Có LT5, LT6, LT7; LT8 chưa làm.
   | KV-cache (A3) | 0,039–0,099 | 0,228–0,231 | 2,3× | 0,022–0,045 | 0,084–0,085 | 1,9× |
   | waiting (A4) | 0 | 21,8–92,1 | ∞ | 0–0,08 | 52–166 | 630× |
 
-  Bỏ hai mức mà máy tạo tải đánh dấu không hợp lệ (1,5B λ = 6 và 8) thì cả bốn kết luận không đổi.
+  Bỏ hai mức mà máy tạo tải đánh dấu không hợp lệ (1,5B λ = 6 và 8; script in thêm dòng "chỉ mức hợp lệ") thì cả bốn kết luận và bốn khoảng hở không đổi.
 - **Số đo, quyết định đầu tiên khi đang có 1 replica** (threshold ở nhà: A1 70 %; A2 21 với 1,5B, 23 với 0,5B):
   - A1 đòi 2 replica ở **cả 18 mức**, từ 0,16 C tới quá tải, vì util ≥ 0,78, tức vượt 77 % = 70 % × 1,1. Ở nhà, exporter chỉ thấy 1 GPU vật lý, nên A1 không lên quá 2.
   - A2 giữ 1 replica khi λ < C, đòi 2 ở λ = C, và 3, 6 ở 1,5B λ = 7, 8; 3, 6, 8 ở 0,5B λ = 13; 13,5; 14.
 - **So với dự đoán:**
   - Định tính đúng. util = 1,000 từ 0,33 C (1,5B) và 0,48 C (0,5B) cho tới quá tải, trong khi `waiting` tăng từ 0 lên 92 và 166. Ở cả hai model, util không tách được tải vừa khỏi quá tải; ở 0,5B, mức quá tải λ = 14 còn có util thấp hơn mức vừa (0,9996 so với 1,000). Ba tín hiệu còn lại đều tách được.
-  - Định lượng: ở 5 mức có dự đoán < 0,999, 1 − e^(−L) khớp util đo với |z| ≤ 0,9. Ở 5 mức chưa xếp hàng còn lại, dự đoán ≥ 0,9998 và số đo là 1,000. Hai mức lệch nhiều nhất cùng thuộc 0,5B và cùng âm (−0,064 và −0,024), nhưng mỗi mức chỉ cỡ 1 SE, nên chưa kết luận được có lệch hệ thống.
+  - Định lượng: ở 5 mức có dự đoán < 0,999, 1 − e^(−L) khớp util đo với |z| < 1 (lớn nhất 0,91). Ở 5 mức chưa xếp hàng còn lại, dự đoán ≥ 0,9998 và số đo là 1,000. Hai mức có |z| lớn nhất cùng thuộc 0,5B và cùng âm (z = −0,86 và −0,91, lệch −0,064 và −0,024), nhưng mỗi mức chưa tới 1 SE, nên chưa kết luận được có lệch hệ thống.
 - **Giải thích:**
   1. **Vì sao bão hoà sớm:** P(N = 0) = e^(−L) giảm theo hàm mũ. Ở 0,33 C (1,5B), L = 5,3, nên GPU chỉ rảnh khoảng 0,5 % thời gian, dù batch trung bình mới bằng 1/5 B\*. util đo "có việc hay không", không đo "bao nhiêu việc".
   2. **KV-cache tách được nhưng không theo được quá tải:** khoảng hở chỉ 1,9–2,3×, và KV đứng yên khi quá tải nặng thêm (0,228 → 0,231 trong khi `waiting` tăng 4×; 0,5B: 0,084 → 0,085). Lý do: vLLM chỉ cấp KV cho request đang chạy, mà số request chạy bị `max-num-seqs` chặn; request trong hàng đợi chưa chiếm KV (LT3: điểm gãy ở nhà do `max-num-seqs`, không do bộ nhớ). A3 vì vậy không biết quá tải nặng tới đâu.
   3. **Hệ quả của mô hình cho A1 (dự đoán, chưa đo):**
      - HPA (threshold 70 %, tolerance 10 %) giữ nguyên số replica khi util mỗi pod nằm trong [63 %; 77 %], tức L mỗi pod trong [0,99; 1,47]. A2 giữ nguyên ở L mỗi pod trong [0,9; 1,1] × threshold, tức 18,9–23,1 với threshold 21.
-     - Nếu mỗi pod chạy trên một GPU và Service chia request ngẫu nhiên, mỗi pod là một M/G/∞ với L ÷ N. Khi đó A1 cần số replica gấp 15–17 lần A2.
+     - Nếu mỗi pod chạy trên một GPU và Service chia request ngẫu nhiên, mỗi pod là một M/G/∞ với L ÷ N. Khi đó A1 dừng ở L mỗi pod 1,25–1,47, còn A2 dừng ở L mỗi pod cỡ threshold. Ở tổng L = 30–100, nếu không kẹp max, A1 cần 23–71 replica so với 2–5 của A2 (gấp 11–14 lần).
      - Với cùng tải này trên node 4 GPU: A1 lên 3 replica ở 0,32 C (0,5B), lên đủ 4 từ 0,33 C (1,5B) và 0,48 C (0,5B). A2 ở 1 replica cho tới 0,83 C (cột `a1_replicas`, `a2_replicas`).
      - Với N = 4, A1 lên đủ 4 replica khi tổng L > 4,4 (= 3 × 1,47). Nó chỉ bớt pod khi ⌈4 × util ÷ 0,7⌉ ≤ 3, tức util mỗi pod ≤ 52,5 %, hay tổng L ≤ 3,0.
 - **Hệ quả:**

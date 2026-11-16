@@ -136,6 +136,12 @@ def test_predict_replicas(total, start, want):
     assert lt.predict_replicas(total, 10, 1, 3, start=start) == want
 
 
+def test_hpa_desired_is_one_sync_without_clamp():
+    assert lt.hpa_desired(11, 10, 1) == 1  # tỷ lệ 1,1: trong tolerance
+    assert lt.hpa_desired(35, 10, 1) == 4  # chưa kẹp max
+    assert lt.hpa_desired(5, 10, 3) == 1  # tỷ lệ 0,17 → ⌈0,5⌉ = 1
+
+
 def test_parse_helpers():
     assert lt.parse_quantity("8334m") == pytest.approx(8.334)
     assert lt.parse_quantity("15") == 15.0

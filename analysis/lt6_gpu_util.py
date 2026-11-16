@@ -23,10 +23,12 @@ Khái niệm:
     khó hơn: từ r xuống r − 1 cần ⌈r × util ÷ 0,7⌉ ≤ r − 1 (với r = 4: util ≤ 52,5 %, tức tổng L ≤ 3,0).
     A2 thì dừng ở L mỗi pod ≤ 1,1 × threshold (23,1 và 25,3 với threshold 21 và 23 ở nhà). Giả sử mỗi pod
     chạy trên một GPU riêng và Service chia request ngẫu nhiên (kube-proxy): mỗi pod nhận một dòng Poisson
-    λ ÷ N, nên là một M/G/∞ với L ÷ N. Khi đó A1 cần số replica gấp 15–17 lần A2 ở cùng một tải, tức lên tới
-    max ngay từ tải nhẹ (a1_replicas).
+    λ ÷ N, nên là một M/G/∞ với L ÷ N. Khi đó A1 dừng ở L mỗi pod 1,25–1,47, còn A2 ở L mỗi pod cỡ
+    threshold. Ở tổng L = 30–100, A1 cần 23–71 replica so với 2–5 của A2 (gấp 11–14 lần), tức lên tới max
+    ngay từ tải nhẹ (a1_replicas).
     Sai số lấy mẫu của util: mỗi mẫu nằm trong [0; 1] nên có phương sai ≤ p(1 − p). Nếu n mẫu độc lập thì
-    SE ≤ √(p(1 − p) ÷ n) (util_se). Thực tế mẫu cách nhau 5 s, còn chu kỳ bận trung bình của M/G/∞ là
+    SE ≤ √(p(1 − p) ÷ n) (util_se), với n = cửa sổ ÷ 5 s = 24 như LT5 (mốc mẫu rơi đúng hai đầu cửa sổ thì
+    capacity.py lấy được 25). Thực tế mẫu cách nhau 5 s, còn chu kỳ bận trung bình của M/G/∞ là
     (e^L − 1) ÷ λ (7,5 s ở 1,5B, λ = 1), nên các mẫu liền nhau có tương quan dương và SE thật có thể lớn hơn.
 Mục đích: Tạo bảng LT6 từ file capacity-*.json của ĐG1 (envs/<env>/experiments/), mỗi mức λ một dòng (CSV):
     util đo so với util_pred, bốn tín hiệu, lần quyết định đầu tiên của A1 và A2 khi đang có 1 replica, và
@@ -49,11 +51,11 @@ from pathlib import Path
 from typing import Any
 
 from analysis.build_tables import _json, write_csv
-from analysis.lt7_hpa import TOLERANCE, predict_replicas
+from analysis.lt5_little import _f, capacity_level
+from analysis.lt7_hpa import TOLERANCE, hpa_desired, predict_replicas
 from analysis.metrics import ATTAINMENT, NAN, STEP_S
 
 MODERATE = (0.3, 0.7)  # dải "tải vừa" theo λ ÷ C (Môi trường §19 LT6: lượt tăng dần 0,3 → 1,5 C)
-QUEUE_MIN = 1.0  # waiting TB từ 1 trở lên = đã xếp hàng: M/G/∞ không còn đúng (như lt5_little.py)
 UNCLAMPED = 10**6  # max replica "vô hạn": để thấy HPA muốn bao nhiêu trước khi bị kẹp
 # Tín hiệu của từng cấu hình (Kiến trúc §10): (cột trong bảng, tên cấu hình)
 SIGNALS = [("gpu_util", "A1"), ("L_server", "A2"), ("kv_cache_usage", "A3"), ("waiting_mean", "A4")]
@@ -83,18 +85,15 @@ def l_for_util(u: float) -> float:
 def a1_replicas(l_total: float, target_pct: float, hi: int, tol: float = TOLERANCE) -> int:
     """Số replica A1 leo tới khi tổng L giữ cố định, mỗi pod một GPU, Service chia đều request.
 
-    Lặp phép tính của mỗi lần sync HPA như lt7_hpa.predict_replicas, nhưng tổng metric đổi theo số replica:
-    với r pod, tổng = 100 × r × util_pred(L ÷ r). Dừng ở lần đầu HPA không muốn thêm pod. Không mô phỏng
-    scale-down: sau khi lên, cửa sổ ổn định 300 s giữ khuyến nghị lớn nhất (Kiến trúc §12), nên số lớn nhất
-    đã đạt mới là số replica giữ lại khi tải không đổi.
+    Lặp phép tính của mỗi lần sync HPA (lt7_hpa.hpa_desired), nhưng tổng metric đổi theo số replica: với r
+    pod, tổng = 100 × r × util_pred(L ÷ r). Vì vậy không dùng được lt7_hpa.predict_replicas, vốn giữ tổng cố
+    định và đi cả hai chiều. Dừng ở lần đầu HPA không muốn thêm pod. Không mô phỏng scale-down: sau khi lên,
+    cửa sổ ổn định 300 s giữ khuyến nghị lớn nhất (Kiến trúc §12), nên số lớn nhất đã đạt mới là số replica
+    giữ lại khi tải không đổi.
     """
     r = 1
     while r < hi:
-        total = 100.0 * r * util_pred(l_total / r)
-        ratio = total / (target_pct * r)
-        if (1 - tol) <= ratio <= (1 + tol):
-            return r
-        new = min(hi, math.ceil(total / target_pct))
+        new = min(hi, hpa_desired(100.0 * r * util_pred(l_total / r), target_pct, r, tol))
         if new <= r:
             return r
         r = new
@@ -110,19 +109,27 @@ def band(load: float, slo: float) -> str:
     return "khác"
 
 
-def separation(rows: Sequence[dict[str, Any]], key: str) -> dict[str, Any]:
+def separation(rows: Sequence[dict[str, Any]], key: str, valid_only: bool = False) -> dict[str, Any]:
     """Phép kiểm "tách được" của một tín hiệu: (min, max) ở mỗi nhóm, tách được không, và tỷ số
-    min(quá tải) ÷ max(vừa), tức khoảng hở giữa hai nhóm (> 1 thì tách được)."""
-    mod = [r[key] for r in rows if r["band"] == "vừa"]
-    over = [r[key] for r in rows if r["band"] == "quá tải"]
+    min(quá tải) ÷ max(vừa), tức khoảng hở giữa hai nhóm (> 1 thì tách được; 0 ÷ 0 cho NaN).
+
+    Mức không có số liệu của tín hiệu (NaN) bị bỏ và đếm ở `n_missing`. valid_only = True: chỉ lấy mức mà
+    máy tạo tải đánh dấu hợp lệ, để kiểm kết luận có đổi khi bỏ các mức không hợp lệ hay không.
+    """
+    sel = [r for r in rows if r["valid"] or not valid_only]
+    vals = {b: [r[key] for r in sel if r["band"] == b] for b in ("vừa", "quá tải")}
+    n_missing = sum(math.isnan(v) for vs in vals.values() for v in vs)
+    mod, over = ([v for v in vals[b] if not math.isnan(v)] for b in ("vừa", "quá tải"))
     if not mod or not over:
-        return {"moderate": None, "overload": None, "separable": None, "gap": NAN}
-    gap = min(over) / max(mod) if max(mod) > 0 else math.inf
+        return {"moderate": None, "overload": None, "separable": None, "gap": NAN, "n_missing": n_missing}
+    lo, hi = min(over), max(mod)
+    gap = lo / hi if hi > 0 else (math.inf if lo > 0 else NAN)
     return {
-        "moderate": (min(mod), max(mod)),
-        "overload": (min(over), max(over)),
-        "separable": max(mod) < min(over),
+        "moderate": (min(mod), hi),
+        "overload": (lo, max(over)),
+        "separable": hi < lo,
         "gap": gap,
+        "n_missing": n_missing,
     }
 
 
@@ -132,11 +139,12 @@ def separation(rows: Sequence[dict[str, Any]], key: str) -> dict[str, Any]:
 def from_capacity(path: Path, window_s: float, max_replicas: int) -> list[dict[str, Any]]:
     """capacity-*.json của ĐG1 → mỗi mức λ một dòng.
 
-    L lấy là B_client: trung bình theo thời gian số request đang chờ phía client trong cả cửa sổ, tính đúng
-    trên từng request, không có sai số lấy mẫu như B_server (24 mẫu). Ở nhà, exporter chỉ thấy 1 GPU vật lý
-    (time-slicing), nên lần quyết định đầu của A1 dùng tổng = 100 × gpu_util. a1_replicas và a2_replicas chỉ
-    tính ở mức chưa xếp hàng: khi có hàng đợi, L đo với 1 replica gồm cả phần hàng đợi tăng dần, không còn là
-    L của hệ đã scale.
+    Mô hình util dùng L = B_client: trung bình theo thời gian số request đang chờ phía client trong cả cửa
+    sổ, tính đúng trên từng request, không có sai số lấy mẫu như B_server (24 mẫu). Cột của A2 dùng B_server
+    (running + waiting), vì đó là chuỗi mà A2 đọc. Ở nhà, exporter chỉ thấy 1 GPU vật lý (time-slicing), nên
+    lần quyết định đầu của A1 dùng tổng = 100 × gpu_util. a1_replicas và a2_replicas chỉ tính ở mức chưa xếp
+    hàng (capacity_level): khi có hàng đợi, L đo với 1 replica gồm cả phần hàng đợi tăng dần, không còn là L
+    của hệ đã scale. Tín hiệu nào thiếu (null hay NaN khi chuỗi rỗng) thì các cột suy từ nó để trống.
     """
     d = _json(path)
     c_rps = float(d["C"])
@@ -145,52 +153,57 @@ def from_capacity(path: Path, window_s: float, max_replicas: int) -> list[dict[s
     a2_t = float(thr["A2_concurrency"])
     rows = []
     for c in d.get("curves", []):
-        win = float(c.get("window_s") or window_s)
-        lam = c["lambda_real_rps"] if c.get("lambda_real_rps") is not None else c["n_measured"] / win
+        lv = capacity_level(c, window_s)
         load = c["lambda_rps"] / c_rps
-        l_cli = c["B_client"]
-        queued = c.get("waiting_mean", 0.0) >= QUEUE_MIN
-        pred = NAN if queued else util_pred(l_cli)
-        se = math.sqrt(pred * (1 - pred) / (win // STEP_S))
+        l_cli, l_srv, util = _num(c.get("B_client")), _num(c.get("B_server")), _num(c.get("gpu_util"))
+        pred = NAN if lv["queued"] else util_pred(l_cli)
+        n = int(lv["window_s"] // STEP_S)
+        se = math.sqrt(pred * (1 - pred) / n) if n > 0 and not math.isnan(pred) else NAN
         rows.append(
             {
                 "source": path.name,
                 "env": d.get("env"),
-                "run_id": c.get("run_id") or f"lambda-{c['lambda_rps']:g}",
-                "valid": bool(c.get("valid", c.get("loadgen_valid", True))),
+                "run_id": lv["run_id"],
+                "valid": lv["valid"],
                 "lambda_nominal": c["lambda_rps"],
                 "C": c_rps,
                 "load": load,
                 "band": band(load, c["slo_attainment"]),
                 "slo_attainment": c["slo_attainment"],
-                "lambda_real": lam,
+                "lambda_real": lv["lambda_real"],
                 "e2e_mean_s": c["e2e_mean_s"],
                 "L_client": l_cli,
-                "L_server": c["B_server"],
-                "waiting_mean": c.get("waiting_mean", NAN),
-                "kv_cache_usage": c.get("kv_cache_usage", NAN),
-                "gpu_util": c["gpu_util"],
+                "L_server": l_srv,
+                "waiting_mean": _num(c.get("waiting_mean")),
+                "kv_cache_usage": _num(c.get("kv_cache_usage")),
+                "gpu_util": util,
                 "util_pred": pred,
-                "util_dev": c["gpu_util"] - pred,
+                "util_dev": util - pred,
                 "util_se": se,
-                "util_z": (c["gpu_util"] - pred) / se if se > 0 else NAN,
+                "util_z": (util - pred) / se if se > 0 else NAN,
                 "a1_target_pct": a1_t,
                 "a2_target": a2_t,
-                "a1_desired_1": predict_replicas(100.0 * c["gpu_util"], a1_t, 1, UNCLAMPED),
-                "a2_desired_1": predict_replicas(c["B_server"], a2_t, 1, UNCLAMPED),
+                "a1_desired_1": _desired(100.0 * util, a1_t, UNCLAMPED),
+                "a2_desired_1": _desired(l_srv, a2_t, UNCLAMPED),
                 "max_replicas": max_replicas,
-                "a1_replicas": NAN if queued else a1_replicas(l_cli, a1_t, max_replicas),
-                "a2_replicas": NAN if queued else predict_replicas(l_cli, a2_t, 1, max_replicas),
+                "a1_replicas": NAN if math.isnan(pred) else a1_replicas(l_cli, a1_t, max_replicas),
+                "a2_replicas": NAN if lv["queued"] else _desired(l_srv, a2_t, max_replicas),
             }
         )
     return rows
 
 
+def _num(v: Any) -> float:
+    """Số trong JSON → float; null (thiếu số liệu) → NaN."""
+    return NAN if v is None else float(v)
+
+
+def _desired(total: float, target: float, hi: int) -> int | float:
+    """Số replica HPA dừng lại từ 1 replica khi tổng giữ cố định; NaN nếu thiếu tổng."""
+    return NAN if math.isnan(total) else predict_replicas(total, target, 1, hi)
+
+
 # ── In bảng ───────────────────────────────────────────────────────────────────────────────────────────
-
-
-def _f(v: Any, spec: str) -> str:
-    return "–" if v is None or (isinstance(v, float) and math.isnan(v)) else format(v, spec)
 
 
 # Cột số của bảng chữ: (tiêu đề, khoá, định dạng, độ rộng)
@@ -218,29 +231,36 @@ def summary(rows: Sequence[dict[str, Any]]) -> str:
         f"A1ₙ, A2ₙ: số replica leo tới nếu cùng tải chạy trên node {rows[0]['max_replicas']} GPU, "
         "mỗi pod một GPU (chỉ tính ở mức chưa xếp hàng)."
     )
-    t = rows[0]["a1_target_pct"] / 100
-    lo, hi = l_for_util(t * (1 - TOLERANCE)), l_for_util(t * (1 + TOLERANCE))
-    out.append(
-        f"A1 {t:.0%}: HPA giữ nguyên khi L mỗi pod trong [{lo:.2f}; {hi:.2f}], trên đó thì thêm pod "
-        "(mô hình 1 − e^(−L))."
-    )
     for src in dict.fromkeys(r["source"] for r in rows):
         sel = [r for r in rows if r["source"] == src]
         lam = {b: [r["lambda_nominal"] for r in sel if r["band"] == b] for b in ("vừa", "quá tải")}
+        t = sel[0]["a1_target_pct"] / 100
+        lo, hi = l_for_util(t * (1 - TOLERANCE)), l_for_util(t * (1 + TOLERANCE))
         out.append("")
         out.append(f"{src}: vừa = λ {lam['vừa']}, quá tải = λ {lam['quá tải']}")
+        out.append(
+            f"  A1 {t:.0%}: HPA giữ nguyên khi L mỗi pod trong [{lo:.2f}; {hi:.2f}], trên đó thì thêm pod "
+            "(mô hình 1 − e^(−L))"
+        )
+        has_invalid = any(not r["valid"] and r["band"] != "khác" for r in sel)
         for key, cfg in SIGNALS:
-            s = separation(sel, key)
-            if s["separable"] is None:
-                out.append(f"  {cfg} {key}: thiếu một trong hai nhóm")
-                continue
-            (a, b), (c, e) = s["moderate"], s["overload"]
-            verdict = "tách được" if s["separable"] else "KHÔNG tách được"
-            out.append(
-                f"  {cfg} {key:<15} vừa [{a:.4g}; {b:.4g}]  quá tải [{c:.4g}; {e:.4g}]  "
-                f"min(quá tải) ÷ max(vừa) = {s['gap']:.4g}  → {verdict}"
-            )
+            out.append(f"  {cfg} {key:<15} {_verdict(separation(sel, key))}")
+            if has_invalid:
+                out.append(f"     {'chỉ mức hợp lệ':<15} {_verdict(separation(sel, key, valid_only=True))}")
     return "\n".join(out)
+
+
+def _verdict(s: dict[str, Any]) -> str:
+    """Một dòng kết quả của separation()."""
+    miss = f"  (bỏ {s['n_missing']} mức thiếu số liệu)" if s["n_missing"] else ""
+    if s["separable"] is None:
+        return f"thiếu một trong hai nhóm{miss}"
+    (a, b), (c, e) = s["moderate"], s["overload"]
+    verdict = "tách được" if s["separable"] else "KHÔNG tách được"
+    return (
+        f"vừa [{a:.4g}; {b:.4g}]  quá tải [{c:.4g}; {e:.4g}]  "
+        f"min(quá tải) ÷ max(vừa) = {_f(s['gap'], '.4g')}  → {verdict}{miss}"
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
