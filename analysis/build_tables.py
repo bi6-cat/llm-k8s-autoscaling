@@ -5,8 +5,8 @@ Khái niệm: Runner (experiments/runner) ghi mỗi lần chạy một lượt v
     pods_timeline.json (mọi pod vLLM kèm mốc thời gian), alerts.jsonl, checks.json, metadata.json.
     "Lượt" = một ô cấu hình × kịch bản × số lần lặp (ví dụ A2-KB2-1); "lần thử" = một lần chạy lượt đó.
     Lần thử không hợp lệ được runner chạy lại thành attempt-2; dữ liệu attempt-1 vẫn giữ (Môi trường §17).
-Mục đích: Tạo các bảng CSV để notebook vẽ biểu đồ C1–C6 và điền bảng nghiệm thu (Môi trường §16). Mọi
-    công thức nằm ở metrics.py (có unit test), file này chỉ đọc dữ liệu, ghép và ghi bảng:
+Mục đích: Tạo các bảng CSV để điền bảng nghiệm thu (Môi trường §16); charts.py vẽ C1–C4 từ cùng các số
+    này. Mọi công thức nằm ở metrics.py (có unit test), file này chỉ đọc dữ liệu, ghép và ghi bảng:
       runs.csv    mỗi lần thử một dòng, cả lần không hợp lệ (cột `valid`); `counted` = lần thử hợp lệ
                   cuối cùng của lượt, là lần được đưa vào kết quả
       phases.csv  mỗi lần thử × pha của kịch bản một dòng (steady; pre, spike, drop; ramp, sustain)
@@ -504,6 +504,7 @@ def build(session_dirs: Sequence[Path], baseline: str = "S4") -> dict[str, Any]:
                 skipped.append(f"{d}: trùng lần thử {'/'.join(map(str, key))} đã đọc")
                 continue
             seen.add(key)
+            r["path"] = d  # thư mục lần thử, cho charts.py đọc lại chuỗi thời gian (không ghi vào runs.csv)
             runs.append(r)
             phases += ps
             alerts += al

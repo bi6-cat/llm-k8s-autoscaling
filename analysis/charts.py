@@ -1,0 +1,429 @@
+"""Biểu đồ C1–C4 của chương 5 từ dữ liệu runner (Môi trường §16, §15).
+
+Khái niệm:
+    C1 = chuỗi thời gian của KB2 (tải tăng đột ngột) cho từng cấu hình, bốn ô xếp dọc chung trục thời gian:
+        λ(t) theo lịch gửi, số replica, TTFT p95 trượt 30 s, độ dài hàng đợi. Đây là biểu đồ trung tâm: nó
+        cho thấy HPA phản ứng bao lâu (N2a), SLO hồi phục bao lâu (N2b) và vì sao A2 tốt hơn A1.
+    C2 = SLO attainment theo cấu hình × kịch bản; C3 = GPU-giờ so với S4 (cấu hình tĩnh cấp theo đỉnh);
+    C4 = trade-off giữa hai số đó, mỗi kịch bản một ô. Ba hình này vẽ cột hoặc điểm = trung bình các lượt
+        `counted`, kèm một chấm cho từng lượt (§16: 1–3 lượt mỗi ô nên phải thấy được độ phân tán).
+    "Lượt counted" = lần thử hợp lệ cuối cùng của lượt (build_tables.mark_counted).
+Mục đích: Vẽ từ đúng các số mà build_tables tính cho bảng nghiệm thu (gọi build_tables.build, không đọc lại
+    CSV), nên hình và bảng không thể lệch nhau. Đường TTFT p95 của C1 dùng metrics.sliding_ttft_p95, cùng
+    hàm với N2b. Quy ước §16: không dùng hai trục tung; màu gắn cố định với từng cấu hình (CONFIG_STYLE),
+    kèm hình dạng marker và nhãn chữ để không phải phân biệt chỉ bằng màu; hình nào cũng ghi số lượt.
+    C5 (cold start 8 pha) và C6 (rolling update VH2) chưa có ở đây: cần dữ liệu ĐG3 và VH2.
+Hạn chế: trên kind trong WSL2, mốc của requests.csv theo đồng hồ đơn điệu, chạy nhanh hơn giờ thực khoảng
+    1,6 %, còn metric theo giờ thực, nên ô số replica và ô hàng đợi lệch dần so với ô λ và ô TTFT (khoảng
+    20 s cuối lượt 24 phút). Không hiệu chỉnh: VM thuê của V2 không bị lệch này (nhật ký vận hành, LT5).
+
+Chạy (từ gốc repo):
+    uv run --project analysis python -m analysis.charts runs/<phiên> [runs/<phiên 2> …] \\
+        [--out <thư mục>] [--baseline S4] [--formats svg,png]
+"""
+
+from __future__ import annotations
+
+import argparse
+import csv
+import math
+from collections import defaultdict
+from collections.abc import Iterable, Mapping, Sequence
+from pathlib import Path
+from typing import Any
+
+import matplotlib
+
+matplotlib.use("Agg")  # vẽ thẳng ra file, không cần màn hình (VM thuê, CI)
+
+import matplotlib.pyplot as plt  # noqa: E402  (phải chọn backend trước khi nạp pyplot)
+from matplotlib.lines import Line2D  # noqa: E402
+from matplotlib.ticker import FixedLocator, FuncFormatter, MaxNLocator, NullFormatter  # noqa: E402
+
+from analysis import build_tables as bt  # noqa: E402
+from analysis import metrics as m  # noqa: E402
+
+RATE_BIN_S = 30.0  # ô λ(t): đếm request theo lịch gửi trong từng khoảng 30 s, cùng cửa sổ với TTFT p95
+DEFAULT_TIMEOUT_S = 120.0  # timeout của máy tạo tải nếu loadgen.json không ghi (Môi trường §14.2)
+
+# Màu theo thứ tự 4 ô đầu của bảng màu phân loại mặc định (skill dataviz, đã chạy validate_palette): cấu hình
+# chính A2 lấy ô 1. C1 chỉ có 3 cấu hình (S4, A1, A2), là 3 ô đầu, đạt ngưỡng phân biệt cho người mù màu
+# với MỌI cặp. S1 (ô 4, vàng) chỉ xuất hiện ở C2–C4, nơi mỗi cột hoặc điểm luôn có nhãn chữ và marker riêng.
+CONFIG_STYLE = {
+    "A2": ("#2a78d6", "o"),
+    "S4": ("#eb6834", "s"),
+    "A1": ("#1baf7a", "^"),
+    "S1": ("#eda100", "D"),
+}
+OTHER_STYLE = ("#8a8984", "X")  # cấu hình ngoài 4 mã trên (thử nghiệm riêng): xám, không lấy màu ô 5+
+CONFIG_ORDER = ["S1", "S4", "A1", "A2"]  # thấp → cao về mức "thông minh", đọc từ trái sang phải
+SCENARIO_ORDER = ["KB1", "KB2", "KB3"]
+# C1 so ba cấu hình đáng so về hành vi theo thời gian (Môi trường §16): tĩnh cấp theo đỉnh và hai cách scale.
+# S1 quá tải suốt pha spike nên chỉ thêm một đường TTFT nằm ở trần; đổi bằng --c1-configs khi cần.
+C1_CONFIGS = ("S4", "A1", "A2")
+# Hướng đặt nhãn cạnh điểm ở C4, cố định theo cấu hình, để hai điểm trùng chỗ không đè nhãn lên nhau
+LABEL_OFFSET = {"A2": (7, 5), "S4": (7, -12), "A1": (-7, 5), "S1": (-7, -12)}
+INK, INK_2, INK_3, GRID, PHASE_FILL = "#0b0b0b", "#52514e", "#8a8984", "#e4e3df", "#f1f0ed"
+
+
+def style(config: str) -> tuple[str, str]:
+    """(màu, marker) cố định của một cấu hình."""
+    return CONFIG_STYLE.get(config, OTHER_STYLE)
+
+
+def _ordered(keys: Iterable[str], order: Sequence[str]) -> list[str]:
+    """Khoá theo thứ tự `order`, khoá lạ xếp sau theo bảng chữ cái."""
+    ks = set(keys)
+    return [k for k in order if k in ks] + sorted(ks - set(order))
+
+
+def _isnum(v: Any) -> bool:
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and not math.isnan(v)
+
+
+# ── Chuẩn bị dữ liệu (hàm thuần, có test) ──────────────────────────────────────────────────────────────
+
+
+def kb2_series(d: Path) -> dict[str, Any]:
+    """Một thư mục attempt-<n> → các chuỗi của C1, thời gian tính bằng giây kể từ t0 của máy tạo tải.
+
+    rate:       (mép các khoảng RATE_BIN_S, số request theo lịch gửi ÷ RATE_BIN_S) = λ(t) đã thực hiện
+    ttft_p95:   [(t, p95)] trên lưới STEP_S; inf = cửa sổ có request lỗi chiếm phần p95; None = cửa sổ rỗng
+    replicas_spec, replicas_ready: [(t, n)] số replica HPA đặt và số replica đang phục vụ (kube-state-metrics)
+    queue:      [(t, tổng vllm:num_requests_waiting của mọi pod)] = request đã nhận mà chưa được xử lý
+    """
+    lg = bt._json(d / "loadgen.json")
+    t0, dur = float(lg["t0_unix"]), float(lg["duration_s"])
+    with (d / "requests.csv").open(newline="", encoding="utf-8") as fh:
+        reqs = [m.parse_request(r, t0) for r in csv.DictReader(fh)]
+    met = bt.read_metrics(d / "metrics.csv.gz")
+
+    n_bins = max(1, math.ceil(dur / RATE_BIN_S))
+    counts = [0] * n_bins
+    for r in reqs:
+        i = int((r.t_sched - t0) // RATE_BIN_S)
+        if 0 <= i < n_bins:
+            counts[i] += 1
+    edges = [i * RATE_BIN_S for i in range(n_bins + 1)]
+
+    grid = [t0 + i * bt.STEP_S for i in range(int(dur // bt.STEP_S) + 1)]
+    p95 = m.sliding_ttft_p95(reqs, grid, m.RECOVERY_WINDOW_S)
+
+    def rel(samples: Iterable[tuple[float, float]]) -> list[tuple[float, float]]:
+        # Lấy cả một mẫu trước t0 để đường bậc thang có giá trị ngay từ đầu trục
+        return [(t - t0, v) for t, v in samples if t0 - bt.STEP_S <= t <= t0 + dur]
+
+    queue: dict[float, float] = defaultdict(float)
+    for ts, _, v in met.get("vllm_waiting", []):
+        queue[ts] += v  # mỗi pod một chuỗi; query_range trả mẫu đúng lưới bước nên cộng theo mốc được
+
+    return {
+        "t0_unix": t0,
+        "duration_s": dur,
+        "timeout_s": float((lg.get("target") or {}).get("timeout_s") or DEFAULT_TIMEOUT_S),
+        "phases": {k: (float(a), float(b)) for k, (a, b) in (lg.get("phases_s") or {}).items()},
+        "rate": (edges, [c / RATE_BIN_S for c in counts]),
+        "ttft_p95": [(t - t0, v) for t, v in zip(grid, p95, strict=True)],
+        "replicas_spec": rel(bt.max_by_ts(met.get("replicas_spec", []))),
+        "replicas_ready": rel(bt.max_by_ts(met.get("replicas_ready", []))),
+        "queue": rel(sorted(queue.items())),
+    }
+
+
+def c1_groups(
+    rows: Sequence[Mapping[str, Any]], configs: Sequence[str] = C1_CONFIGS
+) -> tuple[dict[tuple[Any, Any], dict[str, Any]], list[str]]:
+    """Lần thử counted của KB2 thuộc `configs` → {(env, repeat): {config: dòng runs}}, kèm cảnh báo. Cùng
+    số thứ tự lượt thì cùng lịch gửi (Môi trường §14.2), nên mỗi (env, repeat) là một hình C1 so được từng
+    giây giữa các cấu hình.
+    Hai phiên cùng có một lượt (chạy lại cả phiên) thì giữ phiên đọc trước và báo lại."""
+    out: dict[tuple[Any, Any], dict[str, Any]] = defaultdict(dict)
+    warn = []
+    for r in rows:
+        if not (r.get("counted") and r.get("scenario") == "KB2" and r.get("config") in configs):
+            continue
+        g = out[(r["env"], r["repeat"])]
+        if r["config"] in g:
+            warn.append(
+                f"C1: bỏ {r['session']}/{r['run_id']}, đã có {g[r['config']]['session']}/{r['run_id']}"
+            )
+            continue
+        g[r["config"]] = r
+    return dict(out), warn
+
+
+def cell_values(
+    rows: Sequence[Mapping[str, Any]], key: str, scale: float = 1.0
+) -> dict[str, dict[str, list]]:
+    """{kịch bản: {cấu hình: [giá trị × scale của từng lượt counted]}}, bỏ ô trống. Môi trường gộp chung
+    (giống cells.csv thì tách env): biểu đồ của chương 5 chỉ vẽ một môi trường, do người gọi lọc trước."""
+    out: dict[str, dict[str, list]] = defaultdict(lambda: defaultdict(list))
+    for r in rows:
+        v = r.get(key)
+        if r.get("counted") and _isnum(v):
+            out[r["scenario"]][r["config"]].append(float(v) * scale)
+    return {s: dict(c) for s, c in out.items()}
+
+
+def paired_values(rows: Sequence[Mapping[str, Any]], xkey: str, ykey: str) -> dict[str, dict[str, list]]:
+    """Như cell_values nhưng mỗi lượt là một cặp (x, y), chỉ lấy lượt có đủ cả hai (cho C4)."""
+    out: dict[str, dict[str, list]] = defaultdict(lambda: defaultdict(list))
+    for r in rows:
+        x, y = r.get(xkey), r.get(ykey)
+        if r.get("counted") and _isnum(x) and _isnum(y):
+            out[r["scenario"]][r["config"]].append((float(x) * 100, float(y) * 100))
+    return {s: dict(c) for s, c in out.items()}
+
+
+# ── Vẽ ──────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+def _setup() -> None:
+    plt.rcParams.update(
+        {
+            "font.size": 9,
+            "axes.edgecolor": INK_3,
+            "axes.labelcolor": INK,
+            "axes.titlesize": 10,
+            "axes.spines.top": False,
+            "axes.spines.right": False,
+            "axes.grid": True,
+            "grid.color": GRID,
+            "grid.linewidth": 0.6,
+            "xtick.color": INK_2,
+            "ytick.color": INK_2,
+            "legend.frameon": False,
+            "svg.hashsalt": "llm-k8s-analysis",  # id cố định trong SVG: chạy lại ra đúng cùng file
+        }
+    )
+
+
+def _comma(ax: Any, axes: str = "xy") -> None:
+    """Dấu phẩy thập phân kiểu Việt Nam trên nhãn trục (2,5 thay vì 2.5), như phần còn lại của luận văn."""
+    fmt = FuncFormatter(lambda v, _: f"{v:g}".replace(".", ","))
+    for a in axes:
+        (ax.xaxis if a == "x" else ax.yaxis).set_major_formatter(fmt)
+
+
+def _phase_spans(ax: Any, phases: Mapping[str, tuple[float, float]], label: bool) -> None:
+    for i, (name, (a, b)) in enumerate(sorted(phases.items(), key=lambda kv: kv[1][0])):
+        if i % 2 == 0:
+            ax.axvspan(a / 60, b / 60, color=PHASE_FILL, lw=0, zorder=0)
+        if label:
+            ax.text((a + b) / 120, 1.02, name, transform=ax.get_xaxis_transform(), ha="center", color=INK_2)
+
+
+def plot_c1(series: Mapping[str, Mapping[str, Any]], title: str) -> Any:
+    """{config: kb2_series(...)} → Figure bốn ô xếp dọc chung trục thời gian (phút)."""
+    fig, axes = plt.subplots(4, 1, sharex=True, figsize=(7.2, 8.6), layout="constrained")
+    ax_rate, ax_rep, ax_ttft, ax_q = axes
+    first = next(iter(series.values()))
+    for i, ax in enumerate(axes):
+        _phase_spans(ax, first["phases"], label=i == 0)
+    ceiling = max(s["timeout_s"] for s in series.values())
+
+    for cfg in _ordered(series, CONFIG_ORDER):
+        s, (color, _) = series[cfg], style(cfg)
+        edges, rate = s["rate"]
+        ax_rate.stairs(rate, [e / 60 for e in edges], color=color, lw=1.5)
+        for key, ls, lw in (("replicas_ready", "-", 1.6), ("replicas_spec", "--", 1.0)):
+            pts = s[key]
+            if pts:
+                # Mẫu query_range ở t = giá trị mới nhất tại t, giữ tới mẫu sau: bậc thang kiểu "post"
+                ax_rep.step(
+                    [t / 60 for t, _ in pts], [v for _, v in pts], where="post", color=color, ls=ls, lw=lw
+                )
+        # Cửa sổ có request lỗi chiếm phần p95 (inf) vẽ ở trần = timeout: request đó chờ ít nhất ngần ấy
+        ys = [math.nan if v is None else min(v, ceiling) for _, v in s["ttft_p95"]]
+        ax_ttft.plot([t / 60 for t, _ in s["ttft_p95"]], ys, color=color, lw=1.5)
+        if s["queue"]:
+            ax_q.plot([t / 60 for t, _ in s["queue"]], [v for _, v in s["queue"]], color=color, lw=1.5)
+
+    ax_ttft.set_yscale("log")
+    # Mốc cố định dễ đọc thay cho 2×10⁰, 3×10⁰ của trục log mặc định; mốc phụ không ghi chữ
+    ax_ttft.yaxis.set_major_locator(FixedLocator([0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100, 200]))
+    ax_ttft.yaxis.set_minor_formatter(NullFormatter())
+    ax_ttft.axhline(m.TTFT_SLO_S, color=INK_2, lw=1, ls="--")
+    ax_ttft.text(0.995, m.TTFT_SLO_S, "SLO 2,5 s", transform=ax_ttft.get_yaxis_transform(), ha="right",
+                 va="bottom", color=INK_2)  # fmt: skip
+    ax_rep.yaxis.set_major_locator(MaxNLocator(integer=True))
+    ax_rep.set_ylim(bottom=0)
+    ax_q.set_ylim(bottom=0)
+    ax_rate.set_ylim(bottom=0)
+    ax_rate.set_ylabel(f"λ (req/s)\ntrung bình {RATE_BIN_S:g} s")
+    ax_rep.set_ylabel("Số replica")
+    ax_ttft.set_ylabel(f"TTFT p95 (s)\ncửa sổ {m.RECOVERY_WINDOW_S:g} s")
+    ax_q.set_ylabel("Hàng đợi\n(request chờ)")
+    ax_q.set_xlabel("Thời gian từ đầu pha chính (phút)")
+    ax_q.set_xlim(0, first["duration_s"] / 60)
+    for ax in axes:
+        _comma(ax)
+
+    # Một legend chung dưới đáy (constrained layout chừa chỗ, không đè dữ liệu hay tiêu đề); tiêu đề của
+    # legend mang chú thích, vì chữ đặt tự do bằng fig.text không được layout tính tới.
+    handles = [Line2D([], [], color=style(c)[0], lw=2, label=c) for c in _ordered(series, CONFIG_ORDER)]
+    handles += [
+        Line2D([], [], color=INK_2, lw=1.6, label="replica Ready"),
+        Line2D([], [], color=INK_2, lw=1.0, ls="--", label="replica spec (HPA đặt)"),
+    ]
+    fig.legend(handles=handles, loc="outside lower center", ncols=len(handles), title_fontsize=7.5,
+               title=f"TTFT của request lỗi hoặc timeout vẽ ở trần {ceiling:g} s")  # fmt: skip
+    fig.suptitle(title)
+    return fig
+
+
+def plot_bars(
+    vals: Mapping[str, Mapping[str, list]], ylabel: str, refs: Sequence[tuple[float, str]], title: str
+) -> Any:
+    """Cột = trung bình các lượt, chấm = từng lượt; nhóm theo kịch bản; nhãn dưới cột = cấu hình, số lượt."""
+    scen = _ordered(vals, SCENARIO_ORDER)
+    xs, labels, centers, x = [], [], [], 0.0
+    for s in scen:
+        cfgs = _ordered(vals[s], CONFIG_ORDER)
+        centers.append((s, x + (len(cfgs) - 1) / 2))
+        for c in cfgs:
+            xs.append((x, s, c))
+            x += 1
+        x += 0.6  # khoảng trống giữa hai kịch bản
+    fig, ax = plt.subplots(figsize=(max(4.0, 0.62 * len(xs) + 1.6), 3.6), layout="constrained")
+    for xi, s, c in xs:
+        v = vals[s][c]
+        color, marker = style(c)
+        ax.bar(xi, m.mean(v), width=0.72, color=color, edgecolor="white", lw=1, zorder=2)
+        ax.scatter([xi] * len(v), v, s=22, marker=marker, color=INK, edgecolor="white", lw=0.6, zorder=3)
+        labels.append(f"{c}\nn={len(v)}")
+    for y, text in refs:
+        ax.axhline(y, color=INK_2, lw=1, ls="--", zorder=1)
+        ax.text(1.0, y, f" {text}", transform=ax.get_yaxis_transform(), va="center", color=INK_2)
+    ax.set_xticks([xi for xi, _, _ in xs], labels)
+    for s, cx in centers:
+        ax.annotate(s, (cx, 0), xycoords=("data", "axes fraction"), xytext=(0, -30), 
+                    textcoords="offset points",
+                    ha="center", va="top", fontweight="bold", annotation_clip=False)  # fmt: skip
+    ax.grid(axis="x", visible=False)
+    ax.set_ylim(bottom=0)
+    ax.set_ylabel(ylabel)
+    ax.set_title(title, loc="left")
+    _comma(ax, "y")
+    return fig
+
+
+def plot_c4(pairs: Mapping[str, Mapping[str, list]], title: str, baseline: str = "S4") -> Any:
+    """Mỗi kịch bản một ô: trục hoành GPU-giờ (% S4), trục tung SLO attainment (%); điểm lớn = trung bình,
+    chấm nhạt = từng lượt, nhãn chữ cạnh mỗi điểm."""
+    scen = _ordered(pairs, SCENARIO_ORDER)
+    fig, axes = plt.subplots(1, len(scen), sharey=True, figsize=(2.9 * len(scen) + 0.8, 3.5),
+                             layout="constrained",
+                             squeeze=False)  # fmt: skip
+    seen: dict[str, int] = {}
+    for ax, s in zip(axes[0], scen, strict=True):
+        for c in _ordered(pairs[s], CONFIG_ORDER):
+            pts, (color, marker) = pairs[s][c], style(c)
+            mx, my = m.mean(p[0] for p in pts), m.mean(p[1] for p in pts)
+            ax.scatter([p[0] for p in pts], [p[1] for p in pts], s=16, marker=marker, color=color, alpha=0.4,
+                       lw=0, zorder=2)  # fmt: skip
+            ax.scatter([mx], [my], s=64, marker=marker, color=color, edgecolor="white", lw=1.2, zorder=3)
+            dx, dy = LABEL_OFFSET.get(c, (7, 5))
+            ax.annotate(f"{c} (n={len(pts)})", (mx, my), xytext=(dx, dy), textcoords="offset points",
+                        color=INK, ha="left" if dx > 0 else "right")  # fmt: skip
+            seen.setdefault(c, len(pts))
+        ax.axhline(m.ATTAINMENT * 100, color=INK_2, lw=1, ls="--", zorder=1)
+        ax.axvline(100, color=INK_3, lw=0.8, zorder=1)
+        ax.set_title(s, loc="left")
+        ax.set_xlabel(f"GPU-giờ (% so với {baseline})")
+        # Chừa 25 % bên phải cho nhãn của điểm xa nhất; luôn thấy mốc 100 % (bằng baseline)
+        xmax = max([100.0, *(p[0] for pts in pairs[s].values() for p in pts)])
+        ax.set_xlim(0, xmax * 1.25)
+        _comma(ax)
+    # Trục tung tới 100 % và cận dưới không cao hơn 90 %: để tự co thì chênh 0,3 điểm phần trăm trông như rất
+    # lớn, trong khi ngưỡng thực tiễn là 5 điểm (Thông số §6)
+    ys = [p[1] for c in pairs.values() for pts in c.values() for p in pts]
+    axes[0][0].set_ylim(min([90.0, *ys]) - 2, 101)
+    axes[0][0].set_ylabel("SLO attainment (%)")
+    handles = [
+        Line2D([], [], ls="", marker=style(c)[1], color=style(c)[0], markersize=7, label=c)
+        for c in _ordered(seen, CONFIG_ORDER)
+    ]
+    handles.append(Line2D([], [], color=INK_2, lw=1, ls="--", label=f"mục tiêu N1 {m.ATTAINMENT * 100:g} %"))
+    fig.legend(handles=handles, loc="outside lower center", ncols=len(handles))
+    fig.suptitle(title)
+    return fig
+
+
+def _save(fig: Any, base: Path, formats: Sequence[str]) -> list[Path]:
+    out = []
+    base.parent.mkdir(parents=True, exist_ok=True)
+    for f in formats:
+        p = base.with_suffix(f".{f}")
+        # Bỏ ngày giờ khỏi metadata để chạy lại trên cùng dữ liệu ra đúng cùng file (dễ so trong Git)
+        meta = {"Date": None} if f == "svg" else {"Software": None} if f == "png" else {}
+        fig.savefig(p, dpi=200, metadata=meta)
+        out.append(p)
+    plt.close(fig)
+    return out
+
+
+def draw_all(
+    rows: Sequence[Mapping[str, Any]],
+    out: Path,
+    baseline: str,
+    formats: Sequence[str],
+    c1_configs: Sequence[str] = C1_CONFIGS,
+) -> list[str]:
+    """Vẽ mọi hình có đủ dữ liệu vào `out`, mỗi môi trường một bộ. Trả các dòng báo cáo (file đã ghi, hình bỏ
+    qua và lý do)."""
+    _setup()
+    log: list[str] = []
+    groups, warn = c1_groups(rows, c1_configs)
+    log += warn
+    for (env, rep), runs in sorted(groups.items(), key=lambda kv: tuple(map(str, kv[0]))):
+        series = {c: kb2_series(Path(r["path"])) for c, r in runs.items()}
+        title = f"C1 – KB2, lượt {rep} ({env}), cùng lịch gửi cho mọi cấu hình"
+        log += [f"ghi {p}" for p in _save(plot_c1(series, title), out / f"c1-kb2-{env}-r{rep}", formats)]
+
+    for env in sorted({str(r["env"]) for r in rows if r.get("counted")}):
+        er = [r for r in rows if str(r["env"]) == env]
+        slo = cell_values(er, "slo_attainment", 100)
+        if slo:
+            fig = plot_bars(slo, "SLO attainment (%)", [(m.ATTAINMENT * 100, "N1 95 %")],
+                            f"C2 – SLO attainment ({env})")  # fmt: skip
+            log += [f"ghi {p}" for p in _save(fig, out / f"c2-slo-{env}", formats)]
+        gpu = cell_values(er, "gpu_vs_baseline", 100)
+        if not gpu:
+            log.append(
+                f"C3, C4 ({env}): bỏ qua, không có lượt {baseline} counted hoặc thiếu pods_timeline.json"
+            )
+            continue
+        fig = plot_bars(gpu, f"GPU-giờ (% so với {baseline})", [(100, baseline), (50, "N3 50 %")],
+                        f"C3 – GPU-giờ so với {baseline} ({env})")  # fmt: skip
+        log += [f"ghi {p}" for p in _save(fig, out / f"c3-gpu-{env}", formats)]
+        pairs = paired_values(er, "gpu_vs_baseline", "slo_attainment")
+        fig = plot_c4(pairs, f"C4 – Trade-off GPU-giờ và SLO ({env})", baseline)
+        log += [f"ghi {p}" for p in _save(fig, out / f"c4-tradeoff-{env}", formats)]
+    return log
+
+
+def main(argv: list[str] | None = None) -> int:
+    p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    p.add_argument("sessions", type=Path, nargs="+", help="thư mục phiên runs/<phiên> (một hoặc nhiều)")
+    p.add_argument("--out", type=Path, help="thư mục ghi hình (mặc định: <phiên đầu tiên>/figures)")
+    p.add_argument("--baseline", default="S4", help="cấu hình tĩnh cấp theo đỉnh để so GPU-giờ (mặc định S4)")
+    p.add_argument("--formats", default="svg,png", help="định dạng, cách nhau dấu phẩy (mặc định svg,png)")
+    p.add_argument("--c1-configs", default=",".join(C1_CONFIGS), help="cấu hình vẽ ở C1 (mặc định S4,A1,A2)")
+    a = p.parse_args(argv)
+
+    res = bt.build(a.sessions, a.baseline)
+    for s in res["skipped"]:
+        print(f"bỏ qua {s}")
+    if not any(r["counted"] for r in res["runs"]):
+        print("không có lần thử hợp lệ nào để vẽ")
+        return 1
+    formats = [f.strip() for f in a.formats.split(",") if f.strip()]
+    c1 = [c.strip() for c in a.c1_configs.split(",") if c.strip()]
+    for line in draw_all(res["runs"], a.out or a.sessions[0] / "figures", a.baseline, formats, c1):
+        print(line)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

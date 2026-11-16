@@ -172,11 +172,12 @@ def bad_ratio(reqs: Sequence[Request], start: float, end: float) -> float | None
 # ── N2b: thời gian hồi phục SLO ───────────────────────────────────────────────────────────────────────
 
 
-def _sliding_ttft_p95(reqs: Sequence[Request], grid: Sequence[float], window_s: float) -> list[float | None]:
+def sliding_ttft_p95(reqs: Sequence[Request], grid: Sequence[float], window_s: float) -> list[float | None]:
     """TTFT p95 của các request có lịch gửi trong (τ − window_s, τ], tại mỗi τ của `grid`.
 
     Request lỗi tính như TTFT vô hạn: người dùng không nhận được câu trả lời, và nếu bỏ đi thì một lượt quá
     tải nặng (nhiều timeout) lại trông như đã hồi phục. Cửa sổ không có request nào → None.
+    Dùng cho N2b (slo_recovery_s) và cho đường TTFT p95 của biểu đồ C1 (charts.py), để hình và số khớp nhau.
     """
     rs = sorted(reqs, key=lambda r: r.t_sched)
     ts = [r.t_sched for r in rs]
@@ -218,7 +219,7 @@ def slo_recovery_s(
     """
     n = int((t_end - t_rise) // step_s) + 1
     grid = [t_rise + i * step_s for i in range(n)]
-    p95 = _sliding_ttft_p95(reqs, grid, window_s)
+    p95 = sliding_ttft_p95(reqs, grid, window_s)
     ok = [v is None or v <= TTFT_SLO_S for v in p95]
     need_bad = int(math.ceil(window_s / step_s))  # số điểm vi phạm (cộng dồn) để coi là đã vi phạm thật
     n_bad, first_bad = 0, None
