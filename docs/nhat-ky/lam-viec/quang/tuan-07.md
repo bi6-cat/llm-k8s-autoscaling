@@ -172,3 +172,16 @@
 - **Decision:** nới dung sai lên `START_MARGIN_S / 2` (0,5 s). Phép so này tồn tại để bắt lỗi "một tiến trình tự lấy mốc t0 riêng", khi đó lệch cỡ 1 s, nên 0,5 s vẫn bắt được. Độ đúng lịch (< 50 ms, Môi trường §17) vẫn được kiểm ở dòng `lags` bằng `t_send`. Không chọn cách chạy lại CI cho xanh: test sẽ đỏ lại ngẫu nhiên.
 - **Results:** `uv run --project loadgen pytest loadgen` 3 lần liên tiếp: 55 passed. `ruff check`, `ruff format --check` sạch.
 - **Links:** `loadgen/tests/test_workers.py`; CI run 43870125040.
+
+## 2026-11-16 – Review PR #39 của Trình (A2 và observability ở nhà); sửa `make home-eval-end`
+
+- **Task:** TR1 (review), chung · **Environment:** home (chỉ đọc và dry-run, không đổi cluster)
+- **Done:**
+  1. Checkout nhánh PR ở một worktree riêng. `pytest experiments` đạt; `kubectl kustomize envs/home/autoscaling` ra min 1, max 2, fallback 2, threshold 23; `kubectl apply --dry-run=server` lên cluster nhà cho A2 và `common/observability` đều được chấp nhận; `kubectl diff` cho `root-app.yaml`: không lệch.
+  2. Merge `main` vào nhánh của Trình (xung đột dòng `.PHONY` với PR #44, giữ cả hai) và đẩy một commit sửa `home-eval-end`.
+  3. Cài yq bản mikefarah v4.54.1 vào `~/.local/bin` trên PC nhà, kiểm sha256 giống CI.
+- **Incidents:** `make home-eval-end` gọi `yq -o json -I0`, cú pháp của yq bản mikefarah. PC nhà có `yq 3.4.3` bản Python: lệnh in ra rỗng. Target cũ khi đó vẫn xoá ScaledObject khác A2, rồi gửi patch JSON hỏng, nên auto-sync của `autoscaling` không được bật lại sau phiên. Sửa: đọc khối `automated` trước, kiểm là JSON object, sai thì dừng khi chưa đổi gì. Thử cả hai nhánh bằng `kubectl` giả (in lại tham số): yq sai → rc 2, không gọi `kubectl`; yq đúng → gọi đúng hai lệnh `get scaledobject` và `patch`.
+- **Decision:** sửa thẳng trên nhánh của Trình thay vì chỉ nhận xét, theo yêu cầu của Quang. Nhật ký này nằm ở PR #45 chứ không ở PR #39, để hai PR không cùng thêm vào cuối một file.
+- **Results:** sau merge: `experiments` 157, `loadgen` 55, `analysis` 85 passed.
+- **Deviations:** chưa kiểm lại `helm template` với bốn lớp values của nhà. Điểm còn mở: RAM PC nhà khi fallback lên 2 pod (1 pod 3.644 Mi, còn khả dụng khoảng 4 GB, swap đang dùng 2,5 GB).
+- **Links:** PR #39, commit `5014d84` (merge), `e83a505` (sửa `home-eval-end`); nhận xét review trên PR #39.
