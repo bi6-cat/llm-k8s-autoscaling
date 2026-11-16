@@ -290,32 +290,51 @@ def analyze_attempt(d: Path, clock_rate: float = 1.0) -> list[dict[str, Any]]:
     ]
 
 
-def from_capacity(path: Path, window_s: float) -> list[dict[str, Any]]:
-    """capacity-*.json của ĐG1 → mỗi mức λ một dòng, từ bản tóm tắt (không có dữ liệu thô).
+def capacity_level(c: dict[str, Any], window_s: float) -> dict[str, Any]:
+    """Phần chung của một mức λ trong capacity-*.json mà LT5 và LT6 (lt6_gpu_util) cùng đọc.
 
     Từ 16/11, capacity.py ghi sẵn `lambda_real_rps` (request thành công gửi trong cửa sổ ÷ độ dài cửa sổ)
     và `window_s`; file cũ hơn thì tính λ_thực = n_measured ÷ window_s, với window_s lấy từ tham số (ĐG1-mini
     ở nhà: 120 s; ĐG1 trên V2: 240 s). capacity.py đếm request có t_sched trong cửa sổ đo, gần trùng lúc gửi
-    vì máy tạo tải chạy vòng hở (open loop). B_server là trung bình các mẫu running + waiting trong cửa
+    vì máy tạo tải chạy vòng hở (open loop). `queued`: waiting TB ≥ QUEUE_MIN, hoặc không có số liệu
+    waiting (thiếu trường, hay NaN khi chuỗi rỗng): khi đó không biết hệ đã xếp hàng chưa, nên các công
+    thức chỉ đúng khi chưa xếp hàng (M/G/∞) không được tính.
+    """
+    win = float(c.get("window_s") or window_s)
+    w = c.get("waiting_mean")
+    return {
+        "run_id": c.get("run_id") or f"lambda-{c['lambda_rps']:g}",
+        "valid": bool(c.get("valid", c.get("loadgen_valid", True))),
+        "window_s": win,
+        "lambda_real": (
+            c["lambda_real_rps"] if c.get("lambda_real_rps") is not None else c["n_measured"] / win
+        ),
+        "queued": w is None or math.isnan(w) or w >= QUEUE_MIN,
+    }
+
+
+def from_capacity(path: Path, window_s: float) -> list[dict[str, Any]]:
+    """capacity-*.json của ĐG1 → mỗi mức λ một dòng, từ bản tóm tắt (không có dữ liệu thô).
+
+    λ_thực và độ dài cửa sổ: xem capacity_level. B_server là trung bình các mẫu running + waiting trong cửa
     sổ, B_client là L_client (request lỗi tính tới hết cửa sổ). File không có số mẫu thật, nên se_sampling
     giả định window_s ÷ 5 mẫu.
     """
     d = _json(path)
     rows = []
     for c in d.get("curves", []):
-        win = float(c.get("window_s") or window_s)
-        n_samples = int(win // STEP_S)
-        lam = c["lambda_real_rps"] if c.get("lambda_real_rps") is not None else c["n_measured"] / win
+        lv = capacity_level(c, window_s)
+        n_samples = int(lv["window_s"] // STEP_S)
+        lam = lv["lambda_real"]
         pred = lam * c["e2e_mean_s"]
-        queued = c.get("waiting_mean", 0.0) >= QUEUE_MIN
-        se = NAN if queued else occupancy_se(lam, c["e2e_mean_s"], n_samples)
+        se = NAN if lv["queued"] else occupancy_se(lam, c["e2e_mean_s"], n_samples)
         rows.append(
             {
                 "source": path.name,
                 "env": d.get("env"),
-                "run_id": c.get("run_id") or f"lambda-{c['lambda_rps']:g}",
+                "run_id": lv["run_id"],
                 "attempt": NAN,
-                "valid": bool(c.get("valid", c.get("loadgen_valid", True))),
+                "valid": lv["valid"],
                 "window": "measure",
                 "start_s": NAN,
                 "end_s": NAN,

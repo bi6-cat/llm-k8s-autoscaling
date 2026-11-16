@@ -113,6 +113,16 @@ def test_parse_source() -> None:
     assert lt.parse_source("runs/a@b") == (Path("runs/a@b"), 1.0)
 
 
+def test_capacity_level_treats_missing_waiting_as_queued() -> None:
+    base = {"lambda_rps": 2.0, "n_measured": 240}
+    assert lt.capacity_level({**base, "waiting_mean": 0.0}, 120.0)["queued"] is False
+    assert lt.capacity_level({**base, "waiting_mean": 1.0}, 120.0)["queued"] is True
+    assert lt.capacity_level(base, 120.0)["queued"] is True  # file cũ không có trường
+    assert lt.capacity_level({**base, "waiting_mean": float("nan")}, 120.0)["queued"] is True
+    lv = lt.capacity_level({**base, "loadgen_valid": False}, 120.0)
+    assert (lv["run_id"], lv["valid"], lv["lambda_real"]) == ("lambda-2", False, 2.0)
+
+
 def test_from_capacity_uses_real_arrival_rate(tmp_path: Path) -> None:
     p = tmp_path / "capacity.json"
     curves = [

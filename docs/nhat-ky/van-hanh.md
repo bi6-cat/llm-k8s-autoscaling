@@ -136,7 +136,7 @@ Theo mẫu ở [Môi trường §19](../chi-tiet/05-moi-truong-danh-gia.md#19-ki
 
 ## Kiểm chứng lý thuyết LT5–LT8 (Trình, TR8)
 
-Cùng mẫu với LT1–LT4. Có LT5, LT7; LT6, LT8 chưa làm.
+Cùng mẫu với LT1–LT4. Có LT5, LT6, LT7; LT8 chưa làm.
 
 ### LT5 – Định luật Little (phân tích 16/11/2026 trên dữ liệu đã đo)
 
@@ -186,6 +186,58 @@ Cùng mẫu với LT1–LT4. Có LT5, LT7; LT6, LT8 chưa làm.
   - Ngưỡng 15 % là chặt khi B nhỏ: với 24 mẫu, SE ≈ 1 ÷ √(24 B), tức 14 % ở B = 2. ĐG1 trên V2 đo 4 phút mỗi mức (48 mẫu) thì SE còn 10 % ở B = 2.
   - Trên simulator trong WSL2, mọi phép so mốc client với Prometheus hoặc mốc pod đều lệch (k − 1) × t. Ví dụ, thời điểm tải tăng của KB2 (t = 240 s) thật ra sớm hơn khoảng 8 s so với `t0_unix + 240`, nên N2a do `build_tables` tính trên simulator ngắn đi khoảng 8 s. Cuối lượt 24 phút, lệch tới khoảng 45 s. V2 chạy trên Linux thật nên không bị (sau V2 kiểm lại: cận k của runner phải chứa 1). Cách sửa gốc là để loadgen ghi thêm giờ thực lúc kết thúc; chưa làm.
 - **Còn thiếu:** chưa có V2. Hình L_server theo λ\_thực × W (đường y = x, dải ±15 %) chưa vẽ.
+
+### LT6 – GPU utilization bão hoà (phân tích 16/11/2026 trên dữ liệu đã đo)
+
+- **Lý thuyết** ([Kiến thức nền §4.4](../chi-tiet/02-kien-thuc-nen.md#44-vì-sao-gpu_util-bão-hoà)): GPU util là tỷ lệ thời gian có ít nhất một kernel chạy, không phải phần năng lực GPU đang dùng. vLLM chạy kernel liên tục khi còn ít nhất một request, nên util ≈ P(N ≥ 1), với N là số request trong hệ thống. Khi chưa xếp hàng, mỗi request được phục vụ gần như độc lập với số request khác (LT3), nên hệ gần với hàng đợi M/G/∞: N có phân phối Poisson với trung bình L (LT5), và util ≈ 1 − e^(−L).
+- **Dự đoán:**
+  - Định tính (Môi trường §19, ghi trước khi đo): util ≈ 100 % ngay từ tải vừa, trong khi `waiting` chênh nhau nhiều lần giữa tải vừa và quá tải.
+  - Định lượng: util = 1 − e^(−L), tức 86 % ở L = 2 và 99 % ở L = 4,6. Như vậy util bão hoà khi L mới bằng khoảng 1/6 B\* (B\* = 27–28 ở cả hai model). Công thức này Trình thêm lúc phân tích, sau khi đã thấy bản tóm tắt "89 % ở λ = 1, 100 % từ λ = 2" ở LT3. Nó không có tham số tự do, nên không chỉnh được cho khớp số đo.
+  - Tiêu chí "phân biệt được": có một ngưỡng tách được nhóm tải vừa (0,3 C ≤ λ ≤ 0,7 C) khỏi nhóm quá tải (λ > C, SLO không đạt), tức max(tín hiệu ở tải vừa) < min(tín hiệu ở quá tải). Kiểm cả bốn tín hiệu của Kiến trúc §10: A1 util, A2 running + waiting, A3 KV-cache, A4 waiting.
+- **Cách đo:** `analysis/lt6_gpu_util.py`, mỗi mức λ một dòng ở `analysis/figures/lt6-gpu-util.csv`. Lệnh: `uv run --project analysis python -m analysis.lt6_gpu_util envs/home/experiments/capacity-1.5b.json envs/home/experiments/capacity.json --out analysis/figures/lt6-gpu-util.csv`.
+  - Dữ liệu là ĐG1-mini ở nhà (RTX 5060, 1 replica, các bậc λ, mỗi bậc đo 120 s). util và `waiting` là trung bình của 24 mẫu Prometheus cách nhau 5 s, do runner tính sẵn (`nvidia_smi_utilization_gpu_ratio`, `vllm:num_requests_waiting`).
+  - L lấy B_client: trung bình theo thời gian phía client, không có sai số lấy mẫu.
+  - z = (đo − dự đoán) ÷ SE, với SE = √(p(1 − p) ÷ 24) nếu các mẫu độc lập. Thực tế các mẫu có tương quan, vì chu kỳ bận trung bình (e^L − 1) ÷ λ ở 1,5B λ = 1 là 7,5 s, dài hơn bước 5 s, nên SE thật có thể lớn hơn.
+- **Số đo, util so với mô hình** (10 mức chưa xếp hàng):
+
+  | Model | λ ÷ C | L | util đo | 1 − e^(−L) | z |
+  |---|---|---|---|---|---|
+  | 1,5B | 0,17 | 2,0 | 0,895 | 0,865 | +0,4 |
+  | 1,5B | 0,33 | 5,3 | 1,000 | 0,995 | +0,3 |
+  | 0,5B | 0,16 | 1,9 | 0,780 | 0,844 | −0,9 |
+  | 0,5B | 0,32 | 4,1 | 0,958 | 0,983 | −0,9 |
+  | 0,5B | 0,48 | 6,1 | 1,000 | 0,998 | +0,2 |
+  | 5 mức còn lại | 0,50–0,83 | 8,7–17,8 | 1,000 | ≥ 0,9998 | |
+
+- **Số đo, tách tải vừa khỏi quá tải** (khoảng hở = min(quá tải) ÷ max(vừa); lớn hơn 1 thì tách được):
+
+  | Tín hiệu (cấu hình) | 1,5B vừa (λ 2–4) | 1,5B quá tải (λ 7–8) | Khoảng hở | 0,5B vừa (λ 4–8) | 0,5B quá tải (λ 13–14) | Khoảng hở |
+  |---|---|---|---|---|---|---|
+  | GPU util (A1) | 1,000 | 1,000 | 1,00: **không tách được** | 0,958–1,000 | 0,9996–1,000 | 0,9996: **không tách được** |
+  | running + waiting (A2) | 5,3–13,7 | 53,7–124 | 3,9× | 4,3–8,8 | 68–182 | 7,7× |
+  | KV-cache (A3) | 0,039–0,099 | 0,228–0,231 | 2,3× | 0,022–0,045 | 0,084–0,085 | 1,9× |
+  | waiting (A4) | 0 | 21,8–92,1 | ∞ | 0–0,08 | 52–166 | 630× |
+
+  Bỏ hai mức mà máy tạo tải đánh dấu không hợp lệ (1,5B λ = 6 và 8; script in thêm dòng "chỉ mức hợp lệ") thì cả bốn kết luận và bốn khoảng hở không đổi.
+- **Số đo, quyết định đầu tiên khi đang có 1 replica** (threshold ở nhà: A1 70 %; A2 21 với 1,5B, 23 với 0,5B):
+  - A1 đòi 2 replica ở **cả 18 mức**, từ 0,16 C tới quá tải, vì util ≥ 0,78, tức vượt 77 % = 70 % × 1,1. Ở nhà, exporter chỉ thấy 1 GPU vật lý, nên A1 không lên quá 2.
+  - A2 giữ 1 replica khi λ < C, đòi 2 ở λ = C, và 3, 6 ở 1,5B λ = 7, 8; 3, 6, 8 ở 0,5B λ = 13; 13,5; 14.
+- **So với dự đoán:**
+  - Định tính đúng. util = 1,000 từ 0,33 C (1,5B) và 0,48 C (0,5B) cho tới quá tải, trong khi `waiting` tăng từ 0 lên 92 và 166. Ở cả hai model, util không tách được tải vừa khỏi quá tải; ở 0,5B, mức quá tải λ = 14 còn có util thấp hơn mức vừa (0,9996 so với 1,000). Ba tín hiệu còn lại đều tách được.
+  - Định lượng: ở 5 mức có dự đoán < 0,999, 1 − e^(−L) khớp util đo với |z| < 1 (lớn nhất 0,91). Ở 5 mức chưa xếp hàng còn lại, dự đoán ≥ 0,9998 và số đo là 1,000. Hai mức có |z| lớn nhất cùng thuộc 0,5B và cùng âm (z = −0,86 và −0,91, lệch −0,064 và −0,024), nhưng mỗi mức chưa tới 1 SE, nên chưa kết luận được có lệch hệ thống.
+- **Giải thích:**
+  1. **Vì sao bão hoà sớm:** P(N = 0) = e^(−L) giảm theo hàm mũ. Ở 0,33 C (1,5B), L = 5,3, nên GPU chỉ rảnh khoảng 0,5 % thời gian, dù batch trung bình mới bằng 1/5 B\*. util đo "có việc hay không", không đo "bao nhiêu việc".
+  2. **KV-cache tách được nhưng không theo được quá tải:** khoảng hở chỉ 1,9–2,3×, và KV đứng yên khi quá tải nặng thêm (0,228 → 0,231 trong khi `waiting` tăng 4×; 0,5B: 0,084 → 0,085). Lý do: vLLM chỉ cấp KV cho request đang chạy, mà số request chạy bị `max-num-seqs` chặn; request trong hàng đợi chưa chiếm KV (LT3: điểm gãy ở nhà do `max-num-seqs`, không do bộ nhớ). A3 vì vậy không biết quá tải nặng tới đâu.
+  3. **Hệ quả của mô hình cho A1 (dự đoán, chưa đo):**
+     - HPA (threshold 70 %, tolerance 10 %) giữ nguyên số replica khi util mỗi pod nằm trong [63 %; 77 %], tức L mỗi pod trong [0,99; 1,47]. A2 giữ nguyên ở L mỗi pod trong [0,9; 1,1] × threshold, tức 18,9–23,1 với threshold 21.
+     - Nếu mỗi pod chạy trên một GPU và Service chia request ngẫu nhiên, mỗi pod là một M/G/∞ với L ÷ N. Khi đó A1 dừng ở L mỗi pod 1,25–1,47, còn A2 dừng ở L mỗi pod cỡ threshold. Ở tổng L = 30–100, nếu không kẹp max, A1 cần 23–71 replica so với 2–5 của A2 (gấp 11–14 lần).
+     - Với cùng tải này trên node 4 GPU: A1 lên 3 replica ở 0,32 C (0,5B), lên đủ 4 từ 0,33 C (1,5B) và 0,48 C (0,5B). A2 ở 1 replica cho tới 0,83 C (cột `a1_replicas`, `a2_replicas`).
+     - Với N = 4, A1 lên đủ 4 replica khi tổng L > 4,4 (= 3 × 1,47). Nó chỉ bớt pod khi ⌈4 × util ÷ 0,7⌉ ≤ 3, tức util mỗi pod ≤ 52,5 %, hay tổng L ≤ 3,0.
+- **Hệ quả:**
+  - Con số này lượng hoá dự đoán "A1 gần như Static-4" của [Kiến trúc §10.1](../chi-tiet/03-kien-truc-autoscaling.md#101-a1-gpu-utilization). Nó cũng khớp với V1 (08/11), khi A1 lên 2 replica lúc tải mới khoảng 0,5 C ([log phiên của Quang §13](lam-viec/quang/phien-2026-11-08-a4000.md#13-v1-runner-chạy-2-lượt-đg2-có-keda)).
+  - Dự đoán kiểm được ở V2: A1 × KB1 (0,5 C) giữ max replica suốt pha `steady`, nên GPU-giờ của A1 gần bằng S4, nếu L ở 0,5 C trên V2 lớn hơn 4,4 (ở nhà L ở 0,5 C là 8,7, với B\* = 26,8; ở V1, B\* = 52,5).
+- **Lệch so với thiết kế:** Môi trường §19 ghi "một lượt tải tăng dần (0,3 → 1,5 C) ở nhà, đọc từ Prometheus". Trình chưa có quyền vào cluster nhà, nên dùng các bậc λ của ĐG1-mini đã có (0,16–1,33 C với 1,5B, 0,16–1,12 C với 0,5B, mỗi bậc 120 s) và các trung bình mà runner đã tính từ Prometheus. Dữ liệu này đủ cho tiêu chí, vì mỗi nhóm có ít nhất 2 mức đo ở mỗi model.
+- **Còn thiếu:** phần V2 từ lượt A1: so tổng util theo node với số pod đang có request, trên dữ liệu thô (PR sau). Hình util và L theo λ ÷ C chưa vẽ.
 
 ### LT7 – Thuật toán HPA và trễ phản ứng (đo 16/11/2026 trên simulator)
 
