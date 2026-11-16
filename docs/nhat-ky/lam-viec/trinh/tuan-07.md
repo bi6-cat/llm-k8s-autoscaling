@@ -173,6 +173,15 @@
 - **Links:** nhánh `feat/tr8-lt6-gpu-util`; `analysis/lt6_gpu_util.py`, `analysis/tests/test_lt6_gpu_util.py`, `analysis/figures/lt6-gpu-util.csv`, `analysis/lt5_little.py` (`capacity_level`), `analysis/lt7_hpa.py` (`hpa_desired`), `docs/nhat-ky/van-hanh.md` (LT6), Kiến trúc §10.1.
 - **Thesis:** §5, kiểm chứng lý thuyết LT6: bảng tách tải vừa và quá tải cho 4 tín hiệu, bảng util so với 1 − e^(−L). §5 ĐG2: lập luận "A1 ≈ Static-N" kèm điều kiện L > 1,47 × (N − 1). Hình nên có: util và L_server (trục log) theo λ ÷ C cho hai model, đánh dấu C, thêm đường 1 − e^(−L). Chưa vẽ.
 
+## 2026-11-16 – TR8: merge PR #43 (LT6)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  - CI của PR #43 xanh cả 6 job (`alerts`, `docs`, `manifests`, `python` 3.11 và 3.15, `yaml`). `mergeable` = MERGEABLE (CLEAN), 0 review, 0 bình luận. PR chỉ đổi `analysis/` và `docs/`, nên không đổi thứ gì Argo CD quản lý ở nhà.
+  - Trình merge bằng merge commit `1a5c9fd` và xoá nhánh `feat/tr8-lt6-gpu-util`.
+  - Gộp `origin/main` vào nhánh của PR #39 trước khi ghi mục này. Lần gộp này (và lần gộp sau #42) làm mất dòng trống trước hai mục LT5, LT6; Trình đã thêm lại.
+- **Links:** PR #43; mục LT6 ngay trên; `docs/nhat-ky/van-hanh.md` mục "Kiểm chứng lý thuyết LT5–LT8".
+
 ## 2026-11-16 – TR8: công cụ đo LT8 (burn rate), phiên đo trên simulator đang chạy
 
 - **Task:** TR8 (LT8) · **Environment:** sim (kind trong WSL2, máy Trình)
@@ -229,11 +238,3 @@
   - Hệ quả rút ra (tính từ công thức, chưa đo): với trễ cộng thêm khoảng 30 s, N7 chỉ chắc giữ được khi x ≳ 0,23.
 - **Links:** `docs/nhat-ky/van-hanh.md` (LT8), `docs/chi-tiet/06-ke-hoach-quan-ly.md`, `analysis/lt8_burn.py`, `experiments/ops/lt8_burn.py`.
 - **Thesis:** §5 LT8 (mục `van-hanh.md` là bản nháp trực tiếp).
-## 2026-11-16 – TR8: merge PR #43 (LT6)
-
-- **Task:** TR8 · **Environment:** none
-- **Done:**
-  - CI của PR #43 xanh cả 6 job (`alerts`, `docs`, `manifests`, `python` 3.11 và 3.15, `yaml`). `mergeable` = MERGEABLE (CLEAN), 0 review, 0 bình luận. PR chỉ đổi `analysis/` và `docs/`, nên không đổi thứ gì Argo CD quản lý ở nhà.
-  - Trình merge bằng merge commit `1a5c9fd` và xoá nhánh `feat/tr8-lt6-gpu-util`.
-  - Gộp `origin/main` vào nhánh của PR #39 trước khi ghi mục này. Lần gộp này (và lần gộp sau #42) làm mất dòng trống trước hai mục LT5, LT6; Trình đã thêm lại.
-- **Links:** PR #43; mục LT6 ngay trên; `docs/nhat-ky/van-hanh.md` mục "Kiểm chứng lý thuyết LT5–LT8".
