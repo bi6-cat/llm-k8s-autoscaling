@@ -33,7 +33,7 @@ YQ ?= yq
 AMTOOL ?= amtool
 
 # .PHONY: các target này không phải tên file, make luôn chạy chúng (kể cả khi có file trùng tên)
-.PHONY: help home-up alertmanager-secret sim-up sim-down sim-test-load sim-test sim-lt7 find rent attach probe bootstrap prefetch cloud-platform run backup backup-check ops-tests vh5 release lint alerts-test alerts-coverage alertmanager-check dashboards-check
+.PHONY: help home-up alertmanager-secret sim-up sim-down sim-test-load sim-test sim-lt7 sim-lt8 find rent attach probe bootstrap prefetch cloud-platform run backup backup-check ops-tests vh5 release lint alerts-test alerts-coverage alertmanager-check dashboards-check
 
 # In danh sách lệnh, chia nhóm theo môi trường. Hai loại dòng được in:
 #   `##@ <tiêu đề>`        = đầu một nhóm (in thành dòng tiêu đề);
@@ -119,6 +119,13 @@ sim-test: ## Chạy T1–T5 trên simulator, chấm đạt/trượt (T=t1|t2|t4|
 # LEVELS, REPS, DUR đặt trên dòng lệnh make thì được đưa vào môi trường của script.
 sim-lt7: ## LT7 trên simulator (LEVELS="5 15 25 35" REPS=3 DUR=60)
 	CTX=kind-$(KIND_CLUSTER) envs/sim/tests/lt7-hpa.sh
+
+# LT8 (TR8, Môi trường §19): LLMSLOBurnFast kêu sau bao lâu theo tỷ lệ request xấu x, và có im lặng khi
+# x ≤ 20 % không. Bộ đo đổi TTFT của simulator lúc đang chạy (POST /admin/config) và giữ KEDA ở 1 replica.
+# Dữ liệu thô vào runs/sim/lt8-<giờ>/ (3 mức × 3 lượt, khoảng 2 giờ), rồi tính bảng bằng analysis/lt8_burn.py.
+sim-lt8: ## LT8 trên simulator (LEVELS="0.1 0.3 0.6" REPS=3)
+	uv run --project experiments python -m experiments.ops.lt8_burn --matrix envs/sim/experiments/matrix.yaml \
+	  --context kind-$(KIND_CLUSTER) $(if $(LEVELS),--levels $(LEVELS)) $(if $(REPS),--reps $(REPS))
 
 # ── Máy thuê trên Vast.ai ───────────────────────────────────────────────────────
 ##@ Cloud: thuê và dựng VM 4 × RTX A4000 trên Vast.ai (envs/cloud/README.md)

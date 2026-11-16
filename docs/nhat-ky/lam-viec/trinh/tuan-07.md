@@ -153,3 +153,26 @@
 - **Deviations:** Môi trường §19 ghi "một lượt tải tăng dần 0,3 → 1,5 C ở nhà, đọc Prometheus". Trình chưa có quyền vào cluster nhà, nên dùng các bậc λ của ĐG1-mini (0,16–1,33 C và 0,16–1,12 C, mỗi bậc 120 s), lấy trung bình mà runner đã tính. V1 (`runs/v1-a4000/`) không có trên máy Trình.
 - **Links:** nhánh `feat/tr8-lt6-gpu-util`; `analysis/lt6_gpu_util.py`, `analysis/tests/test_lt6_gpu_util.py`, `analysis/figures/lt6-gpu-util.csv`, `analysis/lt5_little.py` (`capacity_level`), `analysis/lt7_hpa.py` (`hpa_desired`), `docs/nhat-ky/van-hanh.md` (LT6), Kiến trúc §10.1.
 - **Thesis:** §5, kiểm chứng lý thuyết LT6: bảng tách tải vừa và quá tải cho 4 tín hiệu, bảng util so với 1 − e^(−L). §5 ĐG2: lập luận "A1 ≈ Static-N" kèm điều kiện L > 1,47 × (N − 1). Hình nên có: util và L_server (trục log) theo λ ÷ C cho hai model, đánh dấu C, thêm đường 1 − e^(−L). Chưa vẽ.
+
+## 2026-11-16 – TR8: công cụ đo LT8 (burn rate), phiên đo trên simulator đang chạy
+
+- **Task:** TR8 (LT8) · **Environment:** sim (kind trong WSL2, máy Trình)
+- **Done:**
+  1. Đọc Môi trường §19 (LT8), Kiến thức nền §5.2, Vận hành §3.3, Thông số §6, rule `slo.yaml` và `llm.yaml`; đối chiếu mã nguồn llm-d-inference-sim v0.12.0 (`pkg/simulator/latencies.go`, `pkg/common/utils.go`, `pkg/common/config.go`, endpoint `/admin/config` ở `pkg/communication/http.go`).
+  2. Viết bộ đo `experiments/ops/lt8_burn.py`: tạm dừng KEDA ở 1 replica, chạy loadgen thành Job trong cluster (CONST 2 req/s, `--max-tokens 16`), đổi TTFT của simulator lúc đang chạy qua `POST /admin/config` (API server proxy), ghi mốc bơm/gỡ và mẫu Prometheus thô (ALERTS, `llm:ttft_bad_ratio:rate1m/5m`, bộ đếm histogram TTFT). Lịch mỗi lượt: nền 330 s → bơm 360 s → nền 330 s … → nền 120 s; 3 mức x = 0,1/0,3/0,6, xoay thứ tự theo lượt. Thêm `make sim-lt8`.
+  3. Viết `analysis/lt8_burn.py` (dự đoán, so số đo, cột N7 dùng chung `metrics.slo_violation_start` và `metrics.classify_alerts`) cùng unit test; test dựng lượt tổng hợp mô phỏng scrape 5 s, tính rule 15 s, `for: 1m`.
+  4. Lượt thử ngắn (x = 0,6, nền 60 s): chạy hết, dữ liệu đủ.
+  5. Hai lần `/code-review high`; đã sửa các lỗi xác nhận (xem Incidents), còn 3 điểm nhỏ của lần 2 chưa sửa (STATE).
+  6. Phiên đo thật 3 mức × 3 lượt bắt đầu 13:11 UTC (khoảng 2 giờ), chạy bằng bản bộ đo TRƯỚC khi sửa theo review lần 2. Dừng phiên làm việc vì sắp hết quota; phiên đo vẫn chạy nền.
+- **Decision:** (D64) tạo tỷ lệ xấu x bằng cách đổi TTFT của simulator lúc chạy: TTFT ~ N(μ, σ = 0,3 μ) (mức σ lớn nhất simulator nhận), μ chọn để P(TTFT > 2,5 s) = x: x = 0,1/0,3/0,6 ↔ μ = 1806/2160/2706 ms. Không sửa `patch-sim.yaml` vì T1–T5, LT7 và runner dùng chung. Bỏ phương án trộn prompt dài/ngắn với `--prefill-time-per-token` (phụ thuộc cách simulator đếm token, phải sửa loadgen). Giữ 1 replica vì LT8 kiểm cảnh báo, không kiểm scale (giống S1 của VH6). `requests.csv` được dời nguyên khối sang giờ thực (giữ TTFT theo đồng hồ simulator), không co theo k như LT5: co theo k = 1,024 thì ở x = 0,3 khoảng 3 % request đổi phía ngưỡng 2,5 s.
+- **Results:**
+  - Dự đoán (bước nhảy sau ≥ 5 phút nền sạch): điều kiện đúng sau θ·300/x (cửa sổ 5m là chặng chậm), firing sau đó 60 s: x = 0,3 → 260 s, x = 0,6 → 160 s, x = 0,1 → không kêu. Hết cảnh báo sau khi gỡ: 60·(1 − θ/x) = 20 s / 40 s (cửa sổ 1m quyết định). N7: từ lúc vi phạm (cửa sổ 1 phút theo log client) tới firing = θ·240/x + 60 s, luôn < 300 s khi x > θ nhưng tiến tới 300 s khi x → 0,2.
+  - Lượt thử (`runs/sim/lt8-20261116-130645`, chỉ 60 s nền nên không so được với dự đoán): μ = 2706 ms, σ = 811 ms; x đo 0,575 (client, n = 179) và 0,572 (server), dự đoán 0,600; điều kiện đúng +43 s, pending +49 s, firing +109 s (pending → firing đúng 60 s); điều kiện sai 44 s sau khi gỡ (dự đoán 40 s); k = 1,024.
+  - Phiên đo thật (`runs/sim/lt8-20261116-131116`): chưa có kết quả.
+- **Incidents:**
+  - Review 1: định nghĩa N7 tự viết lệch với `analysis/metrics.py` → dùng chung hàm của metrics; hai đợt pending cách 30 s bị gộp → ngưỡng tách đợt 22,5 s; `finally` có thể bỏ sót việc gỡ tạm dừng KEDA → mỗi bước một `try`; k đo bằng runner chỉ đúng khi chung kernel → đo k bằng `kubectl exec` trong pod loadgen; c0 có thể bị request muộn của lượt trước đẩy lên → chờ bộ đếm đứng yên; xoá Job khi dừng giữa chừng.
+  - Review 2: loadgen đếm `--duration` theo đồng hồ đơn điệu (nhanh k lần) nên dừng sớm total·(1 − 1/k) ≈ 50 s → nhân thời lượng 1,05. Pod bị thay không bị phát hiện → so UID pod. Phiên đang chạy dùng bản cũ: pha nền cuối thực còn khoảng 95 s, vẫn đủ cho lúc hết cảnh báo (≈ 65 s); analysis tự đánh dấu lần bơm có nền < 300 s.
+  - Test bắt lỗi: `classify_alerts` đọc `first` khi danh sách đợt rỗng → chỉ truyền khi có đợt.
+- **Deviations:** Môi trường §19 ghi "tăng độ trễ giả lập": làm đúng như vậy nhưng tăng cả độ phân tán (σ = 0,3 μ) để có tỷ lệ xấu x thay vì mọi request cùng xấu.
+- **Links:** nhánh `feat/tr8-lt8-burn-rate` (commit cục bộ, chưa push); `experiments/ops/lt8_burn.py`, `analysis/lt8_burn.py`, test tương ứng, `Makefile`, `envs/sim/README.md`.
+- **Thesis:** §5 LT8: bảng x dự đoán/đo, mốc điều kiện/firing/hết so với công thức; hình r_1m, r_5m theo thời gian quanh lúc bơm kèm ngưỡng 0,2 và mốc pending/firing (chưa vẽ). Nhận xét: mức 5 phút của N7 chỉ vừa khít cửa sổ 5m.
