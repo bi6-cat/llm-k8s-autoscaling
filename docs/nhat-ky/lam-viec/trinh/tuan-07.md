@@ -124,3 +124,49 @@
 - **Task:** TR8 · **Environment:** none
 - **Done:** CI của PR #42 xanh cả 6 job (`alerts`, `docs`, `manifests`, `python` 3.11 và 3.15, `yaml`); `mergeable` = MERGEABLE, 0 review, 0 bình luận; PR không đụng manifest của cluster nhà (điều kiện merge 4). Trình merge bằng merge commit `5918689`, xoá nhánh `feat/tr8-lt5-little`. Mục nhật ký này được đẩy lên nhánh của PR #39 sau khi gộp `origin/main`, như lần merge #41.
 - **Links:** PR #42; mục LT5 ngay trên; `docs/nhat-ky/van-hanh.md` mục "Kiểm chứng lý thuyết LT5–LT8".
+## 2026-11-16 – TR8: LT6 (GPU utilization bão hoà) trên dữ liệu ĐG1-mini ở nhà
+
+- **Task:** TR8 · **Environment:** none (phân tích dữ liệu nhà đã đo 05–06/11)
+- **Done:**
+  1. Đọc Môi trường §19 (LT6), Kiến thức nền §4.3–§4.4, Kiến trúc §10.1, `common/autoscaling/eval/A1.yaml`, cách `capacity.py` tính `gpu_util` (giá trị lớn nhất mỗi lần scrape, trung bình 24 mẫu).
+  2. Viết `analysis/lt6_gpu_util.py`. Script đọc `capacity*.json` và tính:
+     - util_pred = 1 − e^(−L) theo M/G/∞, với L = B_client, cùng z;
+     - nhóm tải vừa (0,3–0,7 C) và quá tải (> C, SLO < 95 %), rồi phép kiểm "tách được bằng một ngưỡng" cho 4 tín hiệu A1–A4;
+     - quyết định đầu tiên của A1, A2 khi đang có 1 replica (dùng `predict_replicas` của LT7);
+     - số replica A1, A2 leo tới nếu chạy cùng tải trên node N GPU (`a1_replicas`).
+     Thêm 18 test (`analysis/tests/test_lt6_gpu_util.py`), cùng 1 test cho `capacity_level` (LT5) và 1 test cho `hpa_desired` (LT7).
+  3. Chạy trên `capacity-1.5b.json` và `capacity.json`, ghi `analysis/figures/lt6-gpu-util.csv`.
+  4. Ghi kết quả vào `docs/nhat-ky/van-hanh.md` (LT6); thêm dòng "Định lượng" ở Kiến trúc §10.1; ghi chú ở Kế hoạch (dòng LT1–LT8).
+  5. `/code-review high`: 10 điểm, sửa cả 10:
+     - phép kiểm "tách được" giờ in thêm kết quả khi chỉ lấy mức hợp lệ;
+     - bỏ NaN trước khi lấy min/max; 0 ÷ 0 cho NaN;
+     - thiếu `waiting` thì coi là đã xếp hàng; cửa sổ < 5 s thì SE để trống;
+     - `a2_replicas` dùng B_server, như A2 thật;
+     - ngưỡng A1 trong bảng tóm tắt lấy theo từng file;
+     - sửa câu "gấp 15–17 lần" (chỉ đúng khi L ≥ 1000) thành 11–14 lần ở L = 30–100;
+     - sửa câu "|z| ≤ 0,9" (có một z = −0,915) và câu xếp hạng độ lệch;
+     - bỏ code lặp: tách `capacity_level` (dùng chung LT5, LT6) và `hpa_desired` (dùng chung LT6, LT7).
+     Chạy lại LT5, LT7: CSV không đổi.
+- **Decision:** (D63)
+  - "Phân biệt được" nghĩa là tách được bằng một ngưỡng: max(tải vừa) < min(quá tải). Không dùng tỷ số trung bình, vì tỷ số không trả lời được câu hỏi có ngưỡng nào tách được hay không.
+  - Mô hình 1 − e^(−L) chỉ áp ở mức waiting < 1. L lấy B_client (không có sai số lấy mẫu). Phương án bỏ: dùng B_server (24 mẫu); dùng M/G/1-PS (util = λ/C), vì mô hình này ra 0,17 ở 1,5B λ = 1 trong khi đo được 0,895.
+  - `a1_replicas` lặp phép tính HPA với tổng = 100 × r × util(L ÷ r), và dừng ở lần đầu HPA không thêm pod. Không mô phỏng scale-down, vì cửa sổ ổn định 300 s giữ khuyến nghị lớn nhất.
+  - Phần đọc dữ liệu thô của runner cho V2 để PR sau, khi có dữ liệu thật. Lý do: `metrics.csv.gz` không giữ nhãn GPU, nên bây giờ chỉ kiểm được bằng mock.
+- **Results:**
+  - util = 1,000 từ 0,33 C (1,5B) và 0,48 C (0,5B) cho tới quá tải. `waiting` tăng từ 0 lên 92 (1,5B) và 166 (0,5B).
+  - Khoảng hở min(quá tải) ÷ max(vừa), 1,5B / 0,5B:
+    - util: 1,00 / 0,9996, **không tách được**;
+    - running + waiting: 3,9× / 7,7×;
+    - KV: 2,3× / 1,9×;
+    - waiting: ∞ / 630×.
+    Bỏ hai mức không hợp lệ (1,5B λ = 6 và 8) thì kết luận không đổi.
+  - Ở 5 mức có dự đoán < 0,999, 1 − e^(−L) khớp util đo với |z| < 1 (lớn nhất 0,91): 0,895 so với 0,865; 0,780 so với 0,844; 0,958 so với 0,983…
+  - Quyết định đầu tiên từ 1 replica: A1 đòi 2 replica ở cả 18 mức (từ 0,16 C). A2 giữ 1 khi λ < C.
+  - Dự đoán (chưa đo) cho node 4 GPU:
+    - A1 lên đủ 4 replica từ 0,33–0,48 C, trong khi A2 ở 1 tới 0,83 C;
+    - không kẹp max, ở tổng L = 30–100 A1 cần gấp 11–14 lần số replica của A2;
+    - A1 lên max khi tổng L > 4,4 và chỉ bớt pod khi L ≤ 3,0.
+  - Kiểm tra: `analysis` 85 test đạt (Python 3.15), ruff check và format sạch; lychee không có lỗi fragment (chỉ còn các đường dẫn cũ mà CI bỏ qua).
+- **Deviations:** Môi trường §19 ghi "một lượt tải tăng dần 0,3 → 1,5 C ở nhà, đọc Prometheus". Trình chưa có quyền vào cluster nhà, nên dùng các bậc λ của ĐG1-mini (0,16–1,33 C và 0,16–1,12 C, mỗi bậc 120 s), lấy trung bình mà runner đã tính. V1 (`runs/v1-a4000/`) không có trên máy Trình.
+- **Links:** nhánh `feat/tr8-lt6-gpu-util`; `analysis/lt6_gpu_util.py`, `analysis/tests/test_lt6_gpu_util.py`, `analysis/figures/lt6-gpu-util.csv`, `analysis/lt5_little.py` (`capacity_level`), `analysis/lt7_hpa.py` (`hpa_desired`), `docs/nhat-ky/van-hanh.md` (LT6), Kiến trúc §10.1.
+- **Thesis:** §5, kiểm chứng lý thuyết LT6: bảng tách tải vừa và quá tải cho 4 tín hiệu, bảng util so với 1 − e^(−L). §5 ĐG2: lập luận "A1 ≈ Static-N" kèm điều kiện L > 1,47 × (N − 1). Hình nên có: util và L_server (trục log) theo λ ÷ C cho hai model, đánh dấu C, thêm đường 1 − e^(−L). Chưa vẽ.

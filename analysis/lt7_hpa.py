@@ -93,6 +93,13 @@ _KLOG = re.compile(
 _NEW_SIZE = re.compile(r"New size: (\d+)")
 
 
+def hpa_desired(total: float, target: float, current: int, tol: float = TOLERANCE) -> int:
+    """Một lần sync HPA với metric AverageValue, chưa kẹp [min, max]: giữ `current` nếu tổng ÷ (target ×
+    current) nằm trong [1 − tol; 1 + tol], ngược lại ⌈tổng ÷ target⌉. Dùng chung cho LT6 (lt6_gpu_util)."""
+    ratio = total / (target * current)
+    return current if (1 - tol) <= ratio <= (1 + tol) else math.ceil(total / target)
+
+
 def predict_replicas(
     total: float, target: float, lo: int, hi: int, start: int = 1, tol: float = TOLERANCE
 ) -> int:
@@ -103,9 +110,7 @@ def predict_replicas(
     """
     r = start
     for _ in range(hi + 2):
-        ratio = total / (target * r)
-        new = r if (1 - tol) <= ratio <= (1 + tol) else math.ceil(total / target)
-        new = max(lo, min(hi, new))
+        new = max(lo, min(hi, hpa_desired(total, target, r, tol)))
         if new == r:
             return r
         r = new
