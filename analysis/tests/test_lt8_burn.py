@@ -75,6 +75,26 @@ def test_episodes_split_when_one_evaluation_is_missing():
     assert lt.episodes([]) == []
 
 
+def test_go_duration_and_applied_latency_check():
+    assert lt.go_duration_ms("1.806s") == pytest.approx(1806)
+    assert lt.go_duration_ms("541ms") == 541 and lt.go_duration_ms("0s") == 0
+    assert lt.go_duration_ms("1m2s") is None and lt.go_duration_ms("ms") is None
+    ok = {"pods": [{"pod": "a", "ttft": "2.16s", "sd": "648ms"}]}
+    assert lt.applied_mismatch(ok, 2160, 648) == ""
+    assert lt.applied_mismatch(ok, 2706, 811) == "a"
+    assert lt.applied_mismatch({"pods": []}, 2160, 648) == "không pod nào nhận"
+    assert lt.applied_mismatch({}, 2160, 648) == "không pod nào nhận"
+
+
+def _pod(mu_ms: int, sd_ms: int) -> dict:
+    """Mục `pods` của mốc inject/recover, theo dạng simulator trả về (time.Duration.String() của Go)."""
+    return {
+        "pod": "vllm-0",
+        "ttft": f"{mu_ms / 1000}s" if mu_ms >= 1000 else f"{mu_ms}ms",
+        "sd": f"{sd_ms}ms",
+    }
+
+
 def _simulate(tmp: Path, every: int, t_inj: float = 400.0, inj_s: float = 360.0, end: float = 1000.0) -> Path:
     """Dựng rep1/ cho một lần bơm: trong [t_inj, t_inj + inj_s), cứ `every` request thì một request xấu."""
     d = tmp / "lt8-test" / "rep1"
@@ -131,8 +151,8 @@ def _simulate(tmp: Path, every: int, t_inj: float = 400.0, inj_s: float = 360.0,
     timeline = [
         {"event": "load_submitted", "wall": T0 - 5},
         {"event": "traffic_seen", "wall": T0 + 3},
-        {"event": "inject", "wall": T0 + t_inj, "x": x, "mu_ms": mu, "sd_ms": sd},
-        {"event": "recover", "wall": T0 + t_inj + inj_s, "x": x},
+        {"event": "inject", "wall": T0 + t_inj, "x": x, "mu_ms": mu, "sd_ms": sd, "pods": [_pod(mu, sd)]},
+        {"event": "recover", "wall": T0 + t_inj + inj_s, "x": x, "pods": [_pod(200, 0)]},
         {"event": "load_done", "wall": T0 + end},
     ]
     (d / "timeline.json").write_text(json.dumps(timeline))
@@ -166,6 +186,33 @@ def test_ten_percent_bad_never_pages(tmp_path):
     assert row["clear_s"] is None and row["false_page"] == 0
     assert row["x_client"] == pytest.approx(0.1, abs=0.005)
     assert row["viol_s"] is None  # đều đặn 1/10 thì cửa sổ 1 phút cũng không vượt 20 %
+
+
+def test_missing_rules_or_unapplied_latency_is_invalid_not_silent(tmp_path):
+    d = _simulate(tmp_path, every=2)
+    prom = json.loads((d / "prom.json").read_text())
+    prom["r5"] = []
+    (d / "prom.json").write_text(json.dumps(prom))
+    tl = json.loads((d / "timeline.json").read_text())
+    tl[2]["pods"] = []  # lúc bơm không có pod Ready nào
+    (d / "timeline.json").write_text(json.dumps(tl))
+    [row] = lt.analyze_rep(d)
+    assert not row["valid"]
+    assert (
+        "thiếu mẫu recording rule" in row["note"]
+        and "bơm không đúng độ trễ: không pod nào nhận" in row["note"]
+    )
+
+
+def test_skipped_evaluation_does_not_split_firing(tmp_path):
+    d = _simulate(tmp_path, every=2)
+    prom = json.loads((d / "prom.json").read_text())
+    firing = prom["alerts"][1]["values"]
+    del firing[len(firing) // 2]  # một lần tính bị bỏ giữa đợt firing: hở 30 s
+    (d / "prom.json").write_text(json.dumps(prom))
+    [row] = lt.analyze_rep(d)
+    assert row["valid"], row["note"]
+    assert row["pending_only"] == 0 and row["false_page"] == 0
 
 
 def test_short_warm_up_is_flagged(tmp_path):

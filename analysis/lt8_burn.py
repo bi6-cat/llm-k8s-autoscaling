@@ -158,6 +158,33 @@ def episodes(times: Sequence[float], max_gap: float = MAX_GAP_S) -> list[tuple[f
     return out
 
 
+def go_duration_ms(s: str) -> float | None:
+    """'1.806s', '541ms', '0s' (time.Duration.String() của Go, simulator trả về) → ms. None nếu dạng khác."""
+    try:
+        if s.endswith("ms"):
+            return float(s[:-2])
+        if s.endswith("s") and s[-2:-1].isdigit():
+            return float(s[:-1]) * 1000
+    except ValueError:
+        pass
+    return None
+
+
+def applied_mismatch(event: Mapping[str, Any], mu_ms: float, sd_ms: float) -> str:
+    """Kiểm độ trễ mà simulator báo lại sau POST /admin/config (khoá `pods` của mốc inject/recover) khớp μ, σ
+    đã định. Rỗng nếu khớp, ngược lại là mô tả lỗi. Không có pod nào (không pod Ready lúc đó) cũng là lỗi:
+    khi đó không có gì được bơm, và "không kêu" là kết quả giả. Hàm thuần."""
+    pods = event.get("pods") or []
+    if not pods:
+        return "không pod nào nhận"
+
+    def same(got: str, want: float) -> bool:
+        ms = go_duration_ms(got)
+        return ms is not None and want is not None and abs(ms - want) < 0.5
+
+    return ", ".join(p["pod"] for p in pods if not (same(p["ttft"], mu_ms) and same(p["sd"], sd_ms)))
+
+
 def first_in(times: Sequence[float], a: float, b: float) -> float | None:
     return next((t for t in sorted(times) if a <= t < b), None)
 
@@ -187,13 +214,27 @@ def analyze_rep(d: Path) -> list[dict[str, Any]]:
     count, good = samples(prom["count"]), samples(prom["good"])
     # Page giả theo N7, chấm từng đợt kêu như build_tables (đợt kêu từ trước t0 của loadgen thì không chấm).
     # Không có đợt nào thì không truyền: classify_alerts coi danh sách đợt rỗng là file cũ, đọc first/last.
-    eps, pend_eps = episodes(firing), episodes(pending)
+    # Firing chỉ quay lại sau một lần điều kiện sai nếu đã qua lại đủ `for`, nên hở < 60 s trong chuỗi firing
+    # chỉ có thể là một lần tính bị bỏ (không ghi mẫu), không phải hai đợt. Pending thì không phân biệt được.
+    eps, pend_eps = episodes(firing, max_gap=FOR_S), episodes(pending)
     alerts = [{"labels": {"alertname": "LLMSLOBurnFast", "severity": "page"}, "episodes": eps}] if eps else []
     graded = m.classify_alerts(alerts, reqs, main_start=t0)
 
+    base = meta.get("base_latency", {"time-to-first-token": "200ms", "time-to-first-token-std-dev": "0s"})
+    base_ms = (
+        go_duration_ms(base["time-to-first-token"]),
+        go_duration_ms(base["time-to-first-token-std-dev"]),
+    )
     notes = []
     if len(prom["count"]) != 1:
         notes.append(f"{len(prom['count'])} chuỗi bộ đếm TTFT (cần đúng 1 pod)")
+    # Không có ALERTS là bình thường (x ≤ θ), nhưng thiếu recording rule thì "không kêu" chỉ là thiếu dữ liệu
+    if not r1 or not r5:
+        notes.append("thiếu mẫu recording rule llm:ttft_bad_ratio (rule chưa nạp hoặc truy vấn rỗng)")
+    # Bộ đo chỉ dùng k của runner khi không đọc được đồng hồ trong pod loadgen; k đó chỉ đúng nếu runner chung
+    # kernel với cluster, điều bộ đo không tự biết được. Bộ đo cũ (trước 16/11 tối) không ghi khoá này.
+    if meta.get("k_source") == "runner":
+        notes.append("k lấy từ đồng hồ runner (không đọc được đồng hồ pod loadgen)")
     if meta["load"].get("rc") != 0 or "error" in meta["load"]:
         notes.append(f"loadgen lỗi: {meta['load']}")
     if meta["restarts"]:
@@ -237,6 +278,10 @@ def analyze_rep(d: Path) -> list[dict[str, Any]]:
             row_notes.append(f"nền trước lần bơm chỉ {warm:.0f} s (< {LONG_W:.0f} s)")
         if dc is None or dg is None:
             row_notes.append("bộ đếm TTFT thiếu mẫu hoặc bị reset")
+        if bad := applied_mismatch(inj, inj["mu_ms"], inj["sd_ms"]):
+            row_notes.append(f"bơm không đúng độ trễ: {bad}")
+        if bad := applied_mismatch(rec, *base_ms):
+            row_notes.append(f"gỡ không về độ trễ nền: {bad}")
         rows.append(
             {
                 "rep": meta["rep"],

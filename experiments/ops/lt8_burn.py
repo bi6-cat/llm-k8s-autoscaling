@@ -232,9 +232,21 @@ def run_rep(
             "time-to-first-token": f"{item['mu_ms']}ms",
             "time-to-first-token-std-dev": f"{item['sd_ms']}ms",
         }
-        s.mark("inject", x=item["x"], mu_ms=item["mu_ms"], sd_ms=item["sd_ms"], pods=s.set_latency(body))
+        # Mốc ghi SAU khi POST trả về, nên muộn hơn lúc độ trễ đổi tối đa post_s (ghi lại để chặn sai số).
+        t_post = time.time()
+        pods = s.set_latency(body)
+        s.mark(
+            "inject",
+            x=item["x"],
+            mu_ms=item["mu_ms"],
+            sd_ms=item["sd_ms"],
+            pods=pods,
+            post_s=time.time() - t_post,
+        )
         time.sleep(max(0.0, t0 + item["end"] - time.time()))
-        s.mark("recover", x=item["x"], pods=s.set_latency(BASE_LATENCY))
+        t_post = time.time()
+        pods = s.set_latency(BASE_LATENCY)
+        s.mark("recover", x=item["x"], pods=pods, post_s=time.time() - t_post)
     clocks.append(s.pod_clock(job_name))  # loadgen còn chạy pha nền cuối (--tail), pod chưa xong
 
     loader.join()
@@ -242,6 +254,9 @@ def run_rep(
     # Chờ qua mốc cuối của cửa sổ truy vấn, để lấy được cả lần tính rule ngay sau khi tải dừng
     time.sleep(max(0.0, t_end + 30 - time.time()))
     (out / "prom.json").write_text(json.dumps(s.raw(t_start - 60, t_end + 30)), encoding="utf-8")
+    # Một ảnh chụp duy nhất cho cả hai khoá. restartCount cộng theo từng UID: pod mới (UID không có lúc đầu)
+    # tính trọn số restart của nó, nên pod bị thay không làm hiệu số âm hay che mất restart.
+    pods1 = s.pod_state()
     first, last = s.timeline[0], s.timeline[-1]
     k_runner = (last["mono"] - first["mono"]) / (last["wall"] - first["wall"])
     k_pod = None
@@ -262,8 +277,8 @@ def run_rep(
         "k_pod": k_pod,
         "k_runner": k_runner,
         "pod_clocks": clocks,
-        "restarts": sum(s.pod_state().values()) - sum(pods0.values()),
-        "pod_replaced": set(s.pod_state()) != set(pods0),
+        "restarts": sum(n - pods0.get(uid, 0) for uid, n in pods1.items()),
+        "pod_replaced": set(pods1) != set(pods0),
         "load": load,
     }
     (out / "meta.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8")

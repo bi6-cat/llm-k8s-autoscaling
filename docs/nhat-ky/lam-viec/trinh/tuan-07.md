@@ -197,3 +197,16 @@
   - Mọi lần x > 0,2 đều đạt N7 (≤ 300 s từ lúc vi phạm theo log client).
 - **Links:** `analysis/figures/lt8-burn.csv`; mục LT8 ngay trên.
 - **Thesis:** §5 LT8: bảng trên. Hình nên có: r_1m, r_5m theo thời gian của một lần bơm x = 0,3, kèm ngưỡng 0,2 và mốc pending/firing (chưa vẽ).
+
+## 2026-11-16 – TR8: ghi LT8 vào nhật ký vận hành, review lần 3, mở PR
+
+- **Task:** TR8 (LT8) · **Environment:** none (máy Trình; không đụng cluster)
+- **Done:**
+  1. Viết mục `### LT8` trong `docs/nhat-ky/van-hanh.md` theo mẫu lý thuyết → dự đoán → cách đo → số đo → giải thích → hệ quả cho V2; sửa dòng trạng thái LT5–LT8 và ghi chú dòng LT1–LT8 ở mốc M2 của Kế hoạch.
+  2. `/code-review high` lần 3 trên cả nhánh: 10 điểm, sửa 6, bỏ qua 3 điểm về hiệu năng hoặc cấu trúc không ảnh hưởng kết quả, giữ một PR (D65).
+  3. Chạy lại `analysis.lt8_burn` trên `runs/sim/lt8-20261116-131116`: vẫn 9/9 hợp lệ, `lt8-burn.csv` không đổi.
+- **Decision:** (D65) analysis đánh dấu không hợp lệ khi lúc bơm hoặc gỡ không có pod nào nhận độ trễ, hoặc độ trễ pod báo lại không khớp; khi thiếu recording rule; khi k lấy từ đồng hồ runner. Đợt firing chỉ tách khi hở > 60 s (`for`), vì firing quay lại sau một lần điều kiện sai cần ít nhất 90 s. Giữ bộ đo và phân tích trong cùng một PR vì gắn với nhau qua định dạng dữ liệu.
+- **Results:** pytest analysis 99 passed; experiments: `test_lt8_burn` 9 passed, `test_backup_notify` hỏng 4 test chỉ trên Windows (`fcntl`, `rclone`, không liên quan nhánh này; CI chạy Linux); ruff check/format đạt; lychee trên các file đã sửa 0 lỗi; yamllint đạt.
+  - Hệ quả rút ra (tính từ công thức, chưa đo): với trễ cộng thêm khoảng 30 s, N7 chỉ chắc giữ được khi x ≳ 0,23.
+- **Links:** `docs/nhat-ky/van-hanh.md` (LT8), `docs/chi-tiet/06-ke-hoach-quan-ly.md`, `analysis/lt8_burn.py`, `experiments/ops/lt8_burn.py`.
+- **Thesis:** §5 LT8 (mục `van-hanh.md` là bản nháp trực tiếp).
