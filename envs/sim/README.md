@@ -32,6 +32,8 @@ make sim-lt7                   # LT7: số replica theo ⌈C ÷ threshold⌉ và
 uv run --project analysis python -m analysis.lt7_hpa runs/sim/lt7-<giờ>   # bảng của LT7
 make sim-lt8                   # LT8: lúc LLMSLOBurnFast kêu theo tỷ lệ request xấu x = 0,1/0,3/0,6, ~2 giờ
 uv run --project analysis python -m analysis.lt8_burn runs/sim/lt8-<giờ>  # bảng của LT8
+uv run --project analysis python -m analysis.lt_charts --lt7 analysis/figures/lt7-hpa.csv \
+  --lt8 runs/sim/lt8-<giờ>     # hình LT7, LT8 → analysis/figures/*.svg
 
 # Runner trên kind (máy tạo tải chạy trong cluster)
 uv run --project experiments python -m experiments.runner \
