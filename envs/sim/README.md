@@ -28,6 +28,8 @@ Kiểm thử vòng autoscaling **không cần GPU**: cluster kind trên laptop, 
 make sim-up                    # kind + Prometheus + KEDA + simulator + A2 (~5 phút)
 make sim-test                  # T1–T5, ~20 phút; một bài: make sim-test T=t4
 make sim-test-load C=25 DUR=180s   # chỉ bơm tải, xem scale trên Grafana
+make sim-lt7                   # LT7: số replica theo ⌈C ÷ threshold⌉ và trễ từng chặng, ~27 phút
+uv run --project analysis python -m analysis.lt7_hpa runs/sim/lt7-<giờ>   # bảng của LT7
 
 # Runner trên kind (máy tạo tải chạy trong cluster)
 uv run --project experiments python -m experiments.runner \

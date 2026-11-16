@@ -134,6 +134,37 @@ Theo mẫu ở [Môi trường §19](../chi-tiet/05-moi-truong-danh-gia.md#19-ki
 - **Định luật Little (dữ liệu cho LT5 của Trình):** B đo phía client so với λ\_thực × E2E trung bình, với λ\_thực = số request gửi trong cửa sổ ÷ 120 s: lệch **≤ 2 %** ở λ = 1–7. Phải dùng λ\_thực, không dùng λ danh định: ở λ = 1 chỉ có 102 request trong 120 s (0,85 req/s, dao động Poisson), dùng λ danh định thì lệch 16 %. Ở λ = 8 lệch 11 % (124 so với 140) vì hàng đợi tăng liên tục, hệ thống không ở trạng thái dừng nên định luật không áp được cho cửa sổ ngắn.
 - **GPU util (dữ liệu cho LT6 của Trình):** 89 % ở λ = 1, 100 % từ λ = 2 tới 8, trong khi `waiting` đi từ 0 lên 92. GPU util không phân biệt được tải vừa với quá tải, đúng dự đoán của LT6.
 
+## Kiểm chứng lý thuyết LT5–LT8 (Trình, TR8)
+
+Cùng mẫu với LT1–LT4. Chỉ có LT7; LT5, LT6, LT8 chưa làm.
+
+### LT7 – Thuật toán HPA và trễ phản ứng (đo 16/11/2026 trên simulator)
+
+- **Lý thuyết** ([Kiến thức nền §3.1](../chi-tiet/02-kien-thuc-nen.md#31-thuật-toán-hpa)): với metric External kiểu `AverageValue`, HPA giữ nguyên số replica nếu tổng ÷ (target × số replica) nằm trong [0,9; 1,1], ngược lại desired = ⌈tổng ÷ target⌉, rồi kẹp vào [min, max]. Trễ quyết định gồm thời gian chờ lần scrape kế tiếp và thời gian chờ lần sync HPA kế tiếp.
+- **Dự đoán:**
+  - Threshold 10, max 3: C = 5, 15, 25, 35 request đồng thời → 1, 2, 3, 3 replica (⌈3,5⌉ = 4 bị kẹp ở max).
+  - Môi trường §19 ghi ≤ ~15 s (scrape 5 s + polling 5 s + sync 5 s). Trước khi đo, Trình sửa lại thành < 10 s: khi `minReplicaCount` ≥ 1, KEDA chạy câu PromQL ngay lúc HPA hỏi, nên `pollingInterval` không nằm trên đường này (KEDA v2.21.0 in cảnh báo này khi áp ScaledObject).
+- **Cách đo:** `make sim-lt7` (`envs/sim/tests/lt7-hpa.sh`), kind trong WSL2, Kubernetes v1.37.0, KEDA v2.21.0. Mỗi lượt reset về 1 replica bằng `paused-replicas` (KEDA tạo HPA mới), rồi bơm C request đồng thời trong 60 s bằng hey. Các mốc lấy được: lúc hey bắt đầu (ms), mẫu Prometheus thô (ms), dòng "Successfully rescaled" trong log kube-controller-manager (µs), mốc của pod (giây). Giờ thực của WSL2 bị kéo lùi 0,5–1,3 s khoảng mỗi 32 s, nên mọi mốc được đổi sang đồng hồ đơn điệu nhờ các dòng "Clock change detected" trong journal. Bảng tính bằng `analysis/lt7_hpa.py`, mỗi lượt một dòng ở `analysis/figures/lt7-hpa.csv` (phiên 2).
+- **Số đo, số replica:** 24/24 lượt (2 phiên × 4 mức × 3 lần) đúng dự đoán. C = 5 thì không đổi; 15 → 2; 25 → 3; 35 → 3. Mỗi lượt có scale thì scale đúng một lần, không lên thêm, không dao động trong 60 s. Cuối mỗi lượt, metric HPA thấy nhân số replica bằng C (15,0; 25,0; 35,0).
+- **Số đo, trễ** (phiên 2, có lệch pha ngẫu nhiên, 7 lượt scale-up; giây, theo đồng hồ đơn điệu):
+
+  | Chặng | Dự đoán | min | TB | max |
+  |---|---|---|---|---|
+  | tải tới → lần scrape đầu thấy tải | [0; 5) | 0,88 | 3,29 | 5,02 |
+  | scrape → KEDA thấy mẫu (giây tròn kế tiếp) | không có trong dự đoán | 0,45 | 0,60 | 0,79 |
+  | KEDA thấy mẫu → HPA đổi replica | [0; 5) + thời gian xử lý | 0,11 | 3,02 | 4,76 |
+  | **tải tới → HPA đổi replica** | **< 10** | **3,61** | **6,91** | **10,21** |
+  | HPA đổi → pod mới Ready (±1 s) | ≈ 5 (một chu kỳ startupProbe) | 5 | 5,98 | 7 |
+
+  Ở cả 18 lượt có scale-up của hai phiên, pod mới được tạo ngay trong giây HPA đổi replica. Phiên 1 (8 lượt, chưa lệch pha) nằm trong cùng các cận, với thời gian quyết định 3,11–8,83 s. 7 mẫu T2 trước đó (`make sim-test`, 01/11–07/11, đo theo đồng hồ đơn điệu, tới giây) là 1, 6, 8, 8, 9, 4, 5 s.
+- **Lệch và giải thích:**
+  - 10,21 s vượt dự đoán < 10 s. Nguyên nhân là một chặng không có trong dự đoán: KEDA hỏi Prometheus với `time=` làm tròn xuống giây (`time.Now().UTC().Format(time.RFC3339)`, `pkg/scalers/prometheus_scaler.go:224` ở v2.21.0). Vì thế mẫu scrape lúc x,138 s chỉ được thấy từ giây x + 1, và cận trên đúng là 5 + 1 + 5 = 11 s. Chặng này lộ ra ở lượt đo thử đầu tiên: từ scrape tới lúc HPA đổi replica mất 5,29 s, dài hơn một chu kỳ sync. Ở cả 15 lượt tính được, chặng "KEDA thấy mẫu → HPA đổi replica" đều dưới 5 s (lớn nhất 4,81 s).
+  - Thời gian xử lý trong chu kỳ sync rất nhỏ. KEDA trả metric trung bình trong 4,2 ms (199 lần, theo metric gRPC của keda-operator). Mỗi lần HPA xử lý mất trung bình 20 ms, và 37 ms khi có scale-up (`horizontal_pod_autoscaler_controller_reconciliation_duration_seconds`, cộng dồn từ 16:18 tới 16:53). HPA hẹn lần sync kế tiếp 5 s kể từ lúc lần trước xử lý xong (`AddRateLimited`, `horizontal.go` ở v1.37.0).
+  - d_scrape = 5,02 s, lớn hơn chu kỳ scrape: lần scrape lúc +0,015 s chưa thấy request nào, vì request đầu tiên cần vài chục ms mới qua được port-forward. Lần scrape kế tiếp, lúc +5,016 s, mới thấy đủ 25.
+  - Phiên 1 chưa có lệch pha. Reset tạo HPA mới, HPA sync ngay khi được tạo, và script bơm tải sau reset một khoảng gần như cố định, nên thời gian quyết định chỉ rơi vào hai cụm, quanh 3–4 s hoặc 8–9 s. Phiên 2 thêm một khoảng chờ ngẫu nhiên trong [0; 5) s trước khi bơm tải.
+  - Nếu đo bằng giờ thực thì những lượt có bước lùi đồng hồ sai tới 1,3 s (ví dụ phiên 2, C = 25 lần 2: ngắn đi 0,90 s). Sau khi đổi sang đồng hồ đơn điệu, khoảng cách giữa hai lần scrape liền nhau chỉ lệch tối đa 2 ms so với 5 s; theo giờ thực thì lệch tới 1301 ms. Có 3/18 lượt scale-up có mốc rơi đúng vào khoảng giờ thực bị lặp lại ngay sau một bước lùi, không đổi chắc chắn được, nên không tính vào bảng trễ.
+- **Hệ quả cho V2:** trên cloud (k3s, cùng scrape 5 s, sync 5 s, KEDA v2.21.0), HPA quyết định trong < 11 s sau khi tải tăng. Phần lớn thời gian của N2a (≤ 180 s) vì vậy là cold start của pod vLLM, không phải độ trễ của autoscaler.
+
 
 ## 2026-11-08 – Phiên thử VM Vast đầu tiên (2 × RTX 5060 Ti): bootstrap, mạng, cold start 3B
 
