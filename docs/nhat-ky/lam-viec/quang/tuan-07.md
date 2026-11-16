@@ -164,3 +164,11 @@
 - **Decision:** không chạy vh2b, vh2c, vh3-drain ở phiên này: drain cần ≥ 2 node, còn vh2b/vh2c để dành cho máy chính thức.
 - **Links:** `runs/ops-vh3-delete-20261116-095917`, `runs/ops-vh3-kill-20261116-101256`, `runs/ops-vh4-20261116-102333`, `runs/ops-vh2a-20261116-103604` (không commit, `runs/` nằm trong `.gitignore`).
 - **Thesis:** chương vận hành (VH2–VH4): bảng trên chỉ là số thử trên N = 2, dùng để kiểm script; số chính thức lấy ở phiên V2.
+
+## 2026-11-16 – CI của `main` đỏ sau khi merge PR #44: test loadgen phụ thuộc tốc độ máy
+
+- **Task:** chung (CI), Q4 (loadgen) · **Environment:** none (GitHub Actions)
+- **Incidents:** sau khi PR #44 được merge, CI trên `main` đỏ ở `loadgen/tests/test_workers.py::test_two_workers_share_t0_and_write_one_csv`: request 0 tới server giả trễ 148 ms so với `t0_unix + t_sched`, dung sai là 100 ms. CI của chính PR #44 (cùng code) trước đó xanh, và PR #44 không sửa gì trong `loadgen/`, nên đây là test không ổn định, không phải lỗi do PR. Trong log, `t_send` của request 0 chỉ lệch lịch 1 ms: loadgen gửi đúng giờ; phần trễ nằm ở việc mở kết nối TCP đầu tiên và tạo luồng ở server giả trên runner CI.
+- **Decision:** nới dung sai lên `START_MARGIN_S / 2` (0,5 s). Phép so này tồn tại để bắt lỗi "một tiến trình tự lấy mốc t0 riêng", khi đó lệch cỡ 1 s, nên 0,5 s vẫn bắt được. Độ đúng lịch (< 50 ms, Môi trường §17) vẫn được kiểm ở dòng `lags` bằng `t_send`. Không chọn cách chạy lại CI cho xanh: test sẽ đỏ lại ngẫu nhiên.
+- **Results:** `uv run --project loadgen pytest loadgen` 3 lần liên tiếp: 55 passed. `ruff check`, `ruff format --check` sạch.
+- **Links:** `loadgen/tests/test_workers.py`; CI run 43870125040.
