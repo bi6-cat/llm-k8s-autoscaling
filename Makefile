@@ -72,14 +72,24 @@ home-eval-begin: ## Tắt auto-sync của A2 ở nhà trước phiên đánh gi�
 	else echo "auto-sync của Application autoscaling đã tắt"; fi
 
 home-eval-end: ## Xoá ScaledObject khác A2 rồi bật lại auto-sync của A2 theo Git [CTX=llm-home] (cần yq)
+#	0) Đọc khối automated từ file Application trong Git TRƯỚC khi đổi gì trên cluster, không viết tay giá
+#	   trị: root bỏ qua trường này nên sửa nó trong Git không tự lên cluster. Chạy từ bản checkout đã cập
+#	   nhật main. Kiểm kết quả là một JSON object (bắt đầu bằng `{`): tên `yq` còn là một công cụ khác
+#	   (bản Python, bọc jq) không hiểu `-o json -I0` và in ra rỗng; khi đó dừng ở đây, chưa xoá gì, thay
+#	   vì xoá ScaledObject rồi gửi patch hỏng và để auto-sync tắt mãi (gặp trên PC nhà 16/11, yq 3.4.3).
 #	1) Webhook của KEDA chặn hai ScaledObject cùng trỏ một Deployment, nên xoá mọi ScaledObject khác
-#	   vllm-a2 trước. `|| true`: grep trả mã 1 khi không còn dòng nào, tức không có gì để xoá.
+#	   vllm-a2 trước khi bật auto-sync. `|| true`: grep trả mã 1 khi không còn dòng nào để xoá.
+#	2) Merge patch khối automated lên Application.
+	@automated=$$($(YQ) -o json -I0 '.spec.syncPolicy.automated' envs/home/argocd/apps/autoscaling.yaml 2>/dev/null); \
+	case "$$automated" in \
+	  "{"*) ;; \
+	  *) echo "Không đọc được khối automated bằng '$(YQ)'. Cần yq bản mikefarah (phiên bản ở docs/phien-ban.md); hoặc truyền YQ=/đường/dẫn/yq" >&2; exit 1 ;; \
+	esac; \
+	set -e; \
 	$(HOME_KUBECTL) -n llm-serving get scaledobject -o name | { grep -v '/vllm-a2$$' || true; } \
-	  | xargs -r $(HOME_KUBECTL) -n llm-serving delete
-#	2) Chép khối automated từ file Application trong Git, không viết tay giá trị: root bỏ qua trường này
-#	   nên sửa nó trong Git không tự lên cluster. Chạy từ bản checkout đã cập nhật main.
+	  | xargs -r $(HOME_KUBECTL) -n llm-serving delete; \
 	$(HOME_KUBECTL) -n argocd patch application autoscaling --type merge \
-	  -p "{\"spec\":{\"syncPolicy\":{\"automated\":$$($(YQ) -o json -I0 '.spec.syncPolicy.automated' envs/home/argocd/apps/autoscaling.yaml)}}}"
+	  -p "{\"spec\":{\"syncPolicy\":{\"automated\":$$automated}}}"
 
 # ── Simulator trên laptop (không cần GPU) ──────────────────────────────────────
 ##@ Simulator: kind + llm-d-inference-sim, không cần GPU (envs/sim/README.md)
