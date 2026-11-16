@@ -33,7 +33,7 @@ YQ ?= yq
 AMTOOL ?= amtool
 
 # .PHONY: các target này không phải tên file, make luôn chạy chúng (kể cả khi có file trùng tên)
-.PHONY: help home-up alertmanager-secret sim-up sim-down sim-test-load sim-test find rent probe bootstrap prefetch cloud-platform run backup backup-check ops-tests vh5 release lint alerts-test alerts-coverage alertmanager-check dashboards-check
+.PHONY: help home-up alertmanager-secret sim-up sim-down sim-test-load sim-test sim-lt7 find rent probe bootstrap prefetch cloud-platform run backup backup-check ops-tests vh5 release lint alerts-test alerts-coverage alertmanager-check dashboards-check
 
 # In danh sách lệnh, chia nhóm theo môi trường. Hai loại dòng được in:
 #   `##@ <tiêu đề>`        = đầu một nhóm (in thành dòng tiêu đề);
@@ -113,6 +113,12 @@ sim-test-load: ## Tải đồng thời cho T2 (C=25, DUR=120s)
 # Một bài: make sim-test T=t4 (t2 gồm cả T3).
 sim-test: ## Chạy T1–T5 trên simulator, chấm đạt/trượt (T=t1|t2|t4|t5|all)
 	CTX=kind-$(KIND_CLUSTER) envs/sim/tests/run-t1-t5.sh $${T:-all}
+
+# LT7 (TR8, Môi trường §19): HPA có chọn đúng ⌈C ÷ threshold⌉ ở mỗi mức tải không, và trễ phản ứng gồm những
+# chặng nào. Ghi dữ liệu thô vào runs/sim/lt7-<giờ>/ (khoảng 25 phút), rồi tính bảng bằng analysis/lt7_hpa.py.
+# LEVELS, REPS, DUR đặt trên dòng lệnh make thì được đưa vào môi trường của script.
+sim-lt7: ## LT7 trên simulator (LEVELS="5 15 25 35" REPS=3 DUR=60)
+	CTX=kind-$(KIND_CLUSTER) envs/sim/tests/lt7-hpa.sh
 
 # ── Máy thuê trên Vast.ai ───────────────────────────────────────────────────────
 ##@ Cloud: thuê và dựng VM 4 × RTX A4000 trên Vast.ai (envs/cloud/README.md)
