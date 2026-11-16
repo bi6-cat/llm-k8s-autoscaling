@@ -23,8 +23,9 @@ dev = [
     "pytest>=9.1,<10",
     "ruff>=0.17,<0.18",
 ]
-# Chỉ charts.py (vẽ C1–C4) cần. Tách nhóm riêng để build_tables vẫn chạy được bằng python3 trần trên VM thuê;
-# vẫn bật mặc định (default-groups) để `uv run` và CI cài sẵn, nên test của charts.py chạy ở CI.
+# Chỉ charts.py (vẽ C1–C4) cần; build_tables, metrics, lt* không import. Bật mặc định (default-groups) để
+# `uv run` và CI cài sẵn, nên test của charts.py chạy ở CI. Chỉ cần bảng (ví dụ trên VM thuê) thì chạy
+# `python3 -m analysis.build_tables` không qua uv, hoặc `uv run --no-group plot …` để không tải matplotlib.
 plot = [
     "matplotlib>=3.10,<4",
 ]

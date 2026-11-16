@@ -248,3 +248,19 @@
   3. CI xanh cả 6 job trên commit sau khi viết lại; Trình merge bằng merge commit `eeefe25` và xoá nhánh `feat/tr8-lt8-burn-rate`.
 - **Results:** LT5–LT8 đều đã có kết quả trong `docs/nhat-ky/van-hanh.md`; hình LT7, LT8 chưa vẽ.
 - **Links:** PR #47; `docs/nhat-ky/van-hanh.md` mục LT8.
+
+## 2026-11-16 – TR7: vẽ biểu đồ C1–C4 bằng script
+
+- **Task:** TR7 · **Environment:** sim (chỉ đọc dữ liệu đã có `runs/sim/tr7-kb2-sim-2`; không đụng cluster)
+- **Done:**
+  1. Viết `analysis/charts.py`: C1 (KB2, bốn ô chung trục thời gian: λ theo lịch, số replica Ready và spec, TTFT p95 trượt 30 s, hàng đợi), C2 (SLO attainment), C3 (GPU-giờ % so với S4), C4 (trade-off, mỗi kịch bản một ô). Vẽ thẳng từ `build_tables.build`, ra SVG và PNG.
+  2. Thêm matplotlib 3.11.2 vào nhóm phụ thuộc `plot` của `analysis/` (bật mặc định); `build_tables`, `metrics` vẫn chỉ dùng thư viện chuẩn. Đổi `_sliding_ttft_p95` thành hàm công khai để C1 và N2b dùng chung.
+  3. Viết `analysis/tests/test_charts.py` (λ, p95 trượt tính tay, hàng đợi cộng theo pod, chọn lượt, khoảng λ cuối ngắn, SVG chạy lại giống từng byte).
+  4. Vẽ thử trên `tr7-kb2-sim-2` và trên fixture đủ 4 cấu hình, xem từng hình rồi sửa: legend đè tiêu đề, nhãn trục log kiểu 3×10⁰, trục tung C4 tự co về 95,0–95,45 %, nhãn điểm C4 đè nhau.
+  5. `/code-review high`: 10 điểm, sửa 8, bỏ qua 1 (đọc lại file hai lần) và mục nhật ký (ghi ở đây).
+  6. Sửa Môi trường §14.2 (thay "Notebook vẽ biểu đồ" bằng lệnh `analysis.charts`) và gợi ý của `make analysis`.
+- **Decision:** (D67) C1 chỉ vẽ S4, A1, A2 theo §16, mỗi (env, lượt, C) một hình vì lịch gửi phụ thuộc cả C; màu cố định theo cấu hình kèm marker và nhãn chữ; không dùng notebook hay pandas.
+- **Results:** pytest analysis 108 passed (Python 3.15 và 3.11 `--locked`); ruff check/format đạt; lychee trên Môi trường 0 lỗi. Trên `tr7-kb2-sim-2` chỉ A2 được tính (S1 không hợp lệ: pod restart 1 lần), nên ra C1 và C2; C3, C4 bỏ qua vì không có S4. Hình C1 của A2: replica 1 → 2 → 3 trong khoảng phút 4,0–4,7 (spike bắt đầu phút 4), về 2 khoảng phút 19,3; TTFT p95 trượt vượt 2,5 s một đợt quanh phút 6,5–7.
+- **Deviations:** Môi trường §14.2 trước ghi "Notebook vẽ biểu đồ"; đổi thành script theo ADR-006 §3.1 và CONTRIBUTING (logic ở `.py` có test). C5, C6 chưa làm (cần dữ liệu ĐG3, VH2).
+- **Links:** `analysis/charts.py`, `analysis/tests/test_charts.py`, `analysis/pyproject.toml`, `docs/chi-tiet/05-moi-truong-danh-gia.md` §14.2.
+- **Thesis:** §5.3 (C1 là biểu đồ trung tâm; C2–C4); chạy lại trên dữ liệu V2 sau phiên.

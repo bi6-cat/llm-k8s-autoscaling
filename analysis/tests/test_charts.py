@@ -57,11 +57,21 @@ def test_kb2_series_rate_ttft_replicas_queue(tmp_path):
     assert s["phases"]["spike"] == (240.0, 840.0)
 
 
+def test_kb2_series_last_rate_bin_uses_its_own_width(tmp_path):
+    # Thời lượng 1445 s: khoảng cuối [1440, 1445] dài 5 s, có 5 request → vẫn là 1 req/s, không phải 1/6
+    d = write_attempt(tmp_path, requests=_requests(n=1445))
+    lg = json.loads((d / "loadgen.json").read_text(encoding="utf-8"))
+    (d / "loadgen.json").write_text(json.dumps({**lg, "duration_s": 1445.0}), encoding="utf-8")
+    edges, rate = ch.kb2_series(d)["rate"]
+    assert edges[-2:] == [1440.0, 1445.0]
+    assert rate[-1] == pytest.approx(1.0) and len(rate) == 49
+
+
 def test_c1_groups_take_counted_kb2_and_report_duplicates():
-    def row(counted, scen, rep, cfg, session):
+    def row(counted, scen, rep, cfg, session, cap=1.0):
         run_id = f"{cfg}-{scen}-{rep}"
         return {"counted": counted, "scenario": scen, "env": "sim", "repeat": rep, "config": cfg,
-                "session": session, "run_id": run_id}  # fmt: skip
+                "session": session, "run_id": run_id, "capacity_rps": cap}  # fmt: skip
 
     rows = [
         row(True, "KB2", 1, "A2", "a"),
@@ -70,11 +80,13 @@ def test_c1_groups_take_counted_kb2_and_report_duplicates():
         row(True, "KB1", 1, "A2", "a"),  # không phải KB2
         row(True, "KB2", 1, "A2", "b"),  # trùng lượt ở phiên thứ hai
         row(True, "KB2", 1, "S1", "a"),  # không thuộc C1_CONFIGS (Môi trường §16: C1 vẽ S4, A1, A2)
+        row(True, "KB2", 1, "A1", "c", cap=2.0),  # C khác = lịch gửi khác: hình riêng
     ]
     groups, warn = ch.c1_groups(rows)
-    assert list(groups) == [("sim", 1)]
-    assert sorted(groups[("sim", 1)]) == ["A2", "S4"]
-    assert groups[("sim", 1)]["A2"]["session"] == "a"
+    assert sorted(groups) == [("sim", 1, 1.0), ("sim", 1, 2.0)]
+    assert sorted(groups[("sim", 1, 1.0)]) == ["A2", "S4"]
+    assert groups[("sim", 1, 1.0)]["A2"]["session"] == "a"
+    assert list(groups[("sim", 1, 2.0)]) == ["A1"]
     assert len(warn) == 1 and "b/A2-KB2-1" in warn[0]
 
 
@@ -95,6 +107,7 @@ def test_style_and_order_are_fixed_per_config():
     assert ch.style("A2") != ch.style("S4")
     assert ch.style("X9") == ch.OTHER_STYLE  # cấu hình lạ: xám, không lấy màu của cấu hình khác
     assert ch._ordered(["A2", "Z", "S1", "B"], ch.CONFIG_ORDER) == ["S1", "A2", "B", "Z"]
+    assert ch._ordered(["A2", None, "X9"], ch.CONFIG_ORDER) == ["A2", None, "X9"]  # metadata thiếu id
 
 
 def _session(root: Path) -> Path:

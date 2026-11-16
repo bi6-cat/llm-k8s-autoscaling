@@ -71,10 +71,10 @@ def style(config: str) -> tuple[str, str]:
     return CONFIG_STYLE.get(config, OTHER_STYLE)
 
 
-def _ordered(keys: Iterable[str], order: Sequence[str]) -> list[str]:
-    """Khoá theo thứ tự `order`, khoá lạ xếp sau theo bảng chữ cái."""
+def _ordered(keys: Iterable[Any], order: Sequence[str]) -> list[Any]:
+    """Khoá theo thứ tự `order`, khoá lạ xếp sau theo bảng chữ cái (so dạng chuỗi, nên None không làm lỗi)."""
     ks = set(keys)
-    return [k for k in order if k in ks] + sorted(ks - set(order))
+    return [k for k in order if k in ks] + sorted(ks - set(order), key=str)
 
 
 def _isnum(v: Any) -> bool:
@@ -87,7 +87,9 @@ def _isnum(v: Any) -> bool:
 def kb2_series(d: Path) -> dict[str, Any]:
     """Một thư mục attempt-<n> → các chuỗi của C1, thời gian tính bằng giây kể từ t0 của máy tạo tải.
 
-    rate:       (mép các khoảng RATE_BIN_S, số request theo lịch gửi ÷ RATE_BIN_S) = λ(t) đã thực hiện
+    rate:       (mép các khoảng RATE_BIN_S, số request ÷ độ dài khoảng) = λ(t) THEO LỊCH GỬI (t_sched), giống
+                nhau ở mọi cấu hình cùng lượt; máy tạo tải gửi trễ so với lịch thì đã bị loại ở checks
+                (send_lag_ok, Môi trường §9), nên không cần vẽ λ theo lúc gửi thật
     ttft_p95:   [(t, p95)] trên lưới STEP_S; inf = cửa sổ có request lỗi chiếm phần p95; None = cửa sổ rỗng
     replicas_spec, replicas_ready: [(t, n)] số replica HPA đặt và số replica đang phục vụ (kube-state-metrics)
     queue:      [(t, tổng vllm:num_requests_waiting của mọi pod)] = request đã nhận mà chưa được xử lý
@@ -104,7 +106,7 @@ def kb2_series(d: Path) -> dict[str, Any]:
         i = int((r.t_sched - t0) // RATE_BIN_S)
         if 0 <= i < n_bins:
             counts[i] += 1
-    edges = [i * RATE_BIN_S for i in range(n_bins + 1)]
+    edges = [min(i * RATE_BIN_S, dur) for i in range(n_bins + 1)]  # khoảng cuối có thể ngắn hơn 30 s
 
     grid = [t0 + i * bt.STEP_S for i in range(int(dur // bt.STEP_S) + 1)]
     p95 = m.sliding_ttft_p95(reqs, grid, m.RECOVERY_WINDOW_S)
@@ -122,7 +124,7 @@ def kb2_series(d: Path) -> dict[str, Any]:
         "duration_s": dur,
         "timeout_s": float((lg.get("target") or {}).get("timeout_s") or DEFAULT_TIMEOUT_S),
         "phases": {k: (float(a), float(b)) for k, (a, b) in (lg.get("phases_s") or {}).items()},
-        "rate": (edges, [c / RATE_BIN_S for c in counts]),
+        "rate": (edges, [c / (b - a) for c, a, b in zip(counts, edges, edges[1:], strict=False)]),
         "ttft_p95": [(t - t0, v) for t, v in zip(grid, p95, strict=True)],
         "replicas_spec": rel(bt.max_by_ts(met.get("replicas_spec", []))),
         "replicas_ready": rel(bt.max_by_ts(met.get("replicas_ready", []))),
@@ -133,16 +135,16 @@ def kb2_series(d: Path) -> dict[str, Any]:
 def c1_groups(
     rows: Sequence[Mapping[str, Any]], configs: Sequence[str] = C1_CONFIGS
 ) -> tuple[dict[tuple[Any, Any], dict[str, Any]], list[str]]:
-    """Lần thử counted của KB2 thuộc `configs` → {(env, repeat): {config: dòng runs}}, kèm cảnh báo. Cùng
-    số thứ tự lượt thì cùng lịch gửi (Môi trường §14.2), nên mỗi (env, repeat) là một hình C1 so được từng
-    giây giữa các cấu hình.
+    """Lần thử counted của KB2 thuộc `configs` → {(env, repeat, C): {config: dòng runs}}, kèm cảnh báo. Lịch
+    gửi do kịch bản, số thứ tự lượt và năng lực C quyết định (Môi trường §14.2, §9), nên mỗi nhóm là một
+    hình C1 so được từng giây giữa các cấu hình; phiên đo trước và sau khi hiệu chỉnh lại C thì tách hình.
     Hai phiên cùng có một lượt (chạy lại cả phiên) thì giữ phiên đọc trước và báo lại."""
     out: dict[tuple[Any, Any], dict[str, Any]] = defaultdict(dict)
     warn = []
     for r in rows:
         if not (r.get("counted") and r.get("scenario") == "KB2" and r.get("config") in configs):
             continue
-        g = out[(r["env"], r["repeat"])]
+        g = out[(r["env"], r["repeat"], r.get("capacity_rps"))]
         if r["config"] in g:
             warn.append(
                 f"C1: bỏ {r['session']}/{r['run_id']}, đã có {g[r['config']]['session']}/{r['run_id']}"
@@ -250,12 +252,12 @@ def plot_c1(series: Mapping[str, Mapping[str, Any]], title: str) -> Any:
     ax_rep.set_ylim(bottom=0)
     ax_q.set_ylim(bottom=0)
     ax_rate.set_ylim(bottom=0)
-    ax_rate.set_ylabel(f"λ (req/s)\ntrung bình {RATE_BIN_S:g} s")
+    ax_rate.set_ylabel(f"λ theo lịch (req/s)\ntrung bình {RATE_BIN_S:g} s")
     ax_rep.set_ylabel("Số replica")
     ax_ttft.set_ylabel(f"TTFT p95 (s)\ncửa sổ {m.RECOVERY_WINDOW_S:g} s")
     ax_q.set_ylabel("Hàng đợi\n(request chờ)")
     ax_q.set_xlabel("Thời gian từ đầu pha chính (phút)")
-    ax_q.set_xlim(0, first["duration_s"] / 60)
+    ax_q.set_xlim(0, max(s["duration_s"] for s in series.values()) / 60)
     for ax in axes:
         _comma(ax)
 
@@ -315,7 +317,7 @@ def plot_c4(pairs: Mapping[str, Mapping[str, list]], title: str, baseline: str =
     fig, axes = plt.subplots(1, len(scen), sharey=True, figsize=(2.9 * len(scen) + 0.8, 3.5),
                              layout="constrained",
                              squeeze=False)  # fmt: skip
-    seen: dict[str, int] = {}
+    seen: set[str] = set()
     for ax, s in zip(axes[0], scen, strict=True):
         for c in _ordered(pairs[s], CONFIG_ORDER):
             pts, (color, marker) = pairs[s][c], style(c)
@@ -326,7 +328,7 @@ def plot_c4(pairs: Mapping[str, Mapping[str, list]], title: str, baseline: str =
             dx, dy = LABEL_OFFSET.get(c, (7, 5))
             ax.annotate(f"{c} (n={len(pts)})", (mx, my), xytext=(dx, dy), textcoords="offset points",
                         color=INK, ha="left" if dx > 0 else "right")  # fmt: skip
-            seen.setdefault(c, len(pts))
+            seen.add(c)
         ax.axhline(m.ATTAINMENT * 100, color=INK_2, lw=1, ls="--", zorder=1)
         ax.axvline(100, color=INK_3, lw=0.8, zorder=1)
         ax.set_title(s, loc="left")
@@ -376,10 +378,19 @@ def draw_all(
     log: list[str] = []
     groups, warn = c1_groups(rows, c1_configs)
     log += warn
-    for (env, rep), runs in sorted(groups.items(), key=lambda kv: tuple(map(str, kv[0]))):
+    n_cap: dict[tuple[Any, Any], int] = defaultdict(int)  # số mức C khác nhau của mỗi (env, repeat)
+    for env, rep, _ in groups:
+        n_cap[(env, rep)] += 1
+    for (env, rep, cap), runs in sorted(groups.items(), key=lambda kv: tuple(map(str, kv[0]))):
         series = {c: kb2_series(Path(r["path"])) for c, r in runs.items()}
-        title = f"C1 – KB2, lượt {rep} ({env}), cùng lịch gửi cho mọi cấu hình"
-        log += [f"ghi {p}" for p in _save(plot_c1(series, title), out / f"c1-kb2-{env}-r{rep}", formats)]
+        if len({tuple(sorted(s["phases"].items())) for s in series.values()}) > 1:
+            log.append(
+                f"C1 ({env}, lượt {rep}): các cấu hình có pha khác nhau, nền xám theo {next(iter(series))}"
+            )
+        c_txt = f"{cap:g}".replace(".", ",") if _isnum(cap) else "?"
+        name = f"c1-kb2-{env}-r{rep}" + (f"-c{c_txt}" if n_cap[(env, rep)] > 1 else "")
+        title = f"C1 – KB2, lượt {rep} ({env}, C = {c_txt} req/s), cùng lịch gửi cho mọi cấu hình"
+        log += [f"ghi {p}" for p in _save(plot_c1(series, title), out / name, formats)]
 
     for env in sorted({str(r["env"]) for r in rows if r.get("counted")}):
         er = [r for r in rows if str(r["env"]) == env]
