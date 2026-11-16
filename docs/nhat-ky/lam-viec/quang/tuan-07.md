@@ -201,3 +201,13 @@
 - **Deviations:** bản sửa `vh3-delete` **chưa chạy trên cluster thật** (máy thuê đã trả; ở nhà chưa chạy vì RAM). Chưa tạo Secret `alertmanager-telegram` ở nhà vì PC chưa có `.env`: cảnh báo chạy nhưng chưa gửi được Telegram.
 - **Links:** `experiments/ops/vh.py`, `experiments/tests/test_ops_vh.py`.
 - **Thesis:** chương vận hành, VH3: điều kiện "còn pod khác phục vụ" của tiêu chí 0 lỗi.
+
+## 2026-11-16 – PC nhà khựng khi chuyển ứng dụng: thiếu RAM, tạm đưa vLLM về 0 pod
+
+- **Task:** chung (vận hành PC nhà) · **Environment:** home
+- **Incidents:** triệu chứng: bấm vào ứng dụng hoặc chuyển cửa sổ thì disk lên 100 % rồi khựng. Đo: RAM 15,1 GB, đã dùng 12,2 GB, còn khả dụng 2,9 GB; swap đang dùng 3,8 GB trên `/swap.img` (ổ NVMe); `vmstat` thấy swap-in tới 2.788 KB/s lúc chuyển ứng dụng; gnome-shell có 257 MB nằm trong swap. Nguyên nhân: cluster chiếm khoảng 6 GB (pod vLLM 3.371 Mi, k3s-server 1.140 MB, Prometheus 638 Mi, Grafana 441 Mi, Argo CD application-controller 395 Mi), nên ứng dụng desktop bị đẩy ra swap và phải đọc lại từ ổ mỗi lần được gọi.
+- **Done:** `make home-eval-begin` (tắt auto-sync của app `autoscaling`), rồi gắn annotation `autoscaling.keda.sh/paused-replicas=0` lên ScaledObject `vllm-a2`. Pod vLLM mất khoảng 3 phút mới tắt hẳn (grace period 180 s, vLLM không dừng khi nhận SIGTERM).
+- **Results:** sau khi pod tắt: RAM khả dụng 2,9 → 5,9 GB; VRAM đang dùng 4.339 → 1.017 MiB. Swap còn 3,8 GB đang dùng (trang đã bị đẩy ra chỉ quay lại khi được đọc).
+- **Decision:** tạm để vLLM ở 0 pod, vì việc kế tiếp là phiên trên máy thuê, chưa cần GPU ở nhà. Phần còn lại của cluster giữ nguyên. Không chọn tắt k3s: Argo CD và monitoring vẫn cần để kiểm PR.
+- **Deviations:** app `autoscaling` đang `Suspended` và auto-sync tắt, khác trạng thái trong Git. Bật lại: `kubectl --context llm-home -n llm-serving annotate scaledobject vllm-a2 autoscaling.keda.sh/paused-replicas-` rồi `make home-eval-end`.
+- **Thesis:** giới hạn của môi trường nhà (§ môi trường): PC 16 GB RAM vừa là máy làm việc vừa là node GPU.
