@@ -509,7 +509,7 @@ runs/<run-id>/
 ├── loadgen.json      # tham số và seed của máy tạo tải, số tiến trình, mốc t0_unix, các pha, tự kiểm tra (§9)
 ├── metrics.csv.gz    # chuỗi Prometheus trong cửa sổ lượt (replicas, hàng đợi, KV-cache, GPU, CPU/RAM pod…), dạng dài: ts, name, labels, value
 ├── events.jsonl      # sự kiện Kubernetes trong namespace: Scheduled, Pulling/Pulled (pha 3), Killing, HPA
-├── alerts.jsonl      # cảnh báo firing trong cửa sổ lượt (từ chuỗi ALERTS, cho VH6)
+├── alerts.jsonl      # cảnh báo firing từ 30 s trước warm-up tới hết cooldown (chuỗi ALERTS, kèm từng đợt kêu `episodes`, cho VH6)
 ├── pods_start.json   # ảnh chụp pod vLLM sau reset; pods_end.json: cuối pha chính (kiểm hợp lệ, §17)
 ├── pods_timeline.json  # mọi pod vLLM từ reset tới hết cooldown, kèm mốc thời gian (bảng dưới)
 ├── logs/<pod>.log    # log vLLM có mốc kubelet, cả pod đã scale-down giữa lượt (pha 4–8, parse_vllm_log)
@@ -566,9 +566,9 @@ Script `analysis/build_tables.py` (công thức ở `analysis/metrics.py`, có u
 - Request được xếp vào pha theo **lịch gửi** `t_sched`. Pha được chấm SLO: KB1 `steady`, KB3 `sustain`, KB2 cả `pre`, `spike`, `drop` (KB2 chỉ báo cáo, bỏ 2 phút đầu như KB1).
 - Phân vị TTFT, TPOT tính trên request **thành công**, giống `vllm bench serve` và `capacity.py` (ĐG1). Request lỗi được đếm riêng và vẫn là "không đạt" trong SLO attainment.
 - **GPU-giờ** tính trong pha chính, mỗi pod từ mốc `scheduled` tới `gone_at` (cận trên, sai số ≤ 5 s mỗi pod). Ước lượng này hơi cao cho cấu hình autoscaling, nên kết luận "A2 tiết kiệm" không bị thổi phồng. Cột `gpu_s_ksm` (từ `kube_deployment_status_replicas`) chỉ để đối chiếu.
-- **N2a:** phần phát hiện = lúc tải tăng → pod mới đầu tiên được tạo (ReplicaSet tạo pod ngay khi HPA đổi `desiredReplicas`; mốc API chính xác tới 1 s, mịn hơn mẫu kube-state-metrics); phần cold start = pod đó tạo → Ready.
-- **N2b:** chỉ tìm trong pha `spike` (hồi phục nhờ tải giảm ở pha `drop` không tính). Request lỗi tính như TTFT vô hạn; không vi phạm lần nào thì ra 0.
-- **N7:** "SLO bắt đầu bị vi phạm" = mốc đầu tiên mà tỷ lệ request xấu trong 1 phút trước đó (theo log client) vượt 20 %, cùng ngưỡng và cửa sổ ngắn của `LLMSLOBurnFast`; chỉ xét khi cửa sổ đã đủ 1 phút. Page giả được chấm trên cửa sổ dài 5 phút kết thúc lúc firing. Mốc firing lấy từ chuỗi `ALERTS` của Prometheus, chưa gồm `group_wait` 30 s của Alertmanager.
+- **N2a:** phần phát hiện = lúc tải tăng → pod mới đầu tiên được tạo (ReplicaSet tạo pod ngay khi HPA đổi `desiredReplicas`; mốc API chính xác tới 1 s, mịn hơn mẫu kube-state-metrics); phần còn lại (cột `create_to_ready_s`, thường bằng cold start của pod đó) = từ đó tới khi pod mới đầu tiên Ready, nên hai phần cộng lại đúng N2a. Pod tạo trước lúc tải tăng (scale-up do dao động ở mức nền) không tính; cột `replicas_at_rise` cho biết số replica lúc tải bắt đầu tăng.
+- **N2b:** tìm từ lúc tổng thời gian vi phạm kể từ khi tải tăng đạt 30 s (hàng đợi dồn dần nên phút đầu có thể vẫn đạt; vài request chậm do dao động gây vi phạm dưới 30 s nên không tính; đếm tổng chứ không đếm liên tục để p95 dao động quanh ngưỡng vẫn là vi phạm), và chỉ trong pha `spike` (hồi phục nhờ tải giảm ở pha `drop` không tính). Request lỗi tính như TTFT vô hạn; không vi phạm lần nào thì ra 0; không hồi phục thì để trống và được đếm ở `cells.csv` (`n_not_recovered`).
+- **N7:** "SLO bắt đầu bị vi phạm" = mốc đầu tiên mà tỷ lệ request xấu trong 1 phút trước đó (theo log client) vượt 20 %, cùng ngưỡng và cửa sổ ngắn của `LLMSLOBurnFast`; chỉ xét khi cửa sổ đã đủ 1 phút. Page giả được chấm cho **từng đợt kêu** trên cửa sổ dài 5 phút kết thúc lúc firing (runner ghi `episodes` trong `alerts.jsonl` từ 16/11). Đợt đã kêu từ trước pha chính (lượt trước để lại, hoặc do warm-up) không được đếm và được ghi ở cột `alerts_at_start`. Thời gian tới cảnh báo âm nghĩa là đợt kêu trước mốc vi phạm theo log client rồi kêu tiếp qua mốc đó; đợt này vẫn có thể là page giả nếu lúc firing log client chưa thấy 20 % request xấu. Mốc firing lấy từ chuỗi `ALERTS` của Prometheus, chưa gồm `group_wait` 30 s của Alertmanager.
 - **Flapping:** số lần `replicas` (spec của Deployment, do HPA đặt) đổi chiều cách lần đổi trước ≤ 5 phút.
 
 ---

@@ -10,9 +10,11 @@ Mục đích: Tạo các bảng CSV để notebook vẽ biểu đồ C1–C6 và
       runs.csv    mỗi lần thử một dòng, cả lần không hợp lệ (cột `valid`); `counted` = lần thử hợp lệ
                   cuối cùng của lượt, là lần được đưa vào kết quả
       phases.csv  mỗi lần thử × pha của kịch bản một dòng (steady; pre, spike, drop; ramp, sustain)
-      cells.csv   mỗi ô môi trường × cấu hình × kịch bản một dòng: số lượt, trung bình, min, max của các
-                  chỉ số chính, chỉ tính lần thử `counted` (§16: báo cáo trung bình kèm min–max)
-      alerts.csv  mỗi chuỗi cảnh báo firing một dòng, kèm tỷ lệ request xấu theo log client (N7, VH6)
+      cells.csv   mỗi ô môi trường × cấu hình × kịch bản một dòng: số lượt, số lượt trượt N2a/N2b (KB2),
+                  trung bình, min, max của các chỉ số chính, chỉ tính lần thử `counted` (§16: báo cáo trung
+                  bình kèm min–max)
+      alerts.csv  mỗi ĐỢT KÊU của mỗi chuỗi cảnh báo một dòng (một chuỗi kêu hai lần = hai dòng), kèm tỷ lệ
+                  request xấu theo log client và cờ đợt đã kêu từ trước pha chính (N7, VH6)
 
 Chạy (từ gốc repo):
     uv run --project analysis python -m analysis.build_tables runs/<phiên> [runs/<phiên 2> …] \\
@@ -33,7 +35,7 @@ from typing import Any
 
 from analysis import metrics as m
 
-STEP_S = 5.0  # bước query_range của runner (experiments/runner/collect.py STEP_S)
+STEP_S = m.STEP_S  # bước query_range của runner (một nguồn ở metrics.py)
 
 # Pha được chấm SLO của từng kịch bản (Thông số §4, §7). Hai phút đầu của KB1, KB2 để ổn định, không tính;
 # KB3 chỉ tính pha `sustain` vì trong pha `ramp` pod đầu tiên chắc chắn quá tải lúc chờ cold start. KB2
@@ -59,13 +61,16 @@ RUN_COLUMNS = [
     "slo_attainment", "ttft_p50_s", "ttft_p95_s", "ttft_p99_s", "tpot_p50_s", "tpot_p95_s",
     "throughput_tok_s", "tokens_out",
     # ── tài nguyên (cả pha chính) ──
-    "gpu_s", "gpu_h", "gpu_s_ksm", "gpu_vs_baseline", "slo_delta_vs_baseline_pp", "tokens_per_gpu_h",
+    "has_timeline", "gpu_s", "gpu_h", "gpu_s_ksm", "gpu_vs_baseline", "slo_delta_vs_baseline_pp",
+    "tokens_per_gpu_h",
     "gpu_util_mean", "vllm_cpu_cores_mean", "vllm_mem_bytes_max",
     # ── autoscaling ──
     "replicas_max", "replicas_ready_mean", "scale_changes", "scale_ups", "scale_downs", "flaps",
-    "replicas_at_rise", "detect_s", "coldstart_s", "react_s", "recovery_s", "n_error_drop", "cooldown_s",
+    "replicas_at_rise", "detect_s", "create_to_ready_s", "react_s", "recovery_s", "n_error_drop",
+    "cooldown_s",
     # ── cảnh báo (N7) ──
-    "alertnames", "pages", "tickets", "false_pages", "slo_violation_s", "slo_alert_s", "time_to_alert_s",
+    "alertnames", "alerts_at_start", "pages", "tickets", "false_pages",
+    "slo_violation_s", "slo_alert_s", "time_to_alert_s",
 ]  # fmt: skip
 
 PHASE_COLUMNS = [
@@ -84,7 +89,8 @@ ALERT_COLUMNS = [
 CELL_METRICS = [
     "slo_attainment", "ttft_p95_s", "tpot_p95_s", "error_ratio", "gpu_h", "gpu_vs_baseline",
     "slo_delta_vs_baseline_pp", "tokens_per_gpu_h", "replicas_ready_mean", "scale_changes", "flaps",
-    "detect_s", "react_s", "recovery_s", "n_error_drop", "pages", "false_pages", "time_to_alert_s",
+    "detect_s", "create_to_ready_s", "react_s", "recovery_s", "n_error_drop", "pages", "false_pages",
+    "time_to_alert_s",
 ]  # fmt: skip
 
 
@@ -197,6 +203,21 @@ def analyze_attempt(d: Path) -> tuple[dict[str, Any], list[dict[str, Any]], list
         v for ts, _, v in met.get("gpu_util", []) if w0 <= ts <= w1
     ]  # mọi GPU của node, kể cả GPU rảnh
 
+    # ── Từng pha của kịch bản (phases.csv) ──
+    phase_rows = [
+        {
+            **ident,
+            "phase": name,
+            "start_s": a - t0,
+            "end_s": b - t0,
+            **m.phase_stats(reqs, a, b),
+            "gpu_s": m.gpu_seconds(pods, a, b) if has_timeline else m.NAN,
+            "replicas_ready_mean": _time_mean(_within(ready_s, a - STEP_S, b), a, b),
+        }
+        for name, (a, b) in sorted(phases.items(), key=lambda kv: kv[1][0])
+    ]
+    by_phase = {p["phase"]: p for p in phase_rows}
+
     # ── KB2: phản ứng (N2a), hồi phục (N2b), lỗi khi scale-down (N4) ──
     kb2: dict[str, Any] = {}
     if "spike" in phases:
@@ -208,8 +229,8 @@ def analyze_attempt(d: Path) -> tuple[dict[str, Any], list[dict[str, Any]], list
         # đọc N2a đúng ngữ cảnh.
         before = [v for t, v in spec_s if t <= t_rise]
         kb2["replicas_at_rise"] = before[-1] if before else None
-    if "drop" in phases:
-        kb2["n_error_drop"] = m.phase_stats(reqs, *phases["drop"])["n_error"]
+    if "drop" in by_phase:
+        kb2["n_error_drop"] = by_phase["drop"]["n_error"]
 
     # ── Cảnh báo (N7) ──
     raw_alerts = []
@@ -220,23 +241,34 @@ def analyze_attempt(d: Path) -> tuple[dict[str, Any], list[dict[str, Any]], list
             for a in map(json.loads, filter(None, lines))
             if a["labels"].get("alertname") not in IGNORED_ALERTS
         ]
-    alerts = m.classify_alerts(raw_alerts, reqs)
+    # Đợt kêu đã có từ trước pha chính (firing_at_start, xem metrics.classify_alerts) không do pha chính gây
+    # ra: không đếm vào pages, false_pages, không dùng cho thời gian tới cảnh báo; tên ghi ở alerts_at_start.
     t_main_start = float(meta.get("t_main_start") or w0)
+    alerts = m.classify_alerts(raw_alerts, reqs, main_start=t_main_start, step_s=STEP_S)
     alert_rows = [
         {
             **ident,
-            **{k: a[k] for k in ("alertname", "severity", "client_bad_ratio", "false_page")},
+            **{
+                k: a[k]
+                for k in ("alertname", "severity", "client_bad_ratio", "false_page", "firing_at_start")
+            },
             "first_s": a["first"] - t0,
             "last_s": a["last"] - t0,
-            # Runner chỉ hỏi ALERTS từ đầu pha chính, nên cảnh báo đã kêu từ trước (lượt trước để lại) có
-            # `first` bị cắt ở mép đầu: đánh dấu để không tính nhầm thời gian tới cảnh báo.
-            "firing_at_start": a["first"] <= t_main_start + STEP_S,
         }
         for a in alerts
     ]
-    ours = [a for a in alerts if a["severity"] in ("page", "ticket")]
+    ours_all = [a for a in alerts if a["severity"] in ("page", "ticket")]
+    ours = [a for a in ours_all if not a["firing_at_start"]]
     violation = m.slo_violation_start(reqs, w0, w1)
-    burn = [a["first"] for a in alerts if a["alertname"] == "LLMSLOBurnFast"]
+    # Đợt LLMSLOBurnFast ứng với lần vi phạm: đợt đầu tiên còn kêu tới lúc vi phạm hoặc sau đó. Đợt đã tắt
+    # trước khi vi phạm bắt đầu không báo cho lần vi phạm này. Đợt kêu sớm rồi kêu tiếp qua mốc vi phạm thì
+    # được dùng (time_to_alert_s âm), và vẫn có thể là page giả ở lúc firing (metrics.classify_alerts): hai
+    # cột trả lời hai câu hỏi khác nhau của N7.
+    burn = [
+        a["first"]
+        for a in ours
+        if a["alertname"] == "LLMSLOBurnFast" and violation is not None and a["last"] >= violation
+    ]
     slo_alert = min(burn) if burn else None
 
     ov = cfg.get("overrides") or {}
@@ -276,6 +308,9 @@ def analyze_attempt(d: Path) -> tuple[dict[str, Any], list[dict[str, Any]], list
                 "tokens_out",
             )
         },
+        # Không có pods_timeline.json (lượt trước 09/11): gpu_s và react_s trống vì THIẾU DỮ LIỆU, không phải
+        # vì không có pod mới; cells() dựa vào cột này để không đếm nhầm là trượt N2a.
+        "has_timeline": has_timeline,
         "gpu_s": gpu_s,
         "gpu_h": gpu_s / 3600,
         "gpu_s_ksm": gpu_ksm,
@@ -292,6 +327,7 @@ def analyze_attempt(d: Path) -> tuple[dict[str, Any], list[dict[str, Any]], list
         **kb2,
         "cooldown_s": meta.get("cooldown_s"),
         "alertnames": " ".join(sorted({a["alertname"] for a in ours})),
+        "alerts_at_start": " ".join(sorted({a["alertname"] for a in ours_all if a["firing_at_start"]})),
         "pages": sum(1 for a in ours if a["severity"] == "page"),
         "tickets": sum(1 for a in ours if a["severity"] == "ticket"),
         "false_pages": sum(1 for a in ours if a["false_page"]),
@@ -299,18 +335,6 @@ def analyze_attempt(d: Path) -> tuple[dict[str, Any], list[dict[str, Any]], list
         "slo_alert_s": None if slo_alert is None else slo_alert - t0,
         "time_to_alert_s": None if violation is None or slo_alert is None else slo_alert - violation,
     }
-    phase_rows = [
-        {
-            **ident,
-            "phase": name,
-            "start_s": a - t0,
-            "end_s": b - t0,
-            **m.phase_stats(reqs, a, b),
-            "gpu_s": m.gpu_seconds(pods, a, b) if has_timeline else m.NAN,
-            "replicas_ready_mean": _time_mean(_within(ready_s, a - STEP_S, b), a, b),
-        }
-        for name, (a, b) in sorted(phases.items(), key=lambda kv: kv[1][0])
-    ]
     return row, phase_rows, alert_rows
 
 
@@ -374,6 +398,9 @@ def cells(rows: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
 
     Môi trường §16: mỗi ô có 1–3 lượt; chỉ viết "A khác B" khi MỌI lượt cùng chiều và vượt ngưỡng thực tiễn,
     nên giữ cả min và max (và từng lượt ở runs.csv) thay vì chỉ trung bình.
+    Ô trống (None, NaN) bị bỏ khi tính trung bình. Với KB2, trống ở react_s hay recovery_s lại là ca TRƯỢT
+    (không có pod mới Ready, không hồi phục trước hết spike), nên đếm riêng ở n_no_new_ready và
+    n_not_recovered; không thì ô 3 lượt có 1 lượt không hồi phục vẫn chỉ hiện trung bình của 2 lượt tốt.
     """
     groups: dict[tuple[Any, Any, Any], list[dict[str, Any]]] = defaultdict(list)
     for r in rows:
@@ -387,10 +414,18 @@ def cells(rows: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
             "scenario": scenario,
             "n_runs": len(rs),
             "run_ids": " ".join(sorted(f"{r['session']}/{r['run_id']}" for r in rs)),
+            # Cấu hình tĩnh (S1, S4) không tạo pod mới theo thiết kế: không đếm là "trượt". Lượt không có
+            # pods_timeline.json (has_timeline) hay không có pha spike thì ô trống là do thiếu dữ liệu.
+            "n_no_new_ready": sum(1 for r in rs if r.get("has_timeline") and r.get("react_s") is None)
+            if scenario == "KB2" and all(r.get("config_type") == "scaledobject" for r in rs)
+            else None,
+            "n_not_recovered": sum(1 for r in rs if "recovery_s" in r and r["recovery_s"] is None)
+            if scenario == "KB2"
+            else None,
         }
         for k in CELL_METRICS:
             vals = [float(v) for r in rs if (v := r.get(k)) is not None and not _isnan(v)]
-            cell[f"{k}_mean"] = sum(vals) / len(vals) if vals else m.NAN
+            cell[f"{k}_mean"] = m.mean(vals)
             cell[f"{k}_min"] = min(vals, default=m.NAN)
             cell[f"{k}_max"] = max(vals, default=m.NAN)
         out.append(cell)
@@ -454,7 +489,7 @@ def main(argv: list[str] | None = None) -> int:
     write_csv(out / "runs.csv", res["runs"], RUN_COLUMNS)
     write_csv(out / "phases.csv", res["phases"], PHASE_COLUMNS)
     write_csv(out / "alerts.csv", res["alerts"], ALERT_COLUMNS)
-    cell_cols = ["env", "config", "scenario", "n_runs", "run_ids"]
+    cell_cols = ["env", "config", "scenario", "n_runs", "run_ids", "n_no_new_ready", "n_not_recovered"]
     cell_cols += [f"{k}_{s}" for k in CELL_METRICS for s in ("mean", "min", "max")]
     write_csv(out / "cells.csv", res["cells"], cell_cols)
 

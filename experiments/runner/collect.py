@@ -7,7 +7,8 @@ Mục đích: Ghi các file:
                      (Thiết kế ghi metrics.parquet; v1 dùng CSV nén để không kéo thêm pyarrow. Bảng phân
                      tích (TR7) đọc được cả hai.)
     events.jsonl     event Kubernetes trong namespace từ lúc bắt đầu lượt (pod, HPA, ScaledObject)
-    alerts.jsonl     cảnh báo firing trong cửa sổ lượt (chuỗi ALERTS), dữ liệu cho VH6
+    alerts.jsonl     cảnh báo firing từ 30 s trước warm-up tới hết cooldown (chuỗi ALERTS, kèm từng đợt
+                     kêu), dữ liệu cho VH6
     pods_start.json, pods_end.json   ảnh chụp pod vLLM sau reset và cuối pha chính (cho kiểm hợp lệ)
     pods_timeline.json   mọi pod vLLM từng xuất hiện từ reset tới hết cooldown, với mốc thời gian đầu
                      tiên của từng loại (PodWatcher): pha cold start 1, 2, 4, 8; GPU-giờ; N2a
@@ -492,15 +493,39 @@ def write_events(kube: Kube, ns: str, since: float, path: Path) -> int:
     return n
 
 
+def alert_episodes(values: list[list[Any]], step_s: float = STEP_S) -> list[list[float]]:
+    """Chia mẫu query_range của một chuỗi ALERTS thành các đợt kêu liền mạch [[đầu, cuối], …]. Hàm thuần.
+
+    query_range chỉ trả mẫu ở những bước chuỗi còn tồn tại; cảnh báo hết thì Prometheus ghi stale marker
+    nên chuỗi dừng. Một cảnh báo hết rồi kêu lại trong cùng lượt vì thế để lại khoảng trống hơn một bước.
+    Chỉ ghi `first`, `last` thì hai lần kêu bị gộp làm một, và lần sau (có thể là page giả, N7) không được
+    chấm. Ngưỡng 1,5 bước để mẫu đúng bước (cách nhau 5 s) không bị tách vì sai số làm tròn.
+    Lỡ một lần đánh giá rule (rule lỗi, Prometheus khởi động lại dưới 5 phút) không tạo khoảng trống:
+    query_range lấy mẫu gần nhất trong lookback 5 phút, và stale marker chỉ được ghi khi rule đánh giá xong
+    mà không còn trả cảnh báo đó, hoặc khi rule bị gỡ lúc nạp lại cấu hình (Prometheus v3.15.0
+    rules/group.go: rule lỗi thì `return` trước đoạn ghi stale marker). Khoảng trống vì vậy nghĩa là cảnh
+    báo đã thật sự hết.
+    """
+    eps: list[list[float]] = []
+    for t in sorted(float(t) for t, _ in values):
+        if eps and t - eps[-1][1] <= 1.5 * step_s:
+            eps[-1][1] = t
+        else:
+            eps.append([t, t])
+    return eps
+
+
 def write_alerts(prom: Prometheus, start: float, end: float, path: Path) -> int:
+    """alerts.jsonl: mỗi chuỗi ALERTS firing một dòng, gồm nhãn, mốc đầu và cuối, và các đợt kêu (`episodes`,
+    có từ 16/11; bảng phân tích đọc `first`/`last` khi file cũ chưa có trường này)."""
     series = prom.query_range('ALERTS{alertstate="firing"}', start, end, STEP_S)
     with path.open("w", encoding="utf-8") as fh:
         for s in series:
-            fh.write(
-                json.dumps(
-                    {"labels": s["metric"], "first": s["values"][0][0], "last": s["values"][-1][0]},
-                    ensure_ascii=False,
-                )
-                + "\n"
-            )
+            rec = {
+                "labels": s["metric"],
+                "first": s["values"][0][0],
+                "last": s["values"][-1][0],
+                "episodes": alert_episodes(s["values"]),
+            }
+            fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
     return len(series)

@@ -41,6 +41,9 @@ VIOLATION_WINDOW_S = 60.0  # N7: cửa sổ xác định "SLO bắt đầu bị 
 PAGE_WINDOW_S = 300.0  # N7: cửa sổ dài 5 phút của LLMSLOBurnFast, dùng để chấm page giả
 
 NAN = float("nan")
+# Bước query_range của runner (experiments/runner/collect.py STEP_S; test_metrics kiểm hai số trùng nhau).
+# Một nguồn cho cả analysis: build_tables dùng lại hằng này.
+STEP_S = 5.0
 
 
 @dataclass(frozen=True)
@@ -155,11 +158,15 @@ def phase_stats(reqs: Sequence[Request], start: float, end: float) -> dict[str, 
     }
 
 
-def bad_ratio(reqs: Sequence[Request], start: float, end: float) -> float | None:
-    """Tỷ lệ request xấu (không đạt SLO, gồm cả lỗi) có lịch gửi trong [start, end).
-    Không có request nào → None."""
-    sel = in_window(reqs, start, end)
+def _bad_fraction(sel: Sequence[Request]) -> float | None:
+    """Tỷ lệ request xấu (không đạt SLO, gồm cả lỗi) trong một nhóm request; nhóm rỗng → None. Một chỗ duy
+    nhất định nghĩa "request xấu" cho cả mốc vi phạm và page giả của N7."""
     return 1 - sum(r.good for r in sel) / len(sel) if sel else None
+
+
+def bad_ratio(reqs: Sequence[Request], start: float, end: float) -> float | None:
+    """Tỷ lệ request xấu có lịch gửi trong [start, end). Không có request nào → None."""
+    return _bad_fraction(in_window(reqs, start, end))
 
 
 # ── N2b: thời gian hồi phục SLO ───────────────────────────────────────────────────────────────────────
@@ -190,21 +197,42 @@ def slo_recovery_s(
     hold_s: float = RECOVERY_HOLD_S,
     step_s: float = 1.0,
 ) -> float | None:
-    """N2b: số giây từ lúc tải tăng (`t_rise`, theo lịch) tới mốc τ đầu tiên mà TTFT p95 trượt 30 s không
-    vượt ngưỡng tại mọi điểm trong [τ, τ + 60 s] (Môi trường §15). Chỉ tìm trong [t_rise, t_end], với
-    t_end = hết pha spike: hồi phục nhờ tải giảm ở pha drop không phải hồi phục nhờ scale-up.
+    """N2b: số giây từ lúc tải tăng (`t_rise`, theo lịch) tới mốc τ đầu tiên, SAU khi SLO đã thật sự bị vi
+    phạm, mà TTFT p95 trượt 30 s không vượt ngưỡng tại mọi điểm trong [τ, τ + 60 s] (Môi trường §15). Chỉ tìm
+    trong [t_rise, t_end], với t_end = hết pha spike: hồi phục nhờ tải giảm ở pha drop không phải nhờ
+    scale-up.
 
-    Không vi phạm lần nào sau t_rise → 0. Không hồi phục trước t_end → None. Cửa sổ trống (không có request)
-    được coi là không vi phạm. Lưới 1 s: sai số tối đa 1 s, nhỏ hơn nhiều ngưỡng 30 s của Thông số §6.
+    "Đã thật sự bị vi phạm" = tổng thời gian vi phạm kể từ t_rise đạt một cửa sổ (30 s; mỗi điểm lưới tính
+    `step_s` giây). Việc tìm τ bắt đầu từ mốc đó. Lý do:
+    - Hàng đợi trên pod cũ dồn dần, nên 60 s đầu sau t_rise có thể vẫn đạt rồi mới vi phạm suốt lúc chờ
+      cold start; tìm từ t_rise thì lượt đó ra 0, là kết quả tốt nhất cho đúng lượt tệ nhất.
+    - Vài request chậm do dao động trước đợt vi phạm thật không được làm mốc, vì 60 s đạt ngay sau đó lại
+      cho kết quả gần 0. Cửa sổ trượt kéo dài mỗi request chậm thêm 30 s, nên hai request chậm đứng riêng
+      chỉ gây vi phạm dưới 30 s (p95 của 30 request chịu được một request xấu).
+    - Đếm TỔNG chứ không đếm liên tục: p95 dao động quanh ngưỡng (xấu 29 s, đạt 2 s, lặp lại) vẫn là quá
+      tải. Đếm liên tục thì không đợt nào đủ 30 s, và lượt đó ra 0 thay vì "không hồi phục".
+    Giới hạn còn lại: vi phạm, rồi đạt 60 s, rồi vi phạm lại thì chỉ tính lần hồi phục đầu.
+    Tổng thời gian vi phạm chưa tới 30 s → 0. Không hồi phục trước t_end → None. Cửa sổ trống (không có
+    request) được coi là không vi phạm. Lưới 1 s: sai số tối đa 1 s, nhỏ hơn nhiều ngưỡng thực tiễn 30 s
+    của Thông số §6.
     """
     n = int((t_end - t_rise) // step_s) + 1
     grid = [t_rise + i * step_s for i in range(n)]
     p95 = _sliding_ttft_p95(reqs, grid, window_s)
     ok = [v is None or v <= TTFT_SLO_S for v in p95]
+    need_bad = int(math.ceil(window_s / step_s))  # số điểm vi phạm (cộng dồn) để coi là đã vi phạm thật
+    n_bad, first_bad = 0, None
+    for i, good in enumerate(ok):
+        n_bad += not good
+        if n_bad >= need_bad:
+            first_bad = i
+            break
+    if first_bad is None:
+        return 0.0
     need = int(math.ceil(hold_s / step_s)) + 1  # số điểm lưới trong [τ, τ + hold_s]
     run = 0  # số điểm "đạt" liên tiếp tính tới điểm i
-    for i, good in enumerate(ok):
-        run = run + 1 if good else 0
+    for i in range(first_bad, len(ok)):
+        run = run + 1 if ok[i] else 0
         if run >= need:
             return grid[i - need + 1] - t_rise
     return None
@@ -238,17 +266,38 @@ def slo_violation_start(
     for i in range(max(n, 0)):
         tau = first + i * step_s
         lo, hi = bisect.bisect_right(ts, tau - window_s), bisect.bisect_right(ts, tau)
-        sel = rs[lo:hi]
-        if sel and 1 - sum(r.good for r in sel) / len(sel) > threshold:
+        bad = _bad_fraction(rs[lo:hi])
+        if bad is not None and bad > threshold:
             return tau
     return None
 
 
 def classify_alerts(
-    alerts: Sequence[Mapping[str, Any]], reqs: Sequence[Request], *, window_s: float = PAGE_WINDOW_S
+    alerts: Sequence[Mapping[str, Any]],
+    reqs: Sequence[Request],
+    *,
+    main_start: float | None = None,
+    step_s: float = STEP_S,
+    window_s: float = PAGE_WINDOW_S,
 ) -> list[dict[str, Any]]:
-    """Mỗi chuỗi trong alerts.jsonl → một dòng: tên, mức, mốc firing đầu/cuối, tỷ lệ request xấu theo log
-    client trong 5 phút trước lúc firing, và có phải page giả không.
+    """Mỗi đợt kêu của mỗi chuỗi trong alerts.jsonl → một dòng: tên, mức, mốc firing đầu/cuối của đợt, tỷ lệ
+    request xấu theo log client trong 5 phút trước lúc firing, có phải page giả không, và đợt đó đã kêu từ
+    trước pha chính chưa.
+
+    Một chuỗi có thể kêu nhiều đợt trong một lượt (hết rồi kêu lại): mỗi đợt được chấm riêng, vì đợt sau có
+    thể là page giả dù đợt đầu đúng. File cũ (trước 16/11) chưa có `episodes` thì coi [first, last] là một
+    đợt.
+
+    `firing_at_start`: đợt bắt đầu trước pha chính (`main_start`, t_main_start của metadata), tức `first` ≤
+    main_start + một bước query_range (`step_s`). Từ 16/11 runner hỏi ALERTS từ 30 s trước warm-up, nên
+    `first` của đợt bắt đầu lúc warm-up là mốc thật. File cũ hỏi từ đầu pha chính, nên `first` bị cắt đúng ở
+    mép đầu (sai số một bước). Hai trường hợp đều là đợt kêu do lượt trước để lại hoặc do warm-up, không do
+    pha chính, nên `false_page` để None: 5 phút trước đó là lúc reset và warm-up, gần như không có request
+    của pha chính, và đợt đó sẽ bị chấm nhầm là page giả.
+
+    Một đợt kêu trước mốc vi phạm theo log client rồi kêu tiếp qua mốc đó vẫn được chấm theo đúng định nghĩa
+    tại lúc firing (Thông số N7): nếu khi đó log client chưa thấy 20 % request xấu thì đó là page giả, dù
+    build_tables vẫn dùng nó làm cảnh báo của lần vi phạm (thời gian tới cảnh báo âm).
 
     Page giả (N7) = cảnh báo `severity: page` kêu trong khi tỷ lệ request xấu theo log client, trên cùng
     cửa sổ, < 20 %. "Cùng cửa sổ" = cửa sổ dài 5 phút của LLMSLOBurnFast, kết thúc ở lúc firing. Cửa sổ
@@ -259,19 +308,23 @@ def classify_alerts(
     rows = []
     for a in alerts:
         labels = a.get("labels", {})
-        first, last = float(a["first"]), float(a["last"])
-        ratio = bad_ratio(reqs, first - window_s, first)
         severity = labels.get("severity", "")
-        rows.append(
-            {
-                "alertname": labels.get("alertname", ""),
-                "severity": severity,
-                "first": first,
-                "last": last,
-                "client_bad_ratio": NAN if ratio is None else ratio,
-                "false_page": severity == "page" and (ratio is None or ratio < BAD_RATIO_PAGE),
-            }
-        )
+        for first, last in a.get("episodes") or [[a["first"], a["last"]]]:
+            first, last = float(first), float(last)
+            ratio = bad_ratio(reqs, first - window_s, first)
+            at_start = main_start is not None and first <= main_start + step_s
+            false_page = severity == "page" and (ratio is None or ratio < BAD_RATIO_PAGE)
+            rows.append(
+                {
+                    "alertname": labels.get("alertname", ""),
+                    "severity": severity,
+                    "first": first,
+                    "last": last,
+                    "client_bad_ratio": NAN if ratio is None else ratio,
+                    "false_page": None if at_start else false_page,
+                    "firing_at_start": at_start,
+                }
+            )
     return rows
 
 
@@ -341,9 +394,14 @@ def reaction(
       nên đây là phần phát hiện (KEDA đọc metric, HPA tính, cửa sổ ổn định), chính xác tới 1 s theo đồng
       hồ API server. Không dùng kube_horizontalpodautoscaler_status_desired_replicas vì mẫu chỉ có mỗi chu
       kỳ scrape của kube-state-metrics.
-    - coldstart_s: pod Ready đầu tiên, từ lúc pod đó được tạo tới lúc Ready (8 pha, Kiến trúc §7.2).
     - react_s: t_rise → pod mới đầu tiên Ready (chỉ tiêu N2a ≤ 2 phút).
-    "Pod mới" = không có trong pods_start và được tạo từ t_rise − 1 s (mốc API chỉ tới giây) trở đi.
+    - create_to_ready_s = react_s − detect_s: từ lúc có pod mới đầu tiên tới lúc có pod mới Ready đầu tiên,
+      để hai phần cộng lại đúng bằng N2a. Thường bằng cold start (8 pha, Kiến trúc §7.2) của chính pod tạo
+      đầu tiên, nhưng KHÔNG gọi là cold start: nếu pod tạo sau lại Ready trước (ví dụ rơi vào node đã có
+      image) thì nó không phải cold start của pod nào. Cold start của từng pod (ĐG3, C5) lấy từ
+      pods_timeline.json và log (vllm_log.phases).
+    "Pod mới" = không có trong pods_start và được tạo từ t_rise − 1 s (mốc API chỉ tới giây) trở đi. Pod tạo
+    trước lúc tải tăng (scale-up do dao động ở mức nền) không phải phản ứng với tải tăng nên không tính.
     """
     new = [
         p
@@ -353,12 +411,13 @@ def reaction(
         and p["marks"]["created"] >= t_rise - 1
     ]
     created = [p["marks"]["created"] for p in new]
-    ready = [p for p in new if p["marks"].get("ready") is not None]
-    first = min(ready, key=lambda p: p["marks"]["ready"]) if ready else None
+    ready = [p["marks"]["ready"] for p in new if p["marks"].get("ready") is not None]
+    detect = min(created) - t_rise if created else None
+    react = min(ready) - t_rise if ready else None
     return {
-        "detect_s": min(created) - t_rise if created else None,
-        "coldstart_s": first["marks"]["ready"] - first["marks"]["created"] if first else None,
-        "react_s": first["marks"]["ready"] - t_rise if first else None,
+        "detect_s": detect,
+        "create_to_ready_s": None if detect is None or react is None else react - detect,
+        "react_s": react,
     }
 
 

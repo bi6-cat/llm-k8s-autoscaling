@@ -1,4 +1,10 @@
-"""Unit test cho analysis/metrics.py: mỗi công thức của Môi trường §15 với số liệu tính tay được."""
+"""Unit test cho analysis/metrics.py.
+
+Khái niệm: Mỗi test dựng vài request hoặc pod giả có số liệu tính tay được (giây tròn, TTFT 0,2 s hoặc 5 s),
+    không cần cluster hay dữ liệu thật.
+Mục đích: Giữ đúng các công thức của Môi trường §15 (SLO attainment, phân vị, N2a, N2b, N7, GPU-giờ,
+    flapping) và các ca biên đã gặp, để số trong luận văn không đổi lặng lẽ khi sửa code.
+"""
 
 from __future__ import annotations
 
@@ -103,6 +109,34 @@ def test_recovery_zero_when_never_violated_and_none_when_not_recovered():
     assert m.slo_recovery_s(_bad_until(100), t_rise=0, t_end=150) is None
 
 
+def test_recovery_starts_from_first_violation():
+    # Hàng đợi dồn dần: 70 s đầu sau t_rise vẫn đạt, rồi xấu tới 299,5. Tìm từ t_rise thì ra 0 (sai).
+    reqs = [req(t + 0.5, ttft=5.0 if 70 <= t + 0.5 < 300 else 0.2) for t in range(600)]
+    assert m.slo_recovery_s(reqs, t_rise=0, t_end=600) == pytest.approx(329)
+
+
+def _bad_pairs(starts, n: int = 600) -> list[m.Request]:
+    """Mỗi giây một request lúc x,5; TTFT 5 s ở hai request liền nhau bắt đầu từ mỗi mốc trong `starts`.
+    Cửa sổ 30 request chịu được 1 request xấu, nên mỗi cặp làm p95 vi phạm đúng 29 điểm lưới."""
+    bad = {s + k for s in starts for k in (0.5, 1.5)}
+    return [req(t + 0.5, ttft=5.0 if t + 0.5 in bad else 0.2) for t in range(n)]
+
+
+def test_recovery_ignores_short_blip_before_real_violation():
+    # Cặp request chậm lúc 40,5–41,5 (vi phạm 29 s), đạt hơn 60 s, rồi quá tải thật 150,5–249,5. Tìm từ điểm
+    # xấu đầu tiên thì ra 71 (sau cặp chậm); đúng là 279 (cửa sổ (249, 279] chỉ còn 249,5 xấu).
+    reqs = [r if not (150 <= r.t_sched < 250) else req(r.t_sched, ttft=5.0) for r in _bad_pairs([40])]
+    assert m.slo_recovery_s(reqs, t_rise=0, t_end=400) == pytest.approx(279)
+
+
+def test_recovery_counts_total_not_consecutive_violation():
+    # p95 dao động quanh ngưỡng: mỗi 31 s một cặp chậm → xấu 29 điểm, đạt 2 điểm, lặp lại. Không đợt nào đủ
+    # 30 s liên tục, nhưng đó vẫn là quá tải: phải ra "không hồi phục", không phải 0.
+    assert m.slo_recovery_s(_bad_pairs(range(40, 330, 31)), t_rise=0, t_end=300) is None
+    # Cặp cuối lúc 164,5–165,5: cửa sổ (165, 195] chỉ còn một request xấu → hồi phục ở 195
+    assert m.slo_recovery_s(_bad_pairs(range(40, 165, 31)), t_rise=0, t_end=300) == pytest.approx(195)
+
+
 def test_recovery_counts_errors_as_infinite_ttft():
     reqs = [req(t + 0.5) if t >= 100 else req(t + 0.5, ttft=None, error="Timeout") for t in range(400)]
     assert m.slo_recovery_s(reqs, t_rise=0, t_end=300) == pytest.approx(129)
@@ -120,6 +154,15 @@ def test_violation_start_uses_full_one_minute_window():
     assert m.slo_violation_start([req(t + 0.5) for t in range(300)], 0, 300) is None
 
 
+def test_classify_alerts_judges_each_episode():
+    # Cùng một chuỗi: kêu đúng lúc quá tải (330 s), tắt, kêu lại lúc 1300 s khi không còn request xấu
+    reqs = [req(t + 0.5, ttft=5.0 if 100 <= t < 400 else 0.2) for t in range(1500)]
+    a = {"labels": {"alertname": "LLMSLOBurnFast", "severity": "page"}, "first": 330, "last": 1310}
+    a["episodes"] = [[330, 400], [1300, 1310]]
+    rows = m.classify_alerts([a], reqs)
+    assert [(r["first"], r["false_page"]) for r in rows] == [(330, False), (1300, True)]
+
+
 def test_classify_alerts_false_page_rule():
     reqs = [req(t + 0.5, ttft=5.0 if t >= 100 else 0.2) for t in range(400)]
     alerts = [
@@ -133,6 +176,27 @@ def test_classify_alerts_false_page_rule():
     assert rows[0]["client_bad_ratio"] == pytest.approx(250 / 300)  # [50, 350): 50,5…349,5, xấu từ 100,5
     assert rows[1]["client_bad_ratio"] == pytest.approx(0.0)
     assert math.isnan(rows[3]["client_bad_ratio"])  # không có request nào trong 5 phút trước
+
+
+# ── Khớp với runner ──
+
+
+def test_constants_and_quantile_match_runner():
+    # analysis chép tay ngưỡng SLO và công thức phân vị của capacity.py (chỗ tính C): lệch là số không còn
+    # so được với ĐG1. Runner chỉ dùng thư viện chuẩn nên import được từ môi trường của analysis.
+    from experiments.runner import capacity, collect
+
+    from analysis import build_tables
+
+    assert (m.TTFT_SLO_S, m.TPOT_SLO_S, m.ATTAINMENT) == (
+        capacity.TTFT_SLO_S,
+        capacity.TPOT_SLO_S,
+        capacity.ATTAINMENT,
+    )
+    assert m.STEP_S == build_tables.STEP_S == collect.STEP_S
+    for vals in ([3.0], [2.0, 1.0], [float(x) for x in range(37)]):
+        for p in (0.5, 0.95, 0.99):
+            assert m.quantile(vals, p) == capacity._q(vals, p)
 
 
 # ── GPU-giờ ──
@@ -164,7 +228,7 @@ def test_scale_changes_and_flaps():
     assert m.count_flaps(ch) == 1
 
 
-def test_reaction_splits_detection_and_cold_start():
+def test_reaction_splits_detection_and_create_to_ready():
     pods = [
         {"name": "old", "marks": {"created": 0.0, "ready": 10.0}},
         {"name": "new-a", "marks": {"created": 260.0, "ready": 340.0}},
@@ -172,5 +236,8 @@ def test_reaction_splits_detection_and_cold_start():
         {"name": "early", "marks": {"created": 100.0, "ready": 160.0}},  # tạo trước khi tải tăng: bỏ
     ]
     r = m.reaction(pods, {"old"}, t_rise=240.0)
-    assert r == {"detect_s": 20.0, "coldstart_s": 65.0, "react_s": 90.0}
-    assert m.reaction(pods[:1], {"old"}, 240.0) == {"detect_s": None, "coldstart_s": None, "react_s": None}
+    # create_to_ready = react − detect để hai phần cộng lại đúng N2a. Pod tạo sau nhưng Ready trước vẫn tính,
+    # nên 70 s ở đây không phải cold start của pod nào (cold start từng pod lấy từ pods_timeline và log).
+    assert r == {"detect_s": 20.0, "create_to_ready_s": 70.0, "react_s": 90.0}
+    none = {"detect_s": None, "create_to_ready_s": None, "react_s": None}
+    assert m.reaction(pods[:1], {"old"}, 240.0) == none

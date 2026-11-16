@@ -245,7 +245,9 @@ def run_one(ctx: Context, spec: RunSpec, attempt_dir: Path) -> str:
     queries = collect.metric_queries(t.namespace, t.deployment)
     n_metric = collect.write_metrics(ctx.prom, queries, t_warm - 30, t_end, attempt_dir / "metrics.csv.gz")
     n_event = collect.write_events(ctx.kube, t.namespace, t_begin, attempt_dir / "events.jsonl")
-    n_alert = collect.write_alerts(ctx.prom, t_main0, t_end, attempt_dir / "alerts.jsonl")
+    # ALERTS hỏi cùng cửa sổ với metric (từ 16/11; trước đó từ t_main0): đợt kêu bắt đầu lúc warm-up giữ
+    # đúng mốc đầu, nên bảng phân tích phân biệt được nó với đợt do pha chính gây ra mà không phải đoán.
+    n_alert = collect.write_alerts(ctx.prom, t_warm - 30, t_end, attempt_dir / "alerts.jsonl")
     # Log đã thu trong watcher.stop(). Thiếu log không loại lượt (Môi trường §17), nhưng mất số đo cold start.
     # Pod chưa từng chạy container (Pending vì hết GPU rồi bị scale-down) không có log nào để mất.
     no_log = [e["name"] for e in timeline["pods"] if e["log"] is None and e["marks"].get("container_started")]

@@ -1,5 +1,10 @@
-"""Test tích hợp cho analysis/build_tables.py: dựng thư mục lượt giả đúng định dạng runner ghi
-(Môi trường §14.2), chạy build() và đọc lại CSV."""
+"""Test tích hợp cho analysis/build_tables.py.
+
+Khái niệm: Dựng thư mục lượt giả runs/<phiên>/<run_id>/attempt-<n>/ đúng định dạng runner ghi (Môi trường
+    §14.2): metadata.json, loadgen.json, requests.csv, metrics.csv.gz, pods_timeline.json, alerts.jsonl…
+Mục đích: Kiểm phần ghép dữ liệu (chọn lần thử được tính, so với S4, gộp theo ô, cảnh báo của lượt trước,
+    thư mục thiếu file) và CSV ghi ra, mà không cần cluster.
+"""
 
 from __future__ import annotations
 
@@ -119,7 +124,7 @@ def test_kb2_row_has_reaction_recovery_and_gpu(tmp_path):
     (row,) = res["runs"]
     assert row["counted"] and row["valid"]
     assert row["scored_phases"] == "pre+spike+drop" and row["scored_start_s"] == 120
-    assert (row["detect_s"], row["coldstart_s"], row["react_s"]) == (20.0, 60.0, 80.0)
+    assert (row["detect_s"], row["create_to_ready_s"], row["react_s"]) == (20.0, 60.0, 80.0)
     assert row["replicas_at_rise"] == 1  # mẫu lúc 240 vẫn là 1 replica
     # Xấu tới 299,5 → τ đầu tiên cửa sổ 30 s chỉ còn ≤ 1 request xấu = 329 (như test_metrics), tính từ 240
     assert row["recovery_s"] == pytest.approx(89)
@@ -152,22 +157,36 @@ def test_counted_is_last_valid_attempt_and_baseline_ratio(tmp_path):
 
 
 def test_alerts_rows_and_false_pages(tmp_path):
+    # LLMSLOBurnFast kêu hai đợt: đợt đầu còn sót từ lượt trước (đã kêu trước pha chính), đợt sau do quá tải
+    # thật. LLMPodPending cũng còn sót từ lượt trước. Chỉ đợt sau được đếm và dùng cho thời gian tới cảnh báo.
+    burn = {"labels": {"alertname": "LLMSLOBurnFast", "severity": "page"}, "first": T0 - 5, "last": T0 + 400}
+    burn["episodes"] = [[T0 - 5, T0 + 30], [T0 + 330, T0 + 400]]
     alerts = [
         {"labels": {"alertname": "Watchdog", "severity": "none"}, "first": T0, "last": T0 + 1500},
-        {"labels": {"alertname": "LLMSLOBurnFast", "severity": "page"}, "first": T0 + 330, "last": T0 + 400},
+        burn,
         {"labels": {"alertname": "LLMPodPending", "severity": "ticket"}, "first": T0 - 5, "last": T0 + 60},
     ]
     write_attempt(tmp_path, alerts=alerts, requests=_requests(bad=(240.0, 400.0)))
     res = bt.build([tmp_path / "s"])
     (row,) = res["runs"]
-    assert [a["alertname"] for a in res["alerts"]] == ["LLMSLOBurnFast", "LLMPodPending"]  # bỏ Watchdog
-    assert row["pages"] == 1 and row["tickets"] == 1 and row["false_pages"] == 0
-    assert row["alertnames"] == "LLMPodPending LLMSLOBurnFast"
-    # Xấu từ 240,5: cửa sổ 1 phút vượt 20 % ở τ = 253 (13/60 xấu); cảnh báo lúc 330 → 77 s
+    names = [(a["alertname"], a["firing_at_start"]) for a in res["alerts"]]  # bỏ Watchdog
+    assert names == [("LLMSLOBurnFast", True), ("LLMSLOBurnFast", False), ("LLMPodPending", True)]
+    assert row["pages"] == 1 and row["tickets"] == 0 and row["false_pages"] == 0
+    assert row["alertnames"] == "LLMSLOBurnFast"
+    assert row["alerts_at_start"] == "LLMPodPending LLMSLOBurnFast"
+    # Đợt sót lại không bị chấm là page giả (5 phút trước mép đầu không có request nào)
+    assert res["alerts"][0]["false_page"] is None and res["alerts"][1]["false_page"] is False
+    # Xấu từ 240,5: cửa sổ 1 phút vượt 20 % ở τ = 253 (13/60 xấu); đợt kêu thật lúc 330 → 77 s
     assert row["slo_violation_s"] == pytest.approx(253)
     assert row["time_to_alert_s"] == pytest.approx(77)
-    pending = next(a for a in res["alerts"] if a["alertname"] == "LLMPodPending")
-    assert pending["firing_at_start"]
+
+
+def test_cells_count_runs_that_did_not_recover(tmp_path):
+    _a2_scaled(tmp_path)
+    _a2_scaled(tmp_path, run_id="A2-KB2-2", requests=_requests(bad=(240.0, 840.0)))  # xấu suốt spike
+    (cell,) = bt.build([tmp_path / "s"])["cells"]
+    assert cell["n_runs"] == 2 and cell["n_not_recovered"] == 1 and cell["n_no_new_ready"] == 0
+    assert cell["recovery_s_mean"] == pytest.approx(89)  # trung bình chỉ của lượt hồi phục được
 
 
 def test_skips_incomplete_attempts_and_missing_timeline(tmp_path):
@@ -181,6 +200,16 @@ def test_skips_incomplete_attempts_and_missing_timeline(tmp_path):
     assert "thiếu metadata.json" in res["skipped"][0]
     assert math.isnan(res["runs"][0]["gpu_s"])  # lượt trước PR #25: không ghi 0
     assert res["runs"][0]["gpu_s_ksm"] == pytest.approx(1440)
+    assert res["runs"][0]["has_timeline"] is False
+
+
+def test_cells_do_not_count_missing_timeline_as_no_new_ready(tmp_path):
+    # A2 × KB2 trước 09/11: không có pods_timeline.json nên react_s trống vì thiếu dữ liệu, không phải trượt
+    (_a2_scaled(tmp_path) / "pods_timeline.json").unlink()
+    _a2_scaled(tmp_path, run_id="A2-KB2-2")
+    (cell,) = bt.build([tmp_path / "s"])["cells"]
+    assert cell["n_runs"] == 2 and cell["n_no_new_ready"] == 0
+    assert cell["react_s_min"] == cell["react_s_max"] == pytest.approx(80)  # chỉ lượt có dữ liệu
 
 
 def test_main_writes_csv_with_empty_nan(tmp_path, capsys):
