@@ -65,6 +65,10 @@ class Context:
     runs_dir: Path
     backup_remote: str | None = None  # gốc trên R2, ví dụ r2:llm-thesis/runs; None = không sao lưu
     notifier: Notifier | None = None
+    # Trạng thái git lúc runner khởi động, tức code đang chạy. Python nạp module một lần lúc khởi động, nên
+    # đọc lại git ở mỗi lượt sẽ ghi sai khi có người commit giữa phiên (kind 16/11: lượt 2 ghi commit mới,
+    # sạch, trong khi tiến trình vẫn chạy code cũ, chưa commit). None = đọc lúc ghi metadata (test).
+    git: dict[str, Any] | None = None
 
     def notify(self, text: str) -> None:
         if self.notifier:
@@ -145,7 +149,7 @@ def run_one(ctx: Context, spec: RunSpec, attempt_dir: Path) -> str:
         "shuffle_seed": m.shuffle_seed,  # seed xáo thứ tự lượt (Thông số §8.2); None = theo thứ tự file
         "timing": asdict(m.timing),
         "target": asdict(t),
-        "git": git_state(ctx.repo_root),
+        "git": ctx.git if ctx.git is not None else git_state(ctx.repo_root),
         "t_begin": t_begin,
     }
     dep = ctx.kube.get_json(f"deployment/{t.deployment}", "-n", t.namespace)
