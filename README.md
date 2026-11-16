@@ -44,7 +44,7 @@ Mỗi thư mục trong `envs/<env>/` chỉ chứa **phần khác biệt** của 
 
 ```bash
 make lint alerts-test dashboards-check          # YAML, kustomize, Ansible, rule Prometheus, dashboard
-uv run --project experiments pytest experiments # và tương tự cho loadgen
+uv run --project experiments pytest experiments # và tương tự cho loadgen, analysis
 ```
 
 CI (`.github/workflows/ci.yaml`) chạy cùng các lệnh này trên mọi PR.

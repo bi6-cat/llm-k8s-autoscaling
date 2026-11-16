@@ -404,7 +404,7 @@ Thực tế trong `.github/workflows/ci.yaml` (5 job, mọi công cụ ghim phi�
 | `yaml` | yamllint (strict) cho mọi file YAML; actionlint + shellcheck cho chính workflow |
 | `manifests` | `kubectl kustomize` mọi thư mục có `kustomization.yaml`, rồi kubeconform (schema Kubernetes 1.36 + CRD của KEDA, Prometheus Operator, Traefik từ CRDs-catalog) |
 | `alerts` | `make alerts-test` (mỗi cảnh báo có severity, runbook, unit test; `promtool check rules` và `promtool test rules`) và `make dashboards-check` (uid, datasource, PromQL của 3 dashboard) |
-| `python` | pytest, ruff check, ruff format cho `loadgen/` và `experiments/` trên Python 3.11 và 3.15 (`analysis/` thêm khi có) |
+| `python` | pytest, ruff check, ruff format cho `loadgen/`, `experiments/` và `analysis/` trên Python 3.11 và 3.15 |
 | `docs` | lychee: link tương đối và anchor trong `docs/` và `*.md` |
 | `secrets` (Could) | `gitleaks`: chưa có |
 
@@ -421,9 +421,9 @@ dataset/
 ├── README.md             # mô tả, cấu trúc, cách dùng, giấy phép
 ├── capacity/             # các mức tải khi đo năng lực
 ├── coldstart/            # L0, L2
-├── matrix/runs/<run-id>/ # metadata.json, requests.csv, metrics.parquet, events.jsonl, alerts.jsonl, checks.json
+├── matrix/runs/<run-id>/ # metadata.json, requests.csv, metrics.csv.gz, events.jsonl, alerts.jsonl, checks.json
 ├── ops/                  # số đo của VH1–VH6
-├── tables/               # bảng mỗi lượt một dòng
+├── tables/               # runs.csv (mỗi lượt một dòng), phases.csv, cells.csv, alerts.csv (analysis/build_tables.py)
 └── SHA256SUMS
 ```
 

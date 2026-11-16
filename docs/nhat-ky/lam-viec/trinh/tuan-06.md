@@ -149,3 +149,15 @@
 - **Deviations:** Kiến trúc §18.2 và Môi trường §14.1 từng ghi "runner tắt auto-sync"; thực tế runner chỉ kiểm, việc tắt và bật làm bằng make target. Root-app có `ignoreDifferences` (thiết kế cũ không có).
 - **Links:** nhánh `feat/tr1-argocd-autoscaling-observability`; `envs/home/argocd/root-app.yaml`, `envs/home/argocd/apps/{autoscaling,observability,monitoring,keda}.yaml`, `envs/home/autoscaling/kustomization.yaml`, `experiments/runner/configs.py`, `Makefile`.
 - **Thesis:** §4 (GitOps), cạm bẫy "App-of-Apps với selfHeal bật lại auto-sync của app con", kèm dòng thời gian của đối chứng âm và đối chứng dương ở trên; bảng app Argo CD ở nhà.
+## 2026-11-15 – TR7: `analysis/build_tables.py` (bản đầu, chưa mở PR)
+
+- **Task:** TR7 · **Environment:** sim
+- **Done:**
+  1. Tạo gói `analysis/` chỉ dùng thư viện chuẩn: `metrics.py` chứa công thức, `build_tables.py` đọc `runs/<phiên>/<run_id>/attempt-<n>/` và ghi 4 CSV (`runs`, `phases`, `cells`, `alerts`). CI chạy pytest và ruff cho `analysis/` trên Python 3.11 và 3.15. Commit `d246927` trên nhánh `feat/tr7-build-tables`.
+  2. Môi trường §14.2 và §15 ghi định nghĩa vận hành: pha theo `t_sched`; KB2 chấm SLO trên pre+spike+drop; phân vị trên request thành công; GPU-giờ cận trên tới `gone_at`; N2a tách phần phát hiện; N2b chỉ trong pha spike; N7 theo cửa sổ của `LLMSLOBurnFast`.
+  3. `/code-review high` trên bản đầu bắt 6 lỗi logic, đã sửa kèm test (chưa commit tới 16/11): N2b tìm từ t_rise nên ra 0 khi hàng đợi dồn dần; một chuỗi cảnh báo kêu hai đợt bị gộp làm một, nên đợt sau không được chấm page giả (runner ghi thêm `episodes` trong `alerts.jsonl`); cảnh báo còn sót từ lượt trước bị đếm vào `pages` và bị chấm là page giả; đợt `LLMSLOBurnFast` đã tắt trước lúc vi phạm vẫn được dùng làm cảnh báo của lần vi phạm; `cells.csv` giấu lượt không hồi phục (thêm `n_not_recovered`, `n_no_new_ready`); `coldstart_s` cộng với `detect_s` không ra N2a (đổi thành `create_to_ready_s` = react − detect).
+  4. Chạy thử phiên `tr7-kb2-sim` (A2, S1 × KB2, C = 1 req/s) trên kind để có dữ liệu thật.
+- **Decision:** làm TR7 ngay bằng dữ liệu kind, không chờ V2, vì dữ liệu V2 phải soát trước khi đóng băng 22/11. Dùng thư viện chuẩn thay pandas để chạy được trên VM và WSL mà không cần cài thêm. Định nghĩa vận hành chọn theo hướng bất lợi cho A2 khi có sai số, để không thổi phồng phần tiết kiệm.
+- **Incidents:** phiên `tr7-kb2-sim` dừng ở bước cooldown của lượt đầu (log cuối 23:28:39, không có `metadata.json`, `alerts.jsonl`); chưa rõ nguyên nhân. Ngày 16/11 chạy lại thành phiên `tr7-kb2-sim-2`.
+- **Links:** nhánh `feat/tr7-build-tables`, commit `d246927`; `analysis/metrics.py`, `analysis/build_tables.py`.
+- **Thesis:** §5 (phương pháp tính chỉ tiêu): bảng định nghĩa vận hành của N2a, N2b, N7 và lý do chọn.

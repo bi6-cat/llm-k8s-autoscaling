@@ -347,6 +347,6 @@ $(NOT_YET):
 	case $@ in \
 	  burnin) echo "  make probe, rồi vllm bench serve chạy tay (Môi trường §3.4)";; \
 	  capacity) echo "  make run MATRIX=envs/cloud/experiments/matrix-dg1.yaml (runner ghi capacity.json)";; \
-	  analysis) echo "  script phân tích trong runs/<phiên>/ (chương 5)";; \
+	  analysis) echo "  uv run --project analysis python -m analysis.build_tables runs/<phiên> (chương 5)";; \
 	  test) echo "  make lint alerts-test dashboards-check; pytest theo CONTRIBUTING §7";; \
 	esac; exit 1
