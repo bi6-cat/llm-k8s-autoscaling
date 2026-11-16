@@ -65,6 +65,11 @@ class Context:
     runs_dir: Path
     backup_remote: str | None = None  # gốc trên R2, ví dụ r2:llm-thesis/runs; None = không sao lưu
     notifier: Notifier | None = None
+    # Trạng thái git lúc runner khởi động, tức code runner đang chạy (Python nạp module một lần). Ghi thêm
+    # vào metadata (`git_runner`) bên cạnh `git` đọc ở mỗi lượt: loadgen, uv.lock và file ScaledObject được
+    # đọc lại từ đĩa ở mỗi lượt nên ứng với `git`. Có người commit giữa phiên thì hai số khác nhau (kind
+    # 16/11: lượt 2 ghi commit mới, sạch, trong khi runner vẫn chạy code cũ chưa commit). None = không biết.
+    git_at_start: dict[str, Any] | None = None
 
     def notify(self, text: str) -> None:
         if self.notifier:
@@ -146,6 +151,7 @@ def run_one(ctx: Context, spec: RunSpec, attempt_dir: Path) -> str:
         "timing": asdict(m.timing),
         "target": asdict(t),
         "git": git_state(ctx.repo_root),
+        "git_runner": ctx.git_at_start,
         "t_begin": t_begin,
     }
     dep = ctx.kube.get_json(f"deployment/{t.deployment}", "-n", t.namespace)
@@ -245,7 +251,9 @@ def run_one(ctx: Context, spec: RunSpec, attempt_dir: Path) -> str:
     queries = collect.metric_queries(t.namespace, t.deployment)
     n_metric = collect.write_metrics(ctx.prom, queries, t_warm - 30, t_end, attempt_dir / "metrics.csv.gz")
     n_event = collect.write_events(ctx.kube, t.namespace, t_begin, attempt_dir / "events.jsonl")
-    n_alert = collect.write_alerts(ctx.prom, t_main0, t_end, attempt_dir / "alerts.jsonl")
+    # ALERTS hỏi cùng cửa sổ với metric (từ 16/11; trước đó từ t_main0): đợt kêu bắt đầu lúc warm-up giữ
+    # đúng mốc đầu, nên bảng phân tích phân biệt được nó với đợt do pha chính gây ra mà không phải đoán.
+    n_alert = collect.write_alerts(ctx.prom, t_warm - 30, t_end, attempt_dir / "alerts.jsonl")
     # Log đã thu trong watcher.stop(). Thiếu log không loại lượt (Môi trường §17), nhưng mất số đo cold start.
     # Pod chưa từng chạy container (Pending vì hết GPU rồi bị scale-down) không có log nào để mất.
     no_log = [e["name"] for e in timeline["pods"] if e["log"] is None and e["marks"].get("container_started")]

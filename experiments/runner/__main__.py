@@ -21,7 +21,7 @@ from pathlib import Path
 from experiments.runner import matrix as matrix_mod
 from experiments.runner.kube import Kube, Prometheus
 from experiments.runner.notify import Notifier
-from experiments.runner.session import Context, log, run_session
+from experiments.runner.session import Context, git_state, log, run_session
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -75,6 +75,7 @@ def main(argv: list[str] | None = None) -> int:
         runs_dir=args.runs_dir,
         backup_remote=None if args.no_backup else args.backup_remote,
         notifier=notifier,
+        git_at_start=git_state(Path.cwd()),  # đọc một lần: commit của code runner mà tiến trình này chạy
     )
     final = run_session(ctx, set(args.only) if args.only else None, args.max_attempts)
     log("kết quả: " + ", ".join(f"{k}={v}" for k, v in final.items()))

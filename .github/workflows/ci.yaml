@@ -259,14 +259,16 @@ jobs:
           cache-dependency-glob: |
             loadgen/uv.lock
             experiments/uv.lock
+            analysis/uv.lock
 
       # --locked: dừng nếu uv.lock không còn khớp pyproject.toml (sửa phụ thuộc mà quên `uv lock`), thay vì
       # lặng lẽ giải lại phụ thuộc rồi test trên bộ thư viện khác với bộ đã ghim.
-      # Mỗi gói Python (loadgen/, experiments/) có pyproject.toml và uv.lock riêng (CONTRIBUTING §5).
+      # Mỗi gói Python (loadgen/, experiments/, analysis/) có pyproject.toml và uv.lock riêng (CONTRIBUTING §5).
       - name: pytest
         run: |
           uv run --project loadgen --locked pytest loadgen
           uv run --project experiments --locked pytest experiments
+          uv run --project analysis --locked pytest analysis
       # ruff cho cùng kết quả ở mọi bản Python (target-version cố định trong pyproject.toml), nên chỉ chạy ở
       # một phần tử của matrix. !cancelled(): vẫn chạy khi pytest lỗi (giải thích ở job yaml).
       - name: ruff check
@@ -274,11 +276,13 @@ jobs:
         run: |
           uv run --project loadgen --locked ruff check loadgen
           uv run --project experiments --locked ruff check experiments
+          uv run --project analysis --locked ruff check analysis
       - name: ruff format --check
         if: ${{ !cancelled() && matrix.python-version == '3.15' }}
         run: |
           uv run --project loadgen --locked ruff format --check loadgen
           uv run --project experiments --locked ruff format --check experiments
+          uv run --project analysis --locked ruff format --check analysis
 
   # ── docs: link tương đối và anchor (#mục) trong tài liệu phải trỏ tới chỗ có thật ──
   # Trên máy: lychee --offline --include-fragments --no-progress 'docs/**/*.md' '*.md'

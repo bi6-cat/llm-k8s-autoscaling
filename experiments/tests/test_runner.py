@@ -7,6 +7,7 @@ Mục đích: Bắt lỗi logic trước khi chạy trên cluster: đọc ma tr�
 
 from __future__ import annotations
 
+import json
 import re
 import time
 from pathlib import Path
@@ -394,6 +395,21 @@ def test_signal_gap_merges_series_and_rounds_window_up():
     assert r == {"selector": "m", "series": 2, "samples": 14, "max_gap_s": pytest.approx(5)}
     # Không có chuỗi nào (exporter chết từ đầu): khoảng trống là cả pha chính
     assert collect.signal_gap(FakeProm(), "m", 0.0, 60.0)["max_gap_s"] == 60
+
+
+def test_alert_episodes_split_on_gaps():
+    # Kêu 0–20 s, hết, kêu lại 60–70 s: hai đợt. Mẫu cách đúng một bước (5 s, kể cả sai số làm tròn) là liền.
+    vals = [[t, "1"] for t in (0, 5, 10.0001, 15, 20, 60, 65, 70)]
+    assert collect.alert_episodes(vals) == [[0, 20], [60, 70]]
+    assert collect.alert_episodes([]) == []
+
+
+def test_write_alerts_records_episodes(tmp_path):
+    s = {"metric": {"alertname": "LLMSLOBurnFast"}, "values": [[t, "1"] for t in (100, 105, 300)]}
+    prom = SimpleNamespace(query_range=lambda *_a: [s])
+    assert collect.write_alerts(prom, 0, 400, tmp_path / "alerts.jsonl") == 1
+    rec = json.loads((tmp_path / "alerts.jsonl").read_text(encoding="utf-8"))
+    assert (rec["first"], rec["last"], rec["episodes"]) == (100, 300, [[100, 105], [300, 300]])
 
 
 def test_signal_gap_query_error_is_returned_not_raised():
