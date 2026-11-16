@@ -1,0 +1,39 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# analysis/pyproject.toml
+# Khái niệm: pyproject.toml khai báo dự án Python và thư viện cần dùng; `uv` ghim phiên bản chính xác vào
+#            uv.lock (CONTRIBUTING §5).
+# Mục đích:  Gói `analysis`: đọc dữ liệu runner (runs/<phiên>/) và tạo bảng cho chương 5 (TR7). Chỉ dùng
+#            thư viện chuẩn của Python, để chạy được ngay trên VM thuê hay trong WSL mà không phải cài gì;
+#            notebook vẽ biểu đồ đọc các CSV này bằng pandas riêng. Mọi lệnh chạy từ GỐC REPO:
+#              uv run --project analysis python -m analysis.build_tables runs/<phiên>
+#              uv run --project analysis pytest analysis
+#              uv run --project analysis ruff check analysis
+# Tham khảo: Môi trường §14.2, §15, §16; CONTRIBUTING §5
+# ──────────────────────────────────────────────────────────────────────────────
+[project]
+name = "analysis"
+version = "0.1.0"
+description = "Bảng phân tích kết quả đánh giá autoscaling vLLM (đồ án autoscaling LLM trên Kubernetes)"
+requires-python = ">=3.11"
+dependencies = []                    # chỉ thư viện chuẩn: csv, gzip, json
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1,<10",
+    "ruff>=0.17,<0.18",
+]
+
+[tool.uv]
+# Không đóng gói thành wheel: uv chỉ quản lý môi trường ảo và phụ thuộc.
+package = false
+
+[tool.ruff]
+line-length = 110                    # CONTRIBUTING §5
+target-version = "py311"
+
+[tool.ruff.lint]
+# E/F: lỗi cơ bản; I: thứ tự import; UP: cú pháp Python mới; B: lỗi hay gặp (bugbear)
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

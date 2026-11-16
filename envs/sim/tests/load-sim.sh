@@ -51,6 +51,9 @@ fi
 # port-forward ở trên (thường 1–2 s, tối đa 10 s).
 if read -r up _ 2>/dev/null < /proc/uptime; then t0=${up%.*}; else t0=$(date +%s); fi
 echo "load-sim: hey bắt đầu $t0"
+# Cùng mốc đó theo giờ thực, tới ms: lt7-hpa.sh so nó với mốc của event Kubernetes và mẫu Prometheus (đều là
+# giờ thực). Dòng riêng để không đổi định dạng dòng trên, mà run-t1-t5.sh đang đọc.
+echo "load-sim: giờ thực $(date +%s.%3N)"
 # -z: thời lượng; -c: số worker đồng thời; -D: body lấy từ file; -T: Content-Type
 hey -z "$DUR" -c "$C" -m POST -T application/json -D envs/sim/tests/request-sim.json \
   "http://127.0.0.1:$port/v1/chat/completions" &

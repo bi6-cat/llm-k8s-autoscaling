@@ -89,7 +89,7 @@ Việc gắn với máy: các bước cài đặt trên PC (driver, k3s server) 
 - [ ] Bảo mật tối thiểu đạt checklist ([Vận hành §8](04-van-hanh.md#8-bảo-mật-tối-thiểu)).
 - [ ] VH1, VH2 (gồm ca 1 replica), VH6 đạt ở nhà.
 - [x] ĐG1-mini xong; có `capacity-home.json`. *(06/11: đo lại với 0,5B bằng runner, 10 mức λ đều hợp lệ: C = 12,5 req/s, B\* = 28,4, threshold A2 tạm 23; chưa đối chiếu với `vllm bench serve` (bước 7). Bản 1,5B giữ ở `capacity-home-1.5b.json`.)* *(05/11: có bản tạm `envs/home/experiments/capacity.json`: C = 6 req/s, B\* ≈ 27, threshold A2 tạm 21. Còn thiếu: quét bước 0,25 quanh λ = 6; lượt λ = 6 bị máy tạo tải đánh dấu không hợp lệ vì 1 chu kỳ CPU throttle.)*
-- [ ] LT1–LT8 có kết quả (dự đoán, số đo, giải thích) trong `docs/nhat-ky/van-hanh.md` ([Môi trường §19](05-moi-truong-danh-gia.md#19-kiểm-chứng-lý-thuyết-lt1lt8)). *(05/11: LT1 (5060), LT2, LT3 có kết quả trong `van-hanh.md`; dữ liệu ĐG1-mini đã có cho LT5, LT6 của Trình; LT1 trên 4050, LT4, LT7, LT8 chưa làm.)*
+- [ ] LT1–LT8 có kết quả (dự đoán, số đo, giải thích) trong `docs/nhat-ky/van-hanh.md` ([Môi trường §19](05-moi-truong-danh-gia.md#19-kiểm-chứng-lý-thuyết-lt1lt8)). *(05/11: LT1 (5060), LT2, LT3 có kết quả trong `van-hanh.md`; dữ liệu ĐG1-mini đã có cho LT5, LT6 của Trình; LT1 trên 4050, LT4, LT7, LT8 chưa làm.)* *(16/11: LT7 có kết quả, đo trên simulator.)*
 - [x] Máy tạo tải đạt tiêu chí tự kiểm tra; runner chạy 2 lượt **không cần can thiệp** trên V1; `make bootstrap` dựng xong VM dưới 30 phút. *(08/11: runner chạy A1 × KB3, A2 × KB2 liền nhau không can thiệp; tự kiểm đánh dấu cả 2 invalid vì máy tạo tải 2 lõi vượt ngưỡng CPU, Quang chấp nhận sau xem xét (nhật ký tuần 05). Ansible dựng VM 164 s, tới vLLM phục vụ 12,5 phút; cài nền vẫn bằng script tay.)*
 
 ### M3 (22/11): xong đánh giá
@@ -404,7 +404,7 @@ Thực tế trong `.github/workflows/ci.yaml` (5 job, mọi công cụ ghim phi�
 | `yaml` | yamllint (strict) cho mọi file YAML; actionlint + shellcheck cho chính workflow |
 | `manifests` | `kubectl kustomize` mọi thư mục có `kustomization.yaml`, rồi kubeconform (schema Kubernetes 1.36 + CRD của KEDA, Prometheus Operator, Traefik từ CRDs-catalog) |
 | `alerts` | `make alerts-test` (mỗi cảnh báo có severity, runbook, unit test; `promtool check rules` và `promtool test rules`) và `make dashboards-check` (uid, datasource, PromQL của 3 dashboard) |
-| `python` | pytest, ruff check, ruff format cho `loadgen/` và `experiments/` trên Python 3.11 và 3.15 (`analysis/` thêm khi có) |
+| `python` | pytest, ruff check, ruff format cho `loadgen/`, `experiments/` và `analysis/` trên Python 3.11 và 3.15 |
 | `docs` | lychee: link tương đối và anchor trong `docs/` và `*.md` |
 | `secrets` (Could) | `gitleaks`: chưa có |
 
@@ -421,9 +421,9 @@ dataset/
 ├── README.md             # mô tả, cấu trúc, cách dùng, giấy phép
 ├── capacity/             # các mức tải khi đo năng lực
 ├── coldstart/            # L0, L2
-├── matrix/runs/<run-id>/ # metadata.json, requests.csv, metrics.parquet, events.jsonl, alerts.jsonl, checks.json
+├── matrix/runs/<run-id>/ # metadata.json, requests.csv, metrics.csv.gz, events.jsonl, alerts.jsonl, checks.json
 ├── ops/                  # số đo của VH1–VH6
-├── tables/               # bảng mỗi lượt một dòng
+├── tables/               # runs.csv (mỗi lượt một dòng), phases.csv, cells.csv, alerts.csv (analysis/build_tables.py)
 └── SHA256SUMS
 ```
 

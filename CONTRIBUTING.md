@@ -44,6 +44,7 @@ llm-k8s-autoscaling/
 ├── ansible/                      # dựng k3s từ máy trắng: site.yml, inventory/, roles/ (dùng cho home và cloud)
 ├── loadgen/                      # gói Python: máy tạo tải
 ├── experiments/                  # gói Python: runner/ (chạy ma trận), ops/ (kịch bản VH2–VH4), tests/
+├── analysis/                     # gói Python: build_tables.py (bảng cho chương 5), metrics.py, tests/
 ├── runs/                         # (gitignore) dữ liệu thô của các lượt chạy
 └── docs/
     ├── mo-ta-chi-tiet-do-an.md   # bản mô tả tổng; chi-tiet/ là thiết kế chi tiết
