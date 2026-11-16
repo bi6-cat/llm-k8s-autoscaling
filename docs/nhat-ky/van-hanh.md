@@ -134,6 +134,30 @@ Theo mẫu ở [Môi trường §19](../chi-tiet/05-moi-truong-danh-gia.md#19-ki
 - **Định luật Little (dữ liệu cho LT5 của Trình):** B đo phía client so với λ\_thực × E2E trung bình, với λ\_thực = số request gửi trong cửa sổ ÷ 120 s: lệch **≤ 2 %** ở λ = 1–7. Phải dùng λ\_thực, không dùng λ danh định: ở λ = 1 chỉ có 102 request trong 120 s (0,85 req/s, dao động Poisson), dùng λ danh định thì lệch 16 %. Ở λ = 8 lệch 11 % (124 so với 140) vì hàng đợi tăng liên tục, hệ thống không ở trạng thái dừng nên định luật không áp được cho cửa sổ ngắn.
 - **GPU util (dữ liệu cho LT6 của Trình):** 89 % ở λ = 1, 100 % từ λ = 2 tới 8, trong khi `waiting` đi từ 0 lên 92. GPU util không phân biệt được tải vừa với quá tải, đúng dự đoán của LT6.
 
+### LT4 – Phân rã cold start (đo 16/11/2026 ở nhà, Qwen2.5-0.5B)
+
+- **Lý thuyết** ([Kiến trúc §7](../chi-tiet/03-kien-truc-autoscaling.md#7-cold-start-chi-tiết)): thời gian nạp weights ≈ dung lượng checkpoint ÷ tốc độ đọc đĩa; nếu file đã nằm trong page cache thì gần bằng tốc độ chép RAM.
+- **Dự đoán** (tính ngày 16/11, **sau** khi đã có số đo lần A, nên không phải dự đoán mù): checkpoint 0,92 GiB = 988 MB. `fio` đọc tuần tự trên phân vùng NVMe chứa `/var/lib/llm-cache`: 367 MB/s (direct, 1 MiB, QD1) và 1.202 MB/s (buffered, 128 KiB, có readahead) → nạp nguội **0,8–2,7 s**; nạp ấm dưới 1 s.
+- **Số đo** (bộ đọc `experiments.runner.vllm_log`, mốc container lấy từ pod status):
+
+  | Pha | A: page cache nguội (12:58, sau boot) | B: page cache ấm (13:10, thay pod) |
+  |---|---|---|
+  | Kéo image | 892 s (image không còn trên node) | 0 s (đã có) |
+  | Container chạy → dòng log đầu (import) | 18,9 s | 16,2 s |
+  | Tải weights từ Hugging Face | 0 s (đã có trên đĩa) | 0 s |
+  | Nạp model (`p6_load_weights`); riêng "Loading weights took" | 16,2 s; **11,67 s** | 7,6 s; **3,08 s** |
+  | Khởi tạo engine (`p7_engine_init`) | 106,9 s | 108,8 s |
+  | – trong đó chụp CUDA graph lúc profiling | 97 s | 100 s |
+  | – trong đó `torch.compile` (cache ấm) | 0,90 s | 0,87 s |
+  | – cấp KV-cache; chụp CUDA graph thật | 3,1 s; 1 s | 3,0 s; 1 s |
+  | Engine xong → server mở cổng | 5,6 s | 5,5 s |
+  | Container chạy → pod Ready | 162 s | 155 s |
+
+- **Lệch:** nạp weights nguội 11,67 s ứng với 85 MB/s, chậm hơn dự đoán 4–14 lần. Nạp ấm 3,08 s ứng với 321 MB/s, cũng chậm hơn dự đoán.
+- **Giải thích (chưa kiểm chứng):** lúc đo máy thiếu RAM (vLLM báo `Available RAM: 1.93 GiB` ở lần A, `2.59 GiB` ở lần B; hệ thống đang swap 2,6–2,9 GB), nên page cache bị thu hồi liên tục; và "Loading weights took" gồm cả việc chép tensor lên GPU, không chỉ đọc đĩa. Chưa tách được hai phần này.
+- **Pha chi phối:** không phải nạp weights. Ở cả hai lần, chụp CUDA graph lúc profiling (để đo bộ nhớ CUDA graph) chiếm ≈ 100 s trên ≈ 160 s, tức 60–64 %; lần chụp thật ngay sau đó chỉ 1 s. Chưa rõ vì sao lần chụp lúc profiling chậm tới 28–48 s mỗi bước. Với model 0,5B, cold start khi image và weights đã có gần như không phụ thuộc đĩa.
+- **Giới hạn của phép đo:** mỗi ca 1 mẫu; ca nguội không dùng `drop_caches` (không có sudo trong phiên) mà lấy lần khởi động đầu sau khi boot; đo 0 → 1 và thay pod, không phải scale 1 → 2 như Môi trường §19. Cần đo lại trên V2 (ĐG3) với model 3B.
+
 ## Kiểm chứng lý thuyết LT5–LT8 (Trình, TR8)
 
 Cùng mẫu với LT1–LT4. Có LT5, LT6, LT7; LT8 chưa làm.
@@ -266,7 +290,6 @@ Cùng mẫu với LT1–LT4. Có LT5, LT6, LT7; LT8 chưa làm.
   - Nếu đo bằng giờ thực thì những lượt có bước lùi đồng hồ sai tới 1,3 s (ví dụ phiên 2, C = 25 lần 2: ngắn đi 0,90 s). Sau khi đổi sang đồng hồ đơn điệu, khoảng cách giữa hai lần scrape liền nhau chỉ lệch tối đa 2 ms so với 5 s; theo giờ thực thì lệch tới 1301 ms. Có 3/18 lượt scale-up có mốc rơi đúng vào khoảng giờ thực bị lặp lại ngay sau một bước lùi, không đổi chắc chắn được, nên không tính vào bảng trễ.
 - **Hệ quả cho V2:** trên cloud (k3s, cùng scrape 5 s, sync 5 s, KEDA v2.21.0), HPA quyết định trong < 11 s sau khi tải tăng. Phần lớn thời gian của N2a (≤ 180 s) vì vậy là cold start của pod vLLM, không phải độ trễ của autoscaler.
 
-
 ## 2026-11-08 – Phiên thử VM Vast đầu tiên (2 × RTX 5060 Ti): bootstrap, mạng, cold start 3B
 
 - **Máy:** Vast VM 2 × RTX 5060 Ti 16 GB, **unverified**, host đặt ở Trung Quốc (thuê qua web UI, không qua `vast.sh`); Xeon E5-2683 v4, VM nhận 30 vCPU, 61 GB RAM (quảng cáo 80 GB), ổ 130 GB; driver ban đầu 580.95, Max CUDA 13.0.
@@ -354,3 +377,41 @@ Cùng mẫu với LT1–LT4. Có LT5, LT6, LT7; LT8 chưa làm.
 - **Chưa kiểm:** vh2c (simulator không giới hạn GPU nên không kẹt), vh3-kill (simulator không có tiến trình con).
 - **Chi phí:** không thuê máy.
 - **Chi tiết:** [nhật ký Quang tuần 06](lam-viec/quang/tuan-06.md).
+
+## 2026-11-16 – Cluster nhà: Argo CD mất đồng bộ sau refactor, image vLLM bị mất, LT4
+
+- **Môi trường:** PC nhà (RTX 5060, 2 GPU replica time-slicing), Qwen2.5-0.5B, vLLM 0.31.0. Không thuê máy.
+- **Sự cố 1 – Argo CD `Unknown`:** cả 7 Application Sync `Unknown` vì `root-home` còn trỏ đường dẫn cũ `platform/argocd/apps/home` (đổi ở PR #34). Sửa: `kubectl apply -f envs/home/argocd/root-app.yaml`; dưới 3 phút cả 7 app `Synced`/`Healthy`. Sau đó áp tiếp bản root-app của PR #39 (thêm `ignoreDifferences`), cluster không đổi gì khác.
+- **Sự cố 2 – image vLLM không còn trên node:** scale 0 → 1 phải kéo lại image, mất 14 phút 52 giây; runner hết 900 s chờ, lượt đầu invalid (123/357 request lỗi kết nối trong 68 s đầu). Nguyên nhân mất image chưa xác định; nghi kubelet image GC (đĩa `/` 80 %, ngưỡng mặc định 85 %, vLLM đang ở 0 replica nên image không được giữ). **Hệ quả vận hành:** trước một phiên ở nhà, scale lên 1 pod và chờ Ready trước khi chạy runner; giữ đĩa dưới 85 %.
+- **Số đo:** lượt runner hợp lệ (S1, 2 req/s × 180 s): 357 request, 0 lỗi, TTFT p50 30 ms / p95 40 ms, TPOT p50 3,7 ms. Cold start khi image đã có: 155–162 s từ lúc container chạy tới Ready (bảng ở mục LT4).
+- **Quan sát:** thay pod thì hai pod cùng tồn tại khoảng 3 phút (pod cũ ở `Terminating` tới hết grace period 180 s, tức không thoát khi nhận SIGTERM, giống 06/11); RAM khả dụng còn 2,7 GB, swap 4,3 GB, không OOM. Một pod dùng 3.644 Mi RAM.
+- **Chưa làm:** VH1–VH4 trên GPU nhà (cần 2 replica dưới tải, RAM không đủ khi desktop đang mở); kiểm sau merge của PR #39.
+- **Trạng thái cuối:** vLLM 0 replica, 7 app `Synced`/`Healthy`, không có ScaledObject.
+- **Chi phí:** không thuê máy.
+- **Chi tiết:** [nhật ký Quang tuần 07](lam-viec/quang/tuan-07.md).
+
+## 2026-11-16 – Máy thuê: 4 máy thử, phiên thử code trên 2 × RTX 4000 Ada (N = 2)
+
+- **Môi trường:** Vast, chế độ VM, thuê qua giao diện web. Không phải phiên đo chính thức; không sao lưu R2 (PC chưa có `.env`).
+- **Máy 1 (4 × RTX 5060 Ti, Trung Quốc):** SSH được, nhưng Docker Hub, `huggingface.co`, `github.com`, `get.k3s.io`, PyPI bị chặn; chưa cài gì, đã tắt.
+- **Máy 2 và 3 (2 GPU):** không lên SSH (một máy mở cổng nhưng không trả banner, một máy timeout TCP); đã tắt.
+- **Máy 4 (2 × RTX 4000 Ada 20 GB, Hungary, 11 vCPU, 49 GB RAM):** `probe` đạt trừ CPU (11 < 14). `bootstrap` 9 phút 12 giây, `cloud-platform` 99 s, vLLM 3B Ready sau 90 s; từ máy trắng tới vLLM Ready 12 phút 54 giây.
+- **Số đo:** ĐG1 rút gọn (4 mức, 180 s đo mỗi mức): C = 5,0 req/s (sơ bộ), B\* = 48,9, threshold A2 = 39. Cold start 3B: nạp weights 1,48 s, `torch.compile` 17,2 s, chụp CUDA graph lúc profiling 2 s.
+- **Kết quả các lượt autoscaling và VH trên máy này:** xem các mục sau trong [nhật ký Quang tuần 07](lam-viec/quang/tuan-07.md).
+- **Chi phí:** chưa ghi (máy thuê qua web, offer cùng loại ở Hungary lúc tra là 0,455 USD/giờ; số thực lấy từ trang Vast khi trả máy).
+
+
+## 2026-11-16 – VH3, VH4, VH2a chạy thử trên máy thuê 2 × RTX 4000 Ada (N = 2)
+
+Chạy bằng `experiments.ops.vh`, tải CONST 2,5 req/s, A2 threshold 39, Qwen2.5-3B. Mục đích là kiểm script trên GPU thật, chưa phải số chính thức.
+
+| Kịch bản | Chấm | Request / lỗi | Số đo |
+|---|---|---|---|
+| vh3-delete | không đạt | 1.942 / 90 | pod thay thế Ready sau 61,3 s |
+| vh3-kill | đạt | 1.481 / 168 | container restart, Ready lại sau 69,4 s |
+| vh4 | đạt | 1.771 / 0 | fallback sau 17,2 s kể từ lúc chặn Prometheus |
+| vh2a | đạt | 2.948 / 0 | rolling update 2 pod: 181,6 s |
+
+- **vh3-delete không đạt vì điều kiện chạy, không phải vì hệ thống:** tải thấp nên chỉ có 1 pod; xoá pod duy nhất thì 61 s không có ai phục vụ. Lần chính thức phải có ≥ 2 pod Ready trước khi xoá.
+- **vh2a:** thời gian rolling update gần bằng grace period 180 s, do vLLM không dừng khi nhận SIGTERM (xem mục 06/11).
+- Chưa chạy: vh2b, vh2c, vh3-drain (drain cần ≥ 2 node).
