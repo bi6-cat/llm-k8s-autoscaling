@@ -8,8 +8,8 @@
 #            chẩn đoán trong runbook KedaScalerErrors. Chart mặc định tắt cả hai cờ dưới, nên trước 15/11 các
 #            panel đó trống ở mọi môi trường. Cảnh báo KedaScalerErrors KHÔNG dùng metric này mà đọc condition
 #            của ScaledObject (kube-state-metrics-values.yaml): bộ đếm lỗi của KEDA đứng yên khi đã fallback.
-#            Tách khỏi keda-values.yaml vì file đó cũng là values của Argo CD ở nhà: bật ở sim và cloud
-#            trước, ở nhà thêm khi kiểm được trên cluster nhà (việc 6b, cùng alertmanager-values.yaml).
+#            Tách khỏi keda-values.yaml để bật ở sim và cloud trước khi kiểm được ở nhà. Ở nhà: Application
+#            keda nạp file này (envs/home/argocd/apps/keda.yaml).
 # Tham khảo: chart kedacore/keda v2.21.0 values.yaml (prometheus.operator); KEDA v2.21.0
 #            pkg/metricscollector/prommetrics.go; common/observability/dashboards/autoscaling.json
 # ──────────────────────────────────────────────────────────────────────────────

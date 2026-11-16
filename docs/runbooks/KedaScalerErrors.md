@@ -44,7 +44,7 @@ Cảnh báo không dựa vào bộ đếm lỗi của KEDA. Lý do: khi đã fal
 Khi KEDA hỏi lại được, condition `Fallback` về `False` ngay ở lần hỏi thành công đầu tiên. Cảnh báo hết sau khoảng 30 s (một lần scrape kube-state-metrics và một chu kỳ tính rule; khi hết thì không chờ `for:`). Tin "đã hết" tới Telegram chậm hơn, tới 5 phút (`group_interval` của Alertmanager). Đo trên kind 15/11: `Fallback=False` sau ≤ 12 s, Alertmanager hết cảnh báo sau ≤ 28 s, tin "đã hết" sau 273 s.
 
 **Giới hạn.** Có ba ca cảnh báo này không kêu được, nên đừng coi "không có cảnh báo" là "KEDA ổn":
-- **Thiếu metric.** Môi trường chưa nạp `kube-state-metrics-values.yaml` (ở nhà trước việc 6b), hoặc kube-state-metrics mất quyền đọc ScaledObject: rule không có dữ liệu nên im lặng. Sau mỗi lần dựng môi trường, chạy PromQL `kube_scaledobject_status_condition{namespace="llm-serving"}`: mỗi ScaledObject phải có 5 chuỗi (Ready, Active, Fallback, Paused, HPAActive).
+- **Thiếu metric.** Môi trường chưa nạp `kube-state-metrics-values.yaml`, hoặc kube-state-metrics mất quyền đọc ScaledObject: rule không có dữ liệu nên im lặng. Sau mỗi lần dựng môi trường, chạy PromQL `kube_scaledobject_status_condition{namespace="llm-serving"}`: mỗi ScaledObject phải có 5 chuỗi (Ready, Active, Fallback, Paused, HPAActive).
 - **Prometheus sập hẳn.** Prometheus vừa là nơi KEDA hỏi vừa là nơi tính rule, nên không còn ai tính cảnh báo. Prometheus khởi động lại thì rule chạy lại và kêu nếu KEDA vẫn đang fallback.
 - **keda-operator sập.** Không còn ai cập nhật condition, nên `Ready` và `Fallback` giữ giá trị cuối (thường là bình thường). Kiểm bằng `kubectl -n keda get pods`.
 

@@ -1,0 +1,38 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# envs/home/argocd/apps/autoscaling.yaml
+# Khái niệm: Application đồng bộ ScaledObject A2 (KEDA) từ overlay kustomize của nhà. KEDA tạo HPA
+#            keda-hpa-vllm-a2 từ ScaledObject; HPA có ownerReference về ScaledObject nên Argo CD hiện nó
+#            như tài nguyên con, nhưng không quản lý nó (không có trong Git).
+# Mục đích:  A2 lên cluster nhà qua Git như mọi thành phần khác (Kiến trúc §18.2). Chỉ trỏ tới
+#            envs/home/autoscaling (A2), KHÔNG trỏ cả common/autoscaling/: eval/ là cấu hình chỉ runner áp
+#            trong lúc đánh giá (ADR-005 T7).
+#            Trước phiên đánh giá, phải tắt auto-sync của app này, nếu không Argo CD áp lại A2 giữa lượt
+#            (runner kiểm và dừng: experiments/runner/configs.py guard_argocd). Root-app bỏ qua trường
+#            syncPolicy.automated của app này nên tắt tay được mà không bị bật lại (root-app.yaml). Tắt:
+#            make home-eval-begin; bật lại: make home-eval-end (envs/home/README.md, "Phiên đánh giá ở nhà").
+# Health:    Argo CD v3.5.4 có sẵn health check cho ScaledObject (resource_customizations/keda.sh/
+#            ScaledObject/health.lua): condition Fallback=True hoặc Ready=False → Degraded; Paused=True →
+#            Suspended (runner để A2 ở trạng thái pause sau mỗi phiên, experiments/runner/session.py).
+# Tham khảo: Kiến trúc §18.1–§18.2; Môi trường §14.1; docs/huong-dan/w2.md §4.3
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: autoscaling                    # tên này cố định: guard_argocd của runner tìm đúng app tên này
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/bi6-cat/llm-k8s-autoscaling.git
+    targetRevision: main
+    path: envs/home/autoscaling
+  destination: {server: https://kubernetes.default.svc, namespace: llm-serving}
+  syncPolicy:
+    # Root-app bỏ qua khối này (để tắt được khi đánh giá), nên sửa nó trong Git KHÔNG tự lên cluster.
+    # make home-eval-end chép khối này từ file lên cluster.
+    automated: {prune: true, selfHeal: true}
+    # Không có CreateNamespace: namespace llm-serving do app `serving` tạo (ScaledObject vô nghĩa khi chưa
+    # có Deployment vllm). ScaledObject là CRD do app `keda` cài; lần sync đầu CRD có thể chưa có, nên bỏ
+    # qua dry-run cho nó và để `retry` sync lại (giải thích ở gpu-exporter.yaml).
+    syncOptions: [SkipDryRunOnMissingResource=true]
+    retry: {limit: 10, backoff: {duration: 15s, factor: 2, maxDuration: 5m}}

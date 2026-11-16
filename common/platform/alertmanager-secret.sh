@@ -10,8 +10,8 @@
 # Dùng:      common/platform/alertmanager-secret.sh <lệnh kubectl…>
 #              sim:   … kubectl --context kind-llm-sim          (make sim-up tự gọi)
 #              cloud: … ssh -p <port> root@<host> k3s kubectl   (vast.sh platform tự gọi)
-#              nhà:   make alertmanager-secret CTX=<context>   (chỉ có tác dụng khi Application monitoring
-#                     đã nạp alertmanager-values.yaml, việc 6b; trước đó Alertmanager ở nhà không đọc Secret)
+#              nhà:   make alertmanager-secret CTX=llm-home    (chạy tay: Secret không nằm trong Git nên
+#                     Argo CD không tạo được; Application monitoring nạp alertmanager-values.yaml để đọc nó)
 # Tham khảo: Vận hành §3.4, §8; .env.example; CONTRIBUTING §2 (bí mật)
 # ──────────────────────────────────────────────────────────────────────────────
 set -euo pipefail

@@ -90,9 +90,13 @@ def test_two_workers_share_t0_and_write_one_csv(sse_server):
     rows = list(csv.DictReader(io.StringIO(out.getvalue())))
     assert sorted(int(r["id"]) for r in rows) == list(range(30))
     # Mốc chung: request tới server đúng lúc t0_unix + t_sched, dù do tiến trình nào gửi. Nếu một tiến
-    # trình tự lấy mốc riêng thì lệch cả giây (START_MARGIN_S). Chừa 100 ms cho đồng hồ Windows và loopback.
+    # trình tự lấy mốc riêng thì lệch cả giây (START_MARGIN_S = 1 s). Dung sai bằng nửa START_MARGIN_S:
+    # vẫn bắt được lỗi mốc riêng, mà không trượt vì máy chậm. Giờ tới server gồm cả thời gian mở kết nối
+    # TCP đầu tiên và tạo luồng ở server giả; trên runner CI ngày 16/11, request 0 tới trễ 148 ms trong
+    # khi `t_send` của nó chỉ lệch lịch 1 ms (dung sai cũ 100 ms làm CI của main đỏ). Độ đúng lịch của
+    # loadgen kiểm riêng ở dòng `lags` bên dưới, bằng `t_send` đo trong tiến trình gửi.
     for rid, t_arrive in sse_server.arrivals.items():
-        assert abs(t_arrive - (result.t0_unix + plan[rid].t_sched)) < 0.1, rid
+        assert abs(t_arrive - (result.t0_unix + plan[rid].t_sched)) < workers.START_MARGIN_S / 2, rid
     lags = [r["t_send"] - r["t_sched"] for r in result.records]
     assert min(lags) >= 0 and max(lags) < 0.05  # Môi trường §17: lệch lịch < 50 ms
 

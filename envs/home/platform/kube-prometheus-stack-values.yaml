@@ -7,6 +7,10 @@
 # ──────────────────────────────────────────────────────────────────────────────
 prometheus:
   prometheusSpec:
+    # Nhãn gắn vào mọi cảnh báo gửi tới Alertmanager (và dữ liệu remote write, nếu có). Tin Telegram in nó
+    # ở đầu dòng ([home]), vì nhà, sim và cloud dùng chung một bot (common/platform/alertmanager-values.yaml).
+    # Không ảnh hưởng truy vấn PromQL hay dashboard.
+    externalLabels: {env: home}
     # Giữ dữ liệu 3 ngày hoặc tối đa 4 GB, cái nào tới trước. Ở nhà chỉ cần dữ liệu vài ngày để phát
     # triển dashboard và cảnh báo; số liệu đánh giá chính lấy trên máy thuê.
     retention: 3d

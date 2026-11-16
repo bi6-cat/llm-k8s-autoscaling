@@ -3,9 +3,10 @@
 # Khái niệm: kube-prometheus-stack = một chart gom Prometheus Operator, Prometheus, Alertmanager,
 #            Grafana, kube-state-metrics và node-exporter. Operator quản lý Prometheus qua CRD
 #            (PodMonitor, PrometheusRule…).
-# Mục đích:  Cài chart (phiên bản ghim) với HAI file values: chung (values.yaml) rồi riêng cho nhà
-#            (values-home.yaml). File sau ghi đè file trước. Cấu trúc giống gpu-device-plugin.yaml.
-# Tham khảo: docs/huong-dan/w2.md §4.3, §6
+# Mục đích:  Cài chart (phiên bản ghim) với BỐN lớp values, cùng thứ tự với `make sim-up` và
+#            envs/cloud/provision/install-platform.sh; file sau ghi đè file trước. Cấu trúc giống
+#            gpu-device-plugin.yaml.
+# Tham khảo: docs/huong-dan/w2.md §4.3, §6; Vận hành §3.4
 # ──────────────────────────────────────────────────────────────────────────────
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -21,8 +22,13 @@ spec:
       helm:
         releaseName: kps               # tên ngắn: Service là kps-prometheus, kps-grafana
         valueFiles:
-          - $values/common/platform/kube-prometheus-stack-values.yaml
-          - $values/envs/home/platform/kube-prometheus-stack-values.yaml
+          - $values/common/platform/kube-prometheus-stack-values.yaml   # values chung
+          # Định tuyến Alertmanager → Telegram. Token bot đọc từ Secret alertmanager-telegram (tạo tay:
+          # make alertmanager-secret CTX=llm-home); Secret mount optional, thiếu thì chỉ không gửi được.
+          - $values/common/platform/alertmanager-values.yaml
+          # kube-state-metrics đọc condition của ScaledObject (cảnh báo KedaScalerErrors cần)
+          - $values/common/platform/kube-state-metrics-values.yaml
+          - $values/envs/home/platform/kube-prometheus-stack-values.yaml   # RAM, retention, ghim node của nhà
     - repoURL: https://github.com/bi6-cat/llm-k8s-autoscaling.git
       targetRevision: main
       ref: values

@@ -1,0 +1,31 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# envs/home/argocd/apps/observability.yaml
+# Khái niệm: Application đồng bộ thư mục kustomize common/observability: 2 PrometheusRule recording rule
+#            (SLO, vLLM), 1 PrometheusRule cảnh báo và 3 ConfigMap dashboard (sidecar của Grafana tự nạp
+#            ConfigMap có nhãn grafana_dashboard: "1").
+# Mục đích:  Rule, cảnh báo và dashboard ở nhà đi qua Git như ở sim và cloud (yêu cầu F5, F6). Sửa rule
+#            hay dashboard = sửa file, merge PR, Argo CD tự áp. Tách khỏi `monitoring-extras` (PodMonitor
+#            của Traefik, chỉ nhà có) vì thư mục này dùng chung mọi môi trường.
+#            Cảnh báo đi tới Telegram nhờ Application `monitoring` nạp common/platform/alertmanager-values.yaml;
+#            Secret bot tạo tay (make alertmanager-secret CTX=llm-home), vì bí mật không nằm trong Git.
+# Tham khảo: Kiến trúc §17.2–§17.3, §18.1; Vận hành §3; common/observability/kustomization.yaml
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: observability
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/bi6-cat/llm-k8s-autoscaling.git
+    targetRevision: main
+    path: common/observability
+  # Mọi object trong thư mục đã ghi namespace: monitoring (cùng chỗ với Prometheus và Grafana)
+  destination: {server: https://kubernetes.default.svc, namespace: monitoring}
+  syncPolicy:
+    automated: {prune: true, selfHeal: true}
+    # Chờ CRD PrometheusRule do app `monitoring` cài (giải thích ở gpu-exporter.yaml). Namespace monitoring
+    # cũng do app đó tạo.
+    syncOptions: [SkipDryRunOnMissingResource=true]
+    retry: {limit: 10, backoff: {duration: 15s, factor: 2, maxDuration: 5m}}

@@ -6,9 +6,9 @@
 #            rule + cảnh báo + dashboard của nhóm, KEDA (autoscaler), GPU exporter, rồi vLLM.
 #            Chạy NGAY trên VM: `vast.sh platform` chép các file vào cùng thư mục này.
 # Mục đích:  Thay các bước làm tay ngày 08/11 (236 s cho phần nền). Trên cloud chưa dùng Argo CD
-#            (group_vars/cloud.yaml), nên đây là cách cài; cùng values chung với Application ở nhà, cộng
-#            các lớp ở nhà chưa bật (alertmanager-, kube-state-metrics-, keda-metrics-values.yaml; việc
-#            6b). Chạy trên VM vì tunnel SSH từng đứt khi phản hồi lớn. Chạy lại an toàn:
+#            (group_vars/cloud.yaml), nên đây là cách cài; cùng các lớp values chung, cùng thứ tự với
+#            Application ở nhà (envs/home/argocd/apps/monitoring.yaml, keda.yaml). Chạy trên VM vì tunnel
+#            SSH từng đứt khi phản hồi lớn. Chạy lại an toàn:
 #            `helm upgrade --install`, `apply`.
 #            In mốc thời gian từng bước làm số đo cho VH5.
 # Tham khảo: log phiên 08/11 §7; docs/phien-ban.md (phiên bản chart, phải trùng Application ở nhà)
