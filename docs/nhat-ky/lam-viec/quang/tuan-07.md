@@ -185,3 +185,19 @@
 - **Results:** sau merge: `experiments` 157, `loadgen` 55, `analysis` 85 passed.
 - **Deviations:** chưa kiểm lại `helm template` với bốn lớp values của nhà. Điểm còn mở: RAM PC nhà khi fallback lên 2 pod (1 pod 3.644 Mi, còn khả dụng khoảng 4 GB, swap đang dùng 2,5 GB).
 - **Links:** PR #39, commit `5014d84` (merge), `e83a505` (sửa `home-eval-end`); nhận xét review trên PR #39.
+
+## 2026-11-16 – Sau merge PR #39: kiểm cluster nhà; `vh3-delete` tự bảo đảm 2 pod; thử `build_tables` trên dữ liệu cloud
+
+- **Task:** Q6 (VH), TR1 (kiểm sau merge), TR7 (dùng thử) · **Environment:** home, none
+- **Done:**
+  1. PR #45 và #39 đã được merge vào `main`. Kiểm cluster nhà theo `envs/home/README.md`, mục "Một lần khi thêm app…".
+  2. Sửa `vh3_delete` trong `experiments/ops/vh.py`: khi chỉ có 1 pod Ready thì nâng `minReplicaCount` lên 2 và chờ 2 pod Ready rồi mới xoá, sau đó luôn trả min về 1 (`finally`). `grade` thêm lý do không đạt khi `ready_before` < 2. Thêm 1 test.
+  3. Chạy `python -m analysis.build_tables runs/try-n2-4000ada` trên dữ liệu thử hôm nay.
+- **Results:**
+  - Cluster nhà: 9 Application `Synced`/`Healthy` ở commit `49474c5`, có thêm `autoscaling` và `observability`. ScaledObject `vllm-a2`: min 1, max 2, HPA target 0/23. `count(kube_scaledobject_status_condition{namespace="llm-serving"})` = 5. Alertmanager có `Watchdog` mang `env="home"`. Có đủ 3 PrometheusRule và 3 ConfigMap dashboard. Chưa mở Grafana để nhìn dashboard.
+  - `build_tables` đọc được dữ liệu cloud thật, ghi `runs.csv`, `phases.csv`, `alerts.csv`, `cells.csv`; đánh dấu đúng cả 2 lượt là không hợp lệ (máy tạo tải trượt tự kiểm), nên 0 ô. A2×KB2: phản ứng 87 s, hồi phục 165 s, 1 page.
+  - `pytest experiments`: 158 passed; ruff sạch.
+- **Incidents:** lệnh kiểm đầu tiên hỏng vì đặt cả `kubectl --context …` vào một biến rồi gọi trong zsh (zsh không tách từ như bash). Chạy lại bằng lệnh viết đầy đủ.
+- **Deviations:** bản sửa `vh3-delete` **chưa chạy trên cluster thật** (máy thuê đã trả; ở nhà chưa chạy vì RAM). Chưa tạo Secret `alertmanager-telegram` ở nhà vì PC chưa có `.env`: cảnh báo chạy nhưng chưa gửi được Telegram.
+- **Links:** `experiments/ops/vh.py`, `experiments/tests/test_ops_vh.py`.
+- **Thesis:** chương vận hành, VH3: điều kiện "còn pod khác phục vụ" của tiêu chí 0 lỗi.

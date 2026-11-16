@@ -5,7 +5,8 @@ Khái niệm: Mỗi kịch bản gây một thay đổi hoặc sự cố trong k
     - vh2a: cập nhật khi có 1 replica, làm theo quy trình: nâng minReplicaCount lên 2, chờ, cập nhật, hạ về 1.
     - vh2b: cập nhật với `maxSurge: 0` khi mọi GPU đều có pod.
     - vh2c: đối chứng kiểu web (`maxSurge: 1`) khi hết GPU: mong đợi rollout KẸT, pod mới Pending.
-    - vh3-delete: `kubectl delete pod`: graceful shutdown, mong đợi 0 lỗi.
+    - vh3-delete: `kubectl delete pod` khi còn pod khác phục vụ (tự nâng min lên 2 nếu chỉ có 1 pod):
+      graceful shutdown, mong đợi 0 lỗi.
     - vh3-kill: `kill -9` tiến trình con của vLLM: mong đợi container restart, chỉ lỗi request trên pod đó.
     - vh3-drain: `kubectl drain` một node (cần ≥ 2 node, nên chỉ ở nhà hoặc simulator).
     - vh4: NetworkPolicy chặn KEDA → Prometheus: mong đợi fallback lên max trong ≤ 30 s (N6), gỡ chặn thì hết.
@@ -87,6 +88,8 @@ def grade(scenario: str, load: dict[str, Any], facts: dict[str, Any]) -> list[st
         why.append("hệ thống không trở lại đủ replica Ready")
     if scenario == "vh2a" and facts.get("replicas_before") != 1:
         why.append(f"ca 1 replica nhưng trước khi làm có {facts.get('replicas_before')} replica: giảm --rate")
+    if scenario == "vh3-delete" and facts.get("ready_before", 2) < 2:
+        why.append("chỉ có 1 pod Ready lúc xoá: lỗi request là do không còn pod nào, không kết luận được")
     if scenario == "vh2c" and not facts.get("rollout_stuck"):
         why.append("rollout kiểu web không bị kẹt như phân tích")
     if scenario == "vh3-kill" and not facts.get("restarted"):
@@ -238,15 +241,36 @@ def vh2c(o: Ops, stuck_after_s: float = 300) -> dict[str, Any]:
 
 
 def vh3_delete(o: Ops) -> dict[str, Any]:
+    """Xoá một pod trong khi còn pod khác phục vụ. Tiêu chí 0 request lỗi (grade) chỉ có nghĩa khi vẫn còn
+    ít nhất một pod Ready sau khi xoá: Service bỏ pod đang tắt khỏi danh sách endpoint ngay, nên nếu đó là
+    pod duy nhất thì mọi request mới lỗi kết nối cho tới khi pod thay thế Ready (cả một lần cold start).
+    Đo 16/11 trên máy thuê 2 GPU, tải 0,5 C nên A2 giữ 1 pod: xoá pod đó → 61 s không có pod, 90 request lỗi.
+    Vì vậy khi chỉ có 1 pod Ready thì nâng min lên 2 trước, như vh2a, và luôn trả min về 1 sau đó."""
     before = o.ready_names()
     if not before:
         raise RuntimeError("không có pod Ready để xoá")
-    t0 = o.mark("delete", pod=before[0])
-    # --wait=false: lệnh trả về ngay, không phải chờ pod tắt hết grace period
-    o.kube.run("delete", "pod", before[0], "-n", o.ns, "--wait=false")
-    back = o.wait_ready(len(before), 900, exclude={before[0]})
-    o.mark("replaced", seconds=back)
-    return {"recovered": back is not None, "replace_s": back, "t_action": t0}
+    raised = len(before) < 2
+    try:
+        if raised:
+            if o.max_replicas < 2:
+                raise RuntimeError("cần ≥ 2 pod để xoá một pod mà không mất dịch vụ, nhưng max replica là 1")
+            o.scale_min(2)
+            o.mark("min_replicas_2")
+            second = o.wait_ready(2, 900)
+            o.mark("two_ready", waited_s=second)
+            if second is None:
+                raise RuntimeError("không lên được 2 pod Ready trong 900 s")
+            before = o.ready_names()
+        t0 = o.mark("delete", pod=before[0], ready_before=len(before))
+        # --wait=false: lệnh trả về ngay, không phải chờ pod tắt hết grace period
+        o.kube.run("delete", "pod", before[0], "-n", o.ns, "--wait=false")
+        back = o.wait_ready(len(before), 900, exclude={before[0]})
+        o.mark("replaced", seconds=back)
+    finally:
+        if raised:
+            o.scale_min(1)  # kể cả khi lỗi giữa chừng: không để cluster kẹt ở min 2
+            o.mark("min_replicas_1")
+    return {"recovered": back is not None, "replace_s": back, "t_action": t0, "ready_before": len(before)}
 
 
 def vh3_kill(o: Ops) -> dict[str, Any]:
