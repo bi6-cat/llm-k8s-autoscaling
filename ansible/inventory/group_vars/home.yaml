@@ -26,3 +26,13 @@ kubeconfig_server: "https://{{ hostvars[groups['k3s_server'][0]].node_ip }}:6443
 # IP Tailscale không cần ghi ở đây: nó đã là node_ip, template luôn thêm node_ip vào tls-san.
 k3s_tls_sans:
   - zorsche-upc             # tên MagicDNS của PC (từ 06/11/2026; trước đó zett-ubuntu-pc)
+
+# Ngưỡng dọn image của kubelet (image garbage collection). Mặc định: đĩa chứa image vượt 85 % thì kubelet
+# xoá image KHÔNG có container nào dùng, cho tới khi đĩa về 80 %. Đĩa / của PC (99 GB) thường ở ~80 %, và
+# vLLM ở nhà hay để 0 replica, nên image vLLM (9 GB nén, ~26 GB sau giải nén) là thứ bị xoá đầu tiên.
+# Ngày 16/11/2026 image này không còn trên node: scale 0 → 1 phải kéo lại mất 14 phút 52 giây, runner hết
+# 900 s chờ và lượt đầu hỏng (nhật ký Quang tuần 07; nguyên nhân chưa chứng minh được, GC là giả thuyết).
+# Nâng lên 95 % / 90 % để image chỉ bị xoá khi đĩa gần đầy thật. Đĩa đầy 95 % thì cần dọn tay.
+k3s_kubelet_args:
+  - image-gc-high-threshold=95
+  - image-gc-low-threshold=90

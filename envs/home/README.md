@@ -62,6 +62,8 @@ uv run --project experiments python -m experiments.runner \
 make ops-tests S=vh3-delete MATRIX=envs/home/experiments/matrix.yaml RATE=6 CTX=llm-home   # RATE ≈ 0,5 C; C nhà = 12,5
 ```
 
+**Trước mỗi phiên runner ở nhà:** scale vLLM lên 1 pod và chờ `Ready` rồi mới chạy (`kubectl --context llm-home -n llm-serving scale deploy/vllm --replicas=1`, rồi `rollout status`). Ngày 16/11 image vLLM không còn trên node sau một thời gian để 0 replica, kéo lại mất 15 phút, runner hết 900 s chờ và lượt đầu hỏng. Nguyên nhân chưa xác định; nghi kubelet tự xoá image không dùng khi đĩa `/` vượt 85 %, nên giữ đĩa dưới mức đó.
+
 Cập nhật cấu hình (VH2) **đi qua Git**: sửa file trong `envs/home/` hoặc `common/`, mở PR, merge; Argo CD tự rollout. Rollback = `git revert`.
 
 ## Phiên đánh giá ở nhà

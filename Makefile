@@ -33,7 +33,7 @@ YQ ?= yq
 AMTOOL ?= amtool
 
 # .PHONY: các target này không phải tên file, make luôn chạy chúng (kể cả khi có file trùng tên)
-.PHONY: help home-up alertmanager-secret home-eval-begin home-eval-end sim-up sim-down sim-test-load sim-test sim-lt7 find rent probe bootstrap prefetch cloud-platform run backup backup-check ops-tests vh5 release lint alerts-test alerts-coverage alertmanager-check dashboards-check
+.PHONY: help home-up alertmanager-secret home-eval-begin home-eval-end sim-up sim-down sim-test-load sim-test sim-lt7 find rent attach probe bootstrap prefetch cloud-platform run backup backup-check ops-tests vh5 release lint alerts-test alerts-coverage alertmanager-check dashboards-check
 
 # In danh sách lệnh, chia nhóm theo môi trường. Hai loại dòng được in:
 #   `##@ <tiêu đề>`        = đầu một nhóm (in thành dòng tiêu đề);
@@ -154,6 +154,12 @@ find: ## Tìm offer Vast: make find MODE=v0|v2 [GPU=RTX_5060_Ti NGPU=2 MAX_DPH=1
 rent: ## Thuê offer: make rent OFFER=<id> MODE=v0|v2
 	envs/cloud/provision/vast.sh rent $(OFFER) $(MODE)
 	envs/cloud/provision/vast.sh wait
+
+# Máy thuê qua giao diện web của Vast (không qua `make rent`): gắn script vào máy bằng host và cổng SSH mà
+# Vast hiển thị. Sau đó probe, bootstrap, cloud-platform, run dùng như thường và không cần API key.
+# `make release` KHÔNG huỷ được máy này: huỷ trên trang Vast, rồi `envs/cloud/provision/vast.sh detach`.
+attach: ## Gắn một máy đã thuê qua web: make attach HOST=<ip> PORT=<cổng SSH>
+	envs/cloud/provision/vast.sh attach $(HOST) $(PORT)
 
 # Kiểm máy thật trước khi bootstrap: giữ hay trả máy (cột mạng của Vast không tin được, log phiên 08/11 §1).
 probe: ## Đo phần cứng và mạng thật của VM vừa thuê

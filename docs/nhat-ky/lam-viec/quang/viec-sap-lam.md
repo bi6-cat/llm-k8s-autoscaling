@@ -1,6 +1,6 @@
 # Việc sắp làm – Quang
 
-> Cập nhật **09/11/2026** (W6, sau V0+V1), làm **bản bàn giao**: đọc file này cùng [nhật ký tuần 05](tuan-05.md) và [log phiên 08/11](phien-2026-11-08-a4000.md) là đủ để làm tiếp trên máy khác hoặc trong phiên AI mới. Danh sách sống: đánh dấu `[x]` khi xong, ghi chi tiết vào nhật ký tuần. Mã việc theo [Kế hoạch §5.1](../../../chi-tiet/06-ke-hoach-quan-ly.md#51-phân-công).
+> Cập nhật **09/11/2026** (W6, sau V0+V1); bổ sung **16/11/2026** ở mục 1a, làm **bản bàn giao**: đọc file này cùng [nhật ký tuần 05](tuan-05.md) và [log phiên 08/11](phien-2026-11-08-a4000.md) là đủ để làm tiếp trên máy khác hoặc trong phiên AI mới. Danh sách sống: đánh dấu `[x]` khi xong, ghi chi tiết vào nhật ký tuần. Mã việc theo [Kế hoạch §5.1](../../../chi-tiet/06-ke-hoach-quan-ly.md#51-phân-công).
 
 ## 1. Tình trạng hiện tại
 
@@ -27,6 +27,17 @@ Phần trăm là ước lượng theo đầu việc, không phải giờ đã d�
 
 **Nhánh và PR** (09/11): PR #24, #25, #26 đã merge vào `main`. PR #27 merge nhầm vào `feat/v2-prep` (base không phải `main`), nên 7 commit dọn dẹp được đưa vào `main` bằng nhánh `chore/v2-prep-to-main`. Từ nay tách nhánh mới từ `main`; trước khi merge PR dưới của một chồng PR, đổi base PR trên về `main`.
 
+## 1a. Cập nhật 16/11 (W7)
+
+Các mục dưới viết ngày 09/11; phần này ghi những gì đã đổi, chi tiết ở [nhật ký tuần 07](tuan-07.md).
+
+- **V2 chưa chạy** (lịch 14–15/11 đã qua); phiên cloud dời sang tối 16/11. Đóng băng dữ liệu vẫn là 22/11.
+- PR #33–#38 đã merge. **PR #39** (TR1: app `autoscaling`, `observability`) đã review, đã làm ba bước trước khi merge trên cluster nhà, **chưa merge**; sau khi merge còn các bước kiểm trong `envs/home/README.md`.
+- Đã áp lại `root-app.yaml` sau refactor (việc (1) của mục 13/11 bên dưới): 7 app `Synced`/`Healthy`. Root-app trên cluster đang là bản của PR #39.
+- Runner chạy được trên GPU nhà sau refactor (1 lượt hợp lệ). `vllm_log` đã chạy với log vLLM thật. LT4 có kết quả.
+- **Mới phát hiện:** image vLLM từng biến mất khỏi node (kéo lại mất 15 phút), nguyên nhân chưa rõ, nghi image GC khi đĩa gần 85 %. Trước mỗi phiên ở nhà: scale lên 1 pod và chờ Ready trước.
+- **Còn treo:** chưa có `.env` trên PC (Vast, R2, Telegram); `make sim-test` chưa chạy lại sau refactor (PC chưa cài `hey`, chưa có cluster kind); VH1–VH4 ở nhà cần đóng ứng dụng desktop để đủ RAM cho 2 pod; `runs/` (V0+V1) chưa sao lưu.
+
 ## 2. Làm ngay (trước V2, hạn 13/11)
 
 - [x] (08/11) Chốt model **3B**, rút kịch bản 12 / 24 / 17 phút, đỉnh KB2 theo N, N = 4.
@@ -51,9 +62,9 @@ Phần trăm là ước lượng theo đầu việc, không phải giờ đã d�
 - [x] ~~**Q1/Q3 áp time-slicing lên PC**~~ (06/11): chạy được 1 pod; 2 pod vừa VRAM nhưng hết RAM, xem `van-hanh.md`. Còn: giải quyết RAM (tắt desktop/zram) rồi thử lại 2 pod. Ghi chú cũ: `helm upgrade` device plugin với `-f device-plugin-values.yaml -f device-plugin-values-home.yaml`, kiểm node báo `nvidia.com/gpu: 3`; áp overlay `home` (0,5B), scale lên 2 rồi 3 pod: cả ba Ready? khởi động cùng lúc có lỗi VRAM không? Đo VRAM (`nvidia-smi`) và RAM (`kubectl top pod`) thực rồi chỉnh `gpu-memory-utilization`, `resources`.
 - [x] (06/11) **Q5:** test graceful shutdown với vLLM thật: 144/144 stream ok trong 3 lần; đối chứng grace 5 s cắt 48/48. Nhưng request an toàn là nhờ grace 180 s, vLLM không dừng khi nhận SIGTERM (xem `van-hanh.md` 06/11).
 - [ ] (08/11: **tạm chấp nhận** grace 180 s, ghi vào Hạn chế; tối ưu sau nếu cần) **Q5 tìm nguyên nhân:** vLLM 0.31.0 không dừng engine và không thoát khi nhận SIGTERM, ở mọi trạng thái (khởi tạo, nhàn rỗi, đang phục vụ; drain lẫn abort). Thử `kill -TERM` tay, xem tiến trình con, thử bản vLLM khác; kiểm lại trên VM ở V0. Hệ quả nếu không sửa: mỗi lần tắt pod giữ GPU 180 s.
-- [ ] **Q4:** manifest pre-pull (giới hạn ghi vì ổ SATA); L2 và đo 8 pha (cần `parse_vllm_log` của TR5); LT4.
-- [ ] Dọn 5 pod vLLM cũ (`Unknown`/`Completed`) và pod `loadgen` trong `llm-serving`.
-- [ ] TTFT trên k3s cao hơn Docker (p50 +18 %): đo lại gọi thẳng Service, bỏ Ingress.
+- [ ] (16/11: LT4 và đo 8 pha ở nhà đã có, 1 mẫu mỗi ca, xem `van-hanh.md`; còn pre-pull và L2) **Q4:** manifest pre-pull (giới hạn ghi vì ổ SATA); L2 và đo 8 pha (cần `parse_vllm_log` của TR5); LT4.
+- [x] ~~Dọn 5 pod vLLM cũ (`Unknown`/`Completed`) và pod `loadgen` trong `llm-serving`~~ (16/11: namespace đã sạch, không còn pod nào).
+- [ ] TTFT trên k3s cao hơn Docker (p50 +18 %): đo lại gọi thẳng Service, bỏ Ingress. (16/11: runner gọi thẳng Service với 0,5B cho TTFT p50 30 ms, p95 40 ms ở 2 req/s; chưa có số Docker cùng model và cùng tải để so.)
 
 **Lưu ý vận hành PC** (chi tiết ở [`van-hanh.md`](../../van-hanh.md)):
 - **Không suspend** PC khi vLLM đang chạy: `nvidia-suspend` treo (05/11). Muốn nghỉ thì `shutdown`, hoặc scale vLLM về 0 trước.

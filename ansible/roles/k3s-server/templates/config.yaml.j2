@@ -46,8 +46,9 @@ kube-controller-manager-arg:
 {% if k3s_kubelet_args %}
 
 # Tham số thêm cho kubelet (agent chạy trên mỗi node, khởi động và theo dõi container).
-# Chỉ VM thuê dùng: cpu-manager-policy=static cho pod "Guaranteed" giữ riêng lõi CPU, tránh
-# nhiễu số đo; reserved-cpus chừa vài lõi cho hệ điều hành (group_vars/cloud.yaml).
+# VM thuê: cpu-manager-policy=static cho pod "Guaranteed" giữ riêng lõi CPU, tránh nhiễu số đo;
+# reserved-cpus chừa vài lõi cho hệ điều hành (group_vars/cloud.yaml).
+# Nhà: nâng ngưỡng dọn image để image vLLM không bị xoá khi để 0 replica (group_vars/home.yaml).
 kubelet-arg:
 {% for a in k3s_kubelet_args %}
   - {{ a }}

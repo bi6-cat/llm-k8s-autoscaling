@@ -6,7 +6,10 @@
 # Mục đích:  Cô lập phần phụ thuộc nhà cung cấp vào MỘT file; đổi nhà cung cấp chỉ phải viết lại file này.
 #            Ghi trạng thái vào .vast/ để không bao giờ quên một máy đang tính tiền.
 # Dùng:      vast.sh find v0|v2 | rent <offer_id> v0|v2 | wait | probe | inventory | platform | ssh | tunnel
-#            | runner-start <matrix> | status | release
+#            | runner-start <matrix> | status | release | attach <host> <port> | detach
+#            Máy thuê qua giao diện web (không qua `rent`): `vast.sh attach <host> <port>` (lấy từ lệnh SSH
+#            Vast hiển thị), rồi probe/inventory/platform/ssh/tunnel/runner-start dùng như thường, không
+#            cần API key. status và release vẫn cần API key và instance thuê bằng `rent`.
 #            (thường gọi qua Makefile: make find / rent / bootstrap / release)
 #            Loại GPU, số GPU, trần giá đổi bằng biến môi trường, ví dụ:
 #              GPU=RTX_4090 NGPU=4 MAX_DPH=3 envs/cloud/provision/vast.sh find v2
@@ -62,10 +65,16 @@ query() {
 disk_gb() { if [ "$1" = v2 ]; then echo 300; else echo 150; fi; }
 # ID instance đang thuê; dừng script nếu chưa thuê
 instance_id() { cat "$STATE/instance_id" 2>/dev/null || { echo "Chưa có instance (.vast/instance_id)" >&2; exit 1; }; }
-# Đổi "ssh://root@host:port" (vastai ssh-url in ra) thành "host port" để đọc bằng `read -r host port`
+# "host port" của máy đang dùng, để đọc bằng `read -r host port`. Hai nguồn, theo thứ tự:
+#   1) .vast/target: do `vast.sh attach` ghi, cho máy thuê qua giao diện web (không có instance_id, và
+#      không cần API key). File nằm trong .vast/ (gitignore) vì chứa IP công khai của máy thuê.
+#   2) API của Vast: `vastai ssh-url` in "ssh://root@host:port", sed đổi thành "host port".
 ssh_target() {
+  if [ -s "$STATE/target" ]; then cat "$STATE/target"; return; fi
   vastai ssh-url "$(instance_id)" | sed -E 's#ssh://[^@]+@([^:]+):([0-9]+).*#\1 \2#'
 }
+# Tên máy trong inventory Ansible: vast-<instance_id>, hoặc vast-manual khi máy được gắn bằng `attach`.
+host_label() { if [ -s "$STATE/target" ]; then echo manual; else instance_id; fi; }
 
 # ── Các lệnh ─────────────────────────────────────────────────────────────────
 # Mỗi lệnh là một hàm cmd_<tên>; dòng cuối file gọi hàm theo tham số đầu tiên.
@@ -113,10 +122,17 @@ cmd_wait() {
   done
   if [ "$st" != running ]; then echo "Máy chưa chạy sau 30 phút; xem console Vast, cân nhắc release." >&2; exit 1; fi
   read -r host port < <(ssh_target)
-  until ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5 -p "$port" "root@$host" true 2>/dev/null; do
+  # Chờ SSH tối đa 10 phút (60 lần × 10 s). Trước 16/11 vòng này chờ vô hạn; hôm đó 2 trong 3 máy thuê báo
+  # running nhưng SSH không bao giờ lên (một máy mở cổng mà không trả banner, một máy timeout TCP), và
+  # máy vẫn tính tiền trong lúc chờ. BatchMode=yes: không hỏi mật khẩu khi khoá sai, lỗi ngay.
+  for _ in $(seq 1 60); do
+    if ssh -o StrictHostKeyChecking=accept-new -o BatchMode=yes -o ConnectTimeout=8 -p "$port" "root@$host" true 2>/dev/null; then
+      echo "SSH sẵn sàng: ssh -p $port root@$host"; return 0
+    fi
     echo "$(date +%T) chờ SSH…"; sleep 10
   done
-  echo "SSH sẵn sàng: ssh -p $port root@$host"
+  echo "Máy báo running nhưng SSH không lên sau 10 phút. Huỷ (FORCE_RELEASE=1 make release) và thuê offer khác." >&2
+  exit 1
 }
 
 # Sinh inventory Ansible cho máy đang thuê. VM duy nhất vừa là k3s_server vừa chạy GPU.
@@ -131,7 +147,7 @@ all:
       children:
         k3s_server:
           hosts:
-            vast-$(instance_id):
+            vast-$(host_label):
               ansible_host: $host
               ansible_port: $port
               ansible_user: root
@@ -200,9 +216,35 @@ KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 cp /opt/llm-runner/envs/cloud/provision/llm-runner.service /etc/systemd/system/llm-runner.service
 systemctl daemon-reload
 REMOTE
-  ssh -p "$port" "root@$host" 'umask 077; cat > /opt/llm-runner/.env' < .env
+  # Chưa có .env (máy dev mới): vẫn cài service, với .env rỗng trên VM, để lỗi hiện ở đúng chỗ. Khi đó
+  # runner dừng ngay với thông báo thiếu R2_REMOTE (phiên cloud bắt buộc sao lưu, experiments/runner/
+  # __main__.py); xem bằng journalctl -u llm-runner. Phiên thử code không cần R2: chạy runner từ máy dev
+  # qua tunnel với --no-backup.
+  if [ -f .env ]; then
+    ssh -p "$port" "root@$host" 'umask 077; cat > /opt/llm-runner/.env' < .env
+  else
+    echo "CẢNH BÁO: không có .env; runner trên VM sẽ dừng vì thiếu R2_REMOTE (xem comment trong vast.sh)." >&2
+    ssh -p "$port" "root@$host" 'umask 077; : > /opt/llm-runner/.env'
+  fi
   ssh -p "$port" "root@$host" 'systemctl enable --now llm-runner && systemctl --no-pager status llm-runner | head -5'
   echo "Xem log: make ssh rồi journalctl -u llm-runner -f"
+}
+
+# Gắn script vào một máy đã thuê sẵn (qua giao diện web của Vast): ghi "host port" vào .vast/target.
+# Thử SSH trước khi ghi, để không gắn nhầm một máy chưa lên (16/11: 2 trong 3 máy thuê không lên SSH).
+# accept-new: lần đầu gặp máy thì tự nhận host key, lần sau key đổi thì từ chối.
+cmd_attach() {
+  local host=${1:?host (IP của máy thuê)} port=${2:?cổng SSH}
+  ssh -p "$port" -o BatchMode=yes -o ConnectTimeout=20 -o StrictHostKeyChecking=accept-new "root@$host" true \
+    || { echo "Không SSH được tới root@$host cổng $port; chưa gắn." >&2; exit 1; }
+  echo "$host $port" > "$STATE/target"
+  echo "Đã gắn máy $host cổng $port (.vast/target). Gỡ: vast.sh detach"
+}
+
+# Gỡ máy đã gắn bằng `attach`. KHÔNG huỷ máy trên Vast: máy thuê qua web phải huỷ trên web.
+cmd_detach() {
+  rm -f "$STATE/target"
+  echo "Đã gỡ .vast/target. Máy vẫn đang thuê và tính tiền cho tới khi huỷ trên trang Vast."
 }
 
 # In "host port" của máy đang thuê, cho script khác (vh5.sh) dùng.
@@ -253,4 +295,4 @@ cmd_release() {
 
 # Gọi hàm theo lệnh: `vast.sh rent 123 v0` → cmd_rent 123 v0. "${@:2}" = mọi tham số từ thứ 2 trở đi.
 # `${1:?…}` = báo lỗi kèm danh sách lệnh nếu không truyền tham số nào.
-"cmd_${1:?lệnh: find|rent|wait|probe|inventory|platform|ssh|tunnel|runner-start|target|status|release}" "${@:2}"
+"cmd_${1:?lệnh: find|rent|wait|probe|inventory|platform|ssh|tunnel|runner-start|target|status|release|attach|detach}" "${@:2}"
