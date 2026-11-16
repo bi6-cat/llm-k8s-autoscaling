@@ -283,3 +283,9 @@
 - **Results:** `pytest analysis` 114 passed (Python 3.15; test mới chạy cả 3.11); `ruff check` và `ruff format --check` đạt. Hình LT8 cho thấy: x = 0,1 không kêu ở cả 3 lần bơm; ở x = 0,3 và 0,6, r_5m đo bám vạch dự đoán và trễ vài giây; vạch firing đo bắt đầu và kết thúc muộn hơn dự đoán, khớp bảng LT8 ở `van-hanh.md`, trừ một lần kêu sớm ở x = 0,3 (đã giải thích ở đó). Hình LT7: 12/12 lượt đúng số replica; ở cả 7 lượt, đoạn quyết định (ba chặng đầu) kết thúc trước vạch 11 s.
 - **Links:** nhánh `feat/tr8-lt7-lt8-figures`; `analysis/lt_charts.py`, `analysis/tests/test_lt_charts.py`, `analysis/figures/lt7-hpa.svg`, `analysis/figures/lt8-burn.svg`, `envs/sim/README.md`, `analysis/pyproject.toml`.
 - **Thesis:** §5 LT7 (hình replica theo C và các chặng trễ), §5 LT8 (hình r_1m/r_5m quanh lúc bơm, khoảng firing đo so với dự đoán).
+
+## 2026-11-17 – TR8: merge PR #49 (hình LT7, LT8)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** CI xanh cả 6 job (alerts, docs, manifests, python 3.11 và 3.15, yaml); `mergeable` = MERGEABLE, không có review hay bình luận; merge bằng merge commit `10c0527`, xoá nhánh `feat/tr8-lt7-lt8-figures`.
+- **Links:** PR #49.
