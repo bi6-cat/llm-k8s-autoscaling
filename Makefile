@@ -33,7 +33,7 @@ YQ ?= yq
 AMTOOL ?= amtool
 
 # .PHONY: các target này không phải tên file, make luôn chạy chúng (kể cả khi có file trùng tên)
-.PHONY: help home-up alertmanager-secret sim-up sim-down sim-test-load sim-test sim-lt7 find rent attach probe bootstrap prefetch cloud-platform run backup backup-check ops-tests vh5 release lint alerts-test alerts-coverage alertmanager-check dashboards-check
+.PHONY: help home-up alertmanager-secret home-eval-begin home-eval-end sim-up sim-down sim-test-load sim-test sim-lt7 find rent attach probe bootstrap prefetch cloud-platform run backup backup-check ops-tests vh5 release lint alerts-test alerts-coverage alertmanager-check dashboards-check
 
 # In danh sách lệnh, chia nhóm theo môi trường. Hai loại dòng được in:
 #   `##@ <tiêu đề>`        = đầu một nhóm (in thành dòng tiêu đề);
@@ -54,10 +54,42 @@ home-up: ## Dựng k3s + Argo CD trên PC và laptop (Ansible)
 
 # Secret token bot và chat id cho Alertmanager, lấy từ .env (common/platform/alertmanager-secret.sh).
 # sim-up và cloud-platform tự gọi script này; chạy tay khi đổi bot trong .env, hoặc ở nhà (Secret không nằm
-# trong Git nên Argo CD không tạo được). Ở nhà chỉ có tác dụng sau việc 6b, khi Application monitoring nạp
-# common/platform/alertmanager-values.yaml. CTX trống = context hiện tại của kubectl.
+# trong Git nên Argo CD không tạo được): make alertmanager-secret CTX=llm-home. CTX trống = context hiện
+# tại của kubectl.
 alertmanager-secret: ## Tạo Secret bot Telegram của Alertmanager từ .env: make alertmanager-secret [CTX=…]
 	common/platform/alertmanager-secret.sh kubectl $(if $(CTX),--context $(CTX))
+
+# Phiên đánh giá ở nhà (envs/home/README.md, Kiến trúc §18.2): runner áp ScaledObject của từng lượt bằng
+# kubectl. Application `autoscaling` còn auto-sync thì Argo CD áp lại A2 giữa lượt, nên runner dừng ngay.
+# Root-app bỏ qua trường syncPolicy.automated của app này, nên tắt ở đây không bị bật lại. CTX mặc định
+# llm-home (context của cluster nhà, envs/home/README.md).
+HOME_KUBECTL = kubectl --context $(or $(CTX),llm-home)
+home-eval-begin: ## Tắt auto-sync của A2 ở nhà trước phiên đánh giá [CTX=llm-home]
+#	JSON patch `remove` báo lỗi khi trường đã không còn, nên kiểm trước: chạy lại bao nhiêu lần cũng được
+	@if [ -n "$$($(HOME_KUBECTL) -n argocd get application autoscaling -o jsonpath='{.spec.syncPolicy.automated}')" ]; then \
+	  $(HOME_KUBECTL) -n argocd patch application autoscaling --type json \
+	    -p '[{"op":"remove","path":"/spec/syncPolicy/automated"}]'; \
+	else echo "auto-sync của Application autoscaling đã tắt"; fi
+
+home-eval-end: ## Xoá ScaledObject khác A2 rồi bật lại auto-sync của A2 theo Git [CTX=llm-home] (cần yq)
+#	0) Đọc khối automated từ file Application trong Git TRƯỚC khi đổi gì trên cluster, không viết tay giá
+#	   trị: root bỏ qua trường này nên sửa nó trong Git không tự lên cluster. Chạy từ bản checkout đã cập
+#	   nhật main. Kiểm kết quả là một JSON object (bắt đầu bằng `{`): tên `yq` còn là một công cụ khác
+#	   (bản Python, bọc jq) không hiểu `-o json -I0` và in ra rỗng; khi đó dừng ở đây, chưa xoá gì, thay
+#	   vì xoá ScaledObject rồi gửi patch hỏng và để auto-sync tắt mãi (gặp trên PC nhà 16/11, yq 3.4.3).
+#	1) Webhook của KEDA chặn hai ScaledObject cùng trỏ một Deployment, nên xoá mọi ScaledObject khác
+#	   vllm-a2 trước khi bật auto-sync. `|| true`: grep trả mã 1 khi không còn dòng nào để xoá.
+#	2) Merge patch khối automated lên Application.
+	@automated=$$($(YQ) -o json -I0 '.spec.syncPolicy.automated' envs/home/argocd/apps/autoscaling.yaml 2>/dev/null); \
+	case "$$automated" in \
+	  "{"*) ;; \
+	  *) echo "Không đọc được khối automated bằng '$(YQ)'. Cần yq bản mikefarah (phiên bản ở docs/phien-ban.md); hoặc truyền YQ=/đường/dẫn/yq" >&2; exit 1 ;; \
+	esac; \
+	set -e; \
+	$(HOME_KUBECTL) -n llm-serving get scaledobject -o name | { grep -v '/vllm-a2$$' || true; } \
+	  | xargs -r $(HOME_KUBECTL) -n llm-serving delete; \
+	$(HOME_KUBECTL) -n argocd patch application autoscaling --type merge \
+	  -p "{\"spec\":{\"syncPolicy\":{\"automated\":$$automated}}}"
 
 # ── Simulator trên laptop (không cần GPU) ──────────────────────────────────────
 ##@ Simulator: kind + llm-d-inference-sim, không cần GPU (envs/sim/README.md)

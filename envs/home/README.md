@@ -13,9 +13,10 @@ Môi trường demo và vận hành thử trên GPU thật, chi phí bằng 0. M
 
 | Đường dẫn | Là gì |
 |---|---|
-| `argocd/root-app.yaml` | Application gốc (App-of-Apps): trỏ vào `argocd/apps/`, Ansible áp một lần khi dựng |
-| `argocd/apps/*.yaml` | Mỗi file một thành phần: GPU device plugin, GPU exporter, kube-prometheus-stack, KEDA, vLLM |
+| `argocd/root-app.yaml` | Application gốc (App-of-Apps): trỏ vào `argocd/apps/`, Ansible áp một lần khi dựng. Bỏ qua auto-sync của app `autoscaling`, để tắt được khi đánh giá |
+| `argocd/apps/*.yaml` | Mỗi file một thành phần: GPU device plugin, GPU exporter, kube-prometheus-stack (kèm Alertmanager → Telegram), KEDA, vLLM, A2 (`autoscaling`), rule + cảnh báo + dashboard (`observability`) |
 | `serving/` | Overlay vLLM của nhà: model 0,5B, RAM giới hạn, cache trên ổ, Ingress `llm.home` |
+| `autoscaling/` | Overlay A2 của nhà: tối đa 2 replica (2 GPU replica), threshold 23 |
 | `platform/*-values.yaml` | Values Helm riêng của nhà, chồng lên values chung ở `common/platform/` |
 | `experiments/` | Ma trận chạy thử (`matrix.yaml`, `matrix-dg1.yaml`) và năng lực đo được (`capacity*.json`) |
 
@@ -33,6 +34,9 @@ Thứ dùng chung (Deployment vLLM, A2, cảnh báo, dashboard) nằm ở `commo
    $K -n monitoring create secret generic grafana-admin \
      --from-literal=admin-user=admin --from-literal=admin-password="$(openssl rand -hex 12)"
    $K -n llm-serving create secret generic vllm-api-key --from-literal=key="$(openssl rand -hex 24)"
+   # Bot Telegram của Alertmanager, đọc từ .env (mẫu: .env.example). .env chưa có bot thì chỉ cảnh báo;
+   # Alertmanager vẫn chạy, chỉ không gửi được tin.
+   make alertmanager-secret CTX=llm-home
    ```
 
 3. **Dựng cluster:** `make home-up` (Ansible: OS, NVIDIA toolkit, k3s, Argo CD, áp `root-app.yaml`). Chạy lại bao nhiêu lần cũng được.
@@ -61,6 +65,48 @@ make ops-tests S=vh3-delete MATRIX=envs/home/experiments/matrix.yaml RATE=6 CTX=
 **Trước mỗi phiên runner ở nhà:** scale vLLM lên 1 pod và chờ `Ready` rồi mới chạy (`kubectl --context llm-home -n llm-serving scale deploy/vllm --replicas=1`, rồi `rollout status`). Ngày 16/11 image vLLM không còn trên node sau một thời gian để 0 replica, kéo lại mất 15 phút, runner hết 900 s chờ và lượt đầu hỏng. Nguyên nhân chưa xác định; nghi kubelet tự xoá image không dùng khi đĩa `/` vượt 85 %, nên giữ đĩa dưới mức đó.
 
 Cập nhật cấu hình (VH2) **đi qua Git**: sửa file trong `envs/home/` hoặc `common/`, mở PR, merge; Argo CD tự rollout. Rollback = `git revert`.
+
+## Phiên đánh giá ở nhà
+
+Runner và `make ops-tests` áp ScaledObject của từng lượt bằng `kubectl apply`. Nếu Application `autoscaling` còn auto-sync thì Argo CD áp lại A2 giữa lượt, nên runner kiểm trước và dừng ngay ([Kiến trúc §18.2](../../docs/chi-tiet/03-kien-truc-autoscaling.md#182-cấu-hình-autoscaling-trong-git-tạm-tách-khi-đánh-giá)).
+
+```bash
+make home-eval-begin    # trước phiên: tắt auto-sync của A2 (root-app bỏ qua trường này nên không bật lại)
+# … chạy runner hoặc make ops-tests …
+make home-eval-end      # sau phiên: xoá ScaledObject khác vllm-a2, rồi bật lại auto-sync theo Git (cần yq)
+```
+
+- Sau `home-eval-end`, Argo CD đưa A2 về đúng Git sau vài giây, bỏ cả annotation pause mà runner để lại. Phải xoá ScaledObject khác trước, vì webhook của KEDA chặn hai ScaledObject cùng trỏ một Deployment.
+- Trong lúc tắt, app `autoscaling` hiện `OutOfSync`, và hiện `Suspended` khi ScaledObject đang pause. Đó là lệch có chủ đích.
+- Đừng sync tay root kèm `--sync-option`, vì làm vậy auto-sync bị bật lại (xem comment trong `argocd/root-app.yaml`).
+- Ma trận chạy A2 ở nhà phải ghi đè `threshold: 23` và `max_replicas: 2`, giá trị của overlay; nếu không, runner dùng giá trị của VM thuê trong file base.
+
+## Một lần khi thêm app `autoscaling` và `observability`
+
+Merge xong là root tạo ngay app `autoscaling` với auto-sync bật. Vì vậy ba việc đầu phải làm **trước khi merge**:
+
+1. Không có phiên runner hay `make ops-tests` nào đang chạy, vì A2 sẽ bị áp giữa lượt.
+2. Xoá ScaledObject khác A2 còn sót từ runner. Nếu còn, webhook của KEDA chặn A2, app `autoscaling` lỗi sync cho đến khi hết lượt `retry`.
+3. Áp `root-app.yaml` mới từ nhánh của PR. Root không tự quản lý chính nó. Bản mới chỉ thêm `ignoreDifferences` và `RespectIgnoreDifferences`, vẫn đọc `main`, nên áp trước khi merge cũng không đổi gì trên cluster.
+
+Rồi merge PR, tạo Secret và chờ đồng bộ:
+
+```bash
+K="kubectl --context llm-home"
+# Trước khi merge (bước 2, 3)
+$K -n llm-serving get scaledobject -o name | { grep -v '/vllm-a2$' || true; } | xargs -r $K -n llm-serving delete
+$K apply -f envs/home/argocd/root-app.yaml
+# Sau khi merge
+make alertmanager-secret CTX=llm-home
+$K -n argocd get applications -w        # autoscaling, observability, monitoring, keda: Synced / Healthy
+```
+
+Kiểm sau khi sync xong:
+- ScaledObject `vllm-a2` có `maxReplicaCount` 2 và threshold 23.
+- PromQL `kube_scaledobject_status_condition{namespace="llm-serving"}` có 5 chuỗi.
+- Alertmanager nhận cảnh báo `Watchdog` mang nhãn `env="home"`. Prometheus chỉ gắn `externalLabels` khi gửi sang Alertmanager, nên chuỗi `ALERTS` trong Prometheus không có nhãn này:
+  `$K -n monitoring exec alertmanager-kps-alertmanager-0 -c alertmanager -- amtool alert query alertname=Watchdog --alertmanager.url=http://localhost:9093 -o extended`
+- Grafana có 3 dashboard của nhóm.
 
 ## Một lần sau khi đổi cấu trúc repo (12/11/2026)
 

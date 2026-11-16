@@ -9,8 +9,8 @@
 #            từ lần lỗi liên tiếp thứ failureThreshold + 1, KEDA trả giá trị fallback với err = nil nên
 #            keda_scaler_detail_errors_total đứng yên suốt thời gian fallback (KEDA v2.21.0
 #            pkg/fallback/fallback.go; đo trên kind 15/11: bộ đếm = 1 trong khi numberOfFailures = 67).
-#            Tách khỏi kube-prometheus-stack-values.yaml vì file đó cũng là values của Argo CD ở nhà: bật ở
-#            sim và cloud trước, ở nhà thêm khi kiểm được trên cluster nhà (việc 6b).
+#            Tách khỏi kube-prometheus-stack-values.yaml để bật ở sim và cloud trước khi kiểm được ở nhà.
+#            Ở nhà: Application monitoring nạp file này (envs/home/argocd/apps/monitoring.yaml).
 # Lưu ý:     Chart luôn truyền --resources=<danh sách collector có sẵn>; custom resource vẫn được thu (đã
 #            kiểm trên kind, nhật ký 15/11). Condition có status "Unknown" thì KSM ghi 0, giống "False".
 # Tham khảo: KSM v2.20.0 docs/metrics/extend/customresourcestate-metrics.md (mục status conditions);

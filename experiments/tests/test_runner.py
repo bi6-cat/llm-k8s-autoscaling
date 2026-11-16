@@ -252,6 +252,23 @@ def test_render_rejects_other_kinds():
         configs.render_scaledobject({"kind": "Deployment", "spec": {}}, {}, paused=False)
 
 
+@pytest.mark.parametrize(
+    ("sync_policy", "enabled"),
+    [
+        ({"automated": {"prune": True, "selfHeal": True}}, True),  # như envs/home/argocd/apps/
+        # autoscaling.yaml
+        ({"automated": {}}, True),  # khối rỗng: Argo CD vẫn auto-sync (chỉ không prune, không selfHeal)
+        ({"automated": {"enabled": True, "prune": True}}, True),
+        ({"automated": {"enabled": False, "prune": True, "selfHeal": True}}, False),  # tắt mà giữ khối
+        ({"syncOptions": ["CreateNamespace=true"]}, False),  # đã xoá khối automated (make home-eval-begin)
+        (None, False),  # app không có syncPolicy
+    ],
+)
+def test_autosync_enabled_follows_argocd(sync_policy, enabled):
+    app = {"spec": {} if sync_policy is None else {"syncPolicy": sync_policy}}
+    assert configs.autosync_enabled(app) is enabled
+
+
 def test_pinned_requirements_follow_runtime_deps_only():
     reqs = loadjob.pinned_requirements(REPO / "loadgen" / "uv.lock")
     names = {r.split("==")[0] for r in reqs}

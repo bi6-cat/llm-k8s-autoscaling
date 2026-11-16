@@ -34,6 +34,13 @@
 - **Links:** nhánh `feat/tr7-build-tables`; `analysis/metrics.py`, `analysis/build_tables.py`, `experiments/runner/session.py`, `experiments/runner/collect.py`; dữ liệu thử ở máy Trình (`.work/tr7/runs/tr7-kb2-sim-2/`, không commit).
 - **Thesis:** §5 (phương pháp): định nghĩa N2b và N7, kèm lý do chọn. §6 (giới hạn): trên simulator, cảnh báo SLO không thể kêu vì hàng đợi; trong V2, cảnh báo tỷ lệ lỗi cần đường đi qua Traefik.
 
+## 2026-11-16 – TR7: merge PR #40 (`analysis/build_tables.py`)
+
+- **Task:** TR7 · **Environment:** none
+- **Done:** Trình merge PR #40 bằng merge commit `baebdc9` và xoá nhánh `feat/tr7-build-tables`. Đủ 5 điều kiện merge: CI xanh 6/6 trên `8433e70`; đã kiểm cục bộ và chạy `/code-review high` ba lần, lỗi xác nhận đều đã sửa; MERGEABLE, không có review hay bình luận; không đụng thư mục mà Argo CD ở nhà đọc; base `main`. Sau đó gộp `origin/main` vào nhánh PR #39 để đưa mục nhật ký này lên.
+- **Links:** PR #40; commit `d246927`, `16349b1`, `3e564e7`, `8433e70`.
+- **Thesis:** chạy lại `uv run --project analysis python -m analysis.build_tables runs/<phiên>` ngay sau phiên V2 để soát dữ liệu trước khi đóng băng 22/11.
+
 ## 2026-11-16 – TR8: LT7 trên simulator (thuật toán HPA và trễ phản ứng)
 
 - **Task:** TR8 · **Environment:** sim
@@ -69,6 +76,12 @@
   - Dự đoán của §19 (≤ ~15 s) được sửa thành < 10 s trước khi đo, vì polling không nằm trên đường quyết định. Số đo cho cận 11 s (chặng KEDA làm tròn `time=`). Giữ nguyên bảng §19, kết quả ghi ở `van-hanh.md`.
 - **Links:** nhánh `feat/tr8-lt7-hpa`; `envs/sim/tests/lt7-hpa.sh`, `envs/sim/tests/load-sim.sh`, `analysis/lt7_hpa.py`, `analysis/tests/test_lt7_hpa.py`, `analysis/figures/lt7-hpa.csv`, `Makefile`, `docs/nhat-ky/van-hanh.md`. Dữ liệu thô trên máy Trình (không commit): `runs/sim/lt7-20261116-162338/` (lượt thử), `lt7-20261116-162501/` (phiên 1), `lt7-20261116-165323/` (phiên 2).
 - **Thesis:** §5, kiểm chứng lý thuyết LT7: bảng số replica theo mức tải và bảng trễ theo chặng; hình nên có là dòng thời gian của một lượt (các lần scrape, giây tròn, các lần sync, pod Ready), chưa vẽ. §6 (giới hạn và bài học đo): giờ thực trên WSL2 bị kéo lùi, và KEDA làm tròn `time=` xuống giây. Hệ quả cho N2a: autoscaler chỉ chiếm < 11 s.
+
+## 2026-11-16 – TR8: merge PR #41 (LT7)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** CI xanh 6/6 (alerts, docs, manifests, python 3.11 và 3.15, yaml). `mergeable` = MERGEABLE (CLEAN), 0 review, 0 bình luận. PR không đổi thứ gì Argo CD quản lý ở nhà. Merge bằng merge commit `d68a680`, xoá nhánh `feat/tr8-lt7-hpa`. Gộp `origin/main` vào nhánh của PR #39 trước khi ghi mục này.
+- **Links:** PR #41; mục LT7 cùng ngày ở trên; `docs/nhat-ky/van-hanh.md` mục "Kiểm chứng lý thuyết LT5–LT8".
 
 ## 2026-11-16 – TR8: LT5 (định luật Little) trên dữ liệu nhà và simulator
 
@@ -106,6 +119,12 @@
   - Môi trường §8 bước 6 đổi từ "C × E2E" sang "λ\_thực × E2E".
 - **Links:** nhánh `feat/tr8-lt5-little`; `analysis/lt5_little.py`, `analysis/tests/test_lt5_little.py`, `analysis/figures/lt5-little.csv`, `experiments/runner/capacity.py`, `experiments/tests/test_runner.py`, `docs/nhat-ky/van-hanh.md` (LT5), Môi trường §8. Dữ liệu thô trên máy Trình (không commit): `runs/sim/mp-final-w2/`, `runs/sim/tr7-kb2-sim-2/`.
 - **Thesis:** §5, kiểm chứng lý thuyết LT5: bảng lệch theo cửa sổ, phân rã lệch thành edge, lấy mẫu và định nghĩa. Hình nên có: L_server theo λ\_thực × W (đường y = x, dải ±15 %), chưa vẽ. §6 (giới hạn đo): đồng hồ đơn điệu của WSL2 chạy nhanh 1,6–3,8 % và đổi theo lần khởi động; λ danh định so với λ\_thực.
+
+## 2026-11-16 – TR8: merge PR #42 (LT5)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** CI của PR #42 xanh cả 6 job (`alerts`, `docs`, `manifests`, `python` 3.11 và 3.15, `yaml`); `mergeable` = MERGEABLE, 0 review, 0 bình luận; PR không đụng manifest của cluster nhà (điều kiện merge 4). Trình merge bằng merge commit `5918689`, xoá nhánh `feat/tr8-lt5-little`. Mục nhật ký này được đẩy lên nhánh của PR #39 sau khi gộp `origin/main`, như lần merge #41.
+- **Links:** PR #42; mục LT5 ngay trên; `docs/nhat-ky/van-hanh.md` mục "Kiểm chứng lý thuyết LT5–LT8".
 
 ## 2026-11-16 – TR8: LT6 (GPU utilization bão hoà) trên dữ liệu ĐG1-mini ở nhà
 
@@ -153,3 +172,12 @@
 - **Deviations:** Môi trường §19 ghi "một lượt tải tăng dần 0,3 → 1,5 C ở nhà, đọc Prometheus". Trình chưa có quyền vào cluster nhà, nên dùng các bậc λ của ĐG1-mini (0,16–1,33 C và 0,16–1,12 C, mỗi bậc 120 s), lấy trung bình mà runner đã tính. V1 (`runs/v1-a4000/`) không có trên máy Trình.
 - **Links:** nhánh `feat/tr8-lt6-gpu-util`; `analysis/lt6_gpu_util.py`, `analysis/tests/test_lt6_gpu_util.py`, `analysis/figures/lt6-gpu-util.csv`, `analysis/lt5_little.py` (`capacity_level`), `analysis/lt7_hpa.py` (`hpa_desired`), `docs/nhat-ky/van-hanh.md` (LT6), Kiến trúc §10.1.
 - **Thesis:** §5, kiểm chứng lý thuyết LT6: bảng tách tải vừa và quá tải cho 4 tín hiệu, bảng util so với 1 − e^(−L). §5 ĐG2: lập luận "A1 ≈ Static-N" kèm điều kiện L > 1,47 × (N − 1). Hình nên có: util và L_server (trục log) theo λ ÷ C cho hai model, đánh dấu C, thêm đường 1 − e^(−L). Chưa vẽ.
+
+## 2026-11-16 – TR8: merge PR #43 (LT6)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  - CI của PR #43 xanh cả 6 job (`alerts`, `docs`, `manifests`, `python` 3.11 và 3.15, `yaml`). `mergeable` = MERGEABLE (CLEAN), 0 review, 0 bình luận. PR chỉ đổi `analysis/` và `docs/`, nên không đổi thứ gì Argo CD quản lý ở nhà.
+  - Trình merge bằng merge commit `1a5c9fd` và xoá nhánh `feat/tr8-lt6-gpu-util`.
+  - Gộp `origin/main` vào nhánh của PR #39 trước khi ghi mục này. Lần gộp này (và lần gộp sau #42) làm mất dòng trống trước hai mục LT5, LT6; Trình đã thêm lại.
+- **Links:** PR #43; mục LT6 ngay trên; `docs/nhat-ky/van-hanh.md` mục "Kiểm chứng lý thuyết LT5–LT8".

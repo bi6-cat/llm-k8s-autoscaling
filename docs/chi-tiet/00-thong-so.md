@@ -141,7 +141,7 @@ Hai phút đầu của KB1 và KB2 là thời gian ổn định, không tính.
 | A3 | KV-cache | `sum(vllm:kv_cache_usage_perc)` | 0,8 × KV\* | Could | – |
 | A4 | Chỉ hàng đợi | `sum(vllm:num_requests_waiting)` | 5 | Minh hoạ flapping | Simulator |
 
-B\* và KV\* là số request đồng thời trung bình và mức KV-cache trên một replica khi tải bằng C (ĐG1). Ở nhà, target tạm lấy từ ĐG1-mini trên GPU yếu nhất (`capacity-home.json`).
+B\* và KV\* là số request đồng thời trung bình và mức KV-cache trên một replica khi tải bằng C (ĐG1). Ở nhà, target tạm lấy từ ĐG1-mini với Qwen2.5-0.5B ngày 06/11 (`envs/home/experiments/capacity.json`): B\* = 28,4 nên A2 = **23**; chỉ dùng cho vận hành và demo ở nhà (overlay `envs/home/autoscaling/`), không dùng cho chương đánh giá.
 
 ### 8.2. Ma trận ĐG2 (17 lượt)
 
@@ -206,7 +206,7 @@ B\* và KV\* là số request đồng thời trung bình và mức KV-cache trê
 
 | Tham số | Giá trị |
 |---|---|
-| `minReplicaCount` / `maxReplicaCount` | 1 / **N = 4** (bằng số GPU và bằng S4; N = 2 nếu phải thuê máy 2 GPU, [ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C2). Ở nhà: 2 GPU replica time-slicing. Simulator: 3 |
+| `minReplicaCount` / `maxReplicaCount` | 1 / **N = 4** (bằng số GPU và bằng S4; N = 2 nếu phải thuê máy 2 GPU, [ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C2). Ở nhà: **2** (2 GPU replica time-slicing; overlay `envs/home/autoscaling/`, fallback cũng 2). Simulator: 3 |
 | `metricType` | `AverageValue` cho mọi trigger (desired = ⌈tổng ÷ target⌉) |
 | `pollingInterval` | 5 s |
 | Chu kỳ sync HPA | **5 s** (k3s: `--kube-controller-manager-arg=horizontal-pod-autoscaler-sync-period=5s`) |

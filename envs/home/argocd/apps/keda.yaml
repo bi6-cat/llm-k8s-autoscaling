@@ -19,7 +19,10 @@ spec:
       targetRevision: 2.21.0           # phải trùng KEDA_VERSION trong Makefile
       helm:
         releaseName: keda
-        valueFiles: [$values/common/platform/keda-values.yaml]
+        valueFiles:
+          - $values/common/platform/keda-values.yaml
+          # Bật PodMonitor cho metric của KEDA operator (hàng KEDA của dashboard autoscaling)
+          - $values/common/platform/keda-metrics-values.yaml
     - repoURL: https://github.com/bi6-cat/llm-k8s-autoscaling.git
       targetRevision: main
       ref: values
@@ -28,5 +31,9 @@ spec:
     automated: {prune: true, selfHeal: true}
     # ServerSideApply: CRD của KEDA quá lớn cho kiểu apply thường (giới hạn 256 KB của annotation
     # last-applied-configuration); server-side apply không cần annotation đó.
-    syncOptions: [CreateNamespace=true, ServerSideApply=true]
+    # SkipDryRunOnMissingResource: PodMonitor (keda-metrics-values.yaml) là CRD do app `monitoring` cài.
+    # Khi dựng từ đầu mà CRD chưa có: thiếu cờ này thì dry-run lỗi và KHÔNG tài nguyên nào của KEDA được
+    # áp; có cờ này thì KEDA vẫn được áp, riêng PodMonitor lỗi nên app báo SyncFailed, rồi `retry` sync
+    # lại khi CRD đã có (giải thích ở gpu-exporter.yaml).
+    syncOptions: [CreateNamespace=true, ServerSideApply=true, SkipDryRunOnMissingResource=true]
     retry: {limit: 10, backoff: {duration: 15s, factor: 2, maxDuration: 5m}}

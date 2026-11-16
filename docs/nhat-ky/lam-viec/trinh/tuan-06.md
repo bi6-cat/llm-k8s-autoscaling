@@ -117,6 +117,38 @@
 - **Links:** nhánh `fix/tr4-keda-metrics`; `common/platform/kube-state-metrics-values.yaml`, `common/observability/alerts/llm.yaml`, `docs/runbooks/KedaScalerErrors.md`.
 - **Thesis:** §4 (giám sát autoscaling), bài học "unit test đạt mà cảnh báo vẫn chết" kèm dòng thời gian T4 ở trên; nên chụp panel "KEDA: request lỗi và fallback" trong một lượt T4.
 
+## 2026-11-15 – TR4: merge PR #38 (`KedaScalerErrors` đọc condition Fallback)
+
+- **Task:** TR4 · **Environment:** none (GitHub)
+- **Done:** merge PR #38 vào `main` lúc 18:04 (giờ Việt Nam), merge commit `02fdd42`; xoá nhánh `fix/tr4-keda-metrics`. Trước khi mở PR, Trình gộp commit WIP (chưa push) với phần sửa thành một commit `15df7bc`.
+- **Results:** đủ 5 điều kiện merge (D35): CI 6/6 xanh (run 43707072307); kiểm cục bộ và `/code-review high` (7/7 đã xử lý); `MERGEABLE`/`CLEAN`, không có review hay bình luận; Application ở nhà không đọc file nào bị đổi (`kube-prometheus-stack-values.yaml`, `keda-values.yaml` giữ nguyên); base là `main`.
+- **Links:** PR #38.
+
+## 2026-11-15 – TR1: Argo CD app `autoscaling` và `observability` ở nhà (việc 6b, PR chờ kiểm ở nhà)
+
+- **Task:** TR1 (kèm TR4) · **Environment:** sim (kind `llm-sim`, Argo CD core v3.5.4 cài tạm), none (GitHub)
+- **Done:**
+  1. Thêm overlay `envs/home/autoscaling/` (A2: max 2, fallback 2, threshold 23), Application `autoscaling` (trỏ overlay) và `observability` (trỏ `common/observability`).
+  2. App `monitoring` nạp thêm `alertmanager-values.yaml` và `kube-state-metrics-values.yaml`; app `keda` nạp thêm `keda-metrics-values.yaml`, cùng thứ tự với `make sim-up` và `install-platform.sh`. Prometheus ở nhà thêm `externalLabels: {env: home}`.
+  3. Root-app: `ignoreDifferences` cho `/spec/syncPolicy/automated` của app `autoscaling` cùng `RespectIgnoreDifferences=true`; cộng 2 trường Argo CD tự ghi (`refresh`, `/operation`) theo mẫu upstream `cluster-bootstrapping.md` v3.5.4.
+  4. Thêm `make home-eval-begin` (tắt auto-sync của A2) và `make home-eval-end` (xoá ScaledObject khác A2, chép khối `automated` từ Git bằng yq). `guard_argocd` của runner đổi sang `autosync_enabled()`, theo đúng `SyncPolicy.IsAutomatedSyncEnabled` của v3.5.4; thêm 6 ca unit test.
+  5. Sửa README nhà (phiên đánh giá, các bước làm một lần), Kiến trúc §18.1–§18.2, Môi trường §14.1, Vận hành §3.4, Thông số §8.1 và §9.3, cùng các comment còn ghi "việc 6b".
+  6. Thử trên kind: cài Argo CD core v3.5.4 giống role `argocd-bootstrap`. Đẩy một nhánh tạm `test/tr1-argocd-kind`, chỉ khác ở chỗ 2 app mới trỏ vào chính nhánh đó; root thử là root thật, cộng `directory.include` để chỉ lấy 2 app này. Thử xong thì xoá nhánh tạm, gỡ Argo CD, chạy `make sim-up` (không có values thử).
+  7. `/code-review high`: 9 điểm. Sửa 7, ghi nhật ký này là điểm thứ 8. Giữ nguyên điểm còn lại (mục `/operation` áp cho mọi app con): đó là mẫu của upstream, và ca xấu nhất chỉ là một lần sync lặp lại.
+- **Decision:** Trình chọn mẫu `ignoreDifferences` của upstream, chỉ mở cho app `autoscaling` (D55). Các phương án bỏ: bỏ qua `automated` của mọi app con (Git không còn ép được các app khác); tắt auto-sync của root mỗi lần đánh giá (2 bước, dễ quên bật lại); annotation `skip-reconcile` (`guard_argocd` không hiểu). Thông số A2 ở nhà lấy từ `capacity.json`, 0,8 × 28,4 ≈ 23; `home-eval-end` đọc giá trị từ Git thay vì viết tay (D56).
+- **Results:**
+  - Pha 1: áp root thử lúc 11:25:35 UTC. Sau ≤ 7 s, cả 3 app `Synced`/`Healthy`; ScaledObject đổi từ max 3, threshold 10 (sim) sang max 2, fallback 2, threshold 23.
+  - Tắt auto-sync lúc 11:26:17: suốt 2 phút sau, root vẫn không bật lại.
+  - Root tự auto-sync commit mới `424a0b2` lúc 11:31:34, sau khi tắt lúc 11:31:32 (history id 2, `initiatedBy.automated`): auto-sync vẫn tắt. Sync tay có `syncOptions` cũng không bật lại.
+  - Runner áp A2 với threshold 10 và pause: giữ nguyên suốt 85 s; app hiện `OutOfSync`/`Suspended`. Bật lại auto-sync thì sau ≤ 5 s A2 về đúng Git (threshold 23, hết pause).
+  - Đối chứng âm, bỏ `ignoreDifferences`: root bật lại auto-sync sau ≤ 5 s (lần đọc đầu tiên).
+  - Make target: `home-eval-begin` chạy 2 lần đều rc 0; `home-eval-end` xoá `vllm-a1` (trỏ Deployment khác), giữ `vllm-a2`, khôi phục `{"prune":true,"selfHeal":true}`.
+  - Render `helm template` kps 92.1.1 với 4 lớp values của nhà: `externalLabels.env = home`, volume Secret `optional: true`, Alertmanager giữ RAM và nodeSelector của nhà, KSM có `--custom-resource-state-config-file` và quyền `keda.sh/scaledobjects`; KEDA có PodMonitor `keda-operator`.
+  - Kiểm cục bộ: kubeconform 11 thư mục kustomize và 9 Application đạt; `yamllint -s .`, `make alerts-test`, shellcheck, lychee (0 lỗi), ruff đạt; pytest `experiments` 147 đạt, 4 lỗi ở `test_backup_notify` (gọi script bash, lỗi y hệt trên bản chưa sửa, chỉ trên Windows).
+- **Incidents:** Lần đầu ép root sync bằng cách patch `operation` không có `syncOptions` thì auto-sync bị bật lại. Nguyên nhân: `RespectIgnoreDifferences` được đọc từ `syncOp.SyncOptions` (`controller/sync.go:239`), không phải từ spec của app. Auto-sync thật chép `spec.syncPolicy.syncOptions` vào operation (`appcontroller.go:2470`); sync tay qua server cũng chép, trừ khi truyền `--sync-option`, vì danh sách đó thay hẳn danh sách của app (`server/application/application.go:2122-2131`). Ghi cạm bẫy này vào comment của root-app và vào README.
+- **Deviations:** Kiến trúc §18.2 và Môi trường §14.1 từng ghi "runner tắt auto-sync"; thực tế runner chỉ kiểm, việc tắt và bật làm bằng make target. Root-app có `ignoreDifferences` (thiết kế cũ không có).
+- **Links:** nhánh `feat/tr1-argocd-autoscaling-observability`; `envs/home/argocd/root-app.yaml`, `envs/home/argocd/apps/{autoscaling,observability,monitoring,keda}.yaml`, `envs/home/autoscaling/kustomization.yaml`, `experiments/runner/configs.py`, `Makefile`.
+- **Thesis:** §4 (GitOps), cạm bẫy "App-of-Apps với selfHeal bật lại auto-sync của app con", kèm dòng thời gian của đối chứng âm và đối chứng dương ở trên; bảng app Argo CD ở nhà.
 ## 2026-11-15 – TR7: `analysis/build_tables.py` (bản đầu, chưa mở PR)
 
 - **Task:** TR7 · **Environment:** sim

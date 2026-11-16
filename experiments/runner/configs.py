@@ -56,16 +56,28 @@ def render_scaledobject(doc: dict[str, Any], overrides: dict[str, Any], paused: 
     return so
 
 
+def autosync_enabled(app: dict[str, Any]) -> bool:
+    """Application có đang auto-sync không. Hàm thuần, có unit test.
+
+    Cùng quy tắc với Argo CD v3.5.4 (`SyncPolicy.IsAutomatedSyncEnabled`, pkg/apis/application/v1alpha1/
+    types.go): bật khi có khối `automated`, kể cả khối rỗng `{}`, trừ khi `automated.enabled: false`
+    (cách tắt mà vẫn giữ prune/selfHeal). Không dùng phép thử truthy của Python: `{}` là False trong
+    Python nhưng với Argo CD vẫn là đang bật.
+    """
+    automated = (app.get("spec", {}).get("syncPolicy") or {}).get("automated")
+    return automated is not None and automated.get("enabled", True) is not False
+
+
 def guard_argocd(kube: Kube) -> None:
     """Dừng nếu Argo CD đang tự sync Application `autoscaling` (sẽ ghi đè cấu hình đánh giá)."""
     proc = kube.run("get", "application", "autoscaling", "-n", "argocd", "-o", "json", check=False)
     if proc.returncode != 0:
         return  # không có Argo CD hoặc không có app autoscaling: an toàn
     app = json.loads(proc.stdout)
-    if app.get("spec", {}).get("syncPolicy", {}).get("automated"):
+    if autosync_enabled(app):
         raise RuntimeError(
             "Application argocd/autoscaling đang bật auto-sync: Argo CD sẽ áp lại A2 chính thức giữa lượt. "
-            "Tắt auto-sync trước phiên đánh giá (Môi trường §14.1) rồi chạy lại runner."
+            "Tắt auto-sync trước phiên đánh giá (make home-eval-begin, Môi trường §14.1) rồi chạy lại runner."
         )
 
 
