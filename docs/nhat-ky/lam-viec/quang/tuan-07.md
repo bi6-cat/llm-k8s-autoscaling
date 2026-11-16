@@ -139,3 +139,28 @@
 - **Decision:** không sửa; ghi nhận rằng máy cho phiên chính thức với N = 2 cần ≥ 14 vCPU (8 + 3N), đúng tiêu chí trong `vast.sh query`.
 - **Links:** `runs/try-n2-4000ada/` (không nằm trong Git).
 - **Thesis:** §Hạn chế hoặc §5 phương pháp: tự kiểm của máy tạo tải bắt được lượt đo bị nhiễu do thiếu CPU; ví dụ cho tiêu chí chọn máy.
+
+## 2026-11-16 – Bốn kịch bản VH trên máy thuê 2 GPU; merge `main` (TR7, LT7) vào nhánh
+
+- **Task:** Q6 (VH), Q2 · **Environment:** cloud thử (2 × RTX 4000 Ada, N = 2, Qwen2.5-3B, A2 threshold 39), không phải V2
+- **Done:**
+  1. Chạy nối tiếp `python -m experiments.ops.vh <kịch bản> --matrix envs/cloud/experiments/matrix-try-n2.yaml --rate 2.5` cho vh3-delete, vh3-kill, vh4, vh2a (16:59–17:56). Tải 2,5 req/s = một nửa C sơ bộ (5,0), nên A2 giữ 1 pod trong suốt các kịch bản.
+  2. Sau khi VH xong mới merge `origin/main` (PR #40 TR7, PR #41 LT7 của Trình) vào nhánh, để code runner không đổi giữa phiên đo.
+- **Results:**
+
+  | Kịch bản | Chấm | Request / lỗi | Số đo |
+  |---|---|---|---|
+  | vh3-delete | **không đạt** | 1.942 / 90 | pod thay thế Ready sau 61,3 s |
+  | vh3-kill | đạt | 1.481 / 168 | container restart, Ready lại sau 69,4 s |
+  | vh4 | đạt | 1.771 / 0 | chặn Prometheus → KEDA vào fallback sau 17,2 s (lên max 2 pod); mở lại thì tín hiệu về bình thường |
+  | vh2a | đạt | 2.948 / 0 | lên 2 pod mất 68,2 s; rolling update 2 pod mất 181,6 s |
+
+  - Test sau merge: `experiments` 150 passed, `analysis` 51 passed.
+- **Incidents:**
+  - vh3-delete không đạt: tiêu chí là 0 request lỗi, nhưng lúc xoá chỉ có **1 pod** (tải thấp nên A2 không scale lên), nên suốt 61 s không còn pod nào phục vụ → 90 lỗi (ConnectError 36, ConnectTimeout 32, HTTPStatus 21, ReadError 1). Không phải lỗi code; tiêu chí 0 lỗi chỉ có nghĩa khi còn ≥ 1 pod khác đang Ready. Chưa sửa script; lần chạy chính thức cần giữ ≥ 2 pod trước khi xoá (tải cao hơn hoặc `minReplicaCount` 2), hoặc cho script từ chối chạy khi chỉ có 1 pod.
+  - vh3-kill có 168 lỗi nhưng vẫn "đạt", vì kịch bản này chỉ chấm việc tự hồi phục, không đòi 0 lỗi. Cùng nguyên nhân: chỉ có 1 pod.
+  - vh2a: rolling update 181,6 s ≈ `terminationGracePeriodSeconds` 180 s, khớp với sự cố đã biết (vLLM không dừng khi nhận SIGTERM, ghi 06/11). Với N = 2 thì pod mới phải chờ pod cũ nhả GPU.
+  - Merge: xung đột ở `Makefile` (dòng `.PHONY`: mình thêm `attach`, Trình thêm `sim-lt7`; giữ cả hai). `van-hanh.md` Git tự ghép nhưng đặt mục LT4 xuống dưới nhóm LT5–LT8 của Trình; đã chuyển về nhóm LT1–LT4.
+- **Decision:** không chạy vh2b, vh2c, vh3-drain ở phiên này: drain cần ≥ 2 node, còn vh2b/vh2c để dành cho máy chính thức.
+- **Links:** `runs/ops-vh3-delete-20261116-095917`, `runs/ops-vh3-kill-20261116-101256`, `runs/ops-vh4-20261116-102333`, `runs/ops-vh2a-20261116-103604` (không commit, `runs/` nằm trong `.gitignore`).
+- **Thesis:** chương vận hành (VH2–VH4): bảng trên chỉ là số thử trên N = 2, dùng để kiểm script; số chính thức lấy ở phiên V2.

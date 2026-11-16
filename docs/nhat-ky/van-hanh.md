@@ -299,3 +299,18 @@ Cùng mẫu với LT1–LT4. Chỉ có LT7; LT5, LT6, LT8 chưa làm.
 - **Kết quả các lượt autoscaling và VH trên máy này:** xem các mục sau trong [nhật ký Quang tuần 07](lam-viec/quang/tuan-07.md).
 - **Chi phí:** chưa ghi (máy thuê qua web, offer cùng loại ở Hungary lúc tra là 0,455 USD/giờ; số thực lấy từ trang Vast khi trả máy).
 
+
+## 2026-11-16 – VH3, VH4, VH2a chạy thử trên máy thuê 2 × RTX 4000 Ada (N = 2)
+
+Chạy bằng `experiments.ops.vh`, tải CONST 2,5 req/s, A2 threshold 39, Qwen2.5-3B. Mục đích là kiểm script trên GPU thật, chưa phải số chính thức.
+
+| Kịch bản | Chấm | Request / lỗi | Số đo |
+|---|---|---|---|
+| vh3-delete | không đạt | 1.942 / 90 | pod thay thế Ready sau 61,3 s |
+| vh3-kill | đạt | 1.481 / 168 | container restart, Ready lại sau 69,4 s |
+| vh4 | đạt | 1.771 / 0 | fallback sau 17,2 s kể từ lúc chặn Prometheus |
+| vh2a | đạt | 2.948 / 0 | rolling update 2 pod: 181,6 s |
+
+- **vh3-delete không đạt vì điều kiện chạy, không phải vì hệ thống:** tải thấp nên chỉ có 1 pod; xoá pod duy nhất thì 61 s không có ai phục vụ. Lần chính thức phải có ≥ 2 pod Ready trước khi xoá.
+- **vh2a:** thời gian rolling update gần bằng grace period 180 s, do vLLM không dừng khi nhận SIGTERM (xem mục 06/11).
+- Chưa chạy: vh2b, vh2c, vh3-drain (drain cần ≥ 2 node).
