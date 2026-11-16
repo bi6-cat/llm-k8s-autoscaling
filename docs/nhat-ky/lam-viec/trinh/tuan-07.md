@@ -33,3 +33,39 @@
 - **Deviations:** Môi trường §15 ghi rõ cách tìm mốc N2b (tổng 30 s vi phạm); `alerts.jsonl` được hỏi từ 30 s trước warm-up thay vì từ đầu pha chính (§14.2).
 - **Links:** nhánh `feat/tr7-build-tables`; `analysis/metrics.py`, `analysis/build_tables.py`, `experiments/runner/session.py`, `experiments/runner/collect.py`; dữ liệu thử ở máy Trình (`.work/tr7/runs/tr7-kb2-sim-2/`, không commit).
 - **Thesis:** §5 (phương pháp): định nghĩa N2b và N7, kèm lý do chọn. §6 (giới hạn): trên simulator, cảnh báo SLO không thể kêu vì hàng đợi; trong V2, cảnh báo tỷ lệ lỗi cần đường đi qua Traefik.
+
+## 2026-11-16 – TR8: LT7 trên simulator (thuật toán HPA và trễ phản ứng)
+
+- **Task:** TR8 · **Environment:** sim
+- **Done:**
+  1. Đếm mẫu T2 cũ trong `runs/sim/`: đã có 7 mẫu thời gian quyết định (1, 6, 8, 8, 9, 4, 5 s), đủ "5 lần" của Môi trường §19. Phần LT7 còn thiếu: kiểm công thức ở nhiều mức tải (T2 chỉ có C = 25) và tách trễ theo chặng.
+  2. Viết `envs/sim/tests/lt7-hpa.sh` (`make sim-lt7`) để thu dữ liệu thô, và `analysis/lt7_hpa.py` để tính bảng (kèm 19 test). `load-sim.sh` in thêm mốc bắt đầu tải theo giờ thực, tới ms.
+  3. Trên kind không còn ScaledObject `vllm-a2`, nhiều khả năng runner TR7 đã gỡ khi kết thúc phiên. Áp lại `envs/sim/autoscaling`.
+  4. Chạy thử một lượt (16:23), rồi phiên 1 (16:25–16:43, 12 lượt). Lượt thử cho chặng scrape → HPA 5,29 s, dài hơn chu kỳ sync, nên Trình đối chiếu mã nguồn Kubernetes v1.37.0 (`horizontal.go`, `replica_calculator.go`, `rate_limiters.go`) và KEDA v2.21.0 (`prometheus_scaler.go`). Trình đọc thêm metric reconcile của kube-controller-manager và metric gRPC của keda-operator.
+  5. Thêm bước đổi mọi mốc giờ thực sang đồng hồ đơn điệu, dựa trên journal của WSL. Lấy bù log rescale, journal và `keda.json` cho phiên 1 bằng chính các lệnh của script.
+  6. Thêm lệch pha ngẫu nhiên, chạy phiên 2 (16:53–17:11, 12 lượt).
+  7. `/code-review high`: 10 điểm. Sửa 8. Hai điểm còn lại là nhật ký chưa ghi (chính mục này) và việc chưa ghi Deviations so với "5 lần" (mục Deviations bên dưới).
+  8. Ghi kết quả vào `docs/nhat-ky/van-hanh.md`, mục LT7.
+- **Decision:** (D61)
+  - Viết script riêng thay vì lặp T2: phải thử 4 mức tải, mà T2 chỉ có một. Reset bằng `paused-replicas` như runner: khoảng 25 s mỗi lượt, so với khoảng 6 phút nếu chờ scale-down tự nhiên.
+  - Mốc quyết định của HPA lấy từ log kube-controller-manager (µs). Event (tới giây) chỉ dùng khi log rỗng.
+  - Đổi mọi mốc sang đồng hồ đơn điệu bằng các dòng "Clock change detected" trong journal (systemd-resolved ghi ngay sau mỗi lần chỉnh giờ). Lượt có mốc nhập nhằng bị loại khỏi bảng trễ, không đoán. Phương án bỏ: dò bước nhảy qua khoảng cách giữa các lần scrape, vì cách đó không biết bước rơi trước hay sau quyết định.
+  - Chọn mức tải 5/15/25/35: tránh biên tolerance (9 ≤ C ≤ 11), và không làm quá tải một pod (port-forward dồn hết tải vào một pod).
+  - Lệch pha ngẫu nhiên trong [0; chu kỳ sync) trước khi bơm tải (xem Incidents).
+- **Results:**
+  - Số replica: 24/24 lượt đúng ⌈C ÷ 10⌉ kẹp ở max 3 (C = 5 → 1, 15 → 2, 25 → 3, 35 → 3). Mỗi lượt scale đúng một lần.
+  - Trễ, phiên 2 (7 lượt, đồng hồ đơn điệu): tải tới → scrape thấy tải 0,88–5,02 s; scrape → KEDA thấy mẫu 0,45–0,79 s; KEDA thấy mẫu → HPA đổi replica 0,11–4,76 s; **tải tới → HPA đổi replica 3,61–10,21 s (TB 6,91 s)**; pod mới Ready sau 5–7 s. Phiên 1 (8 lượt): quyết định 3,11–8,83 s.
+  - KEDA trả metric TB 4,2 ms (199 lần); Prometheus trả lời KEDA chậm nhất 23 ms. Mỗi lần HPA xử lý TB 20 ms (37 ms khi scale-up).
+  - Kiểm cách đổi giờ: khoảng cách hai lần scrape liền nhau lệch khỏi 5 s tối đa 2 ms sau khi đổi, so với 1301 ms theo giờ thực.
+  - Test: `analysis` 51 test đạt (Python 3.15 và 3.11), ruff sạch; shellcheck 0.11.0 sạch cho `lt7-hpa.sh` và `load-sim.sh`; kiểm tham số sai (`DUR=1m`, `LEVELS="15,25"`) và một lượt `DUR=30s` trên kind sau khi sửa.
+- **Incidents:**
+  - Chặng scrape → HPA dài hơn 5 s → do KEDA hỏi Prometheus với `time=` làm tròn xuống giây (`prometheus_scaler.go:224`), nên mẫu chỉ được thấy từ giây tròn kế tiếp → tách chặng này ra (d_visible), cận trên của quyết định là 11 s chứ không phải 10 s.
+  - Phiên 1: thời gian quyết định chỉ rơi vào hai cụm, 3–4 s hoặc 8–9 s → reset tạo HPA mới, HPA sync ngay khi được tạo, và script bơm tải sau reset một khoảng gần như cố định, nên pha sync bị khoá → thêm lệch pha ngẫu nhiên, chạy lại thành phiên 2.
+  - Lúc reset ở lượt C = 35 lần 1 (phiên 1), ReplicaSet xoá pod `xr9cr` (có 12 lần restart), vì khi scale-down nó ưu tiên xoá pod restart nhiều → bản phân tích đầu chọn "pod có mẫu sớm nhất" làm pod gốc, cách này sai khi pod vừa bị xoá cũng có mẫu sớm → bỏ cách chọn đó cùng với cách dò bước nhảy.
+  - Bash đọc dần file script trong lúc chạy, nên sửa `lt7-hpa.sh` khi một phiên đang chạy có thể làm hỏng phiên đó → chỉ sửa sau khi phiên xong.
+  - `/metrics` của kube-controller-manager trả 403 → đọc bằng chứng chỉ super-admin của chính cluster kind, trong container control-plane (file tạm bị xoá ngay sau đó).
+- **Deviations:**
+  - Môi trường §19 ghi "mốc thời gian event trong bài T2, 5 lần". Thực tế dùng script riêng, 4 mức × 3 lần × 2 phiên (18 lượt có scale-up), lấy mốc từ log kube-controller-manager và Prometheus thay cho event; 7 mẫu T2 cũ vẫn ghi kèm. Lý do: event chỉ tới giây, và T2 chỉ có một mức tải.
+  - Dự đoán của §19 (≤ ~15 s) được sửa thành < 10 s trước khi đo, vì polling không nằm trên đường quyết định. Số đo cho cận 11 s (chặng KEDA làm tròn `time=`). Giữ nguyên bảng §19, kết quả ghi ở `van-hanh.md`.
+- **Links:** nhánh `feat/tr8-lt7-hpa`; `envs/sim/tests/lt7-hpa.sh`, `envs/sim/tests/load-sim.sh`, `analysis/lt7_hpa.py`, `analysis/tests/test_lt7_hpa.py`, `analysis/figures/lt7-hpa.csv`, `Makefile`, `docs/nhat-ky/van-hanh.md`. Dữ liệu thô trên máy Trình (không commit): `runs/sim/lt7-20261116-162338/` (lượt thử), `lt7-20261116-162501/` (phiên 1), `lt7-20261116-165323/` (phiên 2).
+- **Thesis:** §5, kiểm chứng lý thuyết LT7: bảng số replica theo mức tải và bảng trễ theo chặng; hình nên có là dòng thời gian của một lượt (các lần scrape, giây tròn, các lần sync, pod Ready), chưa vẽ. §6 (giới hạn và bài học đo): giờ thực trên WSL2 bị kéo lùi, và KEDA làm tròn `time=` xuống giây. Hệ quả cho N2a: autoscaler chỉ chiếm < 11 s.
