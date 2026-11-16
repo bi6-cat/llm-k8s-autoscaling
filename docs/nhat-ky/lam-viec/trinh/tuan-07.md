@@ -270,3 +270,16 @@
 - **Task:** TR7 · **Environment:** none
 - **Done:** CI xanh cả 6 job (alerts, docs, manifests, python 3.11 và 3.15, yaml); `mergeable` = MERGEABLE, không có review hay bình luận; merge bằng merge commit `137fabf`, xoá nhánh `feat/tr7-charts-c1-c4` và `docs/tr8-log-pr47` (commit nhật ký của nhánh này đã vào cùng PR #48).
 - **Links:** PR #48.
+
+## 2026-11-17 – TR8: vẽ hình LT7 và LT8
+
+- **Task:** TR8 (LT7, LT8), TR7 · **Environment:** none (dữ liệu simulator 16/11)
+- **Done:**
+  1. Viết `analysis/lt_charts.py`, dùng lại style của `charts.py` (màu, dấu phẩy thập phân, SVG không kèm ngày giờ). Hình LT7 vẽ từ `analysis/figures/lt7-hpa.csv` (phiên 2). Hình LT8 vẽ từ phiên `runs/sim/lt8-20261116-131116`.
+  2. Xem từng hình rồi sửa bố cục: tiêu đề ô phải của LT7 tràn và đè nhãn cận 11 s, nên chuyển cận vào legend; nhãn θ đè đường r_5m, nên chuyển sang mép trái.
+  3. Chạy `/code-review high`: 10 điểm, sửa 9 điểm. Đáng kể nhất: vạch firing đo trước đó kết thúc ở mẫu ALERTS cuối, sớm hơn khoảng 15 s so với định nghĩa của vạch dự đoán (lần tính đầu tiên mà điều kiện đã sai), nên trông như hết cảnh báo *sớm*. Sau khi sửa, vạch lấy `fire_s` và `clear_s` từ `lt8_burn.analyze_rep`. Các điểm khác: lọc lượt LT7 như bảng (bỏ restart), đếm riêng lượt thiếu chặng, ghi đúng loại đồng hồ, tiêu đề lấy threshold và max từ dữ liệu, không lỗi khi danh sách rỗng.
+  4. Thêm 6 test (`analysis/tests/test_lt_charts.py`).
+- **Decision:** D68: hai hình riêng, commit SVG vào `analysis/figures/`. Dữ liệu thô của LT8 không có trong Git, nên luận văn cần hình đã vẽ. Không dùng hai trục tung.
+- **Results:** `pytest analysis` 114 passed (Python 3.15; test mới chạy cả 3.11); `ruff check` và `ruff format --check` đạt. Hình LT8 cho thấy: x = 0,1 không kêu ở cả 3 lần bơm; ở x = 0,3 và 0,6, r_5m đo bám vạch dự đoán và trễ vài giây; vạch firing đo bắt đầu và kết thúc muộn hơn dự đoán, khớp bảng LT8 ở `van-hanh.md`, trừ một lần kêu sớm ở x = 0,3 (đã giải thích ở đó). Hình LT7: 12/12 lượt đúng số replica; ở cả 7 lượt, đoạn quyết định (ba chặng đầu) kết thúc trước vạch 11 s.
+- **Links:** nhánh `feat/tr8-lt7-lt8-figures`; `analysis/lt_charts.py`, `analysis/tests/test_lt_charts.py`, `analysis/figures/lt7-hpa.svg`, `analysis/figures/lt8-burn.svg`, `envs/sim/README.md`, `analysis/pyproject.toml`.
+- **Thesis:** §5 LT7 (hình replica theo C và các chặng trễ), §5 LT8 (hình r_1m/r_5m quanh lúc bơm, khoảng firing đo so với dự đoán).

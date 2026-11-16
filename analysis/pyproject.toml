@@ -4,7 +4,8 @@
 #            uv.lock (CONTRIBUTING §5).
 # Mục đích:  Gói `analysis`: đọc dữ liệu runner (runs/<phiên>/), tạo bảng và biểu đồ cho chương 5 (TR7).
 #            Phần tạo bảng chỉ dùng thư viện chuẩn của Python, để chạy được ngay trên VM thuê hay trong WSL
-#            mà không phải cài gì; riêng charts.py (vẽ hình) cần matplotlib. Mọi lệnh chạy từ GỐC REPO:
+#            mà không phải cài gì; riêng charts.py và lt_charts.py (vẽ hình) cần matplotlib. Mọi lệnh
+#            chạy từ GỐC REPO:
 #              uv run --project analysis python -m analysis.build_tables runs/<phiên>
 #              uv run --project analysis python -m analysis.charts runs/<phiên>
 #              uv run --project analysis pytest analysis
@@ -16,15 +17,16 @@ name = "analysis"
 version = "0.1.0"
 description = "Bảng phân tích kết quả đánh giá autoscaling vLLM (đồ án autoscaling LLM trên Kubernetes)"
 requires-python = ">=3.11"
-dependencies = []                    # build_tables, metrics, lt*: chỉ thư viện chuẩn (csv, gzip, json)
+dependencies = []                    # build_tables, metrics, lt5–lt8: chỉ thư viện chuẩn (csv, gzip, json)
 
 [dependency-groups]
 dev = [
     "pytest>=9.1,<10",
     "ruff>=0.17,<0.18",
 ]
-# Chỉ charts.py (vẽ C1–C4) cần; build_tables, metrics, lt* không import. Bật mặc định (default-groups) để
-# `uv run` và CI cài sẵn, nên test của charts.py chạy ở CI. Chỉ cần bảng (ví dụ trên VM thuê) thì chạy
+# Chỉ charts.py (C1–C4) và lt_charts.py (hình LT7, LT8) cần; build_tables, metrics, lt5–lt8 không import.
+# Bật mặc định (default-groups) để `uv run` và CI cài sẵn, nên test của hai file vẽ chạy ở CI. Chỉ cần bảng
+# (ví dụ trên VM thuê) thì chạy
 # `python3 -m analysis.build_tables` không qua uv, hoặc `uv run --no-group plot …` để không tải matplotlib.
 plot = [
     "matplotlib>=3.10,<4",
