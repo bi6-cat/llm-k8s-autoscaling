@@ -187,7 +187,7 @@ def analyze_rep(d: Path) -> list[dict[str, Any]]:
     count, good = samples(prom["count"]), samples(prom["good"])
     # Page giả theo N7, chấm từng đợt kêu như build_tables (đợt kêu từ trước t0 của loadgen thì không chấm).
     # Không có đợt nào thì không truyền: classify_alerts coi danh sách đợt rỗng là file cũ, đọc first/last.
-    eps = episodes(firing)
+    eps, pend_eps = episodes(firing), episodes(pending)
     alerts = [{"labels": {"alertname": "LLMSLOBurnFast", "severity": "page"}, "episodes": eps}] if eps else []
     graded = m.classify_alerts(alerts, reqs, main_start=t0)
 
@@ -198,6 +198,8 @@ def analyze_rep(d: Path) -> list[dict[str, Any]]:
         notes.append(f"loadgen lỗi: {meta['load']}")
     if meta["restarts"]:
         notes.append(f"pod restart {meta['restarts']} lần")
+    if meta.get("pod_replaced"):  # bộ đo cũ (trước 16/11 tối) không ghi khoá này
+        notes.append("pod simulator bị thay giữa lượt (mất độ trễ đã bơm)")
     if not lg["checks"]["valid"]:
         notes.append("loadgen tự kiểm không đạt")
     if n_err := sum(1 for r in reqs if r.error):
@@ -222,8 +224,8 @@ def analyze_rep(d: Path) -> list[dict[str, Any]]:
         x_server = 1 - dg / dc if dc and dg is not None else NAN
         cond = next((t for t, _ in r5 if t_inj <= t < t_next and both_above(r1, r5, t)), None)
         pend, fire = first_in(pending, t_inj, t_next), first_in(firing, t_inj, t_next)
-        n_fire = sum(1 for e in episodes(firing) if t_inj <= e[0] < t_next)
-        n_pend = sum(1 for e in episodes(pending) if t_inj <= e[0] < t_next)
+        n_fire = sum(1 for e in eps if t_inj <= e[0] < t_next)
+        n_pend = sum(1 for e in pend_eps if t_inj <= e[0] < t_next)
         last_fire = max((t for t in firing if t_inj <= t < t_next), default=None)
         clear = None
         if cond is not None:  # lần tính đầu tiên từ lúc gỡ mà điều kiện đã sai
@@ -334,7 +336,17 @@ def main(argv: list[str] | None = None) -> int:
     reps = find_reps(args.session)
     if not reps:
         ap.error(f"không thấy lượt nào (rep<r>/meta.json) trong {args.session}")
-    rows = [r for d in reps for r in analyze_rep(d)]
+    rows = []
+    for d in reps:
+        # Máy tạo tải lỗi (pod Failed, kubectl cp hỏng) thì bộ đo vẫn ghi meta.json nhưng không có load/:
+        # bỏ lượt đó và báo, không để cả bảng dừng.
+        missing = [f for f in ("loadgen.json", "requests.csv") if not (d / "load" / f).exists()]
+        if missing:
+            print(f"Bỏ {d.name}: thiếu load/{', load/'.join(missing)}")
+            continue
+        rows += analyze_rep(d)
+    if not rows:
+        ap.error("không lượt nào đủ dữ liệu")
     rows.sort(key=lambda r: (r["x_target"], r["rep"]))
     if args.out:
         write_csv(args.out, rows, COLUMNS)

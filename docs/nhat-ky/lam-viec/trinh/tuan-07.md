@@ -176,3 +176,24 @@
 - **Deviations:** Môi trường §19 ghi "tăng độ trễ giả lập": làm đúng như vậy nhưng tăng cả độ phân tán (σ = 0,3 μ) để có tỷ lệ xấu x thay vì mọi request cùng xấu.
 - **Links:** nhánh `feat/tr8-lt8-burn-rate` (commit cục bộ, chưa push); `experiments/ops/lt8_burn.py`, `analysis/lt8_burn.py`, test tương ứng, `Makefile`, `envs/sim/README.md`.
 - **Thesis:** §5 LT8: bảng x dự đoán/đo, mốc điều kiện/firing/hết so với công thức; hình r_1m, r_5m theo thời gian quanh lúc bơm kèm ngưỡng 0,2 và mốc pending/firing (chưa vẽ). Nhận xét: mức 5 phút của N7 chỉ vừa khít cửa sổ 5m.
+
+## 2026-11-16 – TR8: kết quả phiên đo LT8 trên simulator
+
+- **Task:** TR8 (LT8) · **Environment:** sim (kind trong WSL2, máy Trình)
+- **Done:**
+  1. Phiên đo `runs/sim/lt8-20261116-131116` (3 mức × 3 lượt, thứ tự xoay vòng) chạy xong cả 3 lượt; rc loadgen = 0, 0 restart, k = 1,0264 / 1,0270 / 1,0257 (đo bằng runner, chung kernel WSL với kind).
+  2. Kiểm cluster sau phiên: không còn Job loadgen, ScaledObject hết tạm dừng, TTFT nền 200 ms / 0 s.
+  3. Sửa nốt review lần 2 ở `analysis/lt8_burn.py`: bỏ qua lượt thiếu `load/` (có test), tính đợt cảnh báo một lần, ghi note khi pod bị thay. Ghi bảng `analysis/figures/lt8-burn.csv`.
+- **Results:** 9/9 lần bơm hợp lệ (nền trước mỗi lần bơm 322–331 s). Giá trị: min–max (TB), trong ngoặc là dự đoán; thời gian tính từ lúc bơm, "hết" tính từ lúc gỡ.
+
+  | x | x client | x server | điều kiện đúng, s | firing, s | hết, s | N7 vi phạm → firing, s | page giả |
+  |---|---|---|---|---|---|---|---|
+  | 0,1 | 0,095–0,131 | 0,097–0,126 | không (không) | không kêu, 0 pending (không kêu) | – | – | 0 |
+  | 0,3 | 0,303–0,324 | 0,300–0,315 | 183–220 (200) | 249–286 (260) | 21–34 (20) | 215–242 (220) | 0 |
+  | 0,6 | 0,581–0,620 | 0,572–0,612 | 108–125 (100) | 173–190 (160) | 48–55 (40) | 159–163 (140) | 0 |
+
+  - pending → firing đúng 60,0 s ở mọi lần; điều kiện đúng → pending luôn 5,5 s (độ lệch pha cố định giữa nhóm recording rule và nhóm cảnh báo). firing − dự đoán: −11 đến +31 s (TB +14 s).
+  - Lần x = 0,3 kêu sớm hơn dự đoán 11 s (rep3) có x client = 0,324: θ·300/0,324 = 185 s, khớp mốc điều kiện đúng đo được 183 s. Phần trễ dương còn lại cỡ 5–25 s: token đầu của request xấu ra sau khoảng μ (2–3 s), chờ scrape (≤ 5 s), chờ lần tính rule (≤ 15 s).
+  - Mọi lần x > 0,2 đều đạt N7 (≤ 300 s từ lúc vi phạm theo log client).
+- **Links:** `analysis/figures/lt8-burn.csv`; mục LT8 ngay trên.
+- **Thesis:** §5 LT8: bảng trên. Hình nên có: r_1m, r_5m theo thời gian của một lần bơm x = 0,3, kèm ngưỡng 0,2 và mốc pending/firing (chưa vẽ).

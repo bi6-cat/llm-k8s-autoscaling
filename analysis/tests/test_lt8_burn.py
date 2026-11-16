@@ -182,3 +182,12 @@ def test_main_writes_csv_and_summary(tmp_path, capsys):
     assert len(rows) == 1 and rows[0]["x_target"] == "0.5" and rows[0]["valid"] == "True"
     text = capsys.readouterr().out
     assert "1/1 lần bơm hợp lệ" in text and "| 0.5 |" in text
+
+
+def test_rep_without_load_files_is_skipped_not_fatal(tmp_path, capsys):
+    good = _simulate(tmp_path, every=2)
+    bad = good.parent / "rep2"
+    bad.mkdir()
+    (bad / "meta.json").write_text(json.dumps({"rep": 2, "load": {"error": "RuntimeError: pod Failed"}}))
+    assert lt.main([str(good.parent)]) == 0
+    assert "Bỏ rep2: thiếu load/loadgen.json, load/requests.csv" in capsys.readouterr().out
