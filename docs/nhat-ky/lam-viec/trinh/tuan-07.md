@@ -238,3 +238,13 @@
   - Hệ quả rút ra (tính từ công thức, chưa đo): với trễ cộng thêm khoảng 30 s, N7 chỉ chắc giữ được khi x ≳ 0,23.
 - **Links:** `docs/nhat-ky/van-hanh.md` (LT8), `docs/chi-tiet/06-ke-hoach-quan-ly.md`, `analysis/lt8_burn.py`, `experiments/ops/lt8_burn.py`.
 - **Thesis:** §5 LT8 (mục `van-hanh.md` là bản nháp trực tiếp).
+
+## 2026-11-16 – TR8: merge PR #47 (LT8)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Gộp `origin/main` vào nhánh (xung đột duy nhất ở dòng `.PHONY` của `Makefile`: giữ cả `home-eval-*` và `sim-lt8`); sắp lại nhật ký tuần 07 theo thời gian.
+  2. Gỡ trailer `Co-Authored-By` khỏi 4 commit của nhánh bằng `git filter-branch --msg-filter` chỉ trên `origin/main..HEAD` (tree giữ nguyên, kiểm bằng hash), force push có `--force-with-lease`, được Trình đồng ý.
+  3. CI xanh cả 6 job trên commit sau khi viết lại; Trình merge bằng merge commit `eeefe25` và xoá nhánh `feat/tr8-lt8-burn-rate`.
+- **Results:** LT5–LT8 đều đã có kết quả trong `docs/nhat-ky/van-hanh.md`; hình LT7, LT8 chưa vẽ.
+- **Links:** PR #47; `docs/nhat-ky/van-hanh.md` mục LT8.
