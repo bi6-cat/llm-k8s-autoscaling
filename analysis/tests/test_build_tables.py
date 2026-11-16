@@ -76,7 +76,11 @@ def write_attempt(
             "repeat": int(run_id.rsplit("-", 1)[1]),
             "replicas_for_kb3": 3,
         },
-        "t_main_start": T0 - 5,
+        # Runner ghi t_main_start lúc apply Job, trước t0 của máy tạo tải (kind 16/11: 11 s). Đặt cách xa t0
+        # để test bắt được lỗi lấy t_main_start làm mốc đầu pha chính.
+        "t_main_start": T0 - 30,
+        "git": {"commit": "bbb", "dirty": False},
+        "git_runner": {"commit": "aaa", "dirty": False},
         "cooldown_s": 400.0,
     }
     lg = {"scenario": scenario, "capacity_rps": 1.0, "t0_unix": T0, "duration_s": 1440.0, "n_planned": 1440}
@@ -179,6 +183,35 @@ def test_alerts_rows_and_false_pages(tmp_path):
     # Xấu từ 240,5: cửa sổ 1 phút vượt 20 % ở τ = 253 (13/60 xấu); đợt kêu thật lúc 330 → 77 s
     assert row["slo_violation_s"] == pytest.approx(253)
     assert row["time_to_alert_s"] == pytest.approx(77)
+
+
+def test_violation_without_alert_and_alert_already_firing(tmp_path):
+    # Lượt 1: vi phạm (xấu 240–400) mà LLMSLOBurnFast không kêu → trượt N7.
+    write_attempt(tmp_path, requests=_requests(bad=(240.0, 400.0)))
+    # Lượt 2: LLMSLOBurnFast còn kêu từ lượt trước tới qua mốc vi phạm → đã báo, không đo được thời gian.
+    burn = {"labels": {"alertname": "LLMSLOBurnFast", "severity": "page"}, "first": T0 - 40, "last": T0 + 400}
+    write_attempt(tmp_path, run_id="A2-KB2-2", alerts=[burn], requests=_requests(bad=(240.0, 400.0)))
+    res = bt.build([tmp_path / "s"])
+    r1, r2 = res["runs"]
+    assert r1["slo_violation_s"] is not None and r1["slo_alert_s"] is None and not r1["slo_alert_at_start"]
+    assert r2["slo_alert_at_start"] and r2["slo_alert_s"] is None and r2["time_to_alert_s"] is None
+    (cell,) = res["cells"]
+    assert cell["n_violation_no_alert"] == 1
+    assert (r1["git_commit"], r1["git_runner_commit"]) == ("bbb", "aaa")
+
+
+def test_build_skips_broken_and_duplicate_inputs(tmp_path):
+    write_attempt(tmp_path)
+    bad = write_attempt(tmp_path, run_id="A2-KB2-2")
+    (bad / "loadgen.json").write_text("{", "utf-8")  # ghi dở
+    res = bt.build([tmp_path / "s", tmp_path / "s"])
+    assert [r["run_id"] for r in res["runs"]] == ["A2-KB2-1"]
+    assert any("JSONDecodeError" in s for s in res["skipped"])
+    assert any("trùng thư mục" in s for s in res["skipped"])
+
+
+def test_cell_value_keeps_sign_of_infinity():
+    assert (bt._cell_value(float("inf")), bt._cell_value(float("-inf"))) == ("inf", "-inf")
 
 
 def test_cells_count_runs_that_did_not_recover(tmp_path):

@@ -288,7 +288,7 @@ def classify_alerts(
     thể là page giả dù đợt đầu đúng. File cũ (trước 16/11) chưa có `episodes` thì coi [first, last] là một
     đợt.
 
-    `firing_at_start`: đợt bắt đầu trước pha chính (`main_start`, t_main_start của metadata), tức `first` ≤
+    `firing_at_start`: đợt bắt đầu trước pha chính (`main_start` = t0 của máy tạo tải), tức `first` ≤
     main_start + một bước query_range (`step_s`). Từ 16/11 runner hỏi ALERTS từ 30 s trước warm-up, nên
     `first` của đợt bắt đầu lúc warm-up là mốc thật. File cũ hỏi từ đầu pha chính, nên `first` bị cắt đúng ở
     mép đầu (sai số một bước). Hai trường hợp đều là đợt kêu do lượt trước để lại hoặc do warm-up, không do
@@ -352,11 +352,18 @@ def gpu_seconds(pods: Iterable[Mapping[str, Any]], start: float, end: float) -> 
 
 
 def integrate_steps(samples: Sequence[tuple[float, float]], start: float, end: float, step_s: float) -> float:
-    """∫ giá trị dt trên [start, end] cho chuỗi lấy mẫu đều `step_s` (query_range của runner). Mỗi mẫu đại
-    diện cho khoảng [ts, ts + step_s). Dùng cho GPU-giờ xấp xỉ từ kube_deployment_status_replicas."""
+    """∫ giá trị dt trên [start, end] cho chuỗi lấy mẫu đều `step_s` (query_range của runner). Dùng cho số
+    replica trung bình và GPU-giờ xấp xỉ từ kube_deployment_status_replicas.
+
+    Mỗi mẫu giữ giá trị tới mẫu kế tiếp; mẫu cuối giữ thêm `step_s`. Khi chuỗi đều thì như nhau, mỗi mẫu đại
+    diện cho [ts, ts + step_s). Khoảng hở (kube-state-metrics khởi động lại: chuỗi cũ bị stale trước khi chuỗi
+    mới có mẫu) được lấp bằng giá trị trước đó, vì số replica không đổi chỉ vì mất mẫu. Tính khoảng hở là 0
+    thì số replica và GPU-giờ thấp đi, nghiêng có lợi cho cấu hình autoscaling."""
+    ss = sorted(samples)
     total = 0.0
-    for ts, v in samples:
-        total += v * max(0.0, min(ts + step_s, end) - max(ts, start))
+    for i, (ts, v) in enumerate(ss):
+        nxt = ss[i + 1][0] if i + 1 < len(ss) else ts + step_s
+        total += v * max(0.0, min(nxt, end) - max(ts, start))
     return total
 
 

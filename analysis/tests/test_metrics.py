@@ -217,6 +217,12 @@ def test_integrate_steps_clips_partial_steps():
     assert m.integrate_steps(samples, 2.0, 12.0, 5.0) == pytest.approx(1 * 3 + 2 * 5 + 3 * 2)
 
 
+def test_integrate_steps_carries_value_over_gaps():
+    # kube-state-metrics khởi động lại: mất mẫu 10–25 s. 2 replica suốt 30 s, không phải 2 × 15 s.
+    samples = [(0.0, 2.0), (5.0, 2.0), (25.0, 2.0)]
+    assert m.integrate_steps(samples, 0.0, 30.0, 5.0) == pytest.approx(60)
+
+
 # ── Autoscaling ──
 
 

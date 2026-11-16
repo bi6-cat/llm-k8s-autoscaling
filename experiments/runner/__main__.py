@@ -75,7 +75,7 @@ def main(argv: list[str] | None = None) -> int:
         runs_dir=args.runs_dir,
         backup_remote=None if args.no_backup else args.backup_remote,
         notifier=notifier,
-        git=git_state(Path.cwd()),  # đọc một lần: commit của code mà tiến trình này đang chạy
+        git_at_start=git_state(Path.cwd()),  # đọc một lần: commit của code runner mà tiến trình này chạy
     )
     final = run_session(ctx, set(args.only) if args.only else None, args.max_attempts)
     log("kết quả: " + ", ".join(f"{k}={v}" for k, v in final.items()))

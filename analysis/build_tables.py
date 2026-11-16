@@ -54,7 +54,8 @@ RUN_COLUMNS = [
     # ── định danh lượt ──
     "session", "env", "run_id", "attempt", "config", "config_type", "scenario", "repeat",
     "capacity_rps", "rate_rps", "n_peak", "threshold", "max_replicas",
-    "valid", "counted", "invalid_reasons", "git_commit", "git_dirty", "vllm_image", "t0_unix", "duration_s",
+    "valid", "counted", "invalid_reasons", "git_commit", "git_dirty", "git_runner_commit", "vllm_image",
+    "t0_unix", "duration_s",
     # ── tải và hiệu năng (log máy tạo tải); scored_* = các pha được chấm của kịch bản ──
     "n_planned", "n_sent", "n_error", "error_ratio", "error_types",
     "scored_phases", "scored_start_s", "scored_end_s",
@@ -70,7 +71,7 @@ RUN_COLUMNS = [
     "cooldown_s",
     # ── cảnh báo (N7) ──
     "alertnames", "alerts_at_start", "pages", "tickets", "false_pages",
-    "slo_violation_s", "slo_alert_s", "time_to_alert_s",
+    "slo_violation_s", "slo_alert_s", "slo_alert_at_start", "time_to_alert_s",
 ]  # fmt: skip
 
 PHASE_COLUMNS = [
@@ -243,8 +244,11 @@ def analyze_attempt(d: Path) -> tuple[dict[str, Any], list[dict[str, Any]], list
         ]
     # Đợt kêu đã có từ trước pha chính (firing_at_start, xem metrics.classify_alerts) không do pha chính gây
     # ra: không đếm vào pages, false_pages, không dùng cho thời gian tới cảnh báo; tên ghi ở alerts_at_start.
-    t_main_start = float(meta.get("t_main_start") or w0)
-    alerts = m.classify_alerts(raw_alerts, reqs, main_start=t_main_start, step_s=STEP_S)
+    # Mốc đầu pha chính là t0 của máy tạo tải (w0), không phải t_main_start của metadata: runner ghi
+    # t_main_start ngay sau khi apply Job, trước khi pod được xếp lịch và cài thư viện (kind 16/11: sớm hơn
+    # t0 11 s). Đợt bắt đầu kêu trong khoảng đó không do tải của pha chính, và 5 phút trước nó không có
+    # request nào nên sẽ bị chấm nhầm là page giả.
+    alerts = m.classify_alerts(raw_alerts, reqs, main_start=w0, step_s=STEP_S)
     alert_rows = [
         {
             **ident,
@@ -265,11 +269,16 @@ def analyze_attempt(d: Path) -> tuple[dict[str, Any], list[dict[str, Any]], list
     # được dùng (time_to_alert_s âm), và vẫn có thể là page giả ở lúc firing (metrics.classify_alerts): hai
     # cột trả lời hai câu hỏi khác nhau của N7.
     burn = [
-        a["first"]
-        for a in ours
+        a
+        for a in alerts
         if a["alertname"] == "LLMSLOBurnFast" and violation is not None and a["last"] >= violation
     ]
-    slo_alert = min(burn) if burn else None
+    # Đợt đã kêu từ trước pha chính mà vẫn còn kêu lúc vi phạm bắt đầu (lượt trước quá tải, cửa sổ 5 phút
+    # chưa sạch): người trực đã được báo, nhưng không đo được thời gian tới cảnh báo. Ghi cờ riêng để lượt đó
+    # không bị đếm là "vi phạm mà không có cảnh báo" ở cells.csv, và không dùng đợt kêu sau đó (nếu có).
+    slo_alert_at_start = any(a["firing_at_start"] for a in burn)
+    fresh = [a["first"] for a in burn if not a["firing_at_start"]]
+    slo_alert = min(fresh) if fresh and not slo_alert_at_start else None
 
     ov = cfg.get("overrides") or {}
     tokens_main = whole["tokens_out"]
@@ -284,6 +293,10 @@ def analyze_attempt(d: Path) -> tuple[dict[str, Any], list[dict[str, Any]], list
         "invalid_reasons": "; ".join(checks.get("reasons") or []),
         "git_commit": (meta.get("git") or {}).get("commit"),
         "git_dirty": (meta.get("git") or {}).get("dirty"),
+        # Commit của code runner (đọc lúc runner khởi động, có từ 16/11). git_commit ở trên đọc lúc chạy lượt,
+        # ứng với loadgen, uv.lock, file ScaledObject mà runner đọc lại từ đĩa ở mỗi lượt. Hai số khác nhau =
+        # có commit giữa phiên.
+        "git_runner_commit": (meta.get("git_runner") or {}).get("commit"),
         "vllm_image": (meta.get("vllm") or {}).get("image"),
         "t0_unix": t0,
         "duration_s": duration,
@@ -316,6 +329,8 @@ def analyze_attempt(d: Path) -> tuple[dict[str, Any], list[dict[str, Any]], list
         "gpu_s_ksm": gpu_ksm,
         "tokens_per_gpu_h": tokens_main / (gpu_s / 3600) if gpu_s else m.NAN,
         "gpu_util_mean": m.mean(gpu_util),
+        # Trung bình MỖI POD (mọi mẫu của mọi pod), dùng để chọn CPU request của pod vLLM; không phải tổng
+        # CPU của cả cấu hình (S4 có N pod).
         "vllm_cpu_cores_mean": m.mean(container("cpu_cores", "vllm")),
         "vllm_mem_bytes_max": max(container("mem_bytes", "vllm"), default=m.NAN),
         "replicas_max": max((v for _, v in in_main), default=m.NAN),
@@ -333,6 +348,7 @@ def analyze_attempt(d: Path) -> tuple[dict[str, Any], list[dict[str, Any]], list
         "false_pages": sum(1 for a in ours if a["false_page"]),
         "slo_violation_s": None if violation is None else violation - t0,
         "slo_alert_s": None if slo_alert is None else slo_alert - t0,
+        "slo_alert_at_start": slo_alert_at_start,
         "time_to_alert_s": None if violation is None or slo_alert is None else slo_alert - violation,
     }
     return row, phase_rows, alert_rows
@@ -422,6 +438,15 @@ def cells(rows: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
             "n_not_recovered": sum(1 for r in rs if "recovery_s" in r and r["recovery_s"] is None)
             if scenario == "KB2"
             else None,
+            # N7: SLO bị vi phạm (theo log client) mà LLMSLOBurnFast không kêu trong lượt. Trừ lượt mà cảnh
+            # báo đã kêu sẵn từ trước pha chính (slo_alert_at_start): khi đó người trực đã được báo.
+            "n_violation_no_alert": sum(
+                1
+                for r in rs
+                if r.get("slo_violation_s") is not None
+                and r.get("slo_alert_s") is None
+                and not r.get("slo_alert_at_start")
+            ),
         }
         for k in CELL_METRICS:
             vals = [float(v) for r in rs if (v := r.get(k)) is not None and not _isnan(v)]
@@ -441,7 +466,7 @@ def _cell_value(v: Any) -> str:
     if v is None or _isnan(v):
         return ""
     if isinstance(v, float):
-        return "inf" if math.isinf(v) else repr(round(v, 6))
+        return repr(v) if math.isinf(v) else repr(round(v, 6))  # repr giữ dấu: 'inf', '-inf'
     return str(v)
 
 
@@ -457,11 +482,28 @@ def write_csv(path: Path, rows: Iterable[Mapping[str, Any]], columns: Sequence[s
 def build(session_dirs: Sequence[Path], baseline: str = "S4") -> dict[str, Any]:
     """Đọc mọi lần thử của các phiên, trả {runs, phases, cells, alerts, skipped}."""
     runs, phases, alerts, skipped = [], [], [], []
+    seen_dirs: set[Path] = set()
+    seen: set[tuple[Any, Any, Any]] = set()
     for sd in session_dirs:
+        if sd.resolve() in seen_dirs:  # cùng thư mục truyền hai lần: mọi dòng sẽ bị nhân đôi
+            skipped.append(f"{sd}: trùng thư mục đã đọc")
+            continue
+        seen_dirs.add(sd.resolve())
         found, skip = find_attempts(sd)
         skipped += skip
         for d in found:
-            r, ps, al = analyze_attempt(d)
+            try:
+                r, ps, al = analyze_attempt(d)
+            except (KeyError, ValueError, OSError, EOFError, csv.Error) as e:
+                # File hỏng hoặc ghi dở (chép bị ngắt, đầy đĩa): bỏ lần thử này, vẫn ghi bảng cho phần còn lại
+                # ValueError gồm cả JSON lỗi; OSError, EOFError gồm cả gzip hỏng hoặc bị cắt.
+                skipped.append(f"{d}: không đọc được ({type(e).__name__}: {e})")
+                continue
+            key = (r["session"], r["run_id"], r["attempt"])
+            if key in seen:  # thư mục phiên được chép sang chỗ khác mà giữ tên phiên
+                skipped.append(f"{d}: trùng lần thử {'/'.join(map(str, key))} đã đọc")
+                continue
+            seen.add(key)
             runs.append(r)
             phases += ps
             alerts += al
@@ -489,7 +531,8 @@ def main(argv: list[str] | None = None) -> int:
     write_csv(out / "runs.csv", res["runs"], RUN_COLUMNS)
     write_csv(out / "phases.csv", res["phases"], PHASE_COLUMNS)
     write_csv(out / "alerts.csv", res["alerts"], ALERT_COLUMNS)
-    cell_cols = ["env", "config", "scenario", "n_runs", "run_ids", "n_no_new_ready", "n_not_recovered"]
+    cell_cols = ["env", "config", "scenario", "n_runs", "run_ids"]
+    cell_cols += ["n_no_new_ready", "n_not_recovered", "n_violation_no_alert"]
     cell_cols += [f"{k}_{s}" for k in CELL_METRICS for s in ("mean", "min", "max")]
     write_csv(out / "cells.csv", res["cells"], cell_cols)
 
