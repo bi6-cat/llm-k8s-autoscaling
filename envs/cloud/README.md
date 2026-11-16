@@ -23,6 +23,7 @@ Môi trường đánh giá: một VM thuê theo giờ trên Vast.ai, dựng từ
 | `experiments/matrix-dg1.yaml` | ĐG1: quét λ với 1 replica để tìm năng lực C |
 | `experiments/matrix-v2.yaml` | Ma trận 17 lượt của V2. **Bản nháp**: C và threshold để trống, điền từ kết quả ĐG1 (ADR-003); runner từ chối chạy khi còn trống |
 | `experiments/matrix-v1.yaml` | Ma trận 2 lượt đã chạy ở V1 (08/11), giữ để tái lập |
+| `experiments/matrix-dg1-n2.yaml`, `matrix-try-n2.yaml` | Phiên thử code 16/11 trên máy 2 GPU (N = 2): ĐG1 rút gọn và 2 lượt autoscaling. Không dùng làm số liệu đánh giá |
 
 ## Trước phiên
 
@@ -45,6 +46,8 @@ make backup-check       # thử R2: không lỗi nghĩa là khoá đúng
 | 8 | `make run MATRIX=envs/cloud/experiments/matrix-v2.yaml` | Ma trận chính | Tự sao lưu R2 và nhắn Telegram sau mỗi lượt |
 | 9 | `make ops-tests S=<vh2a…vh4> MATRIX=envs/cloud/experiments/matrix-v2.yaml RATE=2 CTX=llm-cloud` | Kịch bản vận hành dưới tải | RATE ≈ 0,5 C |
 | 10 | `make backup-check && make release` | Xác nhận đủ dữ liệu trên R2 rồi trả máy | `release` tự chặn nếu R2 chưa đủ |
+
+**Máy thuê qua giao diện web** (không có API key trên máy dev, hoặc offer chỉ thuê được trên web): thay bước 1–2 bằng `make attach HOST=<ip> PORT=<cổng SSH>`, lấy từ lệnh SSH mà Vast hiển thị. Lệnh thử SSH trước rồi mới ghi `.vast/target`; ngày 16/11 có 2 trong 3 máy thuê không lên SSH, gặp vậy thì huỷ máy và thuê offer khác. Các bước 3–9 giữ nguyên. Bước 10: `make release` không huỷ được máy gắn bằng `attach`; chạy `make backup-check`, huỷ máy trên trang Vast, rồi `envs/cloud/provision/vast.sh detach`.
 
 Bước 2–5 trên VM vừa thuê gộp lại là kịch bản **VH5**: chạy `make vh5` ngay sau `make rent` để bấm giờ chính thức (N6 ≤ 30 phút; 08/11 đo được 12,5 phút).
 

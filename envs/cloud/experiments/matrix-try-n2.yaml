@@ -1,0 +1,56 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# envs/cloud/experiments/matrix-try-n2.yaml
+# Khái niệm: Ma trận 2 lượt autoscaling trên máy thuê 2 GPU (N = 2), cùng cấu trúc với matrix-v1.yaml.
+# Mục đích:  Phiên THỬ CODE ngày 16/11/2026 trên VM Vast 2 × RTX 4000 Ada 20 GB (11 vCPU, 49 GB RAM):
+#            kiểm runner với A2 và A1 trên VM dựng bằng `vast.sh attach` (máy thuê qua web), sau refactor
+#            envs/. KHÔNG dùng làm số liệu chương đánh giá: C chỉ quét 4 mức, và máy thiếu CPU.
+#            C, threshold: từ runs/dg1-try-4000ada/capacity.json (ĐG1 rút gọn cùng ngày, matrix-dg1-n2.yaml).
+#            loadgen_cpu 500m: node cấp phát được 7 lõi (11 trừ 4 lõi reserved-cpus); 2 pod vLLM giữ 6 lõi,
+#            phần nền ≈ 0,33 lõi, nên máy tạo tải chỉ còn khoảng nửa lõi. Tự kiểm của máy tạo tải có thể
+#            đánh dấu lượt invalid vì CPU; với phiên thử code thì chấp nhận.
+# Chạy:      KUBECONFIG=~/.kube/llm-cloud.yaml uv run --project experiments python -m experiments.runner \
+#              --matrix envs/cloud/experiments/matrix-try-n2.yaml --no-backup
+# Tham khảo: matrix-v1.yaml; ADR-006 C2 (phương án b: máy 2 GPU, N = 2); Môi trường §9 (KB1–KB3)
+# ──────────────────────────────────────────────────────────────────────────────
+x-adr003:
+  C: &C 5.0                           # req/s; capacity.json → "C" (sơ bộ: điểm gãy nằm giữa 5 và 7)
+  A2_threshold: &A2_THRESHOLD 39     # 0,8 × B* (48,9); capacity.json → threshold.A2_concurrency
+  N: &N 2
+  model: &MODEL qwen2.5-3b
+
+session: try-n2-4000ada
+env: cloud
+shuffle_seed: 20261116
+
+target:
+  namespace: llm-serving
+  deployment: vllm
+  service_url: http://vllm.llm-serving.svc:8000
+  model: *MODEL
+  prometheus_service: monitoring/kps-prometheus:9090
+  api_key_secret: vllm-api-key
+  loadgen_cpu: "500m"
+
+timing:
+  settle_s: 60
+  warmup_s: 120
+  warmup_fraction: 0.3
+  cooldown_max_s: 600
+  reset_timeout_s: 900
+
+configs:
+  A1:
+    type: scaledobject
+    file: common/autoscaling/eval/A1.yaml
+    overrides: {max_replicas: *N}
+    signal: nvidia_smi_utilization_gpu_ratio
+  A2:
+    type: scaledobject
+    file: common/autoscaling/a2/scaledobject-a2.yaml
+    overrides: {threshold: *A2_THRESHOLD, max_replicas: *N}
+    signal: 'vllm:num_requests_running{namespace="llm-serving"}'
+
+defaults: {capacity: *C, kb3_replicas: *N}
+runs:
+  - {config: A2, scenario: KB2}
+  - {config: A1, scenario: KB3}

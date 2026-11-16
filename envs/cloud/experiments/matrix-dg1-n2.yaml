@@ -1,0 +1,45 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# envs/cloud/experiments/matrix-dg1-n2.yaml
+# Khái niệm: ĐG1 rút gọn = đo năng lực C của MỘT replica (xem matrix-dg1.yaml) trên máy thuê 2 GPU.
+# Mục đích:  Phiên THỬ CODE ngày 16/11/2026 trên VM Vast 2 × RTX 4000 Ada 20 GB (11 vCPU, 49 GB RAM),
+#            thuê tạm khi không có máy 4 GPU dùng được. Chỉ để có C sơ bộ cho matrix-try-n2.yaml và để
+#            kiểm đường runner → capacity.py trên VM; KHÔNG dùng làm số liệu chương đánh giá.
+#            Rút gọn so với matrix-dg1.yaml: mỗi mức 240 s (capacity.py bỏ 60 s đầu → đo 180 s), 4 mức.
+#            loadgen_cpu 3: lúc này chỉ có 1 pod vLLM (3 lõi) nên node 7 lõi cấp phát được còn đủ.
+# Chạy:      KUBECONFIG=~/.kube/llm-cloud.yaml uv run --project experiments python -m experiments.runner \
+#              --matrix envs/cloud/experiments/matrix-dg1-n2.yaml --no-backup
+#            uv run --project experiments python -m experiments.runner.capacity runs/dg1-try-4000ada \
+#              --out runs/dg1-try-4000ada/capacity.json
+# Tham khảo: matrix-dg1.yaml; Thông số §6, §8.3; ADR-006 C2 (phương án b: máy 2 GPU, N = 2)
+# ──────────────────────────────────────────────────────────────────────────────
+session: dg1-try-4000ada
+env: cloud
+
+target:
+  namespace: llm-serving
+  deployment: vllm
+  service_url: http://vllm.llm-serving.svc:8000
+  model: qwen2.5-3b
+  prometheus_service: monitoring/kps-prometheus:9090
+  api_key_secret: vllm-api-key
+  loadgen_cpu: "3"
+
+timing:
+  settle_s: 30
+  warmup_s: 30
+  warmup_fraction: 0.3
+  cooldown_max_s: 600
+  reset_timeout_s: 900
+
+configs:
+  S1:
+    type: static
+    replicas: 1
+
+defaults: {config: S1, scenario: CONST, duration: 240}
+runs:
+  # A4000 đo được C = 4,5 req/s (08/11). RTX 4000 Ada nhanh hơn, nên quét rộng hơn về phía trên.
+  - {rate: 3}
+  - {rate: 5}
+  - {rate: 7}
+  - {rate: 9}
