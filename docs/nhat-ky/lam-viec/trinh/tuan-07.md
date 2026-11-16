@@ -118,3 +118,9 @@
   - Môi trường §8 bước 6 đổi từ "C × E2E" sang "λ\_thực × E2E".
 - **Links:** nhánh `feat/tr8-lt5-little`; `analysis/lt5_little.py`, `analysis/tests/test_lt5_little.py`, `analysis/figures/lt5-little.csv`, `experiments/runner/capacity.py`, `experiments/tests/test_runner.py`, `docs/nhat-ky/van-hanh.md` (LT5), Môi trường §8. Dữ liệu thô trên máy Trình (không commit): `runs/sim/mp-final-w2/`, `runs/sim/tr7-kb2-sim-2/`.
 - **Thesis:** §5, kiểm chứng lý thuyết LT5: bảng lệch theo cửa sổ, phân rã lệch thành edge, lấy mẫu và định nghĩa. Hình nên có: L_server theo λ\_thực × W (đường y = x, dải ±15 %), chưa vẽ. §6 (giới hạn đo): đồng hồ đơn điệu của WSL2 chạy nhanh 1,6–3,8 % và đổi theo lần khởi động; λ danh định so với λ\_thực.
+
+## 2026-11-16 – TR8: merge PR #42 (LT5)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** CI của PR #42 xanh cả 6 job (`alerts`, `docs`, `manifests`, `python` 3.11 và 3.15, `yaml`); `mergeable` = MERGEABLE, 0 review, 0 bình luận; PR không đụng manifest của cluster nhà (điều kiện merge 4). Trình merge bằng merge commit `5918689`, xoá nhánh `feat/tr8-lt5-little`. Mục nhật ký này được đẩy lên nhánh của PR #39 sau khi gộp `origin/main`, như lần merge #41.
+- **Links:** PR #42; mục LT5 ngay trên; `docs/nhat-ky/van-hanh.md` mục "Kiểm chứng lý thuyết LT5–LT8".
