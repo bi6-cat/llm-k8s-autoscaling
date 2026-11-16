@@ -264,3 +264,9 @@
 - **Deviations:** Môi trường §14.2 trước ghi "Notebook vẽ biểu đồ"; đổi thành script theo ADR-006 §3.1 và CONTRIBUTING (logic ở `.py` có test). C5, C6 chưa làm (cần dữ liệu ĐG3, VH2).
 - **Links:** `analysis/charts.py`, `analysis/tests/test_charts.py`, `analysis/pyproject.toml`, `docs/chi-tiet/05-moi-truong-danh-gia.md` §14.2.
 - **Thesis:** §5.3 (C1 là biểu đồ trung tâm; C2–C4); chạy lại trên dữ liệu V2 sau phiên.
+
+## 2026-11-16 – TR7: merge PR #48 (C1–C4)
+
+- **Task:** TR7 · **Environment:** none
+- **Done:** CI xanh cả 6 job (alerts, docs, manifests, python 3.11 và 3.15, yaml); `mergeable` = MERGEABLE, không có review hay bình luận; merge bằng merge commit `137fabf`, xoá nhánh `feat/tr7-charts-c1-c4` và `docs/tr8-log-pr47` (commit nhật ký của nhánh này đã vào cùng PR #48).
+- **Links:** PR #48.
