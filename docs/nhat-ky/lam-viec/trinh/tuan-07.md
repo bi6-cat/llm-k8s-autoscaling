@@ -82,6 +82,7 @@
 - **Task:** TR8 · **Environment:** none
 - **Done:** CI xanh 6/6 (alerts, docs, manifests, python 3.11 và 3.15, yaml). `mergeable` = MERGEABLE (CLEAN), 0 review, 0 bình luận. PR không đổi thứ gì Argo CD quản lý ở nhà. Merge bằng merge commit `d68a680`, xoá nhánh `feat/tr8-lt7-hpa`. Gộp `origin/main` vào nhánh của PR #39 trước khi ghi mục này.
 - **Links:** PR #41; mục LT7 cùng ngày ở trên; `docs/nhat-ky/van-hanh.md` mục "Kiểm chứng lý thuyết LT5–LT8".
+
 ## 2026-11-16 – TR8: LT5 (định luật Little) trên dữ liệu nhà và simulator
 
 - **Task:** TR8 (LT5) · **Environment:** none (dữ liệu đã đo: nhà 05–06/11, sim 07/11 và 16/11)
@@ -124,6 +125,7 @@
 - **Task:** TR8 · **Environment:** none
 - **Done:** CI của PR #42 xanh cả 6 job (`alerts`, `docs`, `manifests`, `python` 3.11 và 3.15, `yaml`); `mergeable` = MERGEABLE, 0 review, 0 bình luận; PR không đụng manifest của cluster nhà (điều kiện merge 4). Trình merge bằng merge commit `5918689`, xoá nhánh `feat/tr8-lt5-little`. Mục nhật ký này được đẩy lên nhánh của PR #39 sau khi gộp `origin/main`, như lần merge #41.
 - **Links:** PR #42; mục LT5 ngay trên; `docs/nhat-ky/van-hanh.md` mục "Kiểm chứng lý thuyết LT5–LT8".
+
 ## 2026-11-16 – TR8: LT6 (GPU utilization bão hoà) trên dữ liệu ĐG1-mini ở nhà
 
 - **Task:** TR8 · **Environment:** none (phân tích dữ liệu nhà đã đo 05–06/11)
@@ -170,3 +172,12 @@
 - **Deviations:** Môi trường §19 ghi "một lượt tải tăng dần 0,3 → 1,5 C ở nhà, đọc Prometheus". Trình chưa có quyền vào cluster nhà, nên dùng các bậc λ của ĐG1-mini (0,16–1,33 C và 0,16–1,12 C, mỗi bậc 120 s), lấy trung bình mà runner đã tính. V1 (`runs/v1-a4000/`) không có trên máy Trình.
 - **Links:** nhánh `feat/tr8-lt6-gpu-util`; `analysis/lt6_gpu_util.py`, `analysis/tests/test_lt6_gpu_util.py`, `analysis/figures/lt6-gpu-util.csv`, `analysis/lt5_little.py` (`capacity_level`), `analysis/lt7_hpa.py` (`hpa_desired`), `docs/nhat-ky/van-hanh.md` (LT6), Kiến trúc §10.1.
 - **Thesis:** §5, kiểm chứng lý thuyết LT6: bảng tách tải vừa và quá tải cho 4 tín hiệu, bảng util so với 1 − e^(−L). §5 ĐG2: lập luận "A1 ≈ Static-N" kèm điều kiện L > 1,47 × (N − 1). Hình nên có: util và L_server (trục log) theo λ ÷ C cho hai model, đánh dấu C, thêm đường 1 − e^(−L). Chưa vẽ.
+
+## 2026-11-16 – TR8: merge PR #43 (LT6)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  - CI của PR #43 xanh cả 6 job (`alerts`, `docs`, `manifests`, `python` 3.11 và 3.15, `yaml`). `mergeable` = MERGEABLE (CLEAN), 0 review, 0 bình luận. PR chỉ đổi `analysis/` và `docs/`, nên không đổi thứ gì Argo CD quản lý ở nhà.
+  - Trình merge bằng merge commit `1a5c9fd` và xoá nhánh `feat/tr8-lt6-gpu-util`.
+  - Gộp `origin/main` vào nhánh của PR #39 trước khi ghi mục này. Lần gộp này (và lần gộp sau #42) làm mất dòng trống trước hai mục LT5, LT6; Trình đã thêm lại.
+- **Links:** PR #43; mục LT6 ngay trên; `docs/nhat-ky/van-hanh.md` mục "Kiểm chứng lý thuyết LT5–LT8".
