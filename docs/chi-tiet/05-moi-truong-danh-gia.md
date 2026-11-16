@@ -367,7 +367,7 @@ Chủ nhật 15/11
 3. Dừng khi TTFT p95 vượt 3 lần SLO, hoặc khi hàng đợi tăng liên tục.
 4. Với mỗi mức, ghi: TTFT và TPOT p50/p95, **B** (trung bình `running + waiting`), KV-cache, GPU util, CPU của pod.
 5. **C** = mức λ lớn nhất còn đạt SLO. Đọc **B\*** và **UTIL\*** tại C.
-6. Kiểm tra nhanh bằng định luật Little: B\* ≈ C × E2E trung bình. Lệch hơn 15% thì xem lại cách đo.
+6. Kiểm tra nhanh bằng định luật Little: B\* ≈ λ\_thực × E2E trung bình tại C, với λ\_thực = số request gửi trong cửa sổ đo ÷ độ dài cửa sổ (không dùng C danh định, vì số request đến dao động Poisson; xem LT5 trong `docs/nhat-ky/van-hanh.md`). Lệch hơn 15% thì xem lại cách đo.
 7. Đối chiếu một mức tải với `vllm bench serve` để chắc máy tạo tải không sai lệch có hệ thống.
 
 **Sản phẩm:** `capacity.json` = `{C, B_star, UTIL_star, slo, curves}`. Runner đọc file này để tính λ(t) và threshold. Kết quả và các giá trị chốt được ghi vào **ADR-003** ngay trong phiên V2.

@@ -549,6 +549,20 @@ def test_capacity_summarize_window_slo_and_little():
     assert s["tpot_p50_s"] == pytest.approx(1.9 / 255)
 
 
+def test_capacity_little_uses_real_arrival_rate():
+    # Lịch Poisson có thể lệch λ danh định (ĐG1-mini 05/11: λ = 1 nhưng 102 request trong 120 s). Ở đây λ
+    # danh định 1,5 nhưng thật ra 1 req/s: dùng λ danh định thì B_little = 3 và báo lệch 33 % dù B đo đúng.
+    # λ_thực chỉ đếm request thành công (cùng tập với E2E): 1 request lỗi trong 80 → 79 ÷ 80.
+    reqs = [_req(i, i, 0.1, 2.0) for i in range(100)]
+    reqs[60] = _req(60, 60, 0, 0, error="timeout")
+    metrics = [(1000.0 + t, "vllm_running", 2.0) for t in range(0, 100, 5)]
+    metrics += [(1000.0 + t, "vllm_waiting", 0.0) for t in range(0, 100, 5)]
+    s = capacity.summarize_run(reqs, metrics, t0_unix=1000.0, rate=1.5, skip_s=20, duration_s=100)
+    assert s["lambda_rps"] == 1.5 and s["lambda_real_rps"] == pytest.approx(79 / 80)
+    assert s["window_s"] == 80
+    assert s["B_little"] == pytest.approx(79 / 80 * 2.0) and s["little_ok"] is True
+
+
 def test_capacity_gpu_util_uses_busiest_gpu_on_multi_gpu_node():
     # Node 4 GPU, ĐG1 1 replica: một GPU bận 100 %, ba GPU rảnh. UTIL phải là của GPU bận, không phải 0,25.
     reqs = [_req(i, i, 0.1, 2.0) for i in range(100)]

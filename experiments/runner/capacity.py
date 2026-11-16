@@ -7,7 +7,8 @@ Khái niệm: ĐG1 chạy S1 (cố định 1 replica) với tải CONST ở các
       B_client từ log máy tạo tải (tổng thời gian các request nằm trong cửa sổ ÷ độ dài cửa sổ);
     - KV-cache, GPU util trung bình.
     C = mức λ lớn nhất còn đạt SLO (và lượt hợp lệ). B*, KV*, UTIL* là giá trị tại C.
-    Kiểm tra bằng định luật Little: B ≈ λ × E2E trung bình; lệch > 15 % thì xem lại cách đo (bước 6).
+    Kiểm tra bằng định luật Little: B ≈ λ_thực × E2E trung bình, với λ_thực = số request gửi trong cửa sổ ÷
+    độ dài cửa sổ; lệch > 15 % thì xem lại cách đo (bước 6).
 Mục đích: Sinh `capacity-*.json` (C, B*, threshold A1–A3, curves) mà runner và file ma trận dùng làm target.
     Thay script tạm `runs/dg1-mini-home-20261105/dg1_fix.py`. Hàm `summarize_run` thuần, có unit test.
 
@@ -96,9 +97,16 @@ def summarize_run(
     running, waiting = _mean(series("vllm_running")), _mean(series("vllm_waiting"))
     b_server = running + waiting
     e2e_mean = _mean(e2e)
-    little = rate * e2e_mean
+    # Little dùng λ_thực = số request gửi trong cửa sổ ÷ độ dài cửa sổ, không dùng λ danh định: số request đến
+    # dao động Poisson ±1/√(λ·T) (9 % ở λ = 1 trong 120 s), phần đó không phải lỗi đo B (LT5, 16/11). Đếm
+    # cùng tập request thành công với E2E (như analysis/lt5_little.py); mức có request lỗi thì phép kiểm chỉ
+    # gần đúng, vì không biết request lỗi nằm trong server bao lâu.
+    lam_real = len(ok) / (we - ws)
+    little = lam_real * e2e_mean
     return {
         "lambda_rps": rate,
+        "lambda_real_rps": lam_real,
+        "window_s": we - ws,
         "n_measured": len(meas),
         "n_error": sum(1 for r in meas if r["error"]),
         "ttft_p50_s": _q(ttft, 0.5),
