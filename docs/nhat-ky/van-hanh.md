@@ -160,7 +160,7 @@ Theo mẫu ở [Môi trường §19](../chi-tiet/05-moi-truong-danh-gia.md#19-ki
 
 ## Kiểm chứng lý thuyết LT5–LT8 (Trình, TR8)
 
-Cùng mẫu với LT1–LT4. Có LT5, LT6, LT7; LT8 chưa làm.
+Cùng mẫu với LT1–LT4. Đủ LT5–LT8 (LT5, LT6 còn chờ thêm dữ liệu V2).
 
 ### LT5 – Định luật Little (phân tích 16/11/2026 trên dữ liệu đã đo)
 
@@ -289,6 +289,34 @@ Cùng mẫu với LT1–LT4. Có LT5, LT6, LT7; LT8 chưa làm.
   - Phiên 1 chưa có lệch pha. Reset tạo HPA mới, HPA sync ngay khi được tạo, và script bơm tải sau reset một khoảng gần như cố định, nên thời gian quyết định chỉ rơi vào hai cụm, quanh 3–4 s hoặc 8–9 s. Phiên 2 thêm một khoảng chờ ngẫu nhiên trong [0; 5) s trước khi bơm tải.
   - Nếu đo bằng giờ thực thì những lượt có bước lùi đồng hồ sai tới 1,3 s (ví dụ phiên 2, C = 25 lần 2: ngắn đi 0,90 s). Sau khi đổi sang đồng hồ đơn điệu, khoảng cách giữa hai lần scrape liền nhau chỉ lệch tối đa 2 ms so với 5 s; theo giờ thực thì lệch tới 1301 ms. Có 3/18 lượt scale-up có mốc rơi đúng vào khoảng giờ thực bị lặp lại ngay sau một bước lùi, không đổi chắc chắn được, nên không tính vào bảng trễ.
 - **Hệ quả cho V2:** trên cloud (k3s, cùng scrape 5 s, sync 5 s, KEDA v2.21.0), HPA quyết định trong < 11 s sau khi tải tăng. Phần lớn thời gian của N2a (≤ 180 s) vì vậy là cold start của pod vLLM, không phải độ trễ của autoscaler.
+
+### LT8 – Cảnh báo theo burn rate (đo 16/11/2026 trên simulator)
+
+- **Lý thuyết** ([Kiến thức nền §5.2](../chi-tiet/02-kien-thuc-nen.md#52-cảnh-báo-theo-tốc-độ-tiêu-hao-burn-rate)): `LLMSLOBurnFast` chuyển sang pending khi tỷ lệ request có TTFT > 2,5 s vượt θ = 4 × 5 % = 0,2 trên **cả** cửa sổ 5 phút và 1 phút (`llm:ttft_bad_ratio:rate5m`, `:rate1m`), và sang firing nếu điều kiện đúng liên tục suốt `for: 1m`. Sau bước nhảy từ 0 lên tỷ lệ xấu x, với λ không đổi và ít nhất 5 phút nền sạch trước đó, tỷ lệ trên cửa sổ w là r_w(τ) = x · min(τ, w) / w.
+- **Dự đoán** (công thức và giả thiết ở docstring `analysis/lt8_burn.py`):
+  - x ≤ 0,2: r_5m không bao giờ vượt θ, nên cảnh báo không kêu dù lỗi kéo dài bao lâu.
+  - x > 0,2: điều kiện đúng sau θ · 300 / x (cửa sổ 5m là chặng chậm), firing sau θ · 300 / x + 60 s. x = 0,3 → 200 s và 260 s; x = 0,6 → 100 s và 160 s.
+  - Sau khi gỡ lỗi, điều kiện sai khi cửa sổ **ngắn** xuống dưới θ: 60 · (1 − θ / x) = 20 s (x = 0,3) và 40 s (x = 0,6). Nếu chỉ có cửa sổ 5m thì cảnh báo còn kêu tới 300 · (1 − θ / x) = 100 s và 200 s.
+  - N7 tính từ lúc SLO bị vi phạm thật theo log client (cửa sổ 1 phút vượt θ, sau θ · 60 / x) tới lúc firing: θ · 240 / x + 60 s = 220 s (x = 0,3) và 140 s (x = 0,6). Mốc này luôn < 300 s khi x > θ, nhưng tiến tới 300 s khi x → 0,2.
+  - Các trễ không có trong công thức, dự kiến tổng dưới khoảng 30 s: request xấu chỉ được đếm khi có token đầu (khoảng μ, 2–3 s, sau khi gửi); chờ lần scrape kế tiếp (≤ 5 s); recording rule và alerting rule tính ở hai nhóm riêng, mỗi nhóm 15 s, nên mọi mốc chỉ chính xác tới 15 s.
+- **Cách đo:** `make sim-lt8` (`experiments/ops/lt8_burn.py`), kind trong WSL2, simulator llm-d-inference-sim v0.12.0, KEDA tạm dừng ở 1 replica (LT8 kiểm cảnh báo, không kiểm scale). Máy tạo tải chạy thành Job trong cluster, tốc độ cố định 2 req/s. Tỷ lệ xấu x được tạo bằng cách đổi TTFT của simulator ngay lúc chạy (`POST /admin/config`): TTFT ~ N(μ, σ = 0,3 μ), μ chọn để P(TTFT > 2,5 s) = x, nên x = 0,1/0,3/0,6 ứng với μ = 1806/2160/2706 ms (D64). Mỗi lượt: nền 330 s (TTFT 200 ms) → bơm một mức 360 s → nền 330 s → mức kế tiếp … → nền cuối. 3 mức × 3 lượt, thứ tự mức xoay vòng nên mỗi mức đứng đầu, giữa, cuối đúng một lần. Ghi lại mốc bơm và gỡ, `requests.csv`, và mẫu Prometheus thô (`ALERTS`, hai recording rule, bộ đếm histogram TTFT). Bảng tính bằng `analysis/lt8_burn.py`, mỗi lần bơm một dòng ở `analysis/figures/lt8-burn.csv` (phiên `runs/sim/lt8-20261116-131116`).
+- **Số đo:** 9/9 lần bơm hợp lệ (nền sạch trước mỗi lần bơm 322–331 s, 0 restart, 0 request lỗi). Giá trị dạng min–max (TB), dự đoán trong ngoặc; thời gian tính từ lúc bơm, riêng cột "điều kiện sai" tính từ lúc gỡ (giây).
+
+  | x | x client | x server | điều kiện đúng | firing | điều kiện sai | N7: vi phạm → firing | page giả |
+  |---|---|---|---|---|---|---|---|
+  | 0,1 | 0,095–0,131 (0,100) | 0,097–0,126 | không lần nào (không) | không kêu, 0 lần pending (không) | – | – | 0 |
+  | 0,3 | 0,303–0,324 (0,300) | 0,300–0,315 | 183–220, TB 201 (200) | 249–286, TB 267 (260) | 21–34, TB 27 (20) | 215–242, TB 233 (220) | 0 |
+  | 0,6 | 0,581–0,620 (0,600) | 0,572–0,612 | 108–125, TB 116 (100) | 173–190, TB 181 (160) | 48–55, TB 52 (40) | 159–163, TB 161 (140) | 0 |
+
+  - Ở cả 6 lần có cảnh báo: pending → firing đúng 60,0 s, cảnh báo kêu đúng một đợt, không lần nào pending rồi bị đặt lại. Từ lúc điều kiện đúng (nhóm recording rule) tới lúc pending (nhóm cảnh báo) luôn là 5,5 s.
+  - Mọi lần x > 0,2 đều đạt N7 (≤ 300 s), với khoảng dư nhỏ nhất 58 s (x = 0,3).
+- **Lệch và giải thích:**
+  - Lý thuyết đúng về mặt định tính: dưới θ thì im lặng, trên θ thì kêu, và x càng lớn thì kêu càng sớm, hết càng muộn. Hết cảnh báo đúng là nhờ cửa sổ 1 phút: 27 s và 52 s, so với 100 s và 200 s nếu chỉ dùng cửa sổ 5m.
+  - Firing muộn hơn dự đoán trung bình 6 s (x = 0,3) và 21 s (x = 0,6). Phần trễ dương này khớp với các trễ không có trong công thức: token đầu của request xấu ra sau khoảng μ (2,2–2,7 s), chờ scrape (≤ 5 s), mốc chỉ thấy được ở lần tính rule kế tiếp (≤ 15 s). Hết cảnh báo cũng muộn hơn 7–12 s trung bình, vì cùng lý do.
+  - Ở x = 0,3 có một lần kêu **sớm** hơn dự đoán 11 s. Lần đó x client = 0,324, nên θ · 300 / 0,324 = 185 s, khớp mốc điều kiện đúng đo được (183 s). Ở x = 0,3, r_5m tăng chậm (x / 300 = 0,001 mỗi giây), nên nhiễu thống kê của r_5m (độ lệch chuẩn khoảng 0,016 với khoảng 600 request trong cửa sổ) làm lúc vượt θ xê dịch cỡ ±16 s. Ở x = 0,6 con số này chỉ khoảng ±8 s, nên ở đó cả 3 lần đều muộn.
+  - x server thấp hơn x client ở 8/9 lần, tối đa 0,009: server chỉ đếm request đã có token đầu trước lúc gỡ, nên hụt vài request xấu gửi ngay trước đó.
+  - Mốc vi phạm theo log client (24–44 s và 14–27 s, dự đoán 40 s và 20 s) dao động mạnh hơn, vì cửa sổ 1 phút chỉ có khoảng 120 request.
+- **Hệ quả cho V2 (VH6):** mức 5 phút của N7 vừa khít với cửa sổ 5m. Theo công thức, cộng thêm khoảng 30 s trễ như đo ở trên, N7 chỉ chắc giữ được khi x ≳ 0,23 (θ · 240 / x + 60 + 30 = 300 ⇔ x ≈ 0,229; tính từ công thức, chưa đo). Với x trong khoảng 0,2–0,23, thời gian từ lúc vi phạm tới page có thể vượt 5 phút. Đó là đánh đổi có chủ đích của burn rate 4: đổi lấy việc không page khi lỗi dưới 20 %.
 
 ## 2026-11-08 – Phiên thử VM Vast đầu tiên (2 × RTX 5060 Ti): bootstrap, mạng, cold start 3B
 

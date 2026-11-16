@@ -30,6 +30,8 @@ make sim-test                  # T1–T5, ~20 phút; một bài: make sim-test T
 make sim-test-load C=25 DUR=180s   # chỉ bơm tải, xem scale trên Grafana
 make sim-lt7                   # LT7: số replica theo ⌈C ÷ threshold⌉ và trễ từng chặng, ~27 phút
 uv run --project analysis python -m analysis.lt7_hpa runs/sim/lt7-<giờ>   # bảng của LT7
+make sim-lt8                   # LT8: lúc LLMSLOBurnFast kêu theo tỷ lệ request xấu x = 0,1/0,3/0,6, ~2 giờ
+uv run --project analysis python -m analysis.lt8_burn runs/sim/lt8-<giờ>  # bảng của LT8
 
 # Runner trên kind (máy tạo tải chạy trong cluster)
 uv run --project experiments python -m experiments.runner \

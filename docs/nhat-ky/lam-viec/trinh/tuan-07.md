@@ -181,3 +181,60 @@
   - Trình merge bằng merge commit `1a5c9fd` và xoá nhánh `feat/tr8-lt6-gpu-util`.
   - Gộp `origin/main` vào nhánh của PR #39 trước khi ghi mục này. Lần gộp này (và lần gộp sau #42) làm mất dòng trống trước hai mục LT5, LT6; Trình đã thêm lại.
 - **Links:** PR #43; mục LT6 ngay trên; `docs/nhat-ky/van-hanh.md` mục "Kiểm chứng lý thuyết LT5–LT8".
+
+## 2026-11-16 – TR8: công cụ đo LT8 (burn rate), phiên đo trên simulator đang chạy
+
+- **Task:** TR8 (LT8) · **Environment:** sim (kind trong WSL2, máy Trình)
+- **Done:**
+  1. Đọc Môi trường §19 (LT8), Kiến thức nền §5.2, Vận hành §3.3, Thông số §6, rule `slo.yaml` và `llm.yaml`; đối chiếu mã nguồn llm-d-inference-sim v0.12.0 (`pkg/simulator/latencies.go`, `pkg/common/utils.go`, `pkg/common/config.go`, endpoint `/admin/config` ở `pkg/communication/http.go`).
+  2. Viết bộ đo `experiments/ops/lt8_burn.py`: tạm dừng KEDA ở 1 replica, chạy loadgen thành Job trong cluster (CONST 2 req/s, `--max-tokens 16`), đổi TTFT của simulator lúc đang chạy qua `POST /admin/config` (API server proxy), ghi mốc bơm/gỡ và mẫu Prometheus thô (ALERTS, `llm:ttft_bad_ratio:rate1m/5m`, bộ đếm histogram TTFT). Lịch mỗi lượt: nền 330 s → bơm 360 s → nền 330 s … → nền 120 s; 3 mức x = 0,1/0,3/0,6, xoay thứ tự theo lượt. Thêm `make sim-lt8`.
+  3. Viết `analysis/lt8_burn.py` (dự đoán, so số đo, cột N7 dùng chung `metrics.slo_violation_start` và `metrics.classify_alerts`) cùng unit test; test dựng lượt tổng hợp mô phỏng scrape 5 s, tính rule 15 s, `for: 1m`.
+  4. Lượt thử ngắn (x = 0,6, nền 60 s): chạy hết, dữ liệu đủ.
+  5. Hai lần `/code-review high`; đã sửa các lỗi xác nhận (xem Incidents), còn 3 điểm nhỏ của lần 2 chưa sửa (STATE).
+  6. Phiên đo thật 3 mức × 3 lượt bắt đầu 13:11 UTC (khoảng 2 giờ), chạy bằng bản bộ đo TRƯỚC khi sửa theo review lần 2. Dừng phiên làm việc vì sắp hết quota; phiên đo vẫn chạy nền.
+- **Decision:** (D64) tạo tỷ lệ xấu x bằng cách đổi TTFT của simulator lúc chạy: TTFT ~ N(μ, σ = 0,3 μ) (mức σ lớn nhất simulator nhận), μ chọn để P(TTFT > 2,5 s) = x: x = 0,1/0,3/0,6 ↔ μ = 1806/2160/2706 ms. Không sửa `patch-sim.yaml` vì T1–T5, LT7 và runner dùng chung. Bỏ phương án trộn prompt dài/ngắn với `--prefill-time-per-token` (phụ thuộc cách simulator đếm token, phải sửa loadgen). Giữ 1 replica vì LT8 kiểm cảnh báo, không kiểm scale (giống S1 của VH6). `requests.csv` được dời nguyên khối sang giờ thực (giữ TTFT theo đồng hồ simulator), không co theo k như LT5: co theo k = 1,024 thì ở x = 0,3 khoảng 3 % request đổi phía ngưỡng 2,5 s.
+- **Results:**
+  - Dự đoán (bước nhảy sau ≥ 5 phút nền sạch): điều kiện đúng sau θ·300/x (cửa sổ 5m là chặng chậm), firing sau đó 60 s: x = 0,3 → 260 s, x = 0,6 → 160 s, x = 0,1 → không kêu. Hết cảnh báo sau khi gỡ: 60·(1 − θ/x) = 20 s / 40 s (cửa sổ 1m quyết định). N7: từ lúc vi phạm (cửa sổ 1 phút theo log client) tới firing = θ·240/x + 60 s, luôn < 300 s khi x > θ nhưng tiến tới 300 s khi x → 0,2.
+  - Lượt thử (`runs/sim/lt8-20261116-130645`, chỉ 60 s nền nên không so được với dự đoán): μ = 2706 ms, σ = 811 ms; x đo 0,575 (client, n = 179) và 0,572 (server), dự đoán 0,600; điều kiện đúng +43 s, pending +49 s, firing +109 s (pending → firing đúng 60 s); điều kiện sai 44 s sau khi gỡ (dự đoán 40 s); k = 1,024.
+  - Phiên đo thật (`runs/sim/lt8-20261116-131116`): chưa có kết quả.
+- **Incidents:**
+  - Review 1: định nghĩa N7 tự viết lệch với `analysis/metrics.py` → dùng chung hàm của metrics; hai đợt pending cách 30 s bị gộp → ngưỡng tách đợt 22,5 s; `finally` có thể bỏ sót việc gỡ tạm dừng KEDA → mỗi bước một `try`; k đo bằng runner chỉ đúng khi chung kernel → đo k bằng `kubectl exec` trong pod loadgen; c0 có thể bị request muộn của lượt trước đẩy lên → chờ bộ đếm đứng yên; xoá Job khi dừng giữa chừng.
+  - Review 2: loadgen đếm `--duration` theo đồng hồ đơn điệu (nhanh k lần) nên dừng sớm total·(1 − 1/k) ≈ 50 s → nhân thời lượng 1,05. Pod bị thay không bị phát hiện → so UID pod. Phiên đang chạy dùng bản cũ: pha nền cuối thực còn khoảng 95 s, vẫn đủ cho lúc hết cảnh báo (≈ 65 s); analysis tự đánh dấu lần bơm có nền < 300 s.
+  - Test bắt lỗi: `classify_alerts` đọc `first` khi danh sách đợt rỗng → chỉ truyền khi có đợt.
+- **Deviations:** Môi trường §19 ghi "tăng độ trễ giả lập": làm đúng như vậy nhưng tăng cả độ phân tán (σ = 0,3 μ) để có tỷ lệ xấu x thay vì mọi request cùng xấu.
+- **Links:** nhánh `feat/tr8-lt8-burn-rate` (commit cục bộ, chưa push); `experiments/ops/lt8_burn.py`, `analysis/lt8_burn.py`, test tương ứng, `Makefile`, `envs/sim/README.md`.
+- **Thesis:** §5 LT8: bảng x dự đoán/đo, mốc điều kiện/firing/hết so với công thức; hình r_1m, r_5m theo thời gian quanh lúc bơm kèm ngưỡng 0,2 và mốc pending/firing (chưa vẽ). Nhận xét: mức 5 phút của N7 chỉ vừa khít cửa sổ 5m.
+
+## 2026-11-16 – TR8: kết quả phiên đo LT8 trên simulator
+
+- **Task:** TR8 (LT8) · **Environment:** sim (kind trong WSL2, máy Trình)
+- **Done:**
+  1. Phiên đo `runs/sim/lt8-20261116-131116` (3 mức × 3 lượt, thứ tự xoay vòng) chạy xong cả 3 lượt; rc loadgen = 0, 0 restart, k = 1,0264 / 1,0270 / 1,0257 (đo bằng runner, chung kernel WSL với kind).
+  2. Kiểm cluster sau phiên: không còn Job loadgen, ScaledObject hết tạm dừng, TTFT nền 200 ms / 0 s.
+  3. Sửa nốt review lần 2 ở `analysis/lt8_burn.py`: bỏ qua lượt thiếu `load/` (có test), tính đợt cảnh báo một lần, ghi note khi pod bị thay. Ghi bảng `analysis/figures/lt8-burn.csv`.
+- **Results:** 9/9 lần bơm hợp lệ (nền trước mỗi lần bơm 322–331 s). Giá trị: min–max (TB), trong ngoặc là dự đoán; thời gian tính từ lúc bơm, "hết" tính từ lúc gỡ.
+
+  | x | x client | x server | điều kiện đúng, s | firing, s | hết, s | N7 vi phạm → firing, s | page giả |
+  |---|---|---|---|---|---|---|---|
+  | 0,1 | 0,095–0,131 | 0,097–0,126 | không (không) | không kêu, 0 pending (không kêu) | – | – | 0 |
+  | 0,3 | 0,303–0,324 | 0,300–0,315 | 183–220 (200) | 249–286 (260) | 21–34 (20) | 215–242 (220) | 0 |
+  | 0,6 | 0,581–0,620 | 0,572–0,612 | 108–125 (100) | 173–190 (160) | 48–55 (40) | 159–163 (140) | 0 |
+
+  - pending → firing đúng 60,0 s ở mọi lần; điều kiện đúng → pending luôn 5,5 s (độ lệch pha cố định giữa nhóm recording rule và nhóm cảnh báo). firing − dự đoán: −11 đến +31 s (TB +14 s).
+  - Lần x = 0,3 kêu sớm hơn dự đoán 11 s (rep3) có x client = 0,324: θ·300/0,324 = 185 s, khớp mốc điều kiện đúng đo được 183 s. Phần trễ dương còn lại cỡ 5–25 s: token đầu của request xấu ra sau khoảng μ (2–3 s), chờ scrape (≤ 5 s), chờ lần tính rule (≤ 15 s).
+  - Mọi lần x > 0,2 đều đạt N7 (≤ 300 s từ lúc vi phạm theo log client).
+- **Links:** `analysis/figures/lt8-burn.csv`; mục LT8 ngay trên.
+- **Thesis:** §5 LT8: bảng trên. Hình nên có: r_1m, r_5m theo thời gian của một lần bơm x = 0,3, kèm ngưỡng 0,2 và mốc pending/firing (chưa vẽ).
+
+## 2026-11-16 – TR8: ghi LT8 vào nhật ký vận hành, review lần 3, mở PR
+
+- **Task:** TR8 (LT8) · **Environment:** none (máy Trình; không đụng cluster)
+- **Done:**
+  1. Viết mục `### LT8` trong `docs/nhat-ky/van-hanh.md` theo mẫu lý thuyết → dự đoán → cách đo → số đo → giải thích → hệ quả cho V2; sửa dòng trạng thái LT5–LT8 và ghi chú dòng LT1–LT8 ở mốc M2 của Kế hoạch.
+  2. `/code-review high` lần 3 trên cả nhánh: 10 điểm, sửa 6, bỏ qua 3 điểm về hiệu năng hoặc cấu trúc không ảnh hưởng kết quả, giữ một PR (D65).
+  3. Chạy lại `analysis.lt8_burn` trên `runs/sim/lt8-20261116-131116`: vẫn 9/9 hợp lệ, `lt8-burn.csv` không đổi.
+- **Decision:** (D65) analysis đánh dấu không hợp lệ khi lúc bơm hoặc gỡ không có pod nào nhận độ trễ, hoặc độ trễ pod báo lại không khớp; khi thiếu recording rule; khi k lấy từ đồng hồ runner. Đợt firing chỉ tách khi hở > 60 s (`for`), vì firing quay lại sau một lần điều kiện sai cần ít nhất 90 s. Giữ bộ đo và phân tích trong cùng một PR vì gắn với nhau qua định dạng dữ liệu.
+- **Results:** pytest analysis 99 passed; experiments: `test_lt8_burn` 9 passed, `test_backup_notify` hỏng 4 test chỉ trên Windows (`fcntl`, `rclone`, không liên quan nhánh này; CI chạy Linux); ruff check/format đạt; lychee trên các file đã sửa 0 lỗi; yamllint đạt.
+  - Hệ quả rút ra (tính từ công thức, chưa đo): với trễ cộng thêm khoảng 30 s, N7 chỉ chắc giữ được khi x ≳ 0,23.
+- **Links:** `docs/nhat-ky/van-hanh.md` (LT8), `docs/chi-tiet/06-ke-hoach-quan-ly.md`, `analysis/lt8_burn.py`, `experiments/ops/lt8_burn.py`.
+- **Thesis:** §5 LT8 (mục `van-hanh.md` là bản nháp trực tiếp).
