@@ -122,3 +122,20 @@
 - **Deviations:** N = 2 thay cho N = 4 (ADR-006 C2 phương án b); ĐG1 240 s mỗi mức thay cho 300 s; runner chạy từ PC qua tunnel thay cho systemd trên VM; không sao lưu R2.
 - **Links:** `envs/cloud/provision/vast.sh`, `Makefile`, `envs/cloud/README.md`, `envs/cloud/experiments/matrix-dg1-n2.yaml`, `matrix-try-n2.yaml`, `experiments/runner/vllm_log.py`; `runs/dg1-try-4000ada/` (không nằm trong Git). Nhánh `feat/q2-vast-attach`, chưa commit.
 - **Thesis:** §4 (tự động hoá dựng cluster, VH5: thời gian từ máy trắng); §5 cold start: so 3B trên máy thuê (chụp CUDA graph lúc profiling 2 s) với 0,5B ở nhà (97–100 s), cho thấy độ chậm ở nhà là do môi trường PC; §Hạn chế: máy chợ thiếu CPU so với tiêu chí.
+
+## 2026-11-16 – Hai lượt autoscaling N = 2 trên máy thuê: runner chạy trọn, invalid vì CPU máy tạo tải
+
+- **Task:** Q6 · **Environment:** V2 (phiên thử code, 2 × RTX 4000 Ada)
+- **Done:** chạy `matrix-try-n2.yaml` bằng runner từ PC qua tunnel, `--no-backup`: A1 × KB3 (16:03–16:30) rồi A2 × KB2 (16:30–16:58). C = 5,0, threshold A2 = 39, `loadgen_cpu: 500m`.
+- **Results:**
+
+  | Lượt | Số replica | Cold start pod mới (tạo → Ready) | Request / lỗi | TTFT p50 / p95 | TTFT ≤ 2,5 s |
+  |---|---|---|---|---|---|
+  | A1 × KB3 | 1 → 2, không về 1 trong lượt | 69 s | 6.797 / 0 | 0,15 / 0,27 s | 100 % |
+  | A2 × KB2 | 1 → 2 → 1 | 66 s | 6.612 / 0 | 0,15 / 12,40 s | 91,0 % (598 request trễ, trong khoảng 2 phút quanh lúc tải tăng) |
+
+  Runner kiểm được tín hiệu scale trước phiên (`nvidia_smi_utilization_gpu_ratio`: 2 chuỗi; `vllm:num_requests_running`: 1 chuỗi), đồng hồ Prometheus lệch +0,3 s.
+- **Incidents:** cả hai lượt **invalid**: `máy tạo tải không đạt tự kiểm: send_lag_ok, throttle_ok`. Số đo: `send_lag` p99 51,8 ms và 67,2 ms, max 80 và 150 ms; bị throttle 6,3 % và 2,1 % số chu kỳ; CPU max ≈ 49 % của một lõi (đúng giới hạn 500m). Nguyên nhân: node 11 vCPU, 4 lõi reserved, 2 pod vLLM giữ 6 lõi, máy tạo tải chỉ còn nửa lõi. Không phải lỗi runner.
+- **Decision:** không sửa; ghi nhận rằng máy cho phiên chính thức với N = 2 cần ≥ 14 vCPU (8 + 3N), đúng tiêu chí trong `vast.sh query`.
+- **Links:** `runs/try-n2-4000ada/` (không nằm trong Git).
+- **Thesis:** §Hạn chế hoặc §5 phương pháp: tự kiểm của máy tạo tải bắt được lượt đo bị nhiễu do thiếu CPU; ví dụ cho tiêu chí chọn máy.
