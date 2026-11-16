@@ -136,7 +136,56 @@ Theo mẫu ở [Môi trường §19](../chi-tiet/05-moi-truong-danh-gia.md#19-ki
 
 ## Kiểm chứng lý thuyết LT5–LT8 (Trình, TR8)
 
-Cùng mẫu với LT1–LT4. Chỉ có LT7; LT5, LT6, LT8 chưa làm.
+Cùng mẫu với LT1–LT4. Có LT5, LT7; LT6, LT8 chưa làm.
+
+### LT5 – Định luật Little (phân tích 16/11/2026 trên dữ liệu đã đo)
+
+- **Lý thuyết** ([Kiến trúc §10.2](../chi-tiet/03-kien-truc-autoscaling.md#102-a2-số-request-đồng-thời-running--waiting)): ở trạng thái dừng, L = λ × W. A2 dùng chính L = Σ_pod (`running` + `waiting`). Trên một cửa sổ hữu hạn dài T, đẳng thức sau đúng tuyệt đối: L_client = λ\_thực × W + edge, với edge = (vào − tràn) ÷ T. "Vào" là thời gian mà các request gửi trước cửa sổ còn nằm lại trong cửa sổ; "tràn" là thời gian mà các request gửi trong cửa sổ còn nằm lại sau cửa sổ. Khi hệ dừng thì edge ≈ 0; khi hàng đợi đang tăng thì edge < 0.
+- **Dự đoán** (ghi trước khi chạy script trên dữ liệu simulator; dữ liệu nhà đo từ 05–06/11, nhưng Little không có tham số tự do, nên không có gì để chỉnh cho khớp số đo):
+  - Mọi cửa sổ dừng: L_server ≈ λ\_thực × W, lệch < 15 %. Lệch còn lại do lấy mẫu 5 s. Theo M/G/∞ (chưa xếp hàng), SE = √((λ ÷ n) × Σ_k (W − 5|k|)+). Ở nhà, W < 5 s và có 24 mẫu, nên SE ≈ √(L ÷ 24), tức 14 % khi L = 2. Ở simulator pha `pre` (W ≈ 13 s), SE ≈ 13 %.
+  - Simulator (`patch-sim.yaml`: TTFT 200 ms, ITL 50 ms, 256 token): W = 0,2 + 255 × 0,05 = 12,95 s. Từ đó `pre` (λ 0,5) cho L ≈ 6,5; `spike` của A2 (λ trung bình ≈ 2,21) cho L ≈ 28,6; `drop` có edge dương nhỏ, vì request của `spike` còn trong hệ thống ở mép đầu.
+  - Cửa sổ quá tải (λ\_thực > năng lực) thì L < λW. Lượt có request lỗi thì không áp được định luật, vì không biết lúc request lỗi rời server.
+- **Cách đo:** `analysis/lt5_little.py`, bảng mỗi cửa sổ một dòng ở `analysis/figures/lt5-little.csv`. Lệnh: `uv run --project analysis python -m analysis.lt5_little envs/home/experiments/capacity-1.5b.json envs/home/experiments/capacity.json runs/sim/mp-final-w2@1.0162 runs/sim/tr7-kb2-sim-2@1.033 --out analysis/figures/lt5-little.csv`.
+  - File capacity ở nhà chỉ có bản tóm tắt mỗi mức λ (dữ liệu thô nằm trên máy Quang), nên chỉ tính lại được λ\_thực = n\_measured ÷ 120 s và so B_server, B_client với λ\_thực × W.
+  - Lượt runner trên simulator có đủ dữ liệu thô. Script tách thêm L_client_sampled, là số request client đang chờ đúng tại các mốc mẫu của Prometheus. Nhờ vậy lệch của server tách được thành hai phần: phần do lấy mẫu (L_client_sampled − L_client) và phần do định nghĩa (L_server − L_client_sampled).
+  - Hậu tố `@k` là tốc độ đồng hồ của máy tạo tải (xem giải thích 3).
+- **Số đo** (lệch = L ÷ (λ\_thực × W) − 1):
+
+  | Dữ liệu | Cửa sổ | λ\_thực (req/s) | W (s) | λ\_thực × W | L_client (edge) | L_server | lệch server |
+  |---|---|---|---|---|---|---|---|
+  | Nhà, 1,5B, 7 mức dừng (λ 1–7) | 120 s | 0,85–6,79 | 2,37–7,92 | 2,0–53,8 | lệch −0,6…+0,6 % | | −1,2…+4,5 % |
+  | Nhà, 1,5B, λ = 8 (quá tải) | 120 s | 7,52 | 18,57 | 139,6 | 124,4 (−10,9 %) | 124,0 | −11,2 % |
+  | Nhà, 0,5B, 7 mức dừng (λ 2–12,5) | 120 s | 2,03–12,36 | 0,92–2,23 | 1,9–27,6 | lệch −0,3…+1,1 % | | −4,4…+14,3 % |
+  | Nhà, 0,5B, λ = 13; 13,5; 14 (quá tải) | 120 s | 12,96–14,13 | 5,5–14,9 | 72–211 | −4,4; −7,1; −12,7 % | | −5,1; −10,4; −13,7 % |
+  | Sim S1-CONST2-1 (λ 2 > năng lực 1,24) | 60 s từ hệ rỗng | 1,93 | 29,71 | 57,37 | 37,88 (edge −19,49) | 37,00 | −35,5 % |
+  | Sim A2-KB2-1 `pre` | 120 s | 0,551 | 12,74 | 7,02 | 7,06 (+0,04) | 7,17 | +2,1 % |
+  | Sim A2-KB2-1 `spike` (scale 1 → 3) | 600 s | 2,204 | 12,79 | 28,18 | 27,92 (−0,26) | 27,92 | −0,9 % |
+  | Sim A2-KB2-1 `drop` (scale 3 → 1) | 600 s | 0,623 | 12,74 | 7,94 | 8,15 (+0,21) | 8,30 | +4,6 % |
+  | Sim S1-KB2-1 `pre` (lượt không hợp lệ) | 120 s | 0,551 | 12,73 | 7,01 | 7,05 (+0,04) | 6,96 | −0,8 % |
+  | Sim S1-KB2-1 `spike`, `drop` (có request lỗi) | | | | | | | không áp được |
+
+  Sim dùng k = 1,033 cho phiên `tr7-kb2-sim-2` và 1,0162 cho `mp-final-w2` (giải thích 3).
+
+- **So với dự đoán:**
+  - Ở cả **18/18 cửa sổ dừng**, L_server lệch λ\_thực × W từ −4,4 % đến +14,3 %, tức đều dưới 15 %. Phía client lệch từ −0,9 % đến +2,6 %. Hai trong 18 cửa sổ thuộc lượt mà runner đánh dấu không hợp lệ: 1,5B λ = 6 (máy tạo tải bị cgroup throttle 4,4 ms) và S1-KB2-1 (pod restart một lần trong lượt). Hai cửa sổ này lệch −1,2 % và −0,8 %; bỏ chúng thì khoảng lệch không đổi.
+  - Lệch lớn nhất (+14,3 %, 0,5B λ = 2, L = 1,86) chỉ bằng 1,0 SE do lấy mẫu. Ở 14 cửa sổ chưa xếp hàng, z = (L_server − λW) ÷ SE nằm trong [−0,76; +0,96], trung bình +0,20, nên không thấy thiên lệch có hệ thống.
+  - Simulator: λ\_thực × W khớp dự đoán tiên nghiệm trong khoảng −1,5 % (`spike` A2: 28,18 so với 28,6). Ở `pre`, λW = 7,0 so với dự đoán 6,5, vì λ\_thực = 0,55 thay vì 0,5: 64 request trong 120 s, dao động Poisson (SD ±13 %) cộng phần hiệu chỉnh đồng hồ. W ở `pre` đo theo đồng hồ của máy tạo tải là 13,16 s, dài hơn cấu hình 1,6 % (TPOT 50,7–50,8 ms thay vì 50 ms; chưa tách nguyên nhân). Simulator hẹn giờ bằng đồng hồ đơn điệu, nên phần chênh này không phải do k.
+- **Giải thích:**
+  1. **Quá tải** (1,5B λ = 8; 0,5B λ ≥ 13): lệch âm 5–14 %, và phía client lệch gần bằng phía server, nên đây không phải lỗi đo của Prometheus. Hệ không dừng: request gửi cuối cửa sổ còn nằm trong hàng đợi sau khi cửa sổ đóng (tràn > vào). Lượt simulator S1-CONST2-1 cho thấy rõ bằng số: edge = −19,5 trên λW = 57,4, nên L_client = 37,9 (−34 %), còn L_server chỉ lệch L_client −2,3 %. Đẳng thức có edge vẫn đúng tuyệt đối; chỉ phép xấp xỉ L ≈ λW là không dùng được.
+  2. **Nhiều replica:** ở `spike` và `drop` của A2, tổng running + waiting của mọi pod khớp log client trong 5 %, kể cả khi số pod đổi 1 → 3 → 1 (theo series của pod; pod bị xoá thì series của nó dừng lại). Vậy metric của A2 đo đúng lượng việc của cả hệ thống.
+  3. **Đồng hồ của simulator.** Lần chạy đầu (k = 1), pha `drop` của A2 lệch −11,9 % (L_server 6,99 so với L_client_sampled 8,24). Phần lệch dồn vào 30 s đầu pha (846–871 s): client có 20–33 request đang chờ, còn server chỉ đếm 7–22. Nguyên nhân: loadgen ghi mốc request bằng `perf_counter` (đồng hồ đơn điệu) cộng `t0_unix` (`loadgen/sender.py`), còn Prometheus đóng dấu mẫu bằng giờ thực, và trong VM WSL2 đồng hồ đơn điệu chạy nhanh hơn giờ thực k lần. Các bằng chứng:
+     - Độ trễ khớp nhất giữa chuỗi server và chuỗi client tăng dần theo thời gian: −1, −6, −11 s ở các đoạn có tâm 120, 370, 670 s. Đây chỉ là bằng chứng về chiều lệch. Độ dốc suy ra (≈ 1,8 %) là ước lượng thô, vì độ trễ được dò trên số request đang chạy (vốn nhiễu) và lấy trung bình cả đoạn, nên không dùng để chọn k.
+     - Runner (giờ thực) thấy loadgen xong lúc t0 + 1419,4 s, trong khi loadgen tự đo được `wall_s` = 1451,6 s. Vậy k ≥ 1,022 (cộng trừ 1 s cho lệch giờ giữa pod và runner). Runner hỏi file DONE theo vòng `kubectl get` + `kubectl exec` + ngủ 10 s, nên thấy DONE muộn nhất khoảng 20 s (dư 5 s cho mỗi lần gọi kubectl), tức k ≤ 1,038 (A2). Với S1, chạy cùng buổi sáng, k ∈ [1,028; 1,044]. Mtime của các file kết quả không giúp gì thêm: đó là lúc `kubectl cp` giải nén, sau `t_main_end` 22 ms.
+     - Bản ghi chỉnh giờ của journal trong lượt LT7 cho k = 1,0188 vào chiều 16/11, sau khi VM khởi động lại lúc khoảng 16:17. Ngày 07/11 là 1,0162. Vậy k đổi sau mỗi lần VM khởi động.
+
+     Dùng k = 1,033 (giữa cận chung [1,028; 1,038] của hai lượt) thì `drop` chỉ còn lệch +4,6 %. Với mọi k trong cận chung, lệch nằm trong +2,2…+7,4 %; trong cận riêng của A2 thì −0,5…+7,4 %. Cận lấy từ mốc của runner, không dùng dữ liệu Prometheus, nên không phải lập luận vòng. λ × W không phụ thuộc k: W ngắn đi k lần, còn λ tăng đúng k lần.
+  4. **Có request lỗi** (S1-KB2 `spike`, `drop`): L_server gấp 2–3 lần L_client, vì L_client không tính các request lỗi (timeout, bị từ chối kết nối): chúng không có mốc rời hệ thống. Script đánh dấu `applicable = False`.
+- **Hệ quả:**
+  - Prometheus đo đúng L, và L tỷ lệ với λ theo đúng W đo được ở trạng thái dừng. Đây là cơ sở để đặt threshold A2 theo B\* lấy từ ĐG1.
+  - Phần kiểm Little trong `experiments/runner/capacity.py` (Môi trường §8 bước 6) trước đây dùng λ danh định, nên báo nhầm ở mức λ thấp: 0,5B λ = 2 lệch 15,7 % và ra `little_ok = False`, trong khi dùng λ\_thực chỉ lệch 14,3 %. Trình đã sửa sang λ\_thực, đếm trên cùng tập request thành công với W, và thêm hai trường `lambda_real_rps`, `window_s` (`lt5_little.py` đọc hai trường này khi có, ví dụ ĐG1 trên V2 đo 240 s mỗi mức). Hai file `capacity*.json` đã có giữ giá trị cũ, vì không có dữ liệu thô trên máy này để tính lại.
+  - Ngưỡng 15 % là chặt khi B nhỏ: với 24 mẫu, SE ≈ 1 ÷ √(24 B), tức 14 % ở B = 2. ĐG1 trên V2 đo 4 phút mỗi mức (48 mẫu) thì SE còn 10 % ở B = 2.
+  - Trên simulator trong WSL2, mọi phép so mốc client với Prometheus hoặc mốc pod đều lệch (k − 1) × t. Ví dụ, thời điểm tải tăng của KB2 (t = 240 s) thật ra sớm hơn khoảng 8 s so với `t0_unix + 240`, nên N2a do `build_tables` tính trên simulator ngắn đi khoảng 8 s. Cuối lượt 24 phút, lệch tới khoảng 45 s. V2 chạy trên Linux thật nên không bị (sau V2 kiểm lại: cận k của runner phải chứa 1). Cách sửa gốc là để loadgen ghi thêm giờ thực lúc kết thúc; chưa làm.
+- **Còn thiếu:** chưa có V2. Hình L_server theo λ\_thực × W (đường y = x, dải ±15 %) chưa vẽ.
 
 ### LT7 – Thuật toán HPA và trễ phản ứng (đo 16/11/2026 trên simulator)
 

@@ -69,3 +69,40 @@
   - Dự đoán của §19 (≤ ~15 s) được sửa thành < 10 s trước khi đo, vì polling không nằm trên đường quyết định. Số đo cho cận 11 s (chặng KEDA làm tròn `time=`). Giữ nguyên bảng §19, kết quả ghi ở `van-hanh.md`.
 - **Links:** nhánh `feat/tr8-lt7-hpa`; `envs/sim/tests/lt7-hpa.sh`, `envs/sim/tests/load-sim.sh`, `analysis/lt7_hpa.py`, `analysis/tests/test_lt7_hpa.py`, `analysis/figures/lt7-hpa.csv`, `Makefile`, `docs/nhat-ky/van-hanh.md`. Dữ liệu thô trên máy Trình (không commit): `runs/sim/lt7-20261116-162338/` (lượt thử), `lt7-20261116-162501/` (phiên 1), `lt7-20261116-165323/` (phiên 2).
 - **Thesis:** §5, kiểm chứng lý thuyết LT7: bảng số replica theo mức tải và bảng trễ theo chặng; hình nên có là dòng thời gian của một lượt (các lần scrape, giây tròn, các lần sync, pod Ready), chưa vẽ. §6 (giới hạn và bài học đo): giờ thực trên WSL2 bị kéo lùi, và KEDA làm tròn `time=` xuống giây. Hệ quả cho N2a: autoscaler chỉ chiếm < 11 s.
+
+## 2026-11-16 – TR8: LT5 (định luật Little) trên dữ liệu nhà và simulator
+
+- **Task:** TR8 (LT5) · **Environment:** none (dữ liệu đã đo: nhà 05–06/11, sim 07/11 và 16/11)
+- **Done:**
+  1. Đọc Môi trường §19 (LT5), §8 bước 6, Kiến trúc §10.2, `experiments/runner/capacity.py`, `collect.py`, `loadjob.py`, `loadgen/sender.py`.
+  2. Ghi dự đoán cho simulator trước khi tính: W = 0,2 + 255 × 0,05 = 12,95 s; `pre` L ≈ 6,5; `spike` A2 ≈ 28,6; S1 quá tải thì không áp được; SE lấy mẫu theo M/G/∞.
+  3. Viết `analysis/lt5_little.py`: đọc file capacity (bản tóm tắt) và thư mục phiên runner (dữ liệu thô); tính λ\_thực, W, L_client = λW + edge, L_client_sampled, L_server (tổng mọi pod), SE, z; đổi đồng hồ máy tạo tải bằng hậu tố `@k`; tính cận k của từng lượt. Thêm 14 test (`analysis/tests/test_lt5_little.py`).
+  4. Chạy trên `capacity-1.5b.json`, `capacity.json`, `runs/sim/mp-final-w2`, `runs/sim/tr7-kb2-sim-2` (chép từ `.work/tr7/runs/`). Pha `drop` của A2 lệch −11,9 %, nên dò nguyên nhân (Incidents).
+  5. Sửa `capacity.py` (code của Quang): `B_little` dùng λ\_thực, thêm `lambda_real_rps`, `window_s`; thêm test; sửa Môi trường §8 bước 6.
+  6. `/code-review high`: 10 điểm, sửa 8; hai điểm còn lại là việc sửa đồng hồ ở `build_tables`/loadgen (để PR sau) và chính mục nhật ký này.
+  7. Ghi kết quả vào `docs/nhat-ky/van-hanh.md`, mục LT5; ghi chú vào `06-ke-hoach-quan-ly.md` (dòng LT1–LT8).
+- **Decision:** (D62)
+  - Dùng λ\_thực (request thành công gửi trong cửa sổ ÷ T) cho cả LT5 lẫn phép kiểm của runner, không dùng λ danh định.
+  - Tách phần edge bằng đẳng thức tuyệt đối, để phân biệt lỗi đo với hệ không dừng.
+  - Cửa sổ từ request lỗi đầu tiên trở đi bị đánh dấu là không áp được.
+  - Không tính SE và z khi waiting ≥ 1.
+  - k của đồng hồ máy tạo tải lấy theo từng phiên, từ cận do mốc của runner cho, không ước lượng từ dữ liệu Prometheus (tránh vòng). Phương án bỏ: k cố định 1,0162; ước lượng từ chuỗi running + waiting; ước lượng từ bộ đếm `request_success_total`; dùng mtime file.
+- **Results:**
+  - Nhà, 18 cửa sổ dừng (1,5B λ 1–7; 0,5B λ 2–12,5; sim `pre`/`spike`/`drop`): L_server lệch λ\_thực × W từ −4,4 % đến +14,3 %, phía client từ −0,9 % đến +2,6 %. Lệch lớn nhất (+14,3 %, 0,5B λ = 2, L = 1,86) chỉ bằng 1,0 SE. z ở 14 cửa sổ chưa xếp hàng nằm trong [−0,76; +0,96], trung bình +0,20.
+  - Quá tải (1,5B λ = 8; 0,5B λ ≥ 13): −5 đến −14 %, phía client lệch gần bằng. Sim S1-CONST2-1: edge −19,5 trên λW 57,4 (−34 %); L_server so với L_client chỉ −2,3 %.
+  - A2-KB2-1 (scale 1 → 3 → 1), k = 1,033: `pre` +2,1 %, `spike` −0,9 %, `drop` +4,6 %, cả lượt 0,0 %.
+  - Phép kiểm của runner cũ báo nhầm ở 0,5B λ = 2 (15,7 %, `little_ok = False`); với λ\_thực thì 14,3 %.
+  - Kiểm tra: `analysis` 65 test đạt (Python 3.15 và 3.11), ruff sạch. `experiments`: 144 đạt; 4 lỗi `test_backup_notify` có từ trước, chỉ trên Windows. lychee 130 link đạt.
+- **Incidents:**
+  - Pha `drop` của A2 lệch −11,9 %. Lệch dồn vào 846–871 s: client có 20–33 request đang chờ, server chỉ đếm 7–22.
+    - Nguyên nhân: loadgen ghi mốc request bằng `perf_counter` cộng `t0_unix`, còn Prometheus đóng dấu bằng giờ thực, mà trong VM WSL2 đồng hồ đơn điệu chạy nhanh hơn k lần.
+    - Bằng chứng: độ trễ khớp nhất tăng dần (−1, −6, −11 s); runner thấy loadgen xong lúc t0 + 1419,4 s, trong khi `wall_s` = 1451,6 s, nên k ∈ [1,022; 1,038].
+    - Cách sửa: hậu tố `@k`, dùng k = 1,033. Với mọi k trong cận chung của hai lượt, `drop` lệch +2,2…+7,4 %.
+  - k đổi theo lần VM khởi động: 1,0162 (07/11), 1,0188 (chiều 16/11, VM khởi động lại khoảng 16:17, theo bản ghi chỉnh giờ của LT7), khoảng 1,03 (sáng 16/11). Vì thế không dùng được một hằng số.
+  - Hệ quả phụ: N2a mà `build_tables` tính trên simulator ngắn đi khoảng 8 s. V2 (Linux thật) không bị. Cách sửa gốc (loadgen ghi giờ thực lúc kết thúc) chưa làm.
+  - Ước lượng k từ bộ đếm `request_success_total` gãy giữa hai nửa lượt (offset của request warm-up đổi theo λ), cho 2,15–2,6 %, nên bỏ cách này. Mtime của file kết quả là lúc `kubectl cp` giải nén, không dùng được.
+- **Deviations:**
+  - Môi trường §19 ghi nguồn là "requests.csv của mọi lượt tải" ở nhà, simulator và V2. Thực tế: ở nhà chỉ có bản tóm tắt trong `capacity*.json` (dữ liệu thô trên máy Quang); V1 (`runs/v1-a4000/`) không có trên máy Trình nên chưa tính; V2 chưa chạy. Chạy lại script trên dữ liệu thô khi có.
+  - Môi trường §8 bước 6 đổi từ "C × E2E" sang "λ\_thực × E2E".
+- **Links:** nhánh `feat/tr8-lt5-little`; `analysis/lt5_little.py`, `analysis/tests/test_lt5_little.py`, `analysis/figures/lt5-little.csv`, `experiments/runner/capacity.py`, `experiments/tests/test_runner.py`, `docs/nhat-ky/van-hanh.md` (LT5), Môi trường §8. Dữ liệu thô trên máy Trình (không commit): `runs/sim/mp-final-w2/`, `runs/sim/tr7-kb2-sim-2/`.
+- **Thesis:** §5, kiểm chứng lý thuyết LT5: bảng lệch theo cửa sổ, phân rã lệch thành edge, lấy mẫu và định nghĩa. Hình nên có: L_server theo λ\_thực × W (đường y = x, dải ±15 %), chưa vẽ. §6 (giới hạn đo): đồng hồ đơn điệu của WSL2 chạy nhanh 1,6–3,8 % và đổi theo lần khởi động; λ danh định so với λ\_thực.
