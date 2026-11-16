@@ -21,8 +21,9 @@ Ba chỗ dễ đọc sai (đều đã kiểm trong mã nguồn v0.31.0):
        file rồi mới bấm giờ (model_executor/model_loader/default_loader.py:347). Dòng "Time spent downloading
        weights" chỉ in khi tải mất hơn 0,5 s (model_executor/model_loader/weight_utils.py:522).
     3. Compile cache đã ấm (mức L2): torch 2.13 dùng AOT compile (biên dịch trước, lưu kết quả ra đĩa), log
-       có "Directly load AOT compilation" và KHÔNG có dòng "torch.compile took"
-       (compilation/decorators.py:565).
+       có "Directly load AOT compilation" (compilation/decorators.py:565). Log thật ở nhà ngày 16/11/2026
+       (v0.31.0, Qwen2.5-0.5B) VẪN có thêm dòng "torch.compile took 0.90 s in total" ngay sau đó, nên
+       không dùng sự vắng mặt của dòng này để nhận biết cache ấm; dấu hiệu là dòng "Directly load".
 
 Chạy tay trên một hoặc nhiều file log (từ gốc repo); "-" = đọc từ stdin:
     uv run --project experiments python -m experiments.runner.vllm_log runs/<phiên>/<lượt>/logs/*.log
