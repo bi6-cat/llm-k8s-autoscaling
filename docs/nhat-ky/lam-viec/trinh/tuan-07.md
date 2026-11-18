@@ -283,3 +283,32 @@
 - **Results:** `pytest analysis` 114 passed (Python 3.15; test mới chạy cả 3.11); `ruff check` và `ruff format --check` đạt. Hình LT8 cho thấy: x = 0,1 không kêu ở cả 3 lần bơm; ở x = 0,3 và 0,6, r_5m đo bám vạch dự đoán và trễ vài giây; vạch firing đo bắt đầu và kết thúc muộn hơn dự đoán, khớp bảng LT8 ở `van-hanh.md`, trừ một lần kêu sớm ở x = 0,3 (đã giải thích ở đó). Hình LT7: 12/12 lượt đúng số replica; ở cả 7 lượt, đoạn quyết định (ba chặng đầu) kết thúc trước vạch 11 s.
 - **Links:** nhánh `feat/tr8-lt7-lt8-figures`; `analysis/lt_charts.py`, `analysis/tests/test_lt_charts.py`, `analysis/figures/lt7-hpa.svg`, `analysis/figures/lt8-burn.svg`, `envs/sim/README.md`, `analysis/pyproject.toml`.
 - **Thesis:** §5 LT7 (hình replica theo C và các chặng trễ), §5 LT8 (hình r_1m/r_5m quanh lúc bơm, khoảng firing đo so với dự đoán).
+
+## 2026-11-17 – TR8: merge PR #49 (hình LT7, LT8)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** CI xanh cả 6 job (alerts, docs, manifests, python 3.11 và 3.15, yaml); `mergeable` = MERGEABLE, không có review hay bình luận; merge bằng merge commit `10c0527`, xoá nhánh `feat/tr8-lt7-lt8-figures`.
+- **Links:** PR #49.
+
+## 2026-11-18 – TR8: hình LT5 (định luật Little) và LT6 (GPU util bão hoà)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Thêm `--lt5`, `--lt6` vào `analysis/lt_charts.py`. Cả hai hình vẽ từ CSV đã commit (`analysis/figures/lt5-little.csv`, `lt6-gpu-util.csv`), không cần dữ liệu thô.
+  2. Hình LT5: ô trái là L_server theo λ\_thực × W (thang log, đường y = x, dải ±15 %); ô phải là độ lệch, kèm thanh ±1 SE do lấy mẫu. Hình LT6: ô trái là util theo λ ÷ C, kèm vạch dự đoán 1 − e^(−L) và mức 77 % mà trên đó A1 thêm pod; ô phải là running + waiting (thang log), kèm threshold A2. Tiêu đề mỗi ô ghi kết luận "tách được hay không", tính bằng `lt6_gpu_util.separation`.
+  3. Xem hình rồi sửa bố cục. Legend LT6 tràn khung, nên đổi từ 3 cột sang 2 cột. Vạch dự đoán của hai model nằm sát nhau (λ ÷ C 0,16 và 0,17) mà cùng màu đen, nên đổi sang màu của model. Nhãn S1-CONST2-1 lòi khỏi ô, nên chuyển sang bên trái điểm.
+  4. Chạy `/code-review high`: 10 điểm, sửa cả 10. Các điểm đáng kể:
+     - Tên model tra theo tên file trần, nên `capacity.json` của ĐG1 trên V2 sẽ bị ghi là "0,5B". Đã sửa: tra theo cặp (env, file).
+     - L_server = 0 làm trục log chia cho 0.
+     - LT6 gộp mọi phiên simulator vào một phép kiểm "tách được".
+     - `main` trả lỗi mà không báo những hình đã ghi.
+     - Nhãn vạch phụ của trục log dùng dấu chấm thập phân.
+     - Câu trong `van-hanh.md` không phân biệt hai cửa sổ cùng tên S1-CONST2-1, và chưa giải thích chấm rỗng là gì.
+  5. Thêm 5 test. Thêm dòng "Hình" và sửa dòng "Còn thiếu" của LT5, LT6 trong `van-hanh.md`.
+- **Decision:** D69. Chấm rỗng là cửa sổ có hàng đợi, theo `QUEUE_MIN` sẵn có của `lt5_little`; hình không tự phân loại "dừng/quá tải", vì bảng phân loại theo nhận định và CSV không có cột đó. Tên model tra bảng (env, file), không thêm cột model vào CSV. Không dùng hai trục tung cho util và L.
+- **Results:** `pytest analysis` 119 passed trên Python 3.15 và 3.11; `ruff check`, `ruff format --check` và lychee (`van-hanh.md`) đạt.
+  - LT5: 23 cửa sổ, trong đó 9 cửa sổ có hàng đợi. 22/23 nằm trong ±15 %; chỉ cửa sổ `steady` của S1-CONST2-1 trên simulator nằm ngoài (−35,5 %).
+  - LT6: util không tách được tải vừa khỏi quá tải ở cả hai model, và mức thấp nhất (0,780) vẫn trên 77 %. A2 tách được, khoảng hở 3,9× (1,5B) và 7,7× (0,5B).
+  - Mọi số khớp bảng LT5, LT6 trong `van-hanh.md`.
+- **Links:** nhánh `feat/tr8-lt5-lt6-figures`; `analysis/lt_charts.py`, `analysis/tests/test_lt_charts.py`, `analysis/figures/lt5-little.svg`, `analysis/figures/lt6-gpu-util.svg`, `docs/nhat-ky/van-hanh.md`.
+- **Thesis:** §5 LT5 (hình L_server theo λW, độ lệch kèm SE), §5 LT6 (hình util bão hoà so với L; A1 so với A2).
