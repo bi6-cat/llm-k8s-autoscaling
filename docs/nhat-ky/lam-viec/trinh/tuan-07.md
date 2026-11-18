@@ -312,3 +312,9 @@
   - Mọi số khớp bảng LT5, LT6 trong `van-hanh.md`.
 - **Links:** nhánh `feat/tr8-lt5-lt6-figures`; `analysis/lt_charts.py`, `analysis/tests/test_lt_charts.py`, `analysis/figures/lt5-little.svg`, `analysis/figures/lt6-gpu-util.svg`, `docs/nhat-ky/van-hanh.md`.
 - **Thesis:** §5 LT5 (hình L_server theo λW, độ lệch kèm SE), §5 LT6 (hình util bão hoà so với L; A1 so với A2).
+
+## 2026-11-18 – TR8: merge PR #50 (hình LT5, LT6)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** CI xanh cả 6 job (alerts, docs, manifests, python 3.11 và 3.15, yaml); `mergeable` = MERGEABLE, không có review hay bình luận; merge bằng merge commit `4dc5c42`, xoá nhánh `feat/tr8-lt5-lt6-figures`. Từ đây LT5–LT8 đều có hình trong `analysis/figures/`.
+- **Links:** PR #50.
