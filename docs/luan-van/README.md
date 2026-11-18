@@ -18,6 +18,7 @@ Thư mục này chứa **nội dung** luận văn, viết bằng Markdown, mỗi
 | `tai-lieu.bib` | Danh mục tài liệu tham khảo dùng chung (BibTeX) |
 
 - **Mỗi file chỉ một người viết**, là người sở hữu mục đó theo §5.1, nên hai người không sửa cùng một file. Muốn góp ý mục của người kia thì góp qua review PR.
+- Mục mà §5.1 chia cho hai người (như 3.3, 4.11) tách thành phần `a`, `b`: `03-03a-<ten>.md` có tiêu đề `## 3.3.` và các tiểu mục của người thứ nhất, `03-03b-<ten>.md` chỉ có các tiểu mục `###` của người thứ hai. Hai người thống nhất số tiểu mục trước khi viết.
 - Dòng đầu mỗi file là comment `<!-- Mục đích: … Người viết: … -->` (CONTRIBUTING §2). Comment HTML không xuất hiện trong `.docx`.
 - Tiêu đề trong file mục: `## 3.4. …`, `### 3.4.1. …`. Số mục đánh tay, khớp dàn ý §11.1.
 - Hình lấy thẳng từ chỗ gốc, không chép vào đây: sơ đồ ở `docs/images/png/` (sinh từ `docs/diagrams/`), biểu đồ kết quả ở `analysis/figures/`.
@@ -28,7 +29,7 @@ Thư mục này chứa **nội dung** luận văn, viết bằng Markdown, mỗi
 - **Thuật ngữ:** lần đầu xuất hiện thì ghi tiếng Việt, kèm tiếng Anh in nghiêng và chữ viết tắt, ví dụ "thời gian tới token đầu (*time to first token*, TTFT)". Từ đó trở đi dùng chữ viết tắt hoặc thuật ngữ tiếng Anh (GPU replica, threshold, burn rate…), như quy ước của `AGENTS.md`.
 - **Tên metric, resource, file, lệnh** đặt trong `code`.
 - **Số:** dấu phẩy thập phân (2,5 s), dấu chấm phân nghìn (1.942), một dấu cách giữa số và đơn vị (16 GB, 180 s), phần trăm viết liền (95%).
-- **Hình:** `![Hình 3.1. <chú thích>](../images/png/<tên>.png)`, chú thích nằm dưới hình. **Bảng:** dòng `**Bảng 3.1.** <chú thích>` đặt ngay trên bảng. Hình và bảng đánh số theo chương, theo thứ tự xuất hiện. Hình nào, bảng nào cũng phải được nhắc tới trong bài (mốc M4).
+- **Hình:** `![Hình 3.1. <chú thích>](../images/png/<tên>.png)`, chú thích nằm dưới hình. **Bảng:** dòng `**Bảng 3.1.** <chú thích>` đặt ngay trên bảng. Hình và bảng đánh số theo chương, theo thứ tự xuất hiện. Hình nào, bảng nào cũng phải được nhắc tới trong bài (mốc M4). Mục viết khi các mục đứng trước trong chương chưa có thì dùng số tạm theo mục (`Bảng 3.4a`, `Hình 3.4a`), ghi điều đó ở dòng comment thứ hai của file, và đánh lại khi ghép chương.
 - **Dẫn chéo:** "(mục 3.4.2)", "(chương 5)". Thân bài không link tới `docs/`, vì luận văn phải đọc được độc lập; đường dẫn nội bộ chỉ nằm trong comment nguồn.
 - **Trích dẫn:** `[@key]`, với `key` có trong `tai-lieu.bib`. Kiểu hiển thị (ví dụ IEEE đánh số `[1]`) chốt ở bước định dạng, nên không đánh số tay.
 - **Công thức:** `$…$` trong dòng, `$$…$$` cho công thức riêng một dòng. Pandoc chuyển thành công thức Word.
@@ -47,7 +48,7 @@ Sau mỗi đoạn văn hoặc bảng có số liệu hay khẳng định kỹ th
 
 ## Ghép thành .docx
 
-Pandoc 3.13 (bản đã thử). Chạy từ gốc repo, ghi file ra ngoài repo:
+Pandoc 3.13 (ghim ở [docs/phien-ban.md](../phien-ban.md)). Chạy từ gốc repo, ghi file ra ngoài repo:
 
 ```bash
 pandoc docs/luan-van/[0-9]*.md \
