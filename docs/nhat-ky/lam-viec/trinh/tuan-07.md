@@ -318,3 +318,29 @@
 - **Task:** TR8 · **Environment:** none
 - **Done:** CI xanh cả 6 job (alerts, docs, manifests, python 3.11 và 3.15, yaml); `mergeable` = MERGEABLE, không có review hay bình luận; merge bằng merge commit `4dc5c42`, xoá nhánh `feat/tr8-lt5-lt6-figures`. Từ đây LT5–LT8 đều có hình trong `analysis/figures/`.
 - **Links:** PR #50.
+
+## 2026-11-18 – Luận văn: khung `docs/luan-van/` và mục 3.4
+
+- **Task:** chung (ghép luận văn), TR3, TR4 · **Environment:** none
+- **Done:**
+  1. Dựng `docs/luan-van/`: `README.md` gồm tổ chức file `CC-SS-<ten>.md` (mỗi file một người viết), quy ước văn phong, thuật ngữ, số, hình, bảng, trích dẫn `[@key]` với `tai-lieu.bib`, comment nguồn sau mỗi đoạn có số, và lệnh pandoc ghép ra `.docx`. Thêm thư mục vào CONTRIBUTING §1.
+  2. Cài pandoc 3.13 (bản zip, sha256 khớp digest của GitHub release) vào `~/.local/bin`.
+  3. Viết mục 3.4 "Thiết kế giám sát, SLO và cảnh báo": một agent viết từ nguồn trong repo, một agent khác đối chiếu từng con số và khẳng định. Bản soát báo 25 điểm: 7 sai sự kiện nhẹ, 6 lập luận sai hoặc thiếu, 4 thiếu nguồn, 2 quy ước, 6 văn. Sửa 24 điểm; giữ số bảng tạm `3.4a`–`3.4d` đến khi ghép chương 3.
+  4. Tự chạy lại bằng promtool điểm đáng kể nhất của bản soát (Incidents).
+  5. Kiểm 6 URL trong bib (HTTP 200 ngày 18/11) và đổi sang URL của đúng phiên bản đã ghim (vLLM v0.31.0, KEDA 2.21, chart 92.1.1).
+- **Decision:**
+  - D70: bản nguồn luận văn bằng Markdown, mỗi mục một file, ghép bằng pandoc; khuôn của trường áp ở W9 qua `--reference-doc`. Bỏ Word/Google Docs (không xem diff, không gắn nguồn cho số liệu), LaTeX (khuôn và góp ý của GVHD đi qua Word), một file một chương (Quang và Trình cùng sửa một file).
+  - D71: giữ nguyên `LLMErrorRateHigh` trong đợt đánh giá, vì sát ngày đóng băng 22/11 và không muốn đổi cấu hình đã kiểm thử. Mục 3.4 ghi đúng hành vi thật và nêu hướng cải tiến (burn rate hai cửa sổ). Comment trong `llm.yaml` và Vận hành §3.2 sửa ở PR đồng bộ tài liệu sau.
+  - Không chèn Hình 7 (`07-slo-canh-bao-runbook`), vì hình lệch với cái đã làm ở 6 chỗ: ghi DCGM; có cảnh báo nhiệt độ và XID chưa làm; có "thắt giới hạn tốc độ" (rate limit đã lược); thiếu condition của ScaledObject; ghi "chặn trùng" như quy tắc riêng, thực ra là mặc định của chart; ghi Argo CD, trong khi VM thuê không có. Sửa hình ở PR riêng.
+- **Results:** `03-04-giam-sat-slo-canh-bao.md` có khoảng 1.900 từ thân bài, 4 bảng, 6 tài liệu tham khảo. `pandoc … --citeproc` ra `.docx` không lỗi, không cảnh báo trích dẫn; lychee 0 lỗi.
+- **Incidents:** comment của `LLMErrorRateHigh` trong `llm.yaml` và Vận hành §3.2 nói `for: 1m` để không page vì vài lỗi 503 lẻ khi chuyển pod. Điều này sai: ngưỡng 1% tính trên cửa sổ 5 phút, đợt lỗi nằm trong cửa sổ suốt 5 phút, nên `for` không lọc được. Thử bằng promtool (1 req/s, một đợt 5 lỗi 503 ở phút 10): firing lúc 12m và 14m, hết lúc 16m.
+- **Deviations:** các điểm thiết kế lệch với cái đã làm, tìm được khi viết và soát (sửa ở PR đồng bộ tài liệu):
+  - Vận hành §2.3: câu "`1 − tốt/tổng` cho 100% xấu khi không có traffic" sai; bản soát thử bằng promtool, cả hai dạng đều ra NaN.
+  - Vận hành §2.1 ghi TPOT là `vllm:inter_token_latency_seconds`; dashboard dùng `vllm:request_time_per_output_token_seconds` (bucket `le="0.1"`).
+  - Vận hành §11 nói unit test kiểm cặp cửa sổ 1h/5m; test chỉ có cặp 5m/1m.
+  - Thông số §9.4 ghi retention ở cloud 15 ngày; `envs/cloud/platform/` không đặt, nên dùng mặc định của chart.
+  - Thông số §7 ghi máy tạo tải đi qua route riêng của Traefik; route này đã lược và `matrix-v2.yaml` gọi thẳng Service, nên `llm:error_ratio:rate5m` rỗng trong các lượt đánh giá.
+  - Hai runbook còn khuyên "thắt giới hạn tốc độ"; comment cũ ở `slo.yaml` (bucket "còn phải xác nhận") và README của dashboard (hàng KEDA "chưa làm").
+  - Chưa kiểm: severity của `TargetDown` trong chart 92.1.1 (nếu là warning thì exporter chết sẽ không có tin Telegram).
+- **Links:** nhánh `docs/tr4-thesis-monitoring-design`; `docs/luan-van/README.md`, `docs/luan-van/03-04-giam-sat-slo-canh-bao.md`, `docs/luan-van/tai-lieu.bib`, `CONTRIBUTING.md` §1.
+- **Thesis:** §3.4 (bản nháp đầu); Hạn chế (chưa có dead man's switch; `LLMErrorRateHigh` nhạy với đợt lỗi ngắn ở tải thấp); chương 6 (hướng cải tiến cảnh báo lỗi).

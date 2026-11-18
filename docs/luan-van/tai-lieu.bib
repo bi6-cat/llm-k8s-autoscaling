@@ -1,0 +1,44 @@
+% Mục đích: danh mục tài liệu tham khảo chung của luận văn (BibTeX, đọc bằng pandoc --citeproc).
+% Quy ước: key viết thường, nối bằng "-", dạng <tác giả hoặc dự án>-<chủ đề>, ví dụ sre-workbook.
+% Chỉ thêm tài liệu có thật và đã đọc; tài liệu web ghi url và urldate (ngày truy cập).
+% Tài liệu của phần mềm đã ghim: dùng URL của đúng phiên bản trong docs/phien-ban.md.
+% Tên tài liệu giữ nguyên ngôn ngữ gốc (kiểu trích dẫn tự viết hoa từng từ của tên tiếng Anh).
+% Danh mục gốc của đồ án: docs/mo-ta-chi-tiet-do-an.md, mục "Tài liệu tham khảo".
+
+@book{sre-workbook,
+  editor    = {Beyer, B. and Murphy, N. R. and Rensin, D. K. and Kawahara, K. and Thorne, S.},
+  title     = {The Site Reliability Workbook},
+  publisher = {O'Reilly},
+  year      = {2018}
+}
+
+@online{prometheus-alerting,
+  title   = {Prometheus Documentation: Alerting overview},
+  url     = {https://prometheus.io/docs/alerting/latest/overview/},
+  urldate = {2026-11-18}
+}
+
+@online{kube-prometheus-stack,
+  title   = {kube-prometheus-stack Helm chart, version 92.1.1},
+  author  = {{Prometheus Community}},
+  url     = {https://github.com/prometheus-community/helm-charts/tree/kube-prometheus-stack-92.1.1/charts/kube-prometheus-stack},
+  urldate = {2026-11-18}
+}
+
+@online{vllm-metrics,
+  title   = {vLLM Documentation v0.31.0: Metrics},
+  url     = {https://docs.vllm.ai/en/v0.31.0/design/metrics/},
+  urldate = {2026-11-18}
+}
+
+@online{keda-prometheus-scaler,
+  title   = {KEDA Documentation 2.21: Prometheus scaler},
+  url     = {https://keda.sh/docs/2.21/scalers/prometheus/},
+  urldate = {2026-11-18}
+}
+
+@online{keda-scaledobject-spec,
+  title   = {KEDA Documentation 2.21: ScaledObject specification},
+  url     = {https://keda.sh/docs/2.21/reference/scaledobject-spec/},
+  urldate = {2026-11-18}
+}
