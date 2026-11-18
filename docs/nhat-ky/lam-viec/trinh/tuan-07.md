@@ -345,3 +345,9 @@
   - Chưa kiểm: severity của `TargetDown` trong chart 92.1.1 (nếu là warning thì exporter chết sẽ không có tin Telegram).
 - **Links:** nhánh `docs/tr4-thesis-monitoring-design`; `docs/luan-van/README.md`, `docs/luan-van/03-04-giam-sat-slo-canh-bao.md`, `docs/luan-van/tai-lieu.bib`, `CONTRIBUTING.md` §1.
 - **Thesis:** §3.4 (bản nháp đầu); Hạn chế (chưa có dead man's switch; `LLMErrorRateHigh` nhạy với đợt lỗi ngắn ở tải thấp); chương 6 (hướng cải tiến cảnh báo lỗi).
+
+## 2026-11-18 – Luận văn: merge PR #51 (khung `docs/luan-van/`, mục 3.4)
+
+- **Task:** chung, TR3, TR4 · **Environment:** none
+- **Done:** CI xanh cả 6 job (alerts, docs, manifests, python 3.11 và 3.15, yaml); `mergeable` = MERGEABLE, không có review hay bình luận; merge bằng merge commit `626769e`, xoá nhánh `docs/tr4-thesis-monitoring-design`. Commit nhật ký merge PR #50 (`d6f03d9`) vào cùng PR này.
+- **Links:** PR #51.
