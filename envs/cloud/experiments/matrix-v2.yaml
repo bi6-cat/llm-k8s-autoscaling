@@ -17,8 +17,10 @@
 # giá trị, `*tên` dùng lại giá trị đó), nên điền một chỗ là đủ. matrix.py bỏ qua khoá gốc bắt đầu bằng
 # `x-` như `x-adr003`; khoá lạ khác thì báo lỗi.
 x-adr003:
-  C: &C null                           # req/s; capacity.json → "C"
-  A2_threshold: &A2_THRESHOLD null     # 0,8 × B*; capacity.json → threshold.A2_concurrency
+  # 18/11: ĐG1 chính thức trên VM 4 × RTX 4060 Ti 16 GB (không có máy A4000, ADR-006 C2), phiên
+  # dg1-v2-4060ti, 5 mức đều hợp lệ: λ = 3,5 đạt SLO 100 % (B = 46,3), λ = 4 chỉ 28,5 %.
+  C: &C 3.5                            # req/s; capacity.json → "C"
+  A2_threshold: &A2_THRESHOLD 37       # 0,8 × B* = 0,8 × 46,3; capacity.json → threshold.A2_concurrency
   # N = số GPU = max replica của A1, A2 = số replica của S4 = N trong đỉnh 0,75 × N × C của KB2, KB3.
   # Chốt 4 ngày 08/11 (V1 chạy được trên VM 4 × A4000). Nếu máy V2 chỉ có 2 GPU thì đổi thành 2 và viết
   # lại N3 theo N (ADR-005 T12); kịch bản không cần sửa gì thêm, vì đỉnh KB2, KB3 tự tính theo N.
