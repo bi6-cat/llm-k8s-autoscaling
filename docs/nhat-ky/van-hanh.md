@@ -443,3 +443,19 @@ Chạy bằng `experiments.ops.vh`, tải CONST 2,5 req/s, A2 threshold 39, Qwen
 - **vh3-delete không đạt vì điều kiện chạy, không phải vì hệ thống:** tải thấp nên chỉ có 1 pod; xoá pod duy nhất thì 61 s không có ai phục vụ. Lần chính thức phải có ≥ 2 pod Ready trước khi xoá.
 - **vh2a:** thời gian rolling update gần bằng grace period 180 s, do vLLM không dừng khi nhận SIGTERM (xem mục 06/11).
 - Chưa chạy: vh2b, vh2c, vh3-drain (drain cần ≥ 2 node).
+
+## 2026-11-18 – V2 trên VM 4 × RTX 4060 Ti: dựng cluster, ĐG1 chính thức, bắt đầu ma trận
+
+- **Môi trường:** Vast, chế độ VM, thuê qua giao diện web, Canada; 4 × RTX 4060 Ti 16 GB, 61 vCPU, 197 GB RAM; Qwen2.5-3B, vLLM 0.31.0, N = 4.
+- **Máy bỏ:** 4 × RTX 4090 (1,5 USD/giờ): cổng SSH timeout khoảng 15 phút, không cài được gì.
+- **Dựng:** `bootstrap` 5 phút 8 giây (0 failed), `cloud-platform` 82 s, vLLM Ready sau 90 s; từ máy trắng tới vLLM Ready 8 phút 22 giây.
+- **ĐG1:** 5 mức λ, đều hợp lệ → C = 3,5 req/s, B\* = 46,3, threshold A2 = 37. Bảng ở [nhật ký Quang tuần 07](lam-viec/quang/tuan-07.md).
+- **Ma trận ĐG2:** 17 lượt chạy bằng runner trong tmux trên VM, `--no-backup`, 16:30 → 23:44; **17/17 hợp lệ**. A2 × KB2 chỉ đạt SLO khoảng 80 % (phản ứng 80–82 s); các ô khác của A1, A2, S4 đạt 100 %. Bảng ở [nhật ký Quang tuần 07](lam-viec/quang/tuan-07.md).
+- **Chi phí:** 1,5 USD/giờ cả máy (Quang báo theo trang Vast). Ước tính: ĐG1 + ma trận khoảng 9–10 giờ ≈ 14–15 USD; cộng ĐG3, VH trong cùng lần thuê. Số thực ghi khi trả máy.
+
+## 2026-11-19 – V2: ĐG3, VH2–VH4 trên N = 4, trả máy
+
+- **ĐG3:** L2 = 76 / 76 / 81 s, L0 = 311 / 300 s (L0 đo 0 → 1 vì containerd không xoá được image đang dùng). 3 lượt đầu hỏng do lỗi `wait_count` trong `dg3.sh`, đã sửa và đo lại.
+- **VH (1,75 req/s):** vh2a, vh2b (371,6 s), vh2c (kẹt có pod Pending), vh3-delete (67,4 s, 0 lỗi), vh4 (fallback 16,8 s) đạt, 0 lỗi. vh3-kill: restart 67,4 s nhưng 129 lỗi, khả năng cao do chỉ có 1 pod lúc kill.
+- **Trả máy:** VM `poweroff` 02:05 ngày 19/11 sau khi kiểm sha256 mọi file; Quang xoá instance trên Vast ngày 19/11. Chi phí thực tế: chưa có.
+- Chi tiết ở [nhật ký Quang tuần 07](lam-viec/quang/tuan-07.md).
