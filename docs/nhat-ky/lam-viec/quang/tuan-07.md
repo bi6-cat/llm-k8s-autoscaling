@@ -315,5 +315,5 @@
   7. Viết `docs/luan-van/nguon-tu-lieu.md`: bản đồ nguồn, nguồn cho từng mục luận văn theo §5.1, bảng số liệu đã chốt kèm nơi gốc, danh sách chưa có số, cách lấy dữ liệu V2, các hạn chế đã biết, link 12 trang artifact.
 - **Decision:** gửi dữ liệu V2 cho Trình bằng file nén thay vì commit vào Git (`runs/` bị gitignore, 36 MB) hay R2 (PC chưa có `.env`). Không commit hình C1–C4: thuộc TR7, Trình xem bố cục rồi commit.
 - **Incidents:** các trang artifact mặc định chỉ Quang xem được; Trình chỉ mở được sau khi Quang bấm Share. Repo công khai, nên không chia sẻ kiểu ai có link cũng xem.
-- **Links:** `envs/cloud/experiments/capacity.json`, `docs/luan-van/nguon-tu-lieu.md`, `docs/luan-van/README.md`.
+- **Links:** PR #52 (nhánh `feat/v2-results-1911`, reviewer Trình); `envs/cloud/experiments/capacity.json`, `docs/luan-van/nguon-tu-lieu.md`, `docs/luan-van/README.md`.
 - **Thesis:** dùng cho mọi chương (file nguồn); §5.2 (`capacity.json` trong Git).
