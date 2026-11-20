@@ -317,3 +317,13 @@
 - **Incidents:** CI của PR #52 không chạy: cả 6 job dừng sau 1–2 s với "account is locked due to a billing issue" (tài khoản GitHub `bi6-cat`), nên lychee và pytest chưa chạy trên PR. Các trang artifact mặc định chỉ Quang xem được; Trình chỉ mở được sau khi Quang bấm Share. Repo công khai, nên không chia sẻ kiểu ai có link cũng xem.
 - **Links:** PR #52 (nhánh `feat/v2-results-1911`, reviewer Trình); `envs/cloud/experiments/capacity.json`, `docs/luan-van/nguon-tu-lieu.md`, `docs/luan-van/README.md`.
 - **Thesis:** dùng cho mọi chương (file nguồn); §5.2 (`capacity.json` trong Git).
+
+## 2026-11-20 – Sửa 2 test Python đỏ trên PR #52; quy tắc viết luận văn chung
+
+- **Task:** Q6, chung (luận văn) · **Environment:** none
+- **Done:**
+  1. Sau khi tài khoản GitHub hết bị khoá, CI của PR #52 chạy: 4 job đạt, `python (3.11)` và `python (3.15)` đỏ ở 2 test trong `experiments/tests/test_runner.py`. Nguyên nhân: hai test giả định `matrix-v2.yaml` còn để `null` (bản nháp chờ ADR-003), còn commit `a44ae71` đã điền C = 3,5 và threshold 37. Sửa: test "từ chối khi chưa điền" dựng lại bản nháp bằng cách thay hai số về `null`; test cấu trúc kiểm file thật và so C, threshold với `envs/cloud/experiments/capacity.json` thay cho số giả 5 và 24. `pytest experiments`: 168 passed trên Python mặc định và 3.11; `ruff check`, `ruff format --check` đạt. Sửa trong worktree riêng vì thư mục làm việc chính đang ở `main`.
+  2. Viết `docs/luan-van/quy-tac-viet.md`: thứ tự ưu tiên (khuôn trường > README > file này), vai trò từng chương, khung 6 bước cho chương 4 (tránh R21), văn phong và ba mức chắc chắn, bảng thuật ngữ và tên gọi thống nhất, quy tắc số liệu và nhãn nguồn gốc, hình/bảng/mã, trích dẫn, phối hợp và review, dùng AI agent, checklist trước PR. Thêm dòng vào bảng file của README.
+- **Decision:** phần định dạng (phông, lề, giãn dòng) để trống chờ khuôn của trường, không tự đặt số; chỉ ghi các thông lệ không phụ thuộc khuôn.
+- **Links:** PR #52; `experiments/tests/test_runner.py`, `docs/luan-van/quy-tac-viet.md`, `docs/luan-van/README.md`.
+- **Thesis:** quy tắc chung cho mọi chương.
