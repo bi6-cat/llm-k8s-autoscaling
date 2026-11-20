@@ -16,6 +16,7 @@ Thư mục này chứa **nội dung** luận văn, viết bằng Markdown, mỗi
 | `CC-SS-<ten>.md` | Chương `CC`, mục `SS`. Hai chữ số để thứ tự khi ghép đúng với thứ tự mục, ví dụ `03-04-giam-sat-slo-canh-bao.md` đứng trước `04-10-bao-mat.md` |
 | `CC-00-<ten>.md` | Tiêu đề chương (`# Chương CC. …`) và đoạn mở đầu chương |
 | `tai-lieu.bib` | Danh mục tài liệu tham khảo dùng chung (BibTeX) |
+| [`quy-tac-viet.md`](quy-tac-viet.md) | Quy tắc viết chung cho hai người: chương nào nói gì, văn phong, thuật ngữ thống nhất, trình bày kết quả, review, checklist trước PR. Không ghép vào `.docx` |
 | [`nguon-tu-lieu.md`](nguon-tu-lieu.md) | Mục nào lấy tư liệu ở đâu, số liệu đã chốt, những gì chưa có số, cách lấy dữ liệu V2. Không ghép vào `.docx` |
 
 - **Mỗi file chỉ một người viết**, là người sở hữu mục đó theo §5.1, nên hai người không sửa cùng một file. Muốn góp ý mục của người kia thì góp qua review PR.
