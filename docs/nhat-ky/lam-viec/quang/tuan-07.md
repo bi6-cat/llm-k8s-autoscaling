@@ -301,3 +301,19 @@
 - **Deviations:** vh3-kill chạy khi (có lẽ) chỉ 1 pod, khác ý của VH3 ("chỉ lỗi các request đang chạy trên pod đó").
 - **Links:** `runs/v2-vm/dg3-v2-4060ti/*/summary.txt`, `runs/v2-vm/ops-vh*/summary.json`, `runs/v2-vm/v2-dg2/tables/`; báo cáo tổng hợp V2 (Artifact, link trong phiên Claude).
 - **Thesis:** §5.3 (A2 × KB2: hàng đợi kẹt ở pod cũ, hình hàng đợi theo pod), §5.4 cold start (L2 77,7 s, L0 305,5 s), §Hạn chế (load balancing không biết hàng đợi; vh3-kill 1 pod), chương vận hành (VH2–VH4 trên N = 4).
+
+## 2026-11-20 – Rà tiến độ sau V2, đẩy dữ liệu V2 cho Trình, file nguồn tư liệu luận văn
+
+- **Task:** Q6, chung (luận văn) · **Environment:** none
+- **Done:**
+  1. Rà tiến độ theo Kế hoạch §3: M1 7/7; M2 còn T6, T7, bảo mật, Telegram, VH6 ở nhà; M3 đã có dữ liệu ĐG1, ĐG2, ĐG3, VH2–VH4 nhưng còn thiếu ADR-003, bảng nghiệm thu, chi phí thực tế, bản sao lưu thứ hai; M4 mới có bản nháp 3.4 của Trình.
+  2. Merge `origin/main` (PR #50, #51) vào `feat/v2-results-1911`, không conflict. Nhánh trước đó có 4 commit chưa push.
+  3. Chép `runs/dg1-v2-4060ti/capacity.json` vào `envs/cloud/experiments/capacity.json`; chỉ đặt `status` = `v2-official` và `note`, mọi trường số giữ nguyên (so bằng script: chỉ 2 khoá khác).
+  4. Kiểm `runs/v2-evidence/SHA256SUMS`: 638/639 khớp; file lệch là `vm-final-state.txt`, ghi lúc 02:05:02, sau khi lập danh sách lúc 02:04:59 ngày 19/11, nên không phải hỏng dữ liệu.
+  5. Nén `runs/dg1-v2-4060ti`, `runs/v2-vm`, `runs/v2-evidence` thành `runs/_share/v2-data-20261119.tar.gz` (9.975.434 byte, 835 mục) kèm file `.sha256`, để Quang gửi Trình.
+  6. Chạy thử `analysis.charts runs/v2-vm/v2-dg2` (ra thư mục tạm): ra 6 hình C1 (3 lượt KB2), C2, C3, C4, không lỗi. Chưa xem bố cục, chưa commit (việc của TR7).
+  7. Viết `docs/luan-van/nguon-tu-lieu.md`: bản đồ nguồn, nguồn cho từng mục luận văn theo §5.1, bảng số liệu đã chốt kèm nơi gốc, danh sách chưa có số, cách lấy dữ liệu V2, các hạn chế đã biết, link 12 trang artifact.
+- **Decision:** gửi dữ liệu V2 cho Trình bằng file nén thay vì commit vào Git (`runs/` bị gitignore, 36 MB) hay R2 (PC chưa có `.env`). Không commit hình C1–C4: thuộc TR7, Trình xem bố cục rồi commit.
+- **Incidents:** các trang artifact mặc định chỉ Quang xem được; Trình chỉ mở được sau khi Quang bấm Share. Repo công khai, nên không chia sẻ kiểu ai có link cũng xem.
+- **Links:** `envs/cloud/experiments/capacity.json`, `docs/luan-van/nguon-tu-lieu.md`, `docs/luan-van/README.md`.
+- **Thesis:** dùng cho mọi chương (file nguồn); §5.2 (`capacity.json` trong Git).
