@@ -327,3 +327,15 @@
 - **Decision:** phần định dạng (phông, lề, giãn dòng) để trống chờ khuôn của trường, không tự đặt số; chỉ ghi các thông lệ không phụ thuộc khuôn.
 - **Links:** PR #52; `experiments/tests/test_runner.py`, `docs/luan-van/quy-tac-viet.md`, `docs/luan-van/README.md`.
 - **Thesis:** quy tắc chung cho mọi chương.
+
+## 2026-11-20 – Khung luận văn trên Google Docs
+
+- **Task:** chung (luận văn) · **Environment:** none
+- **Done:**
+  1. Đề xuất khung luận văn (trang artifact riêng tư): 6 chương, đầu quyển, phụ lục; mỗi mục có người viết, số trang, trạng thái tư liệu, nguồn. Tổng đề xuất khoảng 60 trang thân bài (Quang khoảng 31, Trình khoảng 29). Quang đồng ý 5 điểm chốt: LT1–LT8 thành mục 5.6 (5.6a Quang, 5.6b Trình); chủ chương viết mở đầu và kết chương (chương 1, 2, 4 Quang; 3, 5, 6 Trình); 5.8 Trình, 5.9 Quang; đầu quyển và danh mục chữ viết tắt Trình; danh mục tài liệu đứng trước phụ lục.
+  2. Theo yêu cầu của Quang, thêm mục 4.12 "Tổng hợp khó khăn và cách vượt qua" và phần khó khăn trong từng mục chương 4. Bảng tư liệu 14 dòng lọc từ `van-hanh.md` và nhật ký tuần 05–07 (triệu chứng, nguyên nhân, cách vượt qua, bài học, nguồn); giả thuyết chưa kiểm ghi rõ "chưa kiểm".
+  3. Tạo thư mục Drive "Luận văn vLLM autoscaling" và một Google Doc khung cho cả quyển (tạo từ HTML: chương là Heading 1, mục là Heading 2). Mỗi mục: ghi chú xám (người viết, trang, trạng thái, câu hỏi phải trả lời, nguồn) và dòng [Chưa viết]. Đọc lại doc sau khi tạo: đủ mọi mục và bảng.
+- **Decision:** Quang chọn viết trên Google Docs để hai người sửa chung, thay cho Markdown trong `docs/luan-van/` + pandoc (D70 của Trình, 18/11). Một doc cho cả quyển để mục lục và dẫn chéo tự động. Nguồn của số liệu ghi bằng chữ xám "[nguồn: …]" sau đoạn, xoá trước khi nộp; góp ý mục của người kia bằng Comment/Suggesting. `quy-tac-viet.md` và `nguon-tu-lieu.md` vẫn ở repo. Cần Trình đồng ý, sau đó sửa README của `docs/luan-van/` cho khớp; mục 3.4 (Markdown, đã merge) Trình chép sang doc.
+- **Deviations:** lệch D70 và README `docs/luan-van/` (Markdown mỗi mục một file). Doc chưa chia sẻ cho Trình (cần email của Trình).
+- **Links:** PR #52; Google Doc trong thư mục Drive của Quang (không ghi link vào repo công khai).
+- **Thesis:** khung cho mọi chương; 4.12.
