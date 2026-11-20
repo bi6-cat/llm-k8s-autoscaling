@@ -351,3 +351,17 @@
 - **Task:** chung, TR3, TR4 · **Environment:** none
 - **Done:** CI xanh cả 6 job (alerts, docs, manifests, python 3.11 và 3.15, yaml); `mergeable` = MERGEABLE, không có review hay bình luận; merge bằng merge commit `626769e`, xoá nhánh `docs/tr4-thesis-monitoring-design`. Commit nhật ký merge PR #50 (`d6f03d9`) vào cùng PR này.
 - **Links:** PR #51.
+
+## 2026-11-20 – Kiểm tiến độ V2; review PR #46 (`vh3-delete` giữ 2 pod)
+
+- **Task:** chung (tiến độ V2), Q6 (review) · **Environment:** none
+- **Done:**
+  1. `git fetch`, xem commit trên mọi nhánh, PR, nhật ký của Quang và `van-hanh.md`.
+  2. Review PR #46: đọc diff `experiments/ops/vh.py` và test; ghép nhánh với `origin/main` trong một worktree tạm; chạy test và ruff.
+- **Results:**
+  - Tính tới 20/11, **V2 chưa chạy**. Commit cuối của Quang là 16/11 22:44. Phiên 16/11 trên 2 × RTX 4000 Ada (N = 2) là phiên thử: ĐG1 rút gọn ra C = 5,0 req/s; 2 lượt autoscaling invalid vì máy tạo tải thiếu CPU; 4 kịch bản VH chỉ là số thử. Dữ liệu thử nằm trong `runs/` trên máy của Quang, không có trong Git. Đóng băng dữ liệu theo lịch là 22/11.
+  - PR #46: ghép với `main` không xung đột. `pytest experiments` 162 passed, 4 failed; 4 test hỏng (`test_backup_notify`, rclone giả không chạy trên Windows) hỏng y hệt trên `main` (161 passed, 4 failed). `ruff check` và `ruff format --check` sạch. CI của PR xanh.
+  - Logic của PR đúng. Điểm chính tìm được: bước chờ pod thứ hai (tới 900 s) nằm trong cửa sổ tải cố định 780 s, và chưa có kiểm "sự cố xảy ra khi tải còn chạy". Nếu pod thứ hai Ready sau khoảng 780 s, lệnh xoá chạy khi tải đã dừng, 0 lỗi, vẫn chấm đạt. Ca thường không bị: cold start đo được 66–152 s, nên lệnh xoá rơi vào khoảng 190–270 s. vh2a có cùng rủi ro (chờ rollout tới 1800 s, tải 1200 s). Hai điểm nhỏ: lỗi của `scale_min(1)` trong `finally` đè lên lỗi gốc; bảng VH3 ở `05-moi-truong-danh-gia.md:474` chưa ghi điều kiện "còn ≥ 2 pod Ready".
+- **Incidents:** test của `experiments` không chạy trọn trên Windows (4 test cần shell script giả). Chỉ CI trên Linux chạy đủ.
+- **Links:** PR #46; `experiments/ops/vh.py`.
+- **Thesis:** §Hạn chế hoặc tiến độ: mốc V2 trễ so với lịch 14–15/11.
