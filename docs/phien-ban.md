@@ -30,5 +30,6 @@ Tra ngày 09/10/2026; các dòng của CI tra ngày 01/11/2026. Đổi phiên b�
 | amtool (CI và `make alertmanager-check`) | `0.34.1`, trùng Alertmanager của chart kube-prometheus-stack 92.1.1 (tra 15/11) | `.github/workflows/ci.yaml`; máy cá nhân cài cùng bản |
 | yamllint (CI) | `1.38.0`; phụ thuộc giải theo mốc 01/11/2026 (PyYAML 6.0.3, pathspec 1.1.1) | `.github/workflows/ci.yaml` |
 | actionlint, shellcheck, lychee (CI) | `1.7.12`, `0.11.0`, `0.24.2` | `.github/workflows/ci.yaml` |
+| pandoc (ghép luận văn ra `.docx`, không chạy trong CI) | `3.13` (bản zip của GitHub release, kiểm sha256 theo digest của release) | `docs/luan-van/README.md`; máy cá nhân |
 | uv, Python (CI cho `loadgen/`) | `0.13.1`; Python `3.11` và `3.15` | `.github/workflows/ci.yaml` |
 | GitHub Actions | `actions/checkout@v7.0.1`, `astral-sh/setup-uv@v10.3.2`, ghim theo commit SHA | `.github/workflows/ci.yaml` |

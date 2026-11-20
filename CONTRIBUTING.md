@@ -53,6 +53,7 @@ llm-k8s-autoscaling/
     ├── adr/NNN-<ten>.md          # quyết định kiến trúc
     ├── runbooks/<TênCảnhBáo>.md  # mỗi cảnh báo một file
     ├── nhat-ky/                  # tuan-XX.md (họp), van-hanh.md, lam-viec/<người>/ (cá nhân)
+    ├── luan-van/                 # bản nguồn luận văn: CC-SS-<ten>.md (mỗi mục một file), tai-lieu.bib
     └── phien-ban.md              # bảng ghim phiên bản duy nhất
 ```
 
@@ -68,6 +69,7 @@ Cấu trúc này có từ 12/11/2026. Trước đó repo chia theo thành phần
 | Cấu hình chỉ dùng khi đánh giá | `common/autoscaling/eval/` hoặc `envs/<env>/experiments/` (không để Argo CD quản lý) |
 | Script vận hành một lần | `experiments/ops/` (kịch bản VH) hoặc `envs/cloud/provision/` (máy thuê); gọi qua `make` |
 | Hình cho luận văn | `docs/images/` (sinh từ `docs/diagrams/`) |
+| Nội dung luận văn | `docs/luan-van/CC-SS-<ten>.md`, quy ước ở [docs/luan-van/README.md](docs/luan-van/README.md) |
 
 Môi trường (`<env>`) chỉ có ba giá trị: `home` (PC ở nhà), `cloud` (VM thuê), `sim` (kind + simulator).
 Tên file và thư mục: chữ thường, nối bằng `-`, không dấu (`scaledobject-a2.yaml`). Ngoại lệ: runbook đặt đúng tên cảnh báo; module Python dùng `_`; cấu hình đánh giá đặt theo mã (`A1.yaml`).

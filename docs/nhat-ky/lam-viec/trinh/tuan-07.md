@@ -283,3 +283,65 @@
 - **Results:** `pytest analysis` 114 passed (Python 3.15; test mới chạy cả 3.11); `ruff check` và `ruff format --check` đạt. Hình LT8 cho thấy: x = 0,1 không kêu ở cả 3 lần bơm; ở x = 0,3 và 0,6, r_5m đo bám vạch dự đoán và trễ vài giây; vạch firing đo bắt đầu và kết thúc muộn hơn dự đoán, khớp bảng LT8 ở `van-hanh.md`, trừ một lần kêu sớm ở x = 0,3 (đã giải thích ở đó). Hình LT7: 12/12 lượt đúng số replica; ở cả 7 lượt, đoạn quyết định (ba chặng đầu) kết thúc trước vạch 11 s.
 - **Links:** nhánh `feat/tr8-lt7-lt8-figures`; `analysis/lt_charts.py`, `analysis/tests/test_lt_charts.py`, `analysis/figures/lt7-hpa.svg`, `analysis/figures/lt8-burn.svg`, `envs/sim/README.md`, `analysis/pyproject.toml`.
 - **Thesis:** §5 LT7 (hình replica theo C và các chặng trễ), §5 LT8 (hình r_1m/r_5m quanh lúc bơm, khoảng firing đo so với dự đoán).
+
+## 2026-11-17 – TR8: merge PR #49 (hình LT7, LT8)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** CI xanh cả 6 job (alerts, docs, manifests, python 3.11 và 3.15, yaml); `mergeable` = MERGEABLE, không có review hay bình luận; merge bằng merge commit `10c0527`, xoá nhánh `feat/tr8-lt7-lt8-figures`.
+- **Links:** PR #49.
+
+## 2026-11-18 – TR8: hình LT5 (định luật Little) và LT6 (GPU util bão hoà)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Thêm `--lt5`, `--lt6` vào `analysis/lt_charts.py`. Cả hai hình vẽ từ CSV đã commit (`analysis/figures/lt5-little.csv`, `lt6-gpu-util.csv`), không cần dữ liệu thô.
+  2. Hình LT5: ô trái là L_server theo λ\_thực × W (thang log, đường y = x, dải ±15 %); ô phải là độ lệch, kèm thanh ±1 SE do lấy mẫu. Hình LT6: ô trái là util theo λ ÷ C, kèm vạch dự đoán 1 − e^(−L) và mức 77 % mà trên đó A1 thêm pod; ô phải là running + waiting (thang log), kèm threshold A2. Tiêu đề mỗi ô ghi kết luận "tách được hay không", tính bằng `lt6_gpu_util.separation`.
+  3. Xem hình rồi sửa bố cục. Legend LT6 tràn khung, nên đổi từ 3 cột sang 2 cột. Vạch dự đoán của hai model nằm sát nhau (λ ÷ C 0,16 và 0,17) mà cùng màu đen, nên đổi sang màu của model. Nhãn S1-CONST2-1 lòi khỏi ô, nên chuyển sang bên trái điểm.
+  4. Chạy `/code-review high`: 10 điểm, sửa cả 10. Các điểm đáng kể:
+     - Tên model tra theo tên file trần, nên `capacity.json` của ĐG1 trên V2 sẽ bị ghi là "0,5B". Đã sửa: tra theo cặp (env, file).
+     - L_server = 0 làm trục log chia cho 0.
+     - LT6 gộp mọi phiên simulator vào một phép kiểm "tách được".
+     - `main` trả lỗi mà không báo những hình đã ghi.
+     - Nhãn vạch phụ của trục log dùng dấu chấm thập phân.
+     - Câu trong `van-hanh.md` không phân biệt hai cửa sổ cùng tên S1-CONST2-1, và chưa giải thích chấm rỗng là gì.
+  5. Thêm 5 test. Thêm dòng "Hình" và sửa dòng "Còn thiếu" của LT5, LT6 trong `van-hanh.md`.
+- **Decision:** D69. Chấm rỗng là cửa sổ có hàng đợi, theo `QUEUE_MIN` sẵn có của `lt5_little`; hình không tự phân loại "dừng/quá tải", vì bảng phân loại theo nhận định và CSV không có cột đó. Tên model tra bảng (env, file), không thêm cột model vào CSV. Không dùng hai trục tung cho util và L.
+- **Results:** `pytest analysis` 119 passed trên Python 3.15 và 3.11; `ruff check`, `ruff format --check` và lychee (`van-hanh.md`) đạt.
+  - LT5: 23 cửa sổ, trong đó 9 cửa sổ có hàng đợi. 22/23 nằm trong ±15 %; chỉ cửa sổ `steady` của S1-CONST2-1 trên simulator nằm ngoài (−35,5 %).
+  - LT6: util không tách được tải vừa khỏi quá tải ở cả hai model, và mức thấp nhất (0,780) vẫn trên 77 %. A2 tách được, khoảng hở 3,9× (1,5B) và 7,7× (0,5B).
+  - Mọi số khớp bảng LT5, LT6 trong `van-hanh.md`.
+- **Links:** nhánh `feat/tr8-lt5-lt6-figures`; `analysis/lt_charts.py`, `analysis/tests/test_lt_charts.py`, `analysis/figures/lt5-little.svg`, `analysis/figures/lt6-gpu-util.svg`, `docs/nhat-ky/van-hanh.md`.
+- **Thesis:** §5 LT5 (hình L_server theo λW, độ lệch kèm SE), §5 LT6 (hình util bão hoà so với L; A1 so với A2).
+
+## 2026-11-18 – TR8: merge PR #50 (hình LT5, LT6)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** CI xanh cả 6 job (alerts, docs, manifests, python 3.11 và 3.15, yaml); `mergeable` = MERGEABLE, không có review hay bình luận; merge bằng merge commit `4dc5c42`, xoá nhánh `feat/tr8-lt5-lt6-figures`. Từ đây LT5–LT8 đều có hình trong `analysis/figures/`.
+- **Links:** PR #50.
+
+## 2026-11-18 – Luận văn: khung `docs/luan-van/` và mục 3.4
+
+- **Task:** chung (ghép luận văn), TR3, TR4 · **Environment:** none
+- **Done:**
+  1. Dựng `docs/luan-van/`: `README.md` gồm tổ chức file `CC-SS-<ten>.md` (mỗi file một người viết), quy ước văn phong, thuật ngữ, số, hình, bảng, trích dẫn `[@key]` với `tai-lieu.bib`, comment nguồn sau mỗi đoạn có số, và lệnh pandoc ghép ra `.docx`. Thêm thư mục vào CONTRIBUTING §1.
+  2. Cài pandoc 3.13 (bản zip, sha256 khớp digest của GitHub release) vào `~/.local/bin`.
+  3. Viết mục 3.4 "Thiết kế giám sát, SLO và cảnh báo": một agent viết từ nguồn trong repo, một agent khác đối chiếu từng con số và khẳng định. Bản soát báo 25 điểm: 7 sai sự kiện nhẹ, 6 lập luận sai hoặc thiếu, 4 thiếu nguồn, 2 quy ước, 6 văn. Sửa 24 điểm; giữ số bảng tạm `3.4a`–`3.4d` đến khi ghép chương 3.
+  4. Tự chạy lại bằng promtool điểm đáng kể nhất của bản soát (Incidents).
+  5. Kiểm các URL trong bib (HTTP 200 ngày 18/11) và đổi sang URL của đúng phiên bản đã ghim (vLLM v0.31.0, KEDA 2.21, chart 92.1.1, Alertmanager v0.34.1).
+  6. Chạy `/code-review high` trên nhánh: 10 điểm, sửa cả 10. Đáng kể nhất: N1 và N7 ở đoạn mở đầu thiếu phạm vi (A2, tải ổn định; page giả là page khi tỷ lệ xấu theo log client < 20%); hai dashboard dùng hai định nghĩa TPOT khác nhau; thời gian fallback do chu kỳ sync 5 s của HPA quyết định, không phải `pollingInterval`; mục chia cho hai người (3.3, 4.11) cần tách file `a`, `b`; tên trong bib phải bọc `{}` để kiểu trích dẫn không viết hoa sai; pandoc ghim vào `docs/phien-ban.md`.
+- **Decision:**
+  - D70: bản nguồn luận văn bằng Markdown, mỗi mục một file, ghép bằng pandoc; khuôn của trường áp ở W9 qua `--reference-doc`. Bỏ Word/Google Docs (không xem diff, không gắn nguồn cho số liệu), LaTeX (khuôn và góp ý của GVHD đi qua Word), một file một chương (Quang và Trình cùng sửa một file).
+  - D71: giữ nguyên `LLMErrorRateHigh` trong đợt đánh giá, vì sát ngày đóng băng 22/11 và không muốn đổi cấu hình đã kiểm thử. Mục 3.4 ghi đúng hành vi thật và nêu hướng cải tiến (burn rate hai cửa sổ). Comment trong `llm.yaml` và Vận hành §3.2 sửa ở PR đồng bộ tài liệu sau.
+  - Không chèn Hình 7 (`07-slo-canh-bao-runbook`), vì hình lệch với cái đã làm ở 6 chỗ: ghi DCGM; có cảnh báo nhiệt độ và XID chưa làm; có "thắt giới hạn tốc độ" (rate limit đã lược); thiếu condition của ScaledObject; ghi "chặn trùng" như quy tắc riêng, thực ra là mặc định của chart; ghi Argo CD, trong khi VM thuê không có. Sửa hình ở PR riêng.
+- **Results:** `03-04-giam-sat-slo-canh-bao.md` có khoảng 1.900 từ thân bài, 4 bảng, dẫn 5 tài liệu (bib có thêm `keda-prometheus-scaler` để dùng cho mục 3.3). `pandoc … --citeproc` ra `.docx` không lỗi, không cảnh báo trích dẫn; lychee 0 lỗi.
+- **Incidents:** comment của `LLMErrorRateHigh` trong `llm.yaml` và Vận hành §3.2 nói `for: 1m` để không page vì vài lỗi 503 lẻ khi chuyển pod. Điều này sai: ngưỡng 1% tính trên cửa sổ 5 phút, đợt lỗi nằm trong cửa sổ suốt 5 phút, nên `for` không lọc được. Thử bằng promtool (1 req/s, một đợt 5 lỗi 503 ở phút 10): firing lúc 12m và 14m, hết lúc 16m.
+- **Deviations:** các điểm thiết kế lệch với cái đã làm, tìm được khi viết và soát (sửa ở PR đồng bộ tài liệu):
+  - Vận hành §2.3: câu "`1 − tốt/tổng` cho 100% xấu khi không có traffic" sai; bản soát thử bằng promtool, cả hai dạng đều ra NaN.
+  - TPOT có hai định nghĩa: dashboard SLO dùng `vllm:request_time_per_output_token_seconds` (trung bình mỗi request, bucket `le="0.1"`), dashboard Serving/GPU vẽ `vllm:inter_token_latency_seconds` (từng khoảng giữa hai token) cạnh vạch 100 ms; Vận hành §2.1 chỉ ghi định nghĩa thứ hai. Cần thống nhất.
+  - Vận hành §11 nói unit test kiểm cặp cửa sổ 1h/5m; test chỉ có cặp 5m/1m.
+  - Thông số §9.4 ghi retention ở cloud 15 ngày; `envs/cloud/platform/` không đặt, nên dùng mặc định của chart.
+  - Thông số §7 ghi máy tạo tải đi qua route riêng của Traefik; route này đã lược và `matrix-v2.yaml` gọi thẳng Service, nên `llm:error_ratio:rate5m` rỗng trong các lượt đánh giá.
+  - Hai runbook còn khuyên "thắt giới hạn tốc độ"; comment cũ ở `slo.yaml` (bucket "còn phải xác nhận") và README của dashboard (hàng KEDA "chưa làm").
+  - Chưa kiểm: severity của `TargetDown` trong chart 92.1.1 (nếu là warning thì exporter chết sẽ không có tin Telegram).
+- **Links:** nhánh `docs/tr4-thesis-monitoring-design`; `docs/luan-van/README.md`, `docs/luan-van/03-04-giam-sat-slo-canh-bao.md`, `docs/luan-van/tai-lieu.bib`, `CONTRIBUTING.md` §1.
+- **Thesis:** §3.4 (bản nháp đầu); Hạn chế (chưa có dead man's switch; `LLMErrorRateHigh` nhạy với đợt lỗi ngắn ở tải thấp); chương 6 (hướng cải tiến cảnh báo lỗi).

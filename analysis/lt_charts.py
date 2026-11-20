@@ -1,6 +1,16 @@
-"""Hình của LT7 (thuật toán HPA) và LT8 (cảnh báo burn rate) cho chương 5 (Môi trường §19, §16).
+"""Hình của LT5–LT8 (Little, GPU util, thuật toán HPA, burn rate) cho chương 5 (Môi trường §19, §16).
 
 Khái niệm:
+    Hình LT5 có hai ô, chung trục hoành λ_thực × W (thang log). Ô trái: L_server (trung bình Σ_pod running +
+        waiting) theo λ_thực × W, với đường y = x (định luật Little L = λW) và dải ±15 % (tiêu chí của
+        Môi trường §19). Ô phải: độ lệch L_server ÷ (λ_thực × W) − 1, kèm thanh ±1 SE do lấy mẫu 5 s
+        (se_sampling của lt5_little, chỉ có khi chưa xếp hàng). Chấm rỗng là cửa sổ có hàng đợi (waiting
+        trung bình ≥ lt5_little.QUEUE_MIN), hình thoi là lượt mà runner đánh dấu không hợp lệ.
+    Hình LT6 có hai ô, chung trục hoành λ ÷ C (C: λ lớn nhất còn đạt SLO, từ ĐG1). Ô trái: GPU util (tín hiệu
+        A1) đo, so với dự đoán 1 − e^(−L), và mức util mà trên đó A1 thêm pod khi đang có 1 replica (target ×
+        (1 + tolerance)). Ô phải: running + waiting (tín hiệu A2, thang log) và threshold A2 của từng model.
+        Dải nền là tải vừa (0,3–0,7 C), vạch đứng là λ = C. Tiêu đề mỗi ô ghi kết luận "tách được tải vừa
+        khỏi quá tải hay không", tính bằng lt6_gpu_util.separation (cùng phép kiểm với bảng ở van-hanh.md).
     Hình LT7 có hai ô. Ô trái: số replica HPA dừng lại theo số request đồng thời C. Đường bậc thang là dự
         đoán ⌈C ÷ threshold⌉ (có tolerance 10 %, kẹp ở max), chấm là từng lượt đo. Ô phải: mỗi lượt scale-up
         một thanh ngang, chia theo các chặng trễ nối tiếp (lt7_hpa: d_scrape, d_visible, d_wait, d_ready),
@@ -11,15 +21,20 @@ Khái niệm:
         mà điều kiện đã sai, đo (mỗi lần bơm một vạch) so với dự đoán (lt8_groups).
 Mục đích: Cho thấy bằng hình điều bảng ở van-hanh.md đã nói bằng số: công thức đúng về hình dạng, lệch
     dương vài giây ở mỗi mốc. Dùng lại style của charts.py (màu, font, dấu phẩy thập phân, lưu file không
-    kèm ngày giờ) để mọi hình của chương 5 trông như một bộ. Hình LT7 vẽ từ CSV đã commit
-    (analysis/figures/lt7-hpa.csv), nên ai cũng vẽ lại được; hình LT8 cần dữ liệu thô của phiên lt8
-    (prom.json, timeline.json), chỉ có trên máy đã đo. Lần bơm không hợp lệ theo lt8_burn.analyze_rep thì
-    không vẽ.
-Hạn chế: Màu ở đây gắn với chuỗi đo (r_5m, r_1m, các chặng trễ), không gắn với cấu hình A2, S4…, vì LT7 và
-    LT8 không so cấu hình. Mốc của LT8 theo giờ thực, sai dưới 1 s do WSL kéo giờ (lt8_burn, "Đồng hồ").
+    kèm ngày giờ) để mọi hình của chương 5 trông như một bộ. Hình LT5, LT6, LT7 vẽ từ CSV đã commit
+    (analysis/figures/lt5-little.csv, lt6-gpu-util.csv, lt7-hpa.csv), nên ai cũng vẽ lại được; hình LT8 cần
+    dữ liệu thô của phiên lt8 (prom.json, timeline.json), chỉ có trên máy đã đo. Lần bơm không hợp lệ theo
+    lt8_burn.analyze_rep thì không vẽ.
+Hạn chế: Màu ở LT7, LT8 gắn với chuỗi đo (r_5m, r_1m, các chặng trễ), ở LT5, LT6 gắn với nguồn dữ liệu (model
+    ở nhà, simulator), không gắn với cấu hình A2, S4…, vì LT không so cấu hình. Tên model của file capacity ở
+    nhà tra bảng SOURCE_MODEL theo (env, tên file), vì CSV không có cột model; nguồn mới (ví dụ V2) chưa có
+    trong bảng thì vẽ màu xám và ghi tên file, cần thêm vào bảng. LT5 bỏ cửa sổ có request lỗi (không áp
+    được định luật) và cửa sổ `main` của KB2 (chồng lên pre, spike, drop), số cửa sổ bị bỏ ghi dưới trục.
+    Mốc của LT8 theo giờ thực, sai dưới 1 s do WSL kéo giờ (lt8_burn, "Đồng hồ").
 
 Chạy (từ gốc repo):
-    uv run --project analysis python -m analysis.lt_charts [--lt7 analysis/figures/lt7-hpa.csv] \\
+    uv run --project analysis python -m analysis.lt_charts [--lt5 analysis/figures/lt5-little.csv] \\
+        [--lt6 analysis/figures/lt6-gpu-util.csv] [--lt7 analysis/figures/lt7-hpa.csv] \\
         [--lt8 runs/sim/lt8-<giờ>] [--out analysis/figures] [--formats svg]
 """
 
@@ -29,15 +44,17 @@ import argparse
 import csv
 import math
 from collections import defaultdict
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
-from matplotlib.ticker import MultipleLocator
+from matplotlib.ticker import FuncFormatter, MultipleLocator
 
 from analysis import charts as ch
+from analysis import lt5_little as l5
+from analysis import lt6_gpu_util as l6
 from analysis import lt7_hpa as l7
 from analysis import lt8_burn as l8
 from analysis import metrics as m
@@ -61,6 +78,18 @@ PRE_S, POST_S = 60.0, 120.0  # LT8: vẽ từ 60 s trước lúc bơm tới 120 
 # Vị trí (theo trục tung) của các vạch firing ở LT8, trên mọi đường tỷ lệ (≤ 0,62 ở x = 0,6)
 FIRE_Y_PRED, FIRE_Y0, FIRE_DY, Y_TOP = 0.86, 0.81, 0.045, 0.92
 
+# LT5, LT6: màu theo nguồn dữ liệu, thứ tự cố định (màu đi theo nguồn, không theo thứ hạng). File capacity ở
+# nhà chỉ ghi model trong JSON (capacity-1.5b.json: trường `model` = Qwen2.5-1.5B-Instruct; capacity.json:
+# ghi chú "ĐG1-mini ở nhà với Qwen2.5-0.5B"), CSV thì chỉ có env và tên file, nên tra ở đây theo cả hai:
+# ĐG1 trên V2 cũng ghi ra capacity.json, không được nhận nhầm là 0,5B.
+SOURCE_MODEL = {("home", "capacity-1.5b.json"): "1,5B", ("home", "capacity.json"): "0,5B"}
+ENV_NAME = {"home": "nhà", "sim": "simulator"}
+GROUP_ORDER = ("nhà, model 1,5B", "nhà, model 0,5B", "simulator")
+GROUP_COLOR = dict(zip(GROUP_ORDER, SERIES_COLORS, strict=False))
+OTHER_COLOR = ch.OTHER_STYLE[0]  # nguồn chưa có trong GROUP_ORDER: xám, không lấy màu ô 4+
+LT5_TEXT = ("source", "env", "run_id", "attempt", "window")
+LT6_TEXT = ("source", "env", "run_id", "band")
+
 
 def _num(v: str) -> float | None:
     return None if v in ("", "None", "nan") else float(v)
@@ -69,22 +98,100 @@ def _num(v: str) -> float | None:
 # ── Chuẩn bị dữ liệu (hàm thuần hoặc chỉ đọc file, có test) ────────────────────────────────────────────
 
 
-def lt7_rows(path: Path) -> list[dict[str, Any]]:
-    """Đọc CSV của lt7_hpa: cột số thành float (ô trống → None), clock giữ chuỗi, cờ thành bool."""
+def read_rows(path: Path, text: Sequence[str] = (), flags: Sequence[str] = ()) -> list[dict[str, Any]]:
+    """Đọc CSV của các script LT: cột trong `text` giữ chuỗi, cột trong `flags` thành bool ("True"), các cột
+    còn lại thành float (ô trống → None)."""
     with path.open(newline="", encoding="utf-8") as fh:
         rows = list(csv.DictReader(fh))
-    out = []
+    return [
+        {k: v if k in text else (v == "True") if k in flags else _num(v) for k, v in r.items()} for r in rows
+    ]
+
+
+def lt7_rows(path: Path) -> list[dict[str, Any]]:
+    """Đọc CSV của lt7_hpa: cột số thành float (ô trống → None), clock giữ chuỗi, cờ thành bool."""
+    return read_rows(path, ("clock", "hpa_time_source", "rescale_sizes"), ("restarted", "formula_ok"))
+
+
+def source_group(r: Mapping[str, Any]) -> str:
+    """Nhóm (và màu) của một dòng LT5: file capacity ở nhà theo model, mọi phiên simulator chung một nhóm
+    (cùng cấu hình patch-sim.yaml), nguồn khác thì ghi môi trường và tên nguồn."""
+    env = ENV_NAME.get(r["env"], r["env"])
+    model = SOURCE_MODEL.get((r["env"], r["source"]))
+    if model:
+        return f"{env}, model {model}"
+    return "simulator" if r["env"] == "sim" else f"{env}, {r['source']}"
+
+
+def lt6_group(r: Mapping[str, Any]) -> str:
+    """Nhóm của một mức λ ở LT6: như source_group, nhưng mỗi phiên simulator một nhóm riêng, vì phép kiểm
+    "tách được" và đường nối các mức λ chỉ có nghĩa trong một lượt ĐG1 (lt6_gpu_util.summary cũng kiểm
+    theo từng nguồn)."""
+    g = source_group(r)
+    return f"{g} ({r['source']})" if g == "simulator" else g
+
+
+def _ordered_groups(rows: Sequence[Mapping[str, Any]], group: Callable[..., str] = source_group) -> list[str]:
+    """Các nhóm có trong dữ liệu: nhóm đã biết theo GROUP_ORDER, nhóm lạ theo tên, xếp sau."""
+    have = {group(r) for r in rows}
+    return [g for g in GROUP_ORDER if g in have] + sorted(have - set(GROUP_ORDER))
+
+
+def queued(r: Mapping[str, Any]) -> bool:
+    """Cửa sổ hoặc mức λ đã có hàng đợi: waiting trung bình ≥ QUEUE_MIN, hoặc không có số liệu waiting. Cùng
+    quy ước với lt5_little.capacity_level (khi đó lt5_little không tính se_sampling)."""
+    w = r.get("waiting_mean")
+    return w is None or w >= l5.QUEUE_MIN
+
+
+def lt5_points(rows: Sequence[Mapping[str, Any]]) -> tuple[list[Mapping[str, Any]], dict[str, int]]:
+    """Cửa sổ vẽ được trên hình LT5, kèm số cửa sổ bị bỏ theo lý do (chỉ lý do có ít nhất một cửa sổ).
+
+    Bỏ: (có request lỗi) applicable = False, vì không biết request lỗi rời server lúc nào; (cửa sổ `main`)
+    cửa sổ cả pha chính của KB2, chồng lên pre, spike, drop, nên mỗi request bị tính hai lần; (thiếu số liệu)
+    không có λ_thực × W dương hoặc L_server; (L_server = 0) mọi mẫu server bằng 0, không đặt được lên thang
+    log. Bảng ở van-hanh.md cũng không ghi dòng `main`."""
+    main, zero = "main (chồng lên pre, spike, drop)", "có L_server = 0 (thang log)"
+    skipped = {"có request lỗi": 0, main: 0, "thiếu số liệu": 0, zero: 0}
+    pts = []
     for r in rows:
-        d: dict[str, Any] = {}
-        for k, v in r.items():
-            if k in ("clock", "hpa_time_source", "rescale_sizes"):
-                d[k] = v
-            elif k in ("restarted", "formula_ok"):
-                d[k] = v == "True"
-            else:
-                d[k] = _num(v)
-        out.append(d)
-    return out
+        if not r["applicable"]:
+            skipped["có request lỗi"] += 1
+        elif r["window"] == "main":
+            skipped[main] += 1
+        elif not r["L_pred"] or r["L_server"] is None or r["dev_server"] is None:
+            skipped["thiếu số liệu"] += 1
+        elif r["L_server"] <= 0:
+            skipped[zero] += 1
+        else:
+            pts.append(r)
+    return pts, {k: n for k, n in skipped.items() if n}
+
+
+def separation_text(
+    rows: Sequence[Mapping[str, Any]], key: str, group: Callable[..., str] = lt6_group
+) -> str:
+    """Kết luận ngắn (cho tiêu đề ô) của phép kiểm "tách được tải vừa khỏi quá tải" trên một tín hiệu, mỗi
+    nhóm một phép kiểm lt6_gpu_util.separation (cùng phép kiểm với bảng ở van-hanh.md). "hở" là khoảng hở
+    min(quá tải) ÷ max(vừa). Nhóm thiếu một trong hai dải thì bỏ; không nhóm nào kiểm được thì trả "".
+    Một nhóm tách được, nhóm kia không thì ghi riêng từng nhóm, để không đọc nhầm thành "tách được"."""
+    res = []
+    for g in _ordered_groups(rows, group):
+        sel = [{**r, key: math.nan if r[key] is None else r[key]} for r in rows if group(r) == g]
+        s = l6.separation(sel, key)
+        if s["separable"] is not None:
+            res.append((g.split("model ")[-1], s))
+    if not res:
+        return ""
+
+    def gap(s: Mapping[str, Any]) -> str:
+        return "∞" if math.isinf(s["gap"]) else f"{s['gap']:.1f}×".replace(".", ",")
+
+    if not any(s["separable"] for _, s in res):
+        return "không tách được tải vừa / quá tải"
+    if all(s["separable"] for _, s in res):
+        return "tách được, hở " + ", ".join(f"{gap(s)} ({name})" for name, s in res)
+    return "; ".join(f"{name}: {'hở ' + gap(s) if s['separable'] else 'không tách được'}" for name, s in res)
 
 
 def lt7_stage_runs(rows: Sequence[Mapping[str, Any]]) -> tuple[list[Mapping[str, Any]], int, int]:
@@ -155,6 +262,179 @@ def lt8_groups(session: Path) -> tuple[dict[float, list[dict[str, Any]]], list[s
 
 
 # ── Vẽ ──────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+def _pct(ax: Any) -> None:
+    """Nhãn trục tung theo phần trăm, dấu phẩy thập phân (0,15 → "15 %")."""
+    ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v * 100:g} %".replace(".", ",")))
+
+
+def _comma_log(ax: Any, axes: str = "xy") -> None:
+    """Trục log, dấu phẩy thập phân như charts._comma. Vạch chính (1, 10, 100…) luôn có nhãn. Vạch phụ chỉ
+    ghi nhãn ở hệ số 2, 3, 5 và khi trục hẹp hơn một bậc 10 (lúc đó vạch chính quá ít), thay cho formatter
+    mặc định của matplotlib, vốn ghi "3e−01" hoặc dấu chấm."""
+
+    def minor(v: float, _: Any, axis: Any) -> str:
+        lo, hi = sorted(axis.get_view_interval())
+        if v <= 0 or lo <= 0 or hi / lo >= 10:
+            return ""
+        coeff = round(v / 10 ** math.floor(math.log10(v) + 1e-9))
+        return f"{v:g}".replace(".", ",") if coeff in (2, 3, 5) else ""
+
+    for a in axes:
+        axis = ax.xaxis if a == "x" else ax.yaxis
+        axis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:g}".replace(".", ",")))
+        axis.set_minor_formatter(FuncFormatter(lambda v, pos, axis=axis: minor(v, pos, axis)))
+
+
+def _dot(ax: Any, x: float, y: float, color: str, hollow: bool, valid: bool) -> None:
+    """Một chấm đo: đặc là chưa xếp hàng, rỗng là có hàng đợi; tròn là lượt hợp lệ, thoi là không hợp lệ.
+    Viền trắng quanh chấm đặc để các chấm chồng nhau vẫn tách được."""
+    ax.scatter(x, y, s=34, marker="o" if valid else "D", facecolor="white" if hollow else color,
+               edgecolor=color if hollow else "white", lw=1.3 if hollow else 0.8, zorder=3)  # fmt: skip
+
+
+def _state_handles(
+    rows: Sequence[Mapping[str, Any]], group: Callable[..., str] = source_group
+) -> list[Line2D]:
+    """Mục legend chung của LT5, LT6: màu từng nhóm, rồi ý nghĩa chấm rỗng và hình thoi (nếu có)."""
+    out = [
+        Line2D([], [], ls="", marker="o", color=GROUP_COLOR.get(g, OTHER_COLOR), markersize=6, label=g)
+        for g in _ordered_groups(rows, group)
+    ]
+    wait = f"{l5.QUEUE_MIN:g}".replace(".", ",")
+    out.append(Line2D([], [], ls="", marker="o", markerfacecolor="white", markeredgecolor=INK_2, markersize=6,
+                      label=f"rỗng: có hàng đợi (waiting TB ≥ {wait})"))  # fmt: skip
+    if not all(r["valid"] for r in rows):
+        out.append(Line2D([], [], ls="", marker="D", color=INK_2, markersize=5,
+                          label="thoi: lượt bị đánh dấu không hợp lệ"))  # fmt: skip
+    return out
+
+
+def _envs(rows: Sequence[Mapping[str, Any]]) -> str:
+    return ", ".join(dict.fromkeys(ENV_NAME.get(r["env"], r["env"]) for r in rows))
+
+
+def plot_lt5(points: Sequence[Mapping[str, Any]], skipped: Mapping[str, int]) -> Any:
+    """Ô trái: L_server theo λ_thực × W, y = x và dải ±LITTLE_TOL. Ô phải: độ lệch, thanh ±1 SE lấy mẫu."""
+    fig, (ax_a, ax_b) = plt.subplots(1, 2, figsize=(7.6, 4.0), layout="constrained", sharex=True)
+    tol = l5.LITTLE_TOL
+    tol_txt = f"±{tol * 100:g} %"
+    lo = min(min(r["L_pred"], r["L_server"]) for r in points) / 1.4
+    hi = max(max(r["L_pred"], r["L_server"]) for r in points) * 1.4
+    grid = [lo * (hi / lo) ** (i / 200) for i in range(201)]
+    ax_a.fill_between(grid, [g * (1 - tol) for g in grid], [g * (1 + tol) for g in grid], color=PHASE_FILL,
+                      lw=0, zorder=0)  # fmt: skip
+    ax_a.plot(grid, grid, color=INK, lw=1, zorder=1)
+    ax_b.axhspan(-tol, tol, color=PHASE_FILL, lw=0, zorder=0)
+    ax_b.axhline(0, color=INK, lw=1, zorder=1)
+    for r in points:
+        color, hollow = GROUP_COLOR.get(source_group(r), OTHER_COLOR), queued(r)
+        x, dev = r["L_pred"], r["dev_server"]
+        _dot(ax_a, x, r["L_server"], color, hollow, r["valid"])
+        _dot(ax_b, x, dev, color, hollow, r["valid"])
+        if r.get("se_sampling"):  # chỉ có khi chưa xếp hàng (M/G/∞); SE tương đối = SE ÷ (λ_thực × W)
+            ax_b.errorbar(x, dev, yerr=r["se_sampling"] / x, fmt="none", ecolor=color, elinewidth=1, zorder=2)
+        if abs(dev) > tol:  # nhãn trực tiếp chỉ cho cửa sổ nằm ngoài dải
+            name = r["run_id"] if r["window"] == "measure" else f"{r['run_id']}, {r['window']}"
+            ax_b.annotate(name, (x, dev), xytext=(-7, 0), textcoords="offset points", ha="right", va="center",
+                          color=INK_2)  # fmt: skip
+    n_in = sum(1 for r in points if abs(r["dev_server"]) <= tol)
+    ax_a.set_xscale("log")
+    ax_a.set_yscale("log")
+    ax_a.set_xlim(lo, hi)
+    ax_a.set_ylim(lo, hi)
+    ax_a.set_title(f"L_server theo λ_thực × W ({len(points)} cửa sổ)", loc="left")
+    ax_a.set_ylabel("L_server = running + waiting (request)")
+    ax_b.set_title(f"Độ lệch: {n_in}/{len(points)} cửa sổ trong {tol_txt}", loc="left")
+    ax_b.set_ylabel("L_server ÷ (λ_thực × W) − 1")
+    ax_a.set_xlabel("λ_thực × W (request)")
+    notes = [f"bỏ {n} cửa sổ {why}" for why, n in skipped.items()]
+    ax_b.set_xlabel("\n".join(["λ_thực × W (request)", *notes]))
+    _comma_log(ax_a)
+    _comma_log(ax_b, "x")
+    _pct(ax_b)
+    handles = [
+        *_state_handles(points),
+        Line2D([], [], color=INK, lw=1, label="y = x (L = λW)"),
+        Patch(color=PHASE_FILL, label=f"dải {tol_txt}"),
+        Line2D([], [], ls="", marker="|", color=INK_2, markersize=9, label="±1 SE lấy mẫu (chưa xếp hàng)"),
+    ]
+    fig.legend(handles=handles, loc="outside lower center", ncols=3)
+    fig.suptitle(f"LT5 – Định luật Little: L_server so với λ_thực × W ({_envs(points)})")
+    return fig
+
+
+def plot_lt6(rows: Sequence[Mapping[str, Any]]) -> Any:
+    """Ô trái: GPU util theo λ ÷ C, dự đoán 1 − e^(−L), mức A1 thêm pod. Ô phải: running + waiting (log) và
+    threshold A2. Target A1 và tolerance lấy như lt6_gpu_util; mỗi giá trị target khác nhau một vạch (ở nhà
+    chỉ có một: 70 %)."""
+    fig, (ax_u, ax_l) = plt.subplots(1, 2, figsize=(7.6, 4.0), layout="constrained", sharex=True)
+    groups = _ordered_groups(rows, lt6_group)
+    tol = l6.TOLERANCE
+    targets = sorted({r["a1_target_pct"] for r in rows if r["a1_target_pct"] is not None})
+    ups = [t / 100 * (1 + tol) for t in targets]  # trên mức này A1 đòi 1 → 2 replica
+    for ax in (ax_u, ax_l):
+        ax.axvspan(*l6.MODERATE, color=PHASE_FILL, lw=0, zorder=0)
+        ax.axvline(1.0, color=INK_3, lw=1, zorder=1)
+        # Nhãn ở đáy ô: ở đó không có điểm nào (util thấp và L nhỏ chỉ có ở tải nhẹ, bên trái dải)
+        ax.text(sum(l6.MODERATE) / 2, 0.03, "tải vừa", transform=ax.get_xaxis_transform(), ha="center",
+                color=INK_2)  # fmt: skip
+        ax.text(1.02, 0.03, "λ = C", transform=ax.get_xaxis_transform(), color=INK_2)
+    for up in ups:
+        ax_u.axhline(up, color=INK_2, lw=1, ls="--", zorder=1)
+    thresholds = []
+    for g in groups:
+        rs = sorted((r for r in rows if lt6_group(r) == g), key=lambda r: r["load"])
+        color = GROUP_COLOR.get(g, OTHER_COLOR)
+        for ax, key in ((ax_u, "gpu_util"), (ax_l, "L_server")):
+            pts = [r for r in rs if r[key] is not None]
+            ax.plot([r["load"] for r in pts], [r[key] for r in pts], color=color, lw=1, zorder=2)
+            for r in pts:
+                _dot(ax, r["load"], r[key], color, queued(r), r["valid"])
+        for r in rs:
+            # lt6_gpu_util chỉ tính khi chưa xếp hàng. Vạch cùng màu model: hai model có mức λ ÷ C gần nhau
+            if r["util_pred"] is not None:
+                ax_u.scatter(r["load"], r["util_pred"], marker="_", s=110, color=color, lw=1.8, zorder=4)
+        thr = next((r["a2_target"] for r in rs if r["a2_target"] is not None), None)
+        if thr is not None:
+            ax_l.axhline(thr, color=color, lw=1, ls=(0, (2, 2)), zorder=1)  # nét ngắn: khác vạch A1 (--)
+            thresholds.append(f"{thr:g}".replace(".", ","))
+    ys = [r[k] for r in rows for k in ("gpu_util", "util_pred") if r[k] is not None]
+    ax_u.set_ylim(min([*ys, *ups]) - 0.04, 1.02)
+    ax_l.set_yscale("log")
+    ax_u.set_xlim(0, max(r["load"] for r in rows) * 1.08)
+    ax_u.xaxis.set_major_locator(MultipleLocator(0.2))
+    s_u, s_l = separation_text(rows, "gpu_util"), separation_text(rows, "L_server")
+    ax_u.set_title("GPU util (tín hiệu A1)" + (f"\n{s_u}" if s_u else ""), loc="left")
+    ax_l.set_title("running + waiting (tín hiệu A2), thang log" + (f"\n{s_l}" if s_l else ""), loc="left")
+    ax_u.set_ylabel("GPU util")
+    ax_l.set_ylabel("running + waiting (request)")
+    for ax in (ax_u, ax_l):
+        ax.set_xlabel("λ ÷ C (C: λ lớn nhất còn đạt SLO)")
+        ch._comma(ax, "x")
+    _pct(ax_u)
+    _comma_log(ax_l, "y")
+
+    def vn(v: float) -> str:
+        return f"{v:g}".replace(".", ",")
+
+    pred_txt = "dự đoán 1 − e^(−L), cùng màu model"
+    handles = [
+        *_state_handles(rows, lt6_group),
+        Line2D([], [], ls="", marker="_", color=INK_2, markersize=10, mew=1.8, label=pred_txt),
+    ]
+    if targets:
+        base = f"{vn(targets[0])} %" if len(targets) == 1 else "target"
+        ups_txt = "; ".join(f"{vn(u * 100)} %" for u in ups)
+        a1_txt = f"A1 thêm pod khi util > {ups_txt} ({base} × {vn(1 + tol)})"
+        handles.append(Line2D([], [], color=INK_2, lw=1, ls="--", label=a1_txt))
+    if thresholds:
+        handles.append(Line2D([], [], color=INK_2, lw=1, ls=(0, (2, 2)),
+                              label=f"threshold A2, cùng màu model ({'; '.join(thresholds)})"))  # fmt: skip
+    fig.legend(handles=handles, loc="outside lower center", ncols=2)
+    fig.suptitle(f"LT6 – GPU util và running + waiting theo tải ({_envs(rows)})")
+    return fig
 
 
 def plot_lt7(rows: Sequence[Mapping[str, Any]]) -> Any:
@@ -279,35 +559,49 @@ def plot_lt8(groups: Mapping[float, Sequence[Mapping[str, Any]]], title: str) ->
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    p.add_argument("--lt5", type=Path, help="CSV của lt5_little, ví dụ analysis/figures/lt5-little.csv")
+    p.add_argument("--lt6", type=Path, help="CSV của lt6_gpu_util, ví dụ analysis/figures/lt6-gpu-util.csv")
     p.add_argument("--lt7", type=Path, help="CSV của lt7_hpa, ví dụ analysis/figures/lt7-hpa.csv")
     p.add_argument("--lt8", type=Path, help="thư mục phiên runs/sim/lt8-<giờ>")
     p.add_argument("--out", type=Path, default=Path("analysis/figures"), help="thư mục ghi hình")
     p.add_argument("--formats", default="svg", help="định dạng, cách nhau dấu phẩy (mặc định svg)")
     a = p.parse_args(argv)
-    if not a.lt7 and not a.lt8:
-        p.error("cần ít nhất một trong --lt7, --lt8")
+    if not (a.lt5 or a.lt6 or a.lt7 or a.lt8):
+        p.error("cần ít nhất một trong --lt5, --lt6, --lt7, --lt8")
     formats = [f.strip() for f in a.formats.split(",") if f.strip()]
     ch._setup()
     log: list[str] = []
+    # Hình nào không vẽ được thì ghi lỗi, các hình còn lại vẫn vẽ; luôn in đủ các file đã ghi rồi mới báo lỗi
+    errors: list[str] = []
+    if a.lt5:
+        points, skipped5 = lt5_points(read_rows(a.lt5, LT5_TEXT, ("valid", "applicable")))
+        if points:
+            log += [f"ghi {f}" for f in ch._save(plot_lt5(points, skipped5), a.out / "lt5-little", formats)]
+        else:
+            errors.append(f"LT5: {a.lt5} không có cửa sổ nào vẽ được")
+    if a.lt6:
+        rows6 = [r for r in read_rows(a.lt6, LT6_TEXT, ("valid",)) if r["load"] is not None]
+        if rows6:
+            log += [f"ghi {f}" for f in ch._save(plot_lt6(rows6), a.out / "lt6-gpu-util", formats)]
+        else:
+            errors.append(f"LT6: {a.lt6} không có mức λ nào vẽ được")
     if a.lt7:
-        rows = lt7_rows(a.lt7)
-        if not rows:
-            print(f"LT7: {a.lt7} không có dòng nào")
-            return 1
-        fig = plot_lt7(rows)
-        log += [f"ghi {f}" for f in ch._save(fig, a.out / "lt7-hpa", formats)]
+        rows7 = lt7_rows(a.lt7)
+        if rows7:
+            log += [f"ghi {f}" for f in ch._save(plot_lt7(rows7), a.out / "lt7-hpa", formats)]
+        else:
+            errors.append(f"LT7: {a.lt7} không có dòng nào")
     if a.lt8:
-        groups, skipped = lt8_groups(a.lt8)
-        log += skipped
-        if not groups:
-            print("\n".join(log))
-            print(f"LT8: không có lần bơm hợp lệ nào trong {a.lt8}")
-            return 1
-        fig = plot_lt8(groups, "LT8 – r_1m, r_5m và LLMSLOBurnFast quanh lúc bơm lỗi (simulator)")
-        log += [f"ghi {f}" for f in ch._save(fig, a.out / "lt8-burn", formats)]
-    for line in log:
+        groups, skipped8 = lt8_groups(a.lt8)
+        log += skipped8
+        if groups:
+            fig = plot_lt8(groups, "LT8 – r_1m, r_5m và LLMSLOBurnFast quanh lúc bơm lỗi (simulator)")
+            log += [f"ghi {f}" for f in ch._save(fig, a.out / "lt8-burn", formats)]
+        else:
+            errors.append(f"LT8: không có lần bơm hợp lệ nào trong {a.lt8}")
+    for line in [*log, *errors]:
         print(line)
-    return 0
+    return 1 if errors else 0
 
 
 if __name__ == "__main__":
