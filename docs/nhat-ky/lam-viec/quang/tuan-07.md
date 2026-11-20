@@ -314,6 +314,6 @@
   6. Chạy thử `analysis.charts runs/v2-vm/v2-dg2` (ra thư mục tạm): ra 6 hình C1 (3 lượt KB2), C2, C3, C4, không lỗi. Chưa xem bố cục, chưa commit (việc của TR7).
   7. Viết `docs/luan-van/nguon-tu-lieu.md`: bản đồ nguồn, nguồn cho từng mục luận văn theo §5.1, bảng số liệu đã chốt kèm nơi gốc, danh sách chưa có số, cách lấy dữ liệu V2, các hạn chế đã biết, link 12 trang artifact.
 - **Decision:** gửi dữ liệu V2 cho Trình bằng file nén thay vì commit vào Git (`runs/` bị gitignore, 36 MB) hay R2 (PC chưa có `.env`). Không commit hình C1–C4: thuộc TR7, Trình xem bố cục rồi commit.
-- **Incidents:** các trang artifact mặc định chỉ Quang xem được; Trình chỉ mở được sau khi Quang bấm Share. Repo công khai, nên không chia sẻ kiểu ai có link cũng xem.
+- **Incidents:** CI của PR #52 không chạy: cả 6 job dừng sau 1–2 s với "account is locked due to a billing issue" (tài khoản GitHub `bi6-cat`), nên lychee và pytest chưa chạy trên PR. Các trang artifact mặc định chỉ Quang xem được; Trình chỉ mở được sau khi Quang bấm Share. Repo công khai, nên không chia sẻ kiểu ai có link cũng xem.
 - **Links:** PR #52 (nhánh `feat/v2-results-1911`, reviewer Trình); `envs/cloud/experiments/capacity.json`, `docs/luan-van/nguon-tu-lieu.md`, `docs/luan-van/README.md`.
 - **Thesis:** dùng cho mọi chương (file nguồn); §5.2 (`capacity.json` trong Git).
