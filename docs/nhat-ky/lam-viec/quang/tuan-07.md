@@ -185,3 +185,157 @@
 - **Results:** sau merge: `experiments` 157, `loadgen` 55, `analysis` 85 passed.
 - **Deviations:** chưa kiểm lại `helm template` với bốn lớp values của nhà. Điểm còn mở: RAM PC nhà khi fallback lên 2 pod (1 pod 3.644 Mi, còn khả dụng khoảng 4 GB, swap đang dùng 2,5 GB).
 - **Links:** PR #39, commit `5014d84` (merge), `e83a505` (sửa `home-eval-end`); nhận xét review trên PR #39.
+
+## 2026-11-18 – V2: thuê 4 × RTX 4060 Ti, dựng từ máy trắng 8 phút 22 giây, ĐG1 chính thức C = 3,5, bắt đầu ma trận 17 lượt
+
+- **Task:** Q2, Q6, Q7 · **Environment:** V2 (phiên đo chính thức, N = 4)
+- **Done:**
+  1. Máy đầu (4 × RTX 4090, 1,5 USD/giờ theo Quang báo) không lên SSH: cổng timeout ở 5 lần thử trong khoảng 15 phút, trong khi mạng của máy dev vẫn thông (`github.com:22` mở được).
+  2. Máy thứ hai: `make attach` → `make probe` → `make bootstrap` → `make cloud-platform` → `vast.sh tunnel` (chạy nền) → chờ vLLM Ready.
+  3. Viết `matrix-dg1-v2.yaml` (session `dg1-v2-4060ti`, λ = 2, 3, 4, 5, rồi thêm 3,5), chạy runner từ PC qua tunnel với `--no-backup`, tính `capacity.py`.
+  4. Điền khối `x-adr003` của `matrix-v2.yaml` (C = 3,5, threshold A2 = 37). `--dry-run`: 17 lượt.
+  5. Chép repo lên VM bằng rsync (bỏ `runs/`, `.env`, `.vast/`), `chown -R root` (git trên VM từ chối repo của uid khác: "dubious ownership"), chạy runner trong tmux trên VM với `--no-backup`, log vào `runs/v2-dg2-console.log`. Một vòng lặp trên PC kéo `runs/` của VM về `runs/v2-vm/` mỗi 30 phút.
+- **Decision:**
+  - Dùng 4 × RTX 4060 Ti 16 GB thay cho 4 × A4000 của ADR-006 C2: hôm đó không có máy A4000, máy 4090 không lên SSH, còn máy này đạt mọi tiêu chí khác và vượt xa về CPU, mạng, đĩa. Quang chọn "dùng, bootstrap ngay".
+  - Chạy runner trên VM trong tmux thay cho systemd + R2: PC chưa có `.env`, nên `runner-start` sẽ dừng vì thiếu `R2_REMOTE`. Chạy trên VM để ma trận 8 giờ không phụ thuộc tunnel; dữ liệu có bản thứ hai trên PC nhờ kéo định kỳ. Bỏ phương án chạy từ PC qua tunnel (tunnel đứt là hỏng lượt).
+- **Results:**
+  - `probe`: 4 × RTX 4060 Ti 16 GB, driver 580.95.05, CUDA 13.0; 61 vCPU (EPYC 7713), RAM 197 GB, đĩa 120 GB trống; Hugging Face 222,3 MB/s; ghi đĩa tuần tự 972 MB/s; Docker Hub thông; vị trí Canada; không có unattended-upgrades.
+  - `bootstrap` từ máy trắng: **5 phút 8 giây** (`real 5m8.294s`), 38 ok, 16 changed, 0 failed. `cloud-platform`: **82 s**, node báo 4 GPU, 57 CPU cấp phát được. vLLM 3B: pod tạo 08:49:00Z, Ready 08:50:30Z (**90 s**). Từ đầu `bootstrap` (15:42:08) tới vLLM Ready (15:50:30): **8 phút 22 giây** (16/11 trên 2 × RTX 4000 Ada: 12 phút 54 giây). Số này đo bằng tay, chưa phải `make vh5`.
+  - ĐG1 (S1, CONST, 300 s mỗi mức, cả 5 lượt hợp lệ):
+
+    | λ (req/s) | Đạt SLO | TTFT p95 | TPOT p95 | B server (Little) | waiting |
+    |---|---|---|---|---|---|
+    | 2 | 100 % | 0,314 s | 36,4 ms | 16,4 (16,5) | 0 |
+    | 3 | 100 % | 0,454 s | 51,7 ms | 32,7 (32,5) | 0 |
+    | 3,5 | 100 % | 1,216 s | 61,3 ms | 46,3 (46,4) | 0,4 |
+    | 4 | 28,5 % | 7,321 s | 64,5 ms | 75,9 (79,0) | 12,4 |
+    | 5 | 0 % | 69,7 s | 64,3 ms | 232 (291,8) | 168,4 |
+
+    `capacity.py`: **C = 3,5 req/s, B\* = 46,3, threshold A2 = 37**, A3 KV = 0,14. Dự đoán trước khi đo: 3–4 req/s (băng thông bộ nhớ 288 so với 448 GB/s của A4000); tỉ lệ băng thông thuần cho 4,5 × 288/448 ≈ 2,9, đo được cao hơn.
+  - Giá thuê: 1,5 USD/giờ cả máy (Quang báo theo trang Vast); ĐG1 + ma trận ước khoảng 9–10 giờ ≈ 14–15 USD.
+  - Runner trên VM: đồng hồ Prometheus lệch +0,1 s; `nvidia_smi_utilization_gpu_ratio` 4 chuỗi, `vllm:num_requests_running` 1 chuỗi; lượt đầu A1-KB3-1 bắt đầu 16:30 (giờ VN). Kết quả ma trận: chưa có.
+- **Incidents:** git trên VM báo "dubious ownership" vì rsync giữ uid của máy dev → `chown -R root:root /opt/llm-v2`.
+- **Deviations:** GPU 4060 Ti thay cho A4000 (ADR-006 C2); runner chạy trong tmux trên VM với `--no-backup` thay cho systemd + R2; code trên VM là commit `10c0527` cộng hai file ma trận chưa commit, nên `metadata.json` ghi commit `10c0527` dù tree đang dirty. Chưa có ADR-003.
+- **Links:** `envs/cloud/experiments/matrix-dg1-v2.yaml` (mới), `envs/cloud/experiments/matrix-v2.yaml` (khối `x-adr003`); `runs/dg1-v2-4060ti/`, `runs/v2-vm/` (không nằm trong Git). Bằng chứng phiên: `runs/v2-evidence/` (log Ansible và runner ghi trực tiếp; output `probe`, `cloud-platform` chép lại từ terminal, có ghi chú; `vm-identity.txt` với UUID 4 GPU và `systemd-detect-virt` = kvm; sha256 ma trận trên VM trùng bản trên PC; `SHA256SUMS` 125 file lúc 16:35).
+- **Thesis:** §5 năng lực (bảng ĐG1, C = 3,5); LT1 (C theo băng thông bộ nhớ, so A4000 4,5 và 4060 Ti 3,5); LT5 phần V2 (B đo và B Little lệch < 1 % khi chưa quá tải); §4 VH5 (8 phút 22 giây từ máy trắng); §Hạn chế (card 4060 Ti thay cho A4000, không sao lưu R2 trong phiên).
+
+## 2026-11-18 – V2: ma trận ĐG2 17/17 lượt hợp lệ, số tổng hợp đầu tiên
+
+- **Task:** Q6, TR7 (bảng) · **Environment:** V2 (VM 4 × RTX 4060 Ti, N = 4, C = 3,5, threshold A2 = 37)
+- **Done:**
+  1. Runner trong tmux trên VM chạy `matrix-v2.yaml` từ 16:30 tới 23:44 (+07), 17 lượt theo thứ tự xáo của seed 20261114, không cần can thiệp.
+  2. Kiểm mỗi giờ bằng lịch hẹn của phiên Claude; phiên khởi động lại lúc khoảng 23:15 làm mất lịch hẹn, vòng kéo `runs/` và tunnel (runner trên VM không bị ảnh hưởng). Vòng chờ thay thế đầu tiên lỗi vì zsh không tách biến `$S` thành lệnh, chạy lại bằng `bash -c`.
+  3. Kéo `runs/` về `runs/v2-vm/`, chép console runner vào `runs/v2-evidence/console/05-matrix-runner-console.log`, tính lại `SHA256SUMS` (525 file).
+  4. `analysis.build_tables runs/v2-vm/v2-dg2 --baseline S4` → `runs/v2-vm/v2-dg2/tables/` (17 lần thử, 11 ô).
+- **Results:** 17/17 lượt `valid: true`, mỗi lượt khoảng 24 phút (tổng 7 giờ 14 phút). Trung bình theo ô (GPU-giờ so với S4 cùng kịch bản):
+
+  | Ô | Số lượt | SLO đạt | TTFT p95 | Lỗi | GPU-giờ | so với S4 |
+  |---|---|---|---|---|---|---|
+  | S4 × KB1 / KB2 / KB3 | 1 / 1 / 1 | 100 % cả ba | 0,22 / 0,38 / 0,40 s | 0 | 0,80 / 1,60 / 1,13 | – |
+  | S1 × KB2 / KB3 | 1 / 1 | 12,5 % / 0 % | 93,1 s / – | 5.659 / 8.008 | 0,40 / 0,28 | – |
+  | A1 × KB1 | 2 | 100 % | 0,23 s | 0 | 0,72 | −10 % |
+  | A1 × KB2 | 2 | 100 % | 0,39 s | 0 | 1,52 | −5 % |
+  | A1 × KB3 | 1 | 100 % | 0,40 s | 0 | 1,05 | −7 % |
+  | A2 × KB1 | 2 | 100 % | 0,32 s | 0 | 0,20 | −75 % |
+  | A2 × KB2 | 3 | 79,4–80,7 % | 73–79 s | 37 / 82 / 93 | 1,15–1,20 | −25 đến −28 % |
+  | A2 × KB3 | 2 | 100 % | 0,40 s | 0 | 1,04 | −8 % |
+
+  - A2 × KB2: thời gian phản ứng 80–82 s, hồi phục 409–430 s, mỗi lượt 1 page cảnh báo (0 page giả). Ba lượt lặp cho số rất gần nhau.
+  - A1 lên 4 replica ở cả KB1 (tải 0,5 C), nên tiết kiệm GPU chỉ 5–10 %: khớp LT6 (GPU utilization không phân biệt được tải vừa với quá tải).
+  - Đây là số đọc thẳng từ `build_tables`, **chưa phân tích nguyên nhân** của lỗi và TTFT cao ở A2 × KB2 (giả thuyết: spike vượt năng lực trước khi pod mới Ready, cold start khoảng 60–90 s; chưa kiểm).
+- **Incidents:** mất lịch hẹn và tunnel khi phiên Claude khởi động lại (xem bước 2); lỗi zsh word splitting ở vòng chờ.
+- **Links:** `runs/v2-vm/v2-dg2/` (không nằm trong Git), `runs/v2-vm/v2-dg2/tables/cells.csv`, `runs/v2-evidence/SHA256SUMS`.
+- **Thesis:** §5.3 (bảng ĐG2, biểu đồ C1–C4 vẽ lại trên `runs/v2-vm/v2-dg2`); §5 đóng góp 2 (A2 so với A1); LT6 phần V2 (A1 lên max ở tải thấp); §Hạn chế (A2 không đạt SLO dưới spike KB2).
+
+## 2026-11-18 – V2: chạy VH2–VH4 trên N = 4, viết `dg3.sh` cho cold start L0/L2
+
+- **Task:** Q4, Q5 · **Environment:** V2 (cùng VM 4 × RTX 4060 Ti)
+- **Done:**
+  1. Lấy `experiments/ops/vh.py` từ nhánh PR #46 (`fix/vh3-delete-needs-two-pods`, chưa merge) đặt lên VM; sha256 trên VM trùng bản của nhánh (`runs/v2-evidence/config/vh.py-pr46`, `pr46-commit.txt`).
+  2. Chạy trong tmux `vh` trên VM, từ 23:46 (+07): vh2a, vh2b, vh2c, vh3-delete, vh3-kill, vh4, mỗi kịch bản `--matrix envs/cloud/experiments/matrix-v2.yaml --rate 1.75` (0,5 C), console tee ra `runs/ops-console-<s>.log`.
+  3. Viết `envs/cloud/provision/dg3.sh`: một lần đo cold start ở L0 hoặc L2, ghi `pod.json`, `events.json`, `vllm.log` (có mốc kubelet), `vllm_log.json`, danh sách image và dung lượng cache trước/sau, `summary.txt`, và toàn bộ console. Kiểm `bash -n`; sha256 trên VM trùng bản trên PC.
+  4. Xếp tmux `dg3` tự chạy sau khi `vh` xong: xoá ScaledObject còn lại, rồi L2 × 3, L0 × 2.
+- **Decision:** L0 đo **0 → 1** thay vì 1 → 2 như Môi trường §12, vì containerd không cho xoá image đang có container dùng; L2 đo đúng 1 → 2. Chạy L2 trước (compile cache còn ấm sau cả ngày chạy ma trận), L0 sau, vì L0 xoá cache.
+- **Results:** chưa có (đang chạy).
+- **Deviations:** L0 0 → 1 (lý do ở trên); `vh.py` là bản của PR #46 chưa merge. 00:30 ngày 19/11 (trước khi vh2c bắt đầu): hạ thời lượng tải của vh2c từ 3000 s xuống 1200 s trên VM, vì rollout 4 pod ở vh2b chỉ mất 371,6 s (mặc định đặt theo ước tính khoảng 20 phút trên A4000); vh2c cần khoảng 60 s nền + 300 s chờ kẹt + khoảng 6–7 phút khôi phục. Diff ở `runs/v2-evidence/config/vh.py-vh2c-duration.diff`.
+- **Links:** `envs/cloud/provision/dg3.sh` (mới), PR #46; dữ liệu `runs/v2-vm/ops-*`, `runs/v2-vm/dg3-v2-4060ti/` sau khi kéo về.
+- **Thesis:** §5.4 cold start (C5, N5); chương vận hành VH2–VH4 trên N = 4.
+
+## 2026-11-19 – V2: tự tắt VM sau khi kéo dữ liệu (Quang đi ngủ)
+
+- **Task:** Q7 (chi phí) · **Environment:** V2
+- **Decision:** Quang đồng ý (00:45) cho tắt VM bằng `poweroff` từ bên trong ngay khi VH và ĐG3 xong, để ngừng tính tiền GPU qua đêm; máy thuê qua web nên không có API key để `vast.sh release`. Điều kiện tắt: kéo `runs/` của VM về `runs/v2-vm/` và sha256 của **mọi file** trên PC trùng bản trên VM (thử tối đa 3 lần; lệch thì không tắt). Hạn cứng 04:30: nếu VH/ĐG3 còn chạy (nghi treo) thì vẫn kéo dữ liệu, kiểm checksum rồi tắt. Trước khi tắt lưu trạng thái cuối (`kubectl get pods -A`, `nvidia-smi`, `tmux ls`) vào `runs/v2-evidence/vm-final-state.txt` và danh sách sha256 trên VM vào `vm-runs-sha256-before-poweroff.txt`.
+- **Results:** chưa có (chờ VH, ĐG3).
+- **Links:** `runs/v2-evidence/`.
+
+## 2026-11-19 – V2: VH 6/6 đạt; ĐG3 hỏng 3/5 lượt do lỗi `dg3.sh`, đo lại; báo động nhầm lúc 01:54
+
+- **Task:** Q4, Q5, Q7 · **Environment:** V2 (VM 4 × RTX 4060 Ti)
+- **Results:**
+  - VH (tải 1,75 req/s, `matrix-v2.yaml`), mọi kịch bản rc = 0: vh2a (23:46–00:07), vh2b (rollout 4 pod `maxSurge: 0` trong 371,6 s), vh2c (thời lượng 1200 s), vh3-delete (2 pod Ready trước khi xoá nhờ bản sửa PR #46, pod thay thế Ready sau 67,4 s, đạt 0 lỗi; lần thử 16/11 trên N = 2 không đạt), vh3-kill, vh4 (chặn rồi gỡ chặn KEDA → Prometheus, tín hiệu về `ok`). Số chi tiết trong `runs/v2-vm/ops-vh*/summary.json`: chưa đọc hết.
+  - ĐG3 lượt đúng: **L2-2: 76 s** từ lệnh scale tới pod Ready (image có sẵn); **L0-2: 300 s** (kéo lại image 9.035.266.183 byte mất 2 phút 34 giây, tải lại model, compile cache nguội).
+- **Incidents:**
+  1. L2-1, L2-3, L0-1 dừng vài giây sau `kubectl scale`: hàm `wait_count` của `dg3.sh` kết thúc vòng lặp bằng `[ $t -gt 900 ] && { … }`; điều kiện sai trả 1, nên hàm trả 1 và `set -e` dừng script mỗi khi phải chờ ít nhất một vòng. L2-2 và L0-2 không phải chờ nên chạy đúng. Sửa: `if … fi` và `return 0`. Thư mục hỏng đổi tên thành `<lượt>-failed-wait-count-bug` (giữ làm bằng chứng), đo lại 3 lượt từ 01:55 trong tmux `dg3b`. Lượt L2 đo lại chạy sau L0-2, tức compile cache được tạo lại bởi pod của L0-2.
+  2. 01:54: bước kiểm trước khi tắt VM báo checksum lệch ở cả 3 lần, nên không tắt VM và chuông báo động trên PC kêu, đánh thức Quang. Nguyên nhân: so hai danh sách bằng `diff` nên lệch do thứ tự `sort` giữa hai máy và do `runs/v2-vm/v2-dg2/tables/` chỉ có trên PC; thực tế 474/474 file trên VM có trên PC với cùng sha256 (`comm -23` sau `sort`: 0 dòng thiếu). Sửa: so bằng `comm -23` sau `LC_ALL=C sort`, chỉ đòi mọi file của VM có trên PC.
+- **Decision:** sau khi đo lại xong và kiểm đúng, tự `poweroff` VM rồi tắt PC sau 10 phút (Quang đồng ý); chuông chỉ kêu khi VM vẫn trả lời SSH sau poweroff hoặc dữ liệu thiếu.
+- **Links:** `envs/cloud/provision/dg3.sh`, `runs/v2-evidence/config/dg3.sh-fixed`, `runs/v2-vm/dg3-v2-4060ti/`.
+- **Thesis:** §5.4 cold start (L2 76 s so với L0 300 s; phần kéo image 154 s); chương vận hành VH2–VH4 trên N = 4; §Hạn chế (L0 đo 0 → 1).
+
+## 2026-11-19 – V2: ĐG3 đo lại xong, VM đã tắt; phân tích lỗi A2 × KB2 và vh3-kill; xoá VM
+
+- **Task:** Q4, Q5, Q6, Q7 · **Environment:** V2 (dữ liệu trên PC), none (phân tích)
+- **Done:**
+  1. Đo lại 3 lượt ĐG3 hỏng (tmux `dg3b`, 01:55–02:04 +07). Kiểm trước khi tắt đạt: mọi file của VM có trên PC với cùng sha256. Lưu `runs/v2-evidence/vm-final-state.txt`, `vm-runs-sha256-before-poweroff.txt`; VM nhận `poweroff` lúc 19:05:02Z (02:05 +07).
+  2. Đọc `summary.json` của 6 kịch bản VH và bảng `phases.csv`, `alerts.csv`, `metrics.csv.gz` của ĐG2 để xem lỗi A2 × KB2 nằm ở đâu.
+  3. Quang xoá instance trên Vast (thao tác qua web) sau khi kết luận không cần đo thêm.
+- **Decision:** không giữ VM để đo thêm. Mọi phép đo trên GPU thuê của kế hoạch đã có dữ liệu (ĐG1, ĐG2 17/17, ĐG3 L0 × 2 + L2 × 3, VH2–VH4). Lỗi ở A2 × KB2 là hạn chế của thiết kế (xem Results), không phải lỗi cần sửa rồi chạy lại; thử cấu hình mới (routing theo hàng đợi, sửa vh3-kill) là thêm phạm vi khi còn 3 ngày tới mốc đóng băng 22/11. Giữ VM cũng không giúp gì cho ĐG1 nếu cần máy khác, vì C = 3,5 gắn với chính máy này.
+- **Results:**
+  - ĐG3 (từ lệnh scale tới pod Ready, `summary.txt` từng lượt): **L2 = 76 / 76 / 81 s** (trung bình 77,7 s); **L0 = 311 / 300 s** (kéo image 9.035.266.183 byte mất 2 phút 36 giây / 2 phút 34 giây). Ba lượt L2 đo sau L0-2 nên compile cache do pod của L0-2 tạo lại.
+  - A2 × KB2, cả 37 / 82 / 93 lỗi đều là `Timeout`, đều ở pha `spike`, gửi trong khoảng 60–120 s đầu của spike. Pha `drop` của 5 lượt A1/A2 × KB2: **0 lỗi, SLO 100 %** → N4 (scale-down) đạt.
+  - Nguyên nhân SLO spike chỉ khoảng 75 %: pod có sẵn (`7krwm`) có hàng đợi vLLM tối đa **416 / 425 / 428** request, kéo dài khoảng 385–390 s; ba pod mới có tối đa 0–9 request chờ. Hàng đợi đã nằm trong vLLM của pod cũ thì không chuyển sang pod mới, còn Service vẫn chia đều request mới nên khoảng 1/4 request tiếp tục xếp sau hàng đợi đó. Ở S4 × KB2, 4 pod có 0 request chờ suốt lượt.
+  - Chỉ tiêu: N1 (A2 KB1, KB3 SLO 100 %) đạt; N2a (phản ứng 80–82 s ≤ 2 phút) đạt; N3 KB1 (A2 dùng 25 % GPU-giờ của S4, SLO kém 0 điểm) đạt; N2b hồi phục 409–430 s (dự kiến ≤ 5 phút, chỉ báo cáo).
+  - VH: vh2a rollout 141,4 s (từ 1 replica), vh2b 371,6 s, vh2c kẹt có pod Pending đúng như dự đoán, vh3-delete thay pod 67,4 s 0 lỗi, vh4 fallback **16,8 s** (N6 ≤ 30 s), cả 5 kịch bản 0 lỗi.
+  - vh3-kill: container restart, Ready lại sau 67,4 s, nhưng 129 lỗi / 1.041 request (ConnectError 70, ConnectTimeout 47, StreamError 11, HTTPStatus 1). 117 lỗi kết nối ≈ 67,4 s × 1,75 req/s, nên khả năng cao lúc kill chỉ có 1 pod (tải 0,5 C, A2 giữ 1 replica): cả cluster không có pod phục vụ trong 67 s. Suy luận này chưa kiểm bằng số pod lúc kill (console không in); `vh3_kill` trong PR #46 chưa có bước bảo đảm 2 pod như `vh3_delete`.
+  - Chi phí thực tế: chưa có (chờ Quang đọc trang Billing của Vast).
+- **Incidents:** suốt mọi lượt ĐG2 có `AlertmanagerFailedToSendAlerts` firing từ trước khi bắt đầu (Alertmanager không gửi được tới receiver); không ảnh hưởng `LLMSLOBurnFast` (đọc từ `ALERTS` của Prometheus), chưa tìm nguyên nhân.
+- **Deviations:** vh3-kill chạy khi (có lẽ) chỉ 1 pod, khác ý của VH3 ("chỉ lỗi các request đang chạy trên pod đó").
+- **Links:** `runs/v2-vm/dg3-v2-4060ti/*/summary.txt`, `runs/v2-vm/ops-vh*/summary.json`, `runs/v2-vm/v2-dg2/tables/`; báo cáo tổng hợp V2 (Artifact, link trong phiên Claude).
+- **Thesis:** §5.3 (A2 × KB2: hàng đợi kẹt ở pod cũ, hình hàng đợi theo pod), §5.4 cold start (L2 77,7 s, L0 305,5 s), §Hạn chế (load balancing không biết hàng đợi; vh3-kill 1 pod), chương vận hành (VH2–VH4 trên N = 4).
+
+## 2026-11-20 – Rà tiến độ sau V2, đẩy dữ liệu V2 cho Trình, file nguồn tư liệu luận văn
+
+- **Task:** Q6, chung (luận văn) · **Environment:** none
+- **Done:**
+  1. Rà tiến độ theo Kế hoạch §3: M1 7/7; M2 còn T6, T7, bảo mật, Telegram, VH6 ở nhà; M3 đã có dữ liệu ĐG1, ĐG2, ĐG3, VH2–VH4 nhưng còn thiếu ADR-003, bảng nghiệm thu, chi phí thực tế, bản sao lưu thứ hai; M4 mới có bản nháp 3.4 của Trình.
+  2. Merge `origin/main` (PR #50, #51) vào `feat/v2-results-1911`, không conflict. Nhánh trước đó có 4 commit chưa push.
+  3. Chép `runs/dg1-v2-4060ti/capacity.json` vào `envs/cloud/experiments/capacity.json`; chỉ đặt `status` = `v2-official` và `note`, mọi trường số giữ nguyên (so bằng script: chỉ 2 khoá khác).
+  4. Kiểm `runs/v2-evidence/SHA256SUMS`: 638/639 khớp; file lệch là `vm-final-state.txt`, ghi lúc 02:05:02, sau khi lập danh sách lúc 02:04:59 ngày 19/11, nên không phải hỏng dữ liệu.
+  5. Nén `runs/dg1-v2-4060ti`, `runs/v2-vm`, `runs/v2-evidence` thành `runs/_share/v2-data-20261119.tar.gz` (9.975.434 byte, 835 mục) kèm file `.sha256`, để Quang gửi Trình.
+  6. Chạy thử `analysis.charts runs/v2-vm/v2-dg2` (ra thư mục tạm): ra 6 hình C1 (3 lượt KB2), C2, C3, C4, không lỗi. Chưa xem bố cục, chưa commit (việc của TR7).
+  7. Viết `docs/luan-van/nguon-tu-lieu.md`: bản đồ nguồn, nguồn cho từng mục luận văn theo §5.1, bảng số liệu đã chốt kèm nơi gốc, danh sách chưa có số, cách lấy dữ liệu V2, các hạn chế đã biết, link 12 trang artifact.
+- **Decision:** gửi dữ liệu V2 cho Trình bằng file nén thay vì commit vào Git (`runs/` bị gitignore, 36 MB) hay R2 (PC chưa có `.env`). Không commit hình C1–C4: thuộc TR7, Trình xem bố cục rồi commit.
+- **Incidents:** CI của PR #52 không chạy: cả 6 job dừng sau 1–2 s với "account is locked due to a billing issue" (tài khoản GitHub `bi6-cat`), nên lychee và pytest chưa chạy trên PR. Các trang artifact mặc định chỉ Quang xem được; Trình chỉ mở được sau khi Quang bấm Share. Repo công khai, nên không chia sẻ kiểu ai có link cũng xem.
+- **Links:** PR #52 (nhánh `feat/v2-results-1911`, reviewer Trình); `envs/cloud/experiments/capacity.json`, `docs/luan-van/nguon-tu-lieu.md`, `docs/luan-van/README.md`.
+- **Thesis:** dùng cho mọi chương (file nguồn); §5.2 (`capacity.json` trong Git).
+
+## 2026-11-20 – Sửa 2 test Python đỏ trên PR #52; quy tắc viết luận văn chung
+
+- **Task:** Q6, chung (luận văn) · **Environment:** none
+- **Done:**
+  1. Sau khi tài khoản GitHub hết bị khoá, CI của PR #52 chạy: 4 job đạt, `python (3.11)` và `python (3.15)` đỏ ở 2 test trong `experiments/tests/test_runner.py`. Nguyên nhân: hai test giả định `matrix-v2.yaml` còn để `null` (bản nháp chờ ADR-003), còn commit `a44ae71` đã điền C = 3,5 và threshold 37. Sửa: test "từ chối khi chưa điền" dựng lại bản nháp bằng cách thay hai số về `null`; test cấu trúc kiểm file thật và so C, threshold với `envs/cloud/experiments/capacity.json` thay cho số giả 5 và 24. `pytest experiments`: 168 passed trên Python mặc định và 3.11; `ruff check`, `ruff format --check` đạt. Sửa trong worktree riêng vì thư mục làm việc chính đang ở `main`.
+  2. Viết `docs/luan-van/quy-tac-viet.md`: thứ tự ưu tiên (khuôn trường > README > file này), vai trò từng chương, khung 6 bước cho chương 4 (tránh R21), văn phong và ba mức chắc chắn, bảng thuật ngữ và tên gọi thống nhất, quy tắc số liệu và nhãn nguồn gốc, hình/bảng/mã, trích dẫn, phối hợp và review, dùng AI agent, checklist trước PR. Thêm dòng vào bảng file của README.
+- **Decision:** phần định dạng (phông, lề, giãn dòng) để trống chờ khuôn của trường, không tự đặt số; chỉ ghi các thông lệ không phụ thuộc khuôn.
+- **Links:** PR #52; `experiments/tests/test_runner.py`, `docs/luan-van/quy-tac-viet.md`, `docs/luan-van/README.md`.
+- **Thesis:** quy tắc chung cho mọi chương.
+
+## 2026-11-20 – Khung luận văn trên Google Docs
+
+- **Task:** chung (luận văn) · **Environment:** none
+- **Done:**
+  1. Đề xuất khung luận văn (trang artifact riêng tư): 6 chương, đầu quyển, phụ lục; mỗi mục có người viết, số trang, trạng thái tư liệu, nguồn. Tổng đề xuất khoảng 60 trang thân bài (Quang khoảng 31, Trình khoảng 29). Quang đồng ý 5 điểm chốt: LT1–LT8 thành mục 5.6 (5.6a Quang, 5.6b Trình); chủ chương viết mở đầu và kết chương (chương 1, 2, 4 Quang; 3, 5, 6 Trình); 5.8 Trình, 5.9 Quang; đầu quyển và danh mục chữ viết tắt Trình; danh mục tài liệu đứng trước phụ lục.
+  2. Theo yêu cầu của Quang, thêm mục 4.12 "Tổng hợp khó khăn và cách vượt qua" và phần khó khăn trong từng mục chương 4. Bảng tư liệu 14 dòng lọc từ `van-hanh.md` và nhật ký tuần 05–07 (triệu chứng, nguyên nhân, cách vượt qua, bài học, nguồn); giả thuyết chưa kiểm ghi rõ "chưa kiểm".
+  3. Tạo thư mục Drive "Luận văn vLLM autoscaling" và một Google Doc khung cho cả quyển (tạo từ HTML: chương là Heading 1, mục là Heading 2). Mỗi mục: ghi chú xám (người viết, trang, trạng thái, câu hỏi phải trả lời, nguồn) và dòng [Chưa viết]. Đọc lại doc sau khi tạo: đủ mọi mục và bảng.
+- **Decision:** Quang chọn viết trên Google Docs để hai người sửa chung, thay cho Markdown trong `docs/luan-van/` + pandoc (D70 của Trình, 18/11). Một doc cho cả quyển để mục lục và dẫn chéo tự động. Nguồn của số liệu ghi bằng chữ xám "[nguồn: …]" sau đoạn, xoá trước khi nộp; góp ý mục của người kia bằng Comment/Suggesting. `quy-tac-viet.md` và `nguon-tu-lieu.md` vẫn ở repo. Cần Trình đồng ý, sau đó sửa README của `docs/luan-van/` cho khớp; mục 3.4 (Markdown, đã merge) Trình chép sang doc.
+- **Deviations:** lệch D70 và README `docs/luan-van/` (Markdown mỗi mục một file). Doc chưa chia sẻ cho Trình (cần email của Trình).
+- **Links:** PR #52; Google Doc trong thư mục Drive của Quang (không ghi link vào repo công khai).
+- **Thesis:** khung cho mọi chương; 4.12.

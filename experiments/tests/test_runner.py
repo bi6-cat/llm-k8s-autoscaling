@@ -164,20 +164,25 @@ def test_matrix_sim_file_is_valid():
     assert (REPO / m.runs[1].config.file).exists()
 
 
-def _v2_filled() -> matrix.Matrix:
-    """matrix-v2.yaml điền thử hai số chờ ADR-003 (C = 5, threshold A2 = 24), như sẽ làm ở V2."""
-    text = (REPO / "envs" / "cloud" / "experiments" / "matrix-v2.yaml").read_text(encoding="utf-8")
-    filled = text.replace("&C null", "&C 5").replace("&A2_THRESHOLD null", "&A2_THRESHOLD 24")
-    assert filled.count("null") == text.count("null") - 2
-    return matrix.parse(yaml.safe_load(filled))
+V2_MATRIX = REPO / "envs" / "cloud" / "experiments" / "matrix-v2.yaml"
 
 
-def test_matrix_v2_draft_refuses_unfilled_values_then_matches_design():
-    # Bản nháp còn `null` (chờ ADR-003): runner phải từ chối, kể cả --dry-run
+def test_matrix_v2_refuses_unfilled_values():
+    # Trước ĐG1, khối x-adr003 để `null`: runner phải từ chối, kể cả --dry-run. Từ 19/11 file đã điền số
+    # của V2, nên dựng lại bản nháp bằng cách thay hai số đó về `null`.
+    text = V2_MATRIX.read_text(encoding="utf-8")
+    draft = re.sub(r"&C [0-9.]+", "&C null", text)
+    draft = re.sub(r"&A2_THRESHOLD [0-9.]+", "&A2_THRESHOLD null", draft)
+    assert draft.count("null") == text.count("null") + 2
     with pytest.raises(matrix.MatrixError, match="số dương"):
-        matrix.load(REPO / "envs" / "cloud" / "experiments" / "matrix-v2.yaml")
-    # Điền thử như ở V2 rồi kiểm cấu trúc theo Thông số §8.2
-    m = _v2_filled()
+        matrix.parse(yaml.safe_load(draft))
+
+
+def test_matrix_v2_matches_design_and_capacity():
+    # Ma trận V2 đúng cấu trúc Thông số §8.2, và hai số của x-adr003 khớp capacity.json của ĐG1 V2
+    m = matrix.load(V2_MATRIX)
+    cap = json.loads((V2_MATRIX.parent / "capacity.json").read_text(encoding="utf-8"))
+    c, threshold = cap["C"], cap["threshold"]["A2_concurrency"]
     cells: dict[tuple[str, str], int] = {}
     for r in m.runs:
         cells[(r.config.id, r.scenario)] = cells.get((r.config.id, r.scenario), 0) + 1
@@ -197,8 +202,8 @@ def test_matrix_v2_draft_refuses_unfilled_values_then_matches_design():
     for cid in ("A1", "A2"):
         assert by_id[cid].overrides["max_replicas"] == n
         assert (REPO / by_id[cid].file).exists()
-    assert by_id["A2"].overrides["threshold"] == 24 and "threshold" not in by_id["A1"].overrides
-    assert all(r.capacity == 5 and r.replicas_for_kb3 == n for r in m.runs)
+    assert by_id["A2"].overrides["threshold"] == threshold and "threshold" not in by_id["A1"].overrides
+    assert all(r.capacity == c and r.replicas_for_kb3 == n for r in m.runs)
     # Mọi cấu hình autoscaling ở V2 đều được kiểm tín hiệu (Môi trường §17)
     assert all(c.signal for c in by_id.values() if c.type == "scaledobject")
 
@@ -229,7 +234,7 @@ def test_matrix_signal_is_what_the_trigger_reads(path):
     # `signal` khai báo trong ma trận phải là đúng một selector trong `query` của trigger, kể cả label. Đổi
     # query (ví dụ A1 sang DCGM) mà quên đổi signal thì runner kiểm nhầm chuỗi, và lượt mất tín hiệu thật
     # vẫn được tính hợp lệ. Quét mọi file ma trận, nên file mới thêm cũng được kiểm.
-    m = _v2_filled() if path.name == "matrix-v2.yaml" else matrix.load(path)
+    m = matrix.load(path)
     for c in {r.config.id: r.config for r in m.runs}.values():
         if c.signal:
             so = yaml.safe_load((REPO / c.file).read_text(encoding="utf-8"))

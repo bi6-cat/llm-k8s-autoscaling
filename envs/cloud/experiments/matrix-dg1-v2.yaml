@@ -1,0 +1,52 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# envs/cloud/experiments/matrix-dg1-v2.yaml
+# Khái niệm: ĐG1 (Môi trường §8, Thông số §8.3) = đo năng lực C của MỘT replica: cố định 1 replica (S1),
+#            quét tải CONST ở các mức λ tăng dần; C = λ lớn nhất còn ≥ 95 % request đạt SLO.
+# Mục đích:  ĐG1 CHÍNH THỨC của V2 (18/11) trên VM Vast 4 × RTX 4060 Ti 16 GB (thay cho 4 × A4000 của
+#            ADR-006 C2, vì hôm đó không có máy A4000). Kết quả → capacity.json → ADR-003 → khối
+#            x-adr003 của matrix-v2.yaml. Cấu hình serving giống V1 (Qwen2.5-3B, max-num-seqs 64,
+#            max-model-len 8192), nên chỉ khác ở card GPU.
+#            Mỗi mức 300 s như spec: capacity.py bỏ 60 s đầu (làm ấm) → đo 240 s.
+# Chạy:      KUBECONFIG=~/.kube/llm-cloud.yaml uv run --project experiments python -m experiments.runner \
+#              --matrix envs/cloud/experiments/matrix-dg1-v2.yaml
+#            uv run --project experiments python -m experiments.runner.capacity runs/dg1-v2-4060ti \
+#              --out runs/dg1-v2-4060ti/capacity.json
+# Tham khảo: Thông số §6 (SLO), §8.3; matrix-dg1.yaml (ĐG1 thử ở V1, cùng cấu trúc)
+# ──────────────────────────────────────────────────────────────────────────────
+session: dg1-v2-4060ti
+env: cloud
+
+target:
+  namespace: llm-serving
+  deployment: vllm
+  service_url: http://vllm.llm-serving.svc:8000
+  model: qwen2.5-3b
+  prometheus_service: monitoring/kps-prometheus:9090
+  api_key_secret: vllm-api-key
+  # Cùng mức của matrix-v2.yaml: 3 tiến trình gửi tải. Máy có 61 vCPU nên không thiếu CPU như 16/11.
+  loadgen_cpu: "3"
+
+timing:
+  settle_s: 30
+  warmup_s: 30                         # warm-up ở 0,3 λ; cửa sổ đo còn bỏ thêm 60 s đầu phase chính
+  warmup_fraction: 0.3
+  cooldown_max_s: 600
+  reset_timeout_s: 900
+
+configs:
+  S1:
+    type: static
+    replicas: 1
+
+# Ước tính trước khi đo: decode bị giới hạn bởi băng thông bộ nhớ (LT1). 4060 Ti có 288 GB/s, A4000 có
+# 448 GB/s, nên TPOT dự kiến dài hơn khoảng 1,5 lần và C thấp hơn mức 4,5 req/s của A4000, dự đoán thô
+# 3–4 req/s. Quét thô bước 1 từ 2 tới 5, rồi thêm mức dày bước 0,5 quanh điểm gãy sau khi xem kết quả.
+defaults: {config: S1, scenario: CONST, duration: 300}
+runs:
+  - {rate: 2}
+  - {rate: 3}
+  - {rate: 4}
+  - {rate: 5}
+  # 18/11, sau 4 mức thô (cả 4 hợp lệ): λ = 3 đạt SLO 100 % (B = 32,7, TPOT p95 51,7 ms), λ = 4 chỉ
+  # 28,5 % (waiting 12,4). Điểm gãy nằm giữa 3 và 4 → thêm mức 3,5.
+  - {rate: 3.5}
