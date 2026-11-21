@@ -387,3 +387,13 @@
 - **Deviations:** chưa nhận dữ liệu `runs/` của V2, nên chưa kiểm số nào trực tiếp từ dữ liệu thô. Chưa chạy pytest cục bộ trên nhánh PR #52, chỉ dựa vào CI.
 - **Links:** PR #52, PR #46 (review của `trinh-cloud`).
 - **Thesis:** §5.2 (C là cận dưới); §5.4 (độ phân giải ĐG3); §5.5 VH6 và Hạn chế (không có tin Telegram trong V2, nếu xác nhận nguyên nhân).
+
+## 2026-11-21 – Luận văn: tạm viết trên Google Docs
+
+- **Task:** chung (luận văn) · **Environment:** none
+- **Decision:** Trình đồng ý dùng Google Doc do Quang dựng ngày 20/11 làm bản gốc của luận văn, thay cho luồng Markdown + pandoc trong `docs/luan-van/` (quyết định 18/11). Đây là lựa chọn tạm: khi nội dung xong, hai người xét lại có chuyển sang LaTeX không. Doc xuất được .docx, khớp với việc khuôn của trường và góp ý của GVHD đi qua Word, và vẫn chuyển tiếp được (.docx → pandoc → LaTeX).
+  - Không chuyển sang LaTeX ngay: chưa biết khuôn của trường, đổi công cụ lần hai khi còn khoảng 2,5 tuần, và luận văn có ít công thức.
+  - Cách làm: Trình nháp từng mục bằng Markdown (agent viết, agent khác đối chiếu số với nguồn), rồi dán vào Doc. Sau khi dán, mọi sửa đổi chỉ làm trên Doc; góp ý bằng Comment/Suggesting. Trích dẫn đề nghị dùng Zotero cho Google Docs (nhập `tai-lieu.bib`, kiểu IEEE).
+  - Không nháp trong repo qua PR: sau khi dán vào Doc, hai bản dễ lệch nhau, và mỗi mục tốn thêm một PR.
+- **Deviations:** `docs/luan-van/README.md` và `quy-tac-viet.md` (§1, §7, §8, §10) vẫn tả luồng pandoc; sẽ sửa trong một PR sau khi PR #52 merge. Mục 3.4 (bản Markdown đã merge ở PR #51) chưa chép sang Doc, vì Doc chưa được share cho Trình.
+- **Thesis:** quy trình viết (lời mở đầu hoặc phần khai báo dùng AI agent, `quy-tac-viet.md` §9).
