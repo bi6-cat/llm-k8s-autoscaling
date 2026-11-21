@@ -23,7 +23,7 @@ kubectl -n llm-serving get hpa                   # TARGETS (metric/threshold), R
 | Nguyên nhân | Hành động |
 |---|---|
 | Tải vừa tăng, pod mới đang cold start | Theo dõi. Cảnh báo tự tắt khi pod mới Ready và hàng đợi rút hết, thường trong vài phút. Nếu cold start > 3 phút: kiểm tra image đã có sẵn trên node chưa, model có nằm trên NVMe không |
-| Đã chạy tối đa replica | Thắt giới hạn tốc độ ở Traefik để bảo vệ phần lớn người dùng; báo người dùng; đề xuất thêm GPU (Vận hành §9) |
+| Đã chạy tối đa replica | Báo người dùng; đề xuất thêm GPU (Vận hành §9). Không có giới hạn tốc độ ở Traefik để cắt bớt tải: lớp này đã lược ngày 12/11 ([Vận hành §8](../chi-tiet/04-van-hanh.md#8-bảo-mật-tối-thiểu)) |
 | Một pod chậm bất thường | Xem GPU của pod đó (nhiệt độ, XID); xoá pod để nó chuyển đi |
 | Ngay sau một lần cập nhật | Rollback bằng `git revert` rồi để Argo CD sync ([Vận hành §5](../chi-tiet/04-van-hanh.md#5-cập-nhật-phiên-bản-khi-gpu-đã-dùng-hết)) |
 | KEDA đang lỗi | Autoscaling đã fallback; xử lý theo [KedaScalerErrors](KedaScalerErrors.md) |

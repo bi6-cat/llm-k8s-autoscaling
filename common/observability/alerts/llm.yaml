@@ -42,8 +42,14 @@ spec:
             runbook_url: "https://github.com/bi6-cat/llm-k8s-autoscaling/blob/main/docs/runbooks/LLMSLOBurnFast.md"
 
         # SLO lỗi 99% → ngưỡng 1% request trả 5xx trong 5 phút (Thông số §6).
-        # for: 1m (thiết kế không ghi): một lần chuyển pod có thể sinh vài 503 lẻ; đòi điều kiện đúng
-        # suốt 1 phút để không page vì một đợt lỗi vài giây.
+        # for: 1m KHÔNG lọc được một đợt lỗi ngắn: tỷ lệ tính trên cửa sổ 5 phút, nên đợt lỗi nằm trong
+        # cửa sổ suốt 5 phút và điều kiện đúng lâu hơn 1 phút. Thử bằng promtool (18/11): 1 req/s, một
+        # đợt 5 lỗi 503 ở phút 10 → còn firing ở phút 12 và 14, hết ở phút 16. Ở tải thấp, vài 503 lẻ khi
+        # chuyển pod vẫn page. Giữ nguyên trong đợt đánh giá; hướng sửa là burn rate hai cửa sổ như
+        # LLMSLOBurnFast (Vận hành §3.2, luận văn §3.4).
+        # Chuỗi llm:error_ratio:rate5m chỉ có khi request đi qua Traefik. Runner gọi thẳng Service ở mọi
+        # môi trường (envs/*/experiments/matrix*.yaml), nên trong các lượt đánh giá chuỗi rỗng và quy tắc
+        # này không kêu được (Môi trường §13).
         - alert: LLMErrorRateHigh
           expr: llm:error_ratio:rate5m >= 0.01
           for: 1m

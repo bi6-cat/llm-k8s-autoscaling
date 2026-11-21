@@ -63,9 +63,9 @@ Tag `llm-run` là điểm hẹn giữa runner và dashboard. Đổi tag thì s�
 |---|---|---|---|---|
 | Hàng GPU (Serving và GPU) | nvidia_gpu_exporter | Trống (không có GPU) | Có | Có |
 | Preemption | `vllm:num_preemptions_total` | Trống (simulator không xuất) | Có | Có |
-| Hàng KEDA (Autoscaling) | Prometheus thu metric của KEDA operator | Trống | Trống | Trống |
+| Hàng KEDA (Autoscaling) | PodMonitor của KEDA operator (`common/platform/keda-metrics-values.yaml`, từ 15/11) | Có | Có, khi app `keda` đã nạp file trên | Có |
 | Không lỗi 5xx, ngân sách lỗi 5xx | Traefik và PodMonitor của nó | Trống (kind không có Traefik) | Có | Có |
 
-"No data" ở các ô trên là đúng. Hàng KEDA sẽ có số khi thêm việc thu metric của KEDA operator (chưa làm). Ở chỗ khác mà thấy "No data" thì kiểm tra target trong Prometheus (`/targets`) và tên metric.
+"No data" ở các ô "Trống" trên là đúng. Hàng KEDA có metric từ 15/11 (đã thấy `keda_scaler_metrics_value` và target `up=1` trên kind). Ở chỗ khác mà thấy "No data" thì kiểm tra target trong Prometheus (`/targets`) và tên metric.
 
 **Lưu ý khi đọc trên simulator.** TTFT mà simulator báo **không gồm thời gian chờ hàng đợi**: lượt tải 25 request đồng thời ngày 07/11 cho TTFT p95 0,24 s trong khi thời gian chờ hàng đợi p95 là 4,7 s. vLLM thật thì tính TTFT từ lúc request tới, nên gồm cả thời gian chờ. Vì vậy trên kind, quá tải không làm các panel TTFT, burn rate hay cảnh báo `LLMSLOBurnFast` thay đổi. Hãy xem panel thời gian chờ hàng đợi. Simulator đặt lý do kết thúc vào nhãn `finish_reason`; overlay `sim` đổi tên nhãn này thành `finished_reason` lúc scrape (`envs/sim/serving/patch-podmonitor-sim.yaml`) cho giống vLLM.

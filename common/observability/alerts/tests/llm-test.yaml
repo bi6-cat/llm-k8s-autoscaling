@@ -99,6 +99,42 @@ tests:
               description: "Đo ở Traefik. Thường do không còn pod Ready (503) hoặc pod chết giữa chừng (502)."
               runbook_url: "https://github.com/bi6-cat/llm-k8s-autoscaling/blob/main/docs/runbooks/LLMErrorRateHigh.md"
 
+  # Một đợt lỗi ngắn ở tải thấp: 1 req/s, 5 lỗi 503 cùng lúc ở phút 10, sau đó hết lỗi. `for: 1m` không
+  # lọc được đợt này: tỷ lệ tính trên cửa sổ 5 phút (5 / ~300 ≈ 1,6% ≥ 1%) nên điều kiện đúng từ phút 10
+  # tới khi bước nhảy rời cửa sổ (sau phút 14:45). Tính tay: pending từ phút 10, firing từ phút 11.
+  # Test này giữ đúng hành vi ghi ở Vận hành §3.2 và runbook; đổi rule (ví dụ sang burn rate hai cửa
+  # sổ) thì sửa cả test này lẫn hai chỗ đó.
+  - name: LLMErrorRateHigh vẫn page khoảng 4 phút vì một đợt 5 lỗi 503 ở 1 req/s
+    interval: 15s
+    input_series:
+      - series: 'traefik_service_requests_total{service="llm-serving-vllm-http@kubernetes", code="200"}'
+        values: '0+15x80'
+      - series: 'traefik_service_requests_total{service="llm-serving-vllm-http@kubernetes", code="503"}'
+        values: '0x39 5x40'
+    alert_rule_test:
+      - eval_time: 9m
+        alertname: LLMErrorRateHigh
+        exp_alerts: []
+      - eval_time: 12m
+        alertname: LLMErrorRateHigh
+        exp_alerts:
+          - exp_labels: {severity: page}
+            exp_annotations:
+              summary: "Hơn 1% request tới vLLM trả lỗi 5xx trong 5 phút gần nhất"
+              description: "Đo ở Traefik. Thường do không còn pod Ready (503) hoặc pod chết giữa chừng (502)."
+              runbook_url: "https://github.com/bi6-cat/llm-k8s-autoscaling/blob/main/docs/runbooks/LLMErrorRateHigh.md"
+      - eval_time: 14m
+        alertname: LLMErrorRateHigh
+        exp_alerts:
+          - exp_labels: {severity: page}
+            exp_annotations:
+              summary: "Hơn 1% request tới vLLM trả lỗi 5xx trong 5 phút gần nhất"
+              description: "Đo ở Traefik. Thường do không còn pod Ready (503) hoặc pod chết giữa chừng (502)."
+              runbook_url: "https://github.com/bi6-cat/llm-k8s-autoscaling/blob/main/docs/runbooks/LLMErrorRateHigh.md"
+      - eval_time: 16m
+        alertname: LLMErrorRateHigh
+        exp_alerts: []
+
   # ── LLMAtMaxReplicas ───────────────────────────────────────────────────────────────────────
   # 4/4 replica suốt 30 phút. Hàng đợi > 0 từ đầu → kêu sau 15 phút. Ca thứ hai: 4/4 nhưng hàng đợi rỗng
   # (tải cao mà vẫn phục vụ kịp) → không kêu.

@@ -446,3 +446,142 @@
 - **Deviations:** LT6 vẫn dùng các bậc λ của ĐG1 thay cho lượt tải tăng dần (như 16/11). V2 không có mức dưới 0,57 C nên không thêm điểm kiểm phần cong của 1 − e^(−L).
 - **Links:** nhánh `feat/tr8-lt5-lt6-v2`; `analysis/lt_charts.py`, `analysis/lt6_gpu_util.py`, `analysis/tests/test_lt_charts.py`, `analysis/tests/test_lt6_gpu_util.py`, `analysis/figures/lt5-little.*`, `lt6-gpu-util.*`, `docs/nhat-ky/van-hanh.md` (LT5, LT6), `docs/chi-tiet/06-ke-hoach-quan-ly.md`.
 - **Thesis:** §5 kiểm chứng lý thuyết LT5, LT6: Hình LT5 (54 cửa sổ, 3 môi trường), Hình LT6 (3 model); câu "A2 đo đúng L cả khi 4 replica trên GPU thật"; §5 ĐG2: A1 × KB1 ≈ S4 có cơ chế giải thích (util bão hoà khi L > 4,4).
+
+## 2026-11-21 – TR8: merge PR #54 (LT5, LT6 thêm V2)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** lần push đầu, CI job `docs` đỏ vì anchor mục LT6 bị đổi (mục ngay trên, Incidents); sửa và push lại thì cả 6 job xanh (alerts, docs, manifests, yaml, python 3.11, python 3.15). `mergeable` = MERGEABLE, 0 review, 0 bình luận. Merge bằng merge commit; xoá nhánh `feat/tr8-lt5-lt6-v2` và `docs/tr7-log-pr53` (commit nhật ký merge #53 đã vào `main` qua PR này).
+- **Links:** PR #54, merge commit `041c6f7`.
+
+## 2026-11-21 – Luận văn: nháp bảng nghiệm thu F1–F7, N1–N8 (mục 5.6)
+
+- **Task:** TR8 (luận văn) · **Environment:** none
+- **Done:**
+  1. Đối chiếu các số của nhật ký Quang (18–19/11) và `nguon-tu-lieu.md` §3 với dữ liệu thô V2: `runs.csv`, `phases.csv`, `alerts.csv` của ĐG2; `summary.json` của 6 kịch bản VH; `summary.txt` của 5 lượt ĐG3.
+  2. Tìm bằng chứng cho F1–F7 trong `van-hanh.md`, nhật ký Trình tuần 04–06, Thông số §3, `install-platform.sh`, `Makefile` (`alerts-coverage`) và `vh.py` bản đã chạy trên V2.
+  3. Viết nháp mục 5.6 bằng Markdown, ngoài Git, chờ dán vào Google Doc. Nháp gồm bảng N1–N8, bảng F1–F7 và khuyến nghị chọn A2, mỗi số kèm dòng nguồn.
+- **Decision:** D75. Cột kết luận dùng năm mức: Đạt, Đạt một phần, Không đạt, Báo cáo, Chưa đo.
+  - F2 ghi Đạt dù T6 ở nhà và T7 chưa chạy: ĐG2 đã cho thấy scale 1 → 4 rồi giảm lại trên GPU thật, còn T7 (A4) chỉ ở mức Could.
+  - N4 chỉ dẫn 3 lượt A2 × KB2, không dẫn 5 lượt.
+  - N8 ghi Chưa đo.
+- **Results:**
+  - Đạt: N1 (A2 × KB1 và A2 × KB3 pha `sustain`, 100% ở cả 4 lượt); N2a (79,7–81,5 s); N3 ở KB1 (25% GPU-giờ của S4, SLO attainment chênh 0 điểm); N4; N5 (77,7 / 305,5 s = 25,4%); N6 (fallback 16,8 s, dựng lại 8 phút 22 giây); N7 (S1 × KB3 104,5 s; 0 page giả trong 17 lượt).
+  - Báo cáo: N2b (409–430 s). Chưa đo: N8 (người thứ hai dựng lại cluster; tổng chi phí).
+  - F1, F2, F4 đạt. Đạt một phần: F3 (chưa cập nhật qua Git rồi `git revert`), F5 (chưa có ảnh chụp dashboard trên GPU thật), F6 (chưa có tin tới Telegram thật). F7 chưa đo (checklist chưa chạy).
+  - Mức Must còn thiếu: VH1, VH2 ở nhà; ảnh chụp dashboard trên GPU thật; tin Telegram thật.
+- **Incidents:** hai điểm lệch giữa nhật ký và dữ liệu thô.
+  - Thứ tự ĐG3: `nguon-tu-lieu.md` §6 ghi "3 lượt L2 chạy sau L0". Theo `pod_created`, L2-2 (18:44:33Z) chạy trước L0-2 (18:46:48Z); chỉ L2-1 và L2-3 chạy sau. L2-2 và L2-1 cùng cho 76 s, nên việc compile cache được tạo lại không làm đổi kết quả L2.
+  - Pha `drop`: câu "pha `drop` của 5 lượt KB2: 0 lỗi" đúng về số lỗi. Tuy vậy, hai lượt A1 giữ 4 replica suốt pha (`scale_downs` = 0), nên chỉ 3 lượt A2 (`scale_downs` = 3) là bằng chứng cho scale-down an toàn.
+- **Links:** không đổi file nào trong repo ngoài nhật ký này. Nguồn: `runs/v2-vm/` (gói dữ liệu V2).
+- **Thesis:** §5.6 bảng nghiệm thu và khuyến nghị cấu hình; §5 Hạn chế (sửa câu về thứ tự lượt L2).
+
+## 2026-11-21 – Luận văn: nháp mục 5.3 (autoscaling so với cấu hình tĩnh)
+
+- **Task:** TR7, TR8 (luận văn) · **Environment:** none
+- **Done:**
+  1. Đọc thiết kế ĐG2 (Thông số §4, §6–§9.3; Môi trường §11, §15, §16), `quy-tac-viet.md` và `nguon-tu-lieu.md` (nhánh của PR #52), nhật ký Quang 18–19/11.
+  2. Tính thêm từ dữ liệu thô V2 bằng một script cục bộ, đọc `events.jsonl`, `metrics.csv.gz`, access log vLLM và `requests.csv`. Các số tính được:
+     - mốc rescale của HPA;
+     - hàng đợi theo pod;
+     - số request mỗi pod nhận;
+     - tín hiệu A2;
+     - request không đạt SLO, tách theo lúc gửi trước hay sau khi pod mới đầu tiên Ready.
+  3. Phiên Claude viết nháp 5.3 bằng Markdown, ngoài Git. Nháp gồm Bảng 5.3a (11 ô, giá trị từng lượt), hình C4, hình C1 của lượt 1 và 4 tiểu mục; mỗi đoạn có số đều kèm dòng nguồn.
+  4. Một agent khác (Opus, effort xhigh) đối chiếu độc lập. Phiên chính tính lại các lỗi được báo, rồi sửa 5 lỗi chính và 6 lỗi nhẹ. Sửa thêm 2 câu của nháp 5.6 cho khớp với 5.3. Trình chưa đọc lại nháp.
+- **Decision:** D76.
+  - Thân bài 5.3 dùng Bảng 5.3a, hình C4 và hình C1 của lượt 1. C2, C3 và C1 của lượt 2, 3 đưa vào phụ lục.
+  - Thêm phép kiểm cách chia request theo pod để có số cho nguyên nhân của A2 × KB2.
+- **Results:**
+  - **A2 × KB2, cách chia request:** trong [360; 600) s, khi cả 4 pod đã Ready, pod cũ nhận 24,3–25,7% số request mới, các pod mới nhận 23,3–26,1%. Số này đếm từ access log; tổng theo pod khớp đúng `n_sent`. Pod cũ xử lý 3,60–3,78 req/s, nhưng trong 240 s đó hàng đợi chỉ giảm từ 370–400 xuống 38–80 request.
+  - **A2 × KB2, request không đạt SLO trong pha `spike`:** 42–44% được gửi trước lúc pod mới đầu tiên Ready (319,7–321,5 s), 56–58% gửi sau đó.
+  - **Nhịp scale của A2 × KB2:** HPA đặt đủ 4 replica sau 30–36 s kể từ lúc tải tăng. A2 về 1 replica sau 369–420 s kể từ lúc tải giảm.
+  - **A2 × KB3, pha `sustain`:**
+    - Tín hiệu A2 dao động 64–152 (trung bình 101,1 và 106,1), và 65–74% số mẫu không quá 111 (= 3 × 37).
+    - Hai mẫu liên tiếp trên 111 cách nhau nhiều nhất 120 s và 95 s, ngắn hơn cửa sổ 300 s. Vì vậy A2 giữ 4 replica và không có flapping.
+  - **A1:** chỉ bớt pod 308–315 s sau khi kịch bản tải kết thúc, ở cả 5 lượt.
+  - **Chưa giải thích:** cold start L2 trong ĐG2 là 65–66 s (tính từ lúc tạo pod), trong ĐG3 là 76–81 s (tính từ lệnh scale). Chênh 10–15 s; đã ghi lại để xử lý khi viết mục 5.4.
+- **Incidents:** bản đầu ước lượng số request mỗi pod nhận bằng Δ`vllm_success_total` + Δ(running + waiting), ra 21–24% cho pod cũ.
+  - Nguyên nhân: `vllm_success_total` không đếm request timeout. Các request này (37, 82, 93 ở ba lượt) đều nằm ở pod cũ và bị cắt trong cửa sổ đo.
+  - Agent đối chiếu phát hiện lỗi. Đã sửa bằng cách đếm access log.
+- **Links:** trong repo chỉ đổi nhật ký này. Nháp ở `.work/luan-van/05-03-autoscaling-so-voi-tinh.md`, ngoài Git. Nguồn: `runs/v2-vm/v2-dg2/` (gói dữ liệu V2).
+- **Thesis:**
+  - §5.3: nháp xong, đã đối chiếu.
+  - §5.6: sửa dòng N1, vì pha được chấm của KB2 là `pre`, `spike`, `drop`.
+  - §5.7 Hạn chế: chưa kiểm theo từng request câu "request vi phạm sau lúc pod mới Ready phần lớn xếp sau hàng đợi cũ".
+  - §6 hướng phát triển: định tuyến theo hàng đợi; giữ tối thiểu 2 replica.
+
+## 2026-11-21 – Luận văn: nháp mục 5.5, phần VH4 và VH6
+
+- **Task:** TR6, TR8 (luận văn) · **Environment:** none (dữ liệu V2 đã thu)
+- **Done:**
+  1. Đọc dữ liệu VH4 của ba lượt: V2 (18/11, 4 × RTX 4060 Ti), máy thuê thử N = 2 (16/11), simulator (09/11). Đối chiếu với hàm `vh4` trong `experiments/ops/vh.py`; hàm này trùng với bản đã chạy trên V2 (`runs/v2-evidence/config/`).
+  2. Chia lượt VH4 của V2 thành ba khoảng theo mốc chặn và mốc gỡ chặn, tính SLO bằng `analysis.metrics`, cùng định nghĩa với bảng ĐG2. Tính thêm TPOT theo từng phút.
+  3. VH6: đọc `runs.csv`, `alerts.csv` của 17 lượt ĐG2. Tính tỷ lệ request xấu lớn nhất trên cửa sổ 1 phút, giữa mốc vi phạm và mốc page.
+  4. Viết nháp. Agent Opus (xhigh) đối chiếu và tự tính lại ba bảng: khớp hết. Agent tìm ra 12 lỗi ở các câu suy luận và mô tả cách đo; đã sửa cả 12.
+  5. Sửa dòng F6 của nháp 5.6 theo cùng cách nói.
+- **Decision:** D77. Phần VH4, VH6 viết chung một file, tạm đánh số tiểu mục theo mã kịch bản (5.5.4, 5.5.6).
+  - VH4 lấy lượt V2 làm số chính thức. Hai lượt thử chỉ dùng để thấy thời gian fallback ít phụ thuộc môi trường, không dùng cho kết luận N6.
+  - Không viết thời điểm pod Ready như một sự thật, vì lượt VH4 không ghi mốc Ready. TPOT chỉ được dùng làm bằng chứng gián tiếp.
+- **Results:**
+  - **VH4, lượt V2** (tải trung bình 1,75 req/s = 0,5 C, chặn 301 s):
+    - Fallback lên 4 replica sau 16,8 s, đạt N6 (≤ 30 s). Lượt thử: 17,2 s (N = 2), 18,8 s (simulator).
+    - SLO attainment 100% ở cả ba khoảng, 0 lỗi / 1.263 request.
+    - TTFT p95: 305 → 254 → 221 ms. TPOT p50: 30,7 → 25,7 → 25,3 ms.
+  - **VH4, TPOT theo phút:** giảm từ 30,6–31,2 ms xuống 25,2–25,5 ms từ phút thứ tư. Hai mức này trùng với mức của 1 replica (A2 × KB1: 30,9 và 31,8 ms) và 4 replica (S4 × KB1: 25,3 ms) ở cùng 0,5 C.
+  - **VH4, gỡ chặn:** condition `Fallback` hết trong ≤ 5,3 s, ở lần đọc thứ hai. Không đo lúc về 1 replica, vì tải dừng 305 s sau khi gỡ chặn.
+  - **VH6:**
+    - 7/17 lượt có vi phạm SLO theo log client. Mỗi lượt có đúng 1 page `LLMSLOBurnFast`, sau 99–111 s; riêng S1 × KB3 là 104,5 s, đạt N7.
+    - 10 lượt không vi phạm, 0 page; 0 page giả.
+    - Cửa sổ 1 phút đạt 68–100% request xấu trước lúc page, nên kêu nhanh hơn LT8 (215–242 s ở x = 0,3; 159–163 s ở x = 0,6).
+- **Incidents:** lỗi trong nháp đầu, do agent đối chiếu phát hiện.
+  - Bản đầu dẫn dòng "không có TELEGRAM_BOT_TOKEN" trong console runner làm bằng chứng máy điều khiển thiếu `.env`. Bằng chứng đó không dùng được: ma trận ĐG2 chạy trên VM, repo rsync lên đã bỏ `.env`, và runner chỉ đọc biến môi trường. Đã thay bằng dòng Decision "PC chưa có `.env`" trong nhật ký Quang 18/11.
+  - Câu "chỉ heartbeat bên ngoài mới phát hiện được lỗi gửi" sai: heartbeat đi qua một receiver khác nên vẫn tới nơi.
+- **Deviations:**
+  - Trong ĐG2, máy tạo tải gọi thẳng Service `vllm.llm-serving.svc:8000`, không qua Traefik. Vì vậy `LLMErrorRateHigh` (đo 5xx tại Traefik) không có dữ liệu, và VH6 không kiểm được quy tắc này. Môi trường §13 không nêu điểm này.
+  - VH4 và VH6 chưa chạy ở nhà (Môi trường §13 ghi "Nhà; GPU thuê").
+  - Lỗ hổng định tuyến thấy trong V2: `AlertmanagerFailedToSendAlerts` ở mức warning nên không được gửi; `AlertmanagerClusterFailedToSendAlerts` ở mức critical thì đi tới Telegram, tức đúng đường đang hỏng. Đề xuất kiểm đầu-cuối lúc dựng cluster bằng một tin thử; chưa làm.
+- **Links:** trong repo chỉ đổi nhật ký này. Nháp ở `.work/luan-van/05-05b-vh4-vh6.md`, ngoài Git. Nguồn: `runs/v2-vm/ops-vh4-20261118-183127/`, `runs/v2-vm/v2-dg2/tables/`.
+- **Thesis:**
+  - §5.5.4, §5.5.6 (số tiểu mục tạm).
+  - §5.6, dòng N6, N7, F6.
+  - §5.7 Hạn chế: VH4 chỉ 1 lượt ở tải thấp; `LLMErrorRateHigh` không được kiểm; vùng 20–23% của N7 chưa đo.
+  - §6 hướng phát triển: kiểm đầu-cuối đường cảnh báo.
+  - Độ dài: ba nháp chương 5 của Trình có khoảng 8.400 chữ, nên rút gọn khi ghép chương.
+
+## 2026-11-21 – Đồng bộ tài liệu thiết kế với cái đã làm (PR đồng bộ, phần a)
+
+- **Task:** TR4, TR8 · **Environment:** none
+- **Done:**
+  1. Tạo nhánh `docs/tr4-sync-design-docs` từ `docs/tr8-log-pr54` (đã có 4 commit nhật ký chưa PR), để gộp vào cùng PR.
+  2. Sửa các điểm lệch ghi ở mục 18/11 (Deviations) và D71:
+     - comment `LLMErrorRateHigh` trong `llm.yaml`, Vận hành §3.2 và runbook: `for: 1m` không lọc được đợt lỗi ngắn;
+     - Vận hành §2.3: bỏ câu sai về `1 − tốt/tổng`;
+     - Vận hành §2.1: nguồn của TPOT;
+     - Vận hành §11: unit test chỉ có cặp cửa sổ 5m/1m;
+     - Thông số §9.4: retention ở cloud, exporter GPU;
+     - Thông số §7 và Kiến trúc §3.5: máy tạo tải gọi thẳng Service;
+     - hai runbook và Vận hành §4.3: bỏ "thắt giới hạn tốc độ";
+     - `slo.yaml`: bucket `le="2.5"` đã xác nhận trên GPU; README dashboard: hàng KEDA.
+  3. Môi trường §13: thêm giới hạn của VH6 trong V2 (`LLMErrorRateHigh` không có dữ liệu). Môi trường §16: điền bảng nghiệm thu từ nháp 5.6 (D75).
+  4. Kiểm điểm còn để ngỏ: severity của `TargetDown` trong chart 92.1.1.
+- **Decision:**
+  - D78: TPOT trong SLI và nghiệm thu là trung bình mỗi request (`vllm:request_time_per_output_token_seconds`); ITL chỉ dùng để chẩn đoán. JSON dashboard giữ nguyên, vì sửa sẽ làm ConfigMap ở nhà đổi.
+  - D79: `TargetDown` không tới Telegram; chỉ ghi là hạn chế, chưa đổi values.
+  - D80: tách bước đồng bộ thành 3 PR: tài liệu (PR này), script tính số vào `analysis/`, và Hình 7. Tên máy V2 trong `docs/chi-tiet/` thuộc Q2 nên báo Quang, không sửa ở đây.
+- **Results:**
+  - Mã vLLM v0.31.0 (`vllm/v1/metrics/stats.py`): `mean_time_per_output_token = decode_time / (num_generation_tokens − 1)`, với `decode_time = last_token_ts − first_token_ts`. Công thức này trùng công thức TPOT ở Môi trường §15.
+  - Chart kube-prometheus-stack 92.1.1 (`templates/prometheus/rules-1.14/general.rules.yaml`): `TargetDown` có severity mặc định `warning`, `Watchdog` có `none`. Repo không đặt `customRules`, mà định tuyến chỉ gửi `page`, `ticket` và `critical`, nên exporter chết sẽ không có tin Telegram.
+  - Retention Prometheus ở cloud là mặc định 10d của chart (`values.yaml`, `prometheusSpec.retention`). `retention: 72h` ở values chung là của `alertmanagerSpec`.
+  - `make alerts-test`: SUCCESS. `yamllint -s common/observability`: đạt. lychee trên các file đã sửa: 0 lỗi. `llm.yaml` và `slo.yaml` sau khi parse YAML giống hệt `origin/main` (chỉ đổi comment), nên Argo CD ở nhà không thấy thay đổi.
+- **Incidents:** `/code-review high` trên nhánh báo 9 điểm. Sửa 6 điểm:
+  - câu truy vấn trong runbook `LLMErrorRateHigh` dùng cửa sổ 5 phút nên không cho biết lỗi đã dừng; đổi sang `increase(...[1m])`;
+  - Vận hành §4.2 còn "Thắt giới hạn tốc độ" (lần grep đầu chỉ tìm chữ thường nên sót);
+  - runner gọi thẳng Service ở mọi môi trường (`envs/{home,sim,cloud}/experiments/matrix*.yaml`), không riêng V2;
+  - Kiến trúc Hình 2, bảng thành phần và luồng request còn ghi Traefik giới hạn tốc độ;
+  - thêm promtool test cho đợt 5 lỗi 503 ở 1 req/s (firing ở phút 12 và 14, hết ở phút 16). Thử đột biến bỏ đợt lỗi thì test FAILED;
+  - comment nguồn ở `docs/luan-van/03-04-…` còn ghi 3 điểm lệch đã sửa.
+
+  Hai điểm F3 và N4 được viết rõ hơn nhưng giữ nguyên mức. F3 có triển khai qua Git và rolling update trên VM, chỉ thiếu `git revert`. N4 theo Thông số §4 lấy nguồn từ ĐG2, VH1, VH2, không đòi chạy ở nhà. Mô tả panel trong JSON dashboard (`slo-cost.json` ghi "cloud 15 ngày", `serving-gpu.json` ghi "ngưỡng TPOT của SLO") để lại, vì sửa sẽ làm ConfigMap ở nhà đổi (D78).
+- **Deviations:** tài liệu `docs/chi-tiet/` vẫn ghi máy V2 là 4 × RTX A4000, trong khi dữ liệu V2 chạy trên 4 × RTX 4060 Ti 16 GB. Phần này chưa sửa (D80).
+- **Links:** nhánh `docs/tr4-sync-design-docs`; `docs/chi-tiet/00-thong-so.md`, `03-kien-truc-autoscaling.md`, `04-van-hanh.md`, `05-moi-truong-danh-gia.md`; `docs/runbooks/`; `common/observability/`.
+- **Thesis:** §3.4 (định nghĩa TPOT và ITL; `TargetDown` vào Hạn chế); §5.6 (bảng nghiệm thu, đã có trong Môi trường §16); §5.7 Hạn chế (VH6 không kiểm `LLMErrorRateHigh`).
