@@ -509,3 +509,41 @@
   - §5.6: sửa dòng N1, vì pha được chấm của KB2 là `pre`, `spike`, `drop`.
   - §5.7 Hạn chế: chưa kiểm theo từng request câu "request vi phạm sau lúc pod mới Ready phần lớn xếp sau hàng đợi cũ".
   - §6 hướng phát triển: định tuyến theo hàng đợi; giữ tối thiểu 2 replica.
+
+## 2026-11-21 – Luận văn: nháp mục 5.5, phần VH4 và VH6
+
+- **Task:** TR6, TR8 (luận văn) · **Environment:** none (dữ liệu V2 đã thu)
+- **Done:**
+  1. Đọc dữ liệu VH4 của ba lượt: V2 (18/11, 4 × RTX 4060 Ti), máy thuê thử N = 2 (16/11), simulator (09/11). Đối chiếu với hàm `vh4` trong `experiments/ops/vh.py`; hàm này trùng với bản đã chạy trên V2 (`runs/v2-evidence/config/`).
+  2. Chia lượt VH4 của V2 thành ba khoảng theo mốc chặn và mốc gỡ chặn, tính SLO bằng `analysis.metrics`, cùng định nghĩa với bảng ĐG2. Tính thêm TPOT theo từng phút.
+  3. VH6: đọc `runs.csv`, `alerts.csv` của 17 lượt ĐG2. Tính tỷ lệ request xấu lớn nhất trên cửa sổ 1 phút, giữa mốc vi phạm và mốc page.
+  4. Viết nháp. Agent Opus (xhigh) đối chiếu và tự tính lại ba bảng: khớp hết. Agent tìm ra 12 lỗi ở các câu suy luận và mô tả cách đo; đã sửa cả 12.
+  5. Sửa dòng F6 của nháp 5.6 theo cùng cách nói.
+- **Decision:** D77. Phần VH4, VH6 viết chung một file, tạm đánh số tiểu mục theo mã kịch bản (5.5.4, 5.5.6).
+  - VH4 lấy lượt V2 làm số chính thức. Hai lượt thử chỉ dùng để thấy thời gian fallback ít phụ thuộc môi trường, không dùng cho kết luận N6.
+  - Không viết thời điểm pod Ready như một sự thật, vì lượt VH4 không ghi mốc Ready. TPOT chỉ được dùng làm bằng chứng gián tiếp.
+- **Results:**
+  - **VH4, lượt V2** (tải trung bình 1,75 req/s = 0,5 C, chặn 301 s):
+    - Fallback lên 4 replica sau 16,8 s, đạt N6 (≤ 30 s). Lượt thử: 17,2 s (N = 2), 18,8 s (simulator).
+    - SLO attainment 100% ở cả ba khoảng, 0 lỗi / 1.263 request.
+    - TTFT p95: 305 → 254 → 221 ms. TPOT p50: 30,7 → 25,7 → 25,3 ms.
+  - **VH4, TPOT theo phút:** giảm từ 30,6–31,2 ms xuống 25,2–25,5 ms từ phút thứ tư. Hai mức này trùng với mức của 1 replica (A2 × KB1: 30,9 và 31,8 ms) và 4 replica (S4 × KB1: 25,3 ms) ở cùng 0,5 C.
+  - **VH4, gỡ chặn:** condition `Fallback` hết trong ≤ 5,3 s, ở lần đọc thứ hai. Không đo lúc về 1 replica, vì tải dừng 305 s sau khi gỡ chặn.
+  - **VH6:**
+    - 7/17 lượt có vi phạm SLO theo log client. Mỗi lượt có đúng 1 page `LLMSLOBurnFast`, sau 99–111 s; riêng S1 × KB3 là 104,5 s, đạt N7.
+    - 10 lượt không vi phạm, 0 page; 0 page giả.
+    - Cửa sổ 1 phút đạt 68–100% request xấu trước lúc page, nên kêu nhanh hơn LT8 (215–242 s ở x = 0,3; 159–163 s ở x = 0,6).
+- **Incidents:** lỗi trong nháp đầu, do agent đối chiếu phát hiện.
+  - Bản đầu dẫn dòng "không có TELEGRAM_BOT_TOKEN" trong console runner làm bằng chứng máy điều khiển thiếu `.env`. Bằng chứng đó không dùng được: ma trận ĐG2 chạy trên VM, repo rsync lên đã bỏ `.env`, và runner chỉ đọc biến môi trường. Đã thay bằng dòng Decision "PC chưa có `.env`" trong nhật ký Quang 18/11.
+  - Câu "chỉ heartbeat bên ngoài mới phát hiện được lỗi gửi" sai: heartbeat đi qua một receiver khác nên vẫn tới nơi.
+- **Deviations:**
+  - Trong ĐG2, máy tạo tải gọi thẳng Service `vllm.llm-serving.svc:8000`, không qua Traefik. Vì vậy `LLMErrorRateHigh` (đo 5xx tại Traefik) không có dữ liệu, và VH6 không kiểm được quy tắc này. Môi trường §13 không nêu điểm này.
+  - VH4 và VH6 chưa chạy ở nhà (Môi trường §13 ghi "Nhà; GPU thuê").
+  - Lỗ hổng định tuyến thấy trong V2: `AlertmanagerFailedToSendAlerts` ở mức warning nên không được gửi; `AlertmanagerClusterFailedToSendAlerts` ở mức critical thì đi tới Telegram, tức đúng đường đang hỏng. Đề xuất kiểm đầu-cuối lúc dựng cluster bằng một tin thử; chưa làm.
+- **Links:** trong repo chỉ đổi nhật ký này. Nháp ở `.work/luan-van/05-05b-vh4-vh6.md`, ngoài Git. Nguồn: `runs/v2-vm/ops-vh4-20261118-183127/`, `runs/v2-vm/v2-dg2/tables/`.
+- **Thesis:**
+  - §5.5.4, §5.5.6 (số tiểu mục tạm).
+  - §5.6, dòng N6, N7, F6.
+  - §5.7 Hạn chế: VH4 chỉ 1 lượt ở tải thấp; `LLMErrorRateHigh` không được kiểm; vùng 20–23% của N7 chưa đo.
+  - §6 hướng phát triển: kiểm đầu-cuối đường cảnh báo.
+  - Độ dài: ba nháp chương 5 của Trình có khoảng 8.400 chữ, nên rút gọn khi ghép chương.
