@@ -547,3 +547,32 @@
   - §5.7 Hạn chế: VH4 chỉ 1 lượt ở tải thấp; `LLMErrorRateHigh` không được kiểm; vùng 20–23% của N7 chưa đo.
   - §6 hướng phát triển: kiểm đầu-cuối đường cảnh báo.
   - Độ dài: ba nháp chương 5 của Trình có khoảng 8.400 chữ, nên rút gọn khi ghép chương.
+
+## 2026-11-21 – Đồng bộ tài liệu thiết kế với cái đã làm (PR đồng bộ, phần a)
+
+- **Task:** TR4, TR8 · **Environment:** none
+- **Done:**
+  1. Tạo nhánh `docs/tr4-sync-design-docs` từ `docs/tr8-log-pr54` (đã có 4 commit nhật ký chưa PR), để gộp vào cùng PR.
+  2. Sửa các điểm lệch ghi ở mục 18/11 (Deviations) và D71:
+     - comment `LLMErrorRateHigh` trong `llm.yaml`, Vận hành §3.2 và runbook: `for: 1m` không lọc được đợt lỗi ngắn;
+     - Vận hành §2.3: bỏ câu sai về `1 − tốt/tổng`;
+     - Vận hành §2.1: nguồn của TPOT;
+     - Vận hành §11: unit test chỉ có cặp cửa sổ 5m/1m;
+     - Thông số §9.4: retention ở cloud, exporter GPU;
+     - Thông số §7 và Kiến trúc §3.5: máy tạo tải gọi thẳng Service;
+     - hai runbook và Vận hành §4.3: bỏ "thắt giới hạn tốc độ";
+     - `slo.yaml`: bucket `le="2.5"` đã xác nhận trên GPU; README dashboard: hàng KEDA.
+  3. Môi trường §13: thêm giới hạn của VH6 trong V2 (`LLMErrorRateHigh` không có dữ liệu). Môi trường §16: điền bảng nghiệm thu từ nháp 5.6 (D75).
+  4. Kiểm điểm còn để ngỏ: severity của `TargetDown` trong chart 92.1.1.
+- **Decision:**
+  - D78: TPOT trong SLI và nghiệm thu là trung bình mỗi request (`vllm:request_time_per_output_token_seconds`); ITL chỉ dùng để chẩn đoán. JSON dashboard giữ nguyên, vì sửa sẽ làm ConfigMap ở nhà đổi.
+  - D79: `TargetDown` không tới Telegram; chỉ ghi là hạn chế, chưa đổi values.
+  - D80: tách bước đồng bộ thành 3 PR: tài liệu (PR này), script tính số vào `analysis/`, và Hình 7. Tên máy V2 trong `docs/chi-tiet/` thuộc Q2 nên báo Quang, không sửa ở đây.
+- **Results:**
+  - Mã vLLM v0.31.0 (`vllm/v1/metrics/stats.py`): `mean_time_per_output_token = decode_time / (num_generation_tokens − 1)`, với `decode_time = last_token_ts − first_token_ts`. Công thức này trùng công thức TPOT ở Môi trường §15.
+  - Chart kube-prometheus-stack 92.1.1 (`templates/prometheus/rules-1.14/general.rules.yaml`): `TargetDown` có severity mặc định `warning`, `Watchdog` có `none`. Repo không đặt `customRules`, mà định tuyến chỉ gửi `page`, `ticket` và `critical`, nên exporter chết sẽ không có tin Telegram.
+  - Retention Prometheus ở cloud là mặc định 10d của chart (`values.yaml`, `prometheusSpec.retention`). `retention: 72h` ở values chung là của `alertmanagerSpec`.
+  - `make alerts-test`: SUCCESS. `yamllint -s common/observability`: đạt. lychee trên các file đã sửa: 0 lỗi. `llm.yaml` và `slo.yaml` sau khi parse YAML giống hệt `origin/main` (chỉ đổi comment), nên Argo CD ở nhà không thấy thay đổi.
+- **Deviations:** tài liệu `docs/chi-tiet/` vẫn ghi máy V2 là 4 × RTX A4000, trong khi dữ liệu V2 chạy trên 4 × RTX 4060 Ti 16 GB. Phần này chưa sửa (D80).
+- **Links:** nhánh `docs/tr4-sync-design-docs`; `docs/chi-tiet/00-thong-so.md`, `03-kien-truc-autoscaling.md`, `04-van-hanh.md`, `05-moi-truong-danh-gia.md`; `docs/runbooks/`; `common/observability/`.
+- **Thesis:** §3.4 (định nghĩa TPOT và ITL; `TargetDown` vào Hạn chế); §5.6 (bảng nghiệm thu, đã có trong Môi trường §16); §5.7 Hạn chế (VH6 không kiểm `LLMErrorRateHigh`).

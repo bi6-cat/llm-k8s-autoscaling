@@ -20,7 +20,7 @@
 
 | Nguyên nhân | Hành động |
 |---|---|
-| Tải thật vượt năng lực toàn cụm | Thắt giới hạn tốc độ ở Traefik nếu SLO đang bị vi phạm; đề xuất thêm GPU (Vận hành §9) |
+| Tải thật vượt năng lực toàn cụm | Báo người dùng; đề xuất thêm GPU (Vận hành §9). Không có giới hạn tốc độ ở Traefik để thắt: lớp này đã lược ngày 12/11 ([Vận hành §8](../chi-tiet/04-van-hanh.md#8-bảo-mật-tối-thiểu)) |
 | `maxReplicaCount` < số GPU | Nâng max trong `common/autoscaling/a2/` (hoặc overlay `envs/<env>/autoscaling/`) qua PR, không sửa tay trên cluster |
 | Đang chạy fallback của KEDA (giữ max) | Không phải tải thật; xử lý theo [KedaScalerErrors](KedaScalerErrors.md) |
 | Tải giả (vòng lặp từ một client) | Tìm client trong log Traefik, chặn hoặc giới hạn |

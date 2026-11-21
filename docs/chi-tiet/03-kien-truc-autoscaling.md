@@ -124,6 +124,7 @@ Manifest thật nằm trong repo, mỗi dòng có comment giải thích: [common
 - **ingress-nginx** đã được Kubernetes cho **ngừng bảo trì từ tháng 3/2026**, nên không nên dùng cho hệ thống mới.
 - **Traefik** có sẵn trong k3s và hỗ trợ SSE streaming tốt. Envoy Gateway (Gateway API) là lựa chọn thay thế nếu muốn dùng `LEAST_REQUEST`.
 - Với streaming dài, cần kiểm tra **timeout** của entrypoint và route để stream không bị cắt giữa chừng, và kiểm tra rằng proxy không gom (buffer) response lại.
+- **Sửa 21/11:** route riêng cho máy tạo tải và `rateLimit` đã lược ([ADR-006 §3.1](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md#31-quyết-định-ngày-12112026)). Trong V2, máy tạo tải gọi thẳng Service `vllm.llm-serving.svc:8000`, không qua Traefik ([Thông số §7](00-thong-so.md#7-kịch-bản-tải)). Thiết kế ban đầu ở gạch đầu dòng dưới.
 - **Khi đánh giá**, máy tạo tải vẫn đi qua Traefik như người dùng thật, để số đo gồm cả xác thực và giới hạn tốc độ. Vì middleware `rateLimit` tính theo header `Authorization` áp **cùng một mức** cho mọi khoá, máy tạo tải dùng **route riêng** (ví dụ host nội bộ `llm-eval`) gắn middleware có giới hạn cao. Nếu không, các lượt KB2, KB3 sẽ nhận 429 và bị tính là lỗi ([ADR-005](../adr/005-sua-thiet-ke-sau-review.md) T5).
 
 Các biện pháp bảo mật và checklist nằm ở [Vận hành §8](04-van-hanh.md#8-bảo-mật-tối-thiểu).

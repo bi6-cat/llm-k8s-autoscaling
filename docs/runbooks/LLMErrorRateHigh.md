@@ -7,6 +7,8 @@
 
 **Ảnh hưởng.** Người dùng nhận lỗi thay vì câu trả lời. Lỗi đo ở cửa vào nên gồm cả lúc không còn pod nào nhận request.
 
+**Lưu ý.** Ở tải thấp, một đợt vài lỗi 503 ngắn (ví dụ lúc chuyển pod) cũng đủ vượt 1% và giữ cảnh báo khoảng 4 phút, vì đợt lỗi còn nằm trong cửa sổ 5 phút (`for: 1m` không lọc được). Nếu bước 2 dưới đây cho thấy lỗi đã dừng thì cảnh báo tự hết trong ≤ 5 phút ([Vận hành §3.2](../chi-tiet/04-van-hanh.md#32-danh-sách-cảnh-báo)).
+
 **Chẩn đoán nhanh (≤ 5 phút).**
 1. Còn pod Ready nào không? Không còn pod Ready thì Traefik trả 503.
    ```bash
