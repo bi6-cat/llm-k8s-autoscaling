@@ -474,3 +474,38 @@
   - Pha `drop`: câu "pha `drop` của 5 lượt KB2: 0 lỗi" đúng về số lỗi. Tuy vậy, hai lượt A1 giữ 4 replica suốt pha (`scale_downs` = 0), nên chỉ 3 lượt A2 (`scale_downs` = 3) là bằng chứng cho scale-down an toàn.
 - **Links:** không đổi file nào trong repo ngoài nhật ký này. Nguồn: `runs/v2-vm/` (gói dữ liệu V2).
 - **Thesis:** §5.6 bảng nghiệm thu và khuyến nghị cấu hình; §5 Hạn chế (sửa câu về thứ tự lượt L2).
+
+## 2026-11-21 – Luận văn: nháp mục 5.3 (autoscaling so với cấu hình tĩnh)
+
+- **Task:** TR7, TR8 (luận văn) · **Environment:** none
+- **Done:**
+  1. Đọc thiết kế ĐG2 (Thông số §4, §6–§9.3; Môi trường §11, §15, §16), `quy-tac-viet.md` và `nguon-tu-lieu.md` (nhánh của PR #52), nhật ký Quang 18–19/11.
+  2. Tính thêm từ dữ liệu thô V2 bằng một script cục bộ, đọc `events.jsonl`, `metrics.csv.gz`, access log vLLM và `requests.csv`. Các số tính được:
+     - mốc rescale của HPA;
+     - hàng đợi theo pod;
+     - số request mỗi pod nhận;
+     - tín hiệu A2;
+     - request không đạt SLO, tách theo lúc gửi trước hay sau khi pod mới đầu tiên Ready.
+  3. Phiên Claude viết nháp 5.3 bằng Markdown, ngoài Git. Nháp gồm Bảng 5.3a (11 ô, giá trị từng lượt), hình C4, hình C1 của lượt 1 và 4 tiểu mục; mỗi đoạn có số đều kèm dòng nguồn.
+  4. Một agent khác (Opus, effort xhigh) đối chiếu độc lập. Phiên chính tính lại các lỗi được báo, rồi sửa 5 lỗi chính và 6 lỗi nhẹ. Sửa thêm 2 câu của nháp 5.6 cho khớp với 5.3. Trình chưa đọc lại nháp.
+- **Decision:** D76.
+  - Thân bài 5.3 dùng Bảng 5.3a, hình C4 và hình C1 của lượt 1. C2, C3 và C1 của lượt 2, 3 đưa vào phụ lục.
+  - Thêm phép kiểm cách chia request theo pod để có số cho nguyên nhân của A2 × KB2.
+- **Results:**
+  - **A2 × KB2, cách chia request:** trong [360; 600) s, khi cả 4 pod đã Ready, pod cũ nhận 24,3–25,7% số request mới, các pod mới nhận 23,3–26,1%. Số này đếm từ access log; tổng theo pod khớp đúng `n_sent`. Pod cũ xử lý 3,60–3,78 req/s, nhưng trong 240 s đó hàng đợi chỉ giảm từ 370–400 xuống 38–80 request.
+  - **A2 × KB2, request không đạt SLO trong pha `spike`:** 42–44% được gửi trước lúc pod mới đầu tiên Ready (319,7–321,5 s), 56–58% gửi sau đó.
+  - **Nhịp scale của A2 × KB2:** HPA đặt đủ 4 replica sau 30–36 s kể từ lúc tải tăng. A2 về 1 replica sau 369–420 s kể từ lúc tải giảm.
+  - **A2 × KB3, pha `sustain`:**
+    - Tín hiệu A2 dao động 64–152 (trung bình 101,1 và 106,1), và 65–74% số mẫu không quá 111 (= 3 × 37).
+    - Hai mẫu liên tiếp trên 111 cách nhau nhiều nhất 120 s và 95 s, ngắn hơn cửa sổ 300 s. Vì vậy A2 giữ 4 replica và không có flapping.
+  - **A1:** chỉ bớt pod 308–315 s sau khi kịch bản tải kết thúc, ở cả 5 lượt.
+  - **Chưa giải thích:** cold start L2 trong ĐG2 là 65–66 s (tính từ lúc tạo pod), trong ĐG3 là 76–81 s (tính từ lệnh scale). Chênh 10–15 s; đã ghi lại để xử lý khi viết mục 5.4.
+- **Incidents:** bản đầu ước lượng số request mỗi pod nhận bằng Δ`vllm_success_total` + Δ(running + waiting), ra 21–24% cho pod cũ.
+  - Nguyên nhân: `vllm_success_total` không đếm request timeout. Các request này (37, 82, 93 ở ba lượt) đều nằm ở pod cũ và bị cắt trong cửa sổ đo.
+  - Agent đối chiếu phát hiện lỗi. Đã sửa bằng cách đếm access log.
+- **Links:** trong repo chỉ đổi nhật ký này. Nháp ở `.work/luan-van/05-03-autoscaling-so-voi-tinh.md`, ngoài Git. Nguồn: `runs/v2-vm/v2-dg2/` (gói dữ liệu V2).
+- **Thesis:**
+  - §5.3: nháp xong, đã đối chiếu.
+  - §5.6: sửa dòng N1, vì pha được chấm của KB2 là `pre`, `spike`, `drop`.
+  - §5.7 Hạn chế: chưa kiểm theo từng request câu "request vi phạm sau lúc pod mới Ready phần lớn xếp sau hàng đợi cũ".
+  - §6 hướng phát triển: định tuyến theo hàng đợi; giữ tối thiểu 2 replica.
