@@ -573,6 +573,15 @@
   - Chart kube-prometheus-stack 92.1.1 (`templates/prometheus/rules-1.14/general.rules.yaml`): `TargetDown` có severity mặc định `warning`, `Watchdog` có `none`. Repo không đặt `customRules`, mà định tuyến chỉ gửi `page`, `ticket` và `critical`, nên exporter chết sẽ không có tin Telegram.
   - Retention Prometheus ở cloud là mặc định 10d của chart (`values.yaml`, `prometheusSpec.retention`). `retention: 72h` ở values chung là của `alertmanagerSpec`.
   - `make alerts-test`: SUCCESS. `yamllint -s common/observability`: đạt. lychee trên các file đã sửa: 0 lỗi. `llm.yaml` và `slo.yaml` sau khi parse YAML giống hệt `origin/main` (chỉ đổi comment), nên Argo CD ở nhà không thấy thay đổi.
+- **Incidents:** `/code-review high` trên nhánh báo 9 điểm. Sửa 6 điểm:
+  - câu truy vấn trong runbook `LLMErrorRateHigh` dùng cửa sổ 5 phút nên không cho biết lỗi đã dừng; đổi sang `increase(...[1m])`;
+  - Vận hành §4.2 còn "Thắt giới hạn tốc độ" (lần grep đầu chỉ tìm chữ thường nên sót);
+  - runner gọi thẳng Service ở mọi môi trường (`envs/{home,sim,cloud}/experiments/matrix*.yaml`), không riêng V2;
+  - Kiến trúc Hình 2, bảng thành phần và luồng request còn ghi Traefik giới hạn tốc độ;
+  - thêm promtool test cho đợt 5 lỗi 503 ở 1 req/s (firing ở phút 12 và 14, hết ở phút 16). Thử đột biến bỏ đợt lỗi thì test FAILED;
+  - comment nguồn ở `docs/luan-van/03-04-…` còn ghi 3 điểm lệch đã sửa.
+
+  Hai điểm F3 và N4 được viết rõ hơn nhưng giữ nguyên mức. F3 có triển khai qua Git và rolling update trên VM, chỉ thiếu `git revert`. N4 theo Thông số §4 lấy nguồn từ ĐG2, VH1, VH2, không đòi chạy ở nhà. Mô tả panel trong JSON dashboard (`slo-cost.json` ghi "cloud 15 ngày", `serving-gpu.json` ghi "ngưỡng TPOT của SLO") để lại, vì sửa sẽ làm ConfigMap ở nhà đổi (D78).
 - **Deviations:** tài liệu `docs/chi-tiet/` vẫn ghi máy V2 là 4 × RTX A4000, trong khi dữ liệu V2 chạy trên 4 × RTX 4060 Ti 16 GB. Phần này chưa sửa (D80).
 - **Links:** nhánh `docs/tr4-sync-design-docs`; `docs/chi-tiet/00-thong-so.md`, `03-kien-truc-autoscaling.md`, `04-van-hanh.md`, `05-moi-truong-danh-gia.md`; `docs/runbooks/`; `common/observability/`.
 - **Thesis:** §3.4 (định nghĩa TPOT và ITL; `TargetDown` vào Hạn chế); §5.6 (bảng nghiệm thu, đã có trong Môi trường §16); §5.7 Hạn chế (VH6 không kiểm `LLMErrorRateHigh`).

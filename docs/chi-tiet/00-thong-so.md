@@ -124,7 +124,7 @@ Hai phút đầu của KB1 và KB2 là thời gian ổn định, không tính.
 | Output | **Cố định 256 token** (`max_tokens=256`, `ignore_eos=true`) |
 | Streaming | `stream=true`, `stream_options.include_usage=true` |
 | Timeout | 120 s; quá hạn tính là lỗi |
-| Đường đi | Gọi thẳng Service `vllm.llm-serving.svc:8000` trong cluster, không qua Traefik; khoá API vẫn được vLLM kiểm. **Sửa 21/11:** route riêng qua Traefik ([ADR-005](../adr/005-sua-thiet-ke-sau-review.md) T5) đã lược cùng rate limit ([ADR-006 §3.1](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md#31-quyết-định-ngày-12112026)), nên trong ĐG2 tỷ lệ 5xx đo ở Traefik không có dữ liệu ([Môi trường §13](05-moi-truong-danh-gia.md#13-kịch-bản-vận-hành-vh1vh6)) |
+| Đường đi | Gọi thẳng Service `vllm.llm-serving.svc:8000` trong cluster, không qua Traefik; khoá API vẫn được vLLM kiểm. **Sửa 21/11:** route riêng qua Traefik ([ADR-005](../adr/005-sua-thiet-ke-sau-review.md) T5) đã lược cùng rate limit ([ADR-006 §3.1](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md#31-quyết-định-ngày-12112026)), nên trong mọi lượt đánh giá (nhà, simulator, VM thuê) tỷ lệ 5xx đo ở Traefik không có dữ liệu ([Môi trường §13](05-moi-truong-danh-gia.md#13-kịch-bản-vận-hành-vh1vh6)) |
 
 ---
 

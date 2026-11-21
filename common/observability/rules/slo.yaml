@@ -72,8 +72,8 @@ spec:
         # Ingress ở envs/home/serving trỏ cổng theo tên `http`, nên tên dự kiến là
         # llm-serving-vllm-http@kubernetes (cần kiểm chứng trên cluster nhà).
         # code=~"5..": regex, mọi mã 500–599.
-        # Request không qua Traefik thì không được đếm: trong V2, máy tạo tải gọi thẳng Service
-        # vllm.llm-serving.svc:8000 nên chuỗi này rỗng ở mọi lượt đánh giá (Thông số §7, Môi trường §13).
+        # Request không qua Traefik thì không được đếm: runner gọi thẳng Service vllm.llm-serving.svc:8000
+        # ở mọi môi trường, nên chuỗi này rỗng trong mọi lượt đánh giá (Thông số §7, Môi trường §13).
         - record: llm:error_ratio:rate5m
           expr: |
             sum(rate(traefik_service_requests_total{service=~"llm-serving-.*", code=~"5.."}[5m]))

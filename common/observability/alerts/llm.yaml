@@ -47,8 +47,9 @@ spec:
         # đợt 5 lỗi 503 ở phút 10 → còn firing ở phút 12 và 14, hết ở phút 16. Ở tải thấp, vài 503 lẻ khi
         # chuyển pod vẫn page. Giữ nguyên trong đợt đánh giá; hướng sửa là burn rate hai cửa sổ như
         # LLMSLOBurnFast (Vận hành §3.2, luận văn §3.4).
-        # Chuỗi llm:error_ratio:rate5m chỉ có khi request đi qua Traefik. Trong V2, máy tạo tải gọi thẳng
-        # Service nên chuỗi rỗng và quy tắc này không kêu được (Môi trường §13).
+        # Chuỗi llm:error_ratio:rate5m chỉ có khi request đi qua Traefik. Runner gọi thẳng Service ở mọi
+        # môi trường (envs/*/experiments/matrix*.yaml), nên trong các lượt đánh giá chuỗi rỗng và quy tắc
+        # này không kêu được (Môi trường §13).
         - alert: LLMErrorRateHigh
           expr: llm:error_ratio:rate5m >= 0.01
           for: 1m

@@ -206,7 +206,7 @@ Runbook được dùng thật trong các kịch bản vận hành và trong ph�
 | Nguyên nhân | Hành động |
 |---|---|
 | Tải vừa tăng, pod mới đang cold start | Theo dõi. Cảnh báo sẽ tự tắt khi pod mới Ready và hàng đợi rút hết, thường trong vài phút. Nếu cold start lâu hơn 3 phút, kiểm tra image đã có sẵn trên node chưa và model có nằm trên NVMe không |
-| Đã chạy tối đa replica | Thắt giới hạn tốc độ ở Traefik để bảo vệ phần lớn người dùng; báo người dùng; đề xuất thêm GPU (§9) |
+| Đã chạy tối đa replica | Báo người dùng; đề xuất thêm GPU (§9). Không có giới hạn tốc độ ở Traefik để cắt bớt tải: lớp này đã lược ngày 12/11 (§8) |
 | Một pod chậm bất thường | Xem GPU của pod đó (nhiệt độ, XID); xoá pod để nó chuyển đi |
 | Ngay sau một lần cập nhật | Rollback bằng `git revert` rồi để Argo CD sync (§5.4) |
 | KEDA đang lỗi | Autoscaling đã fallback lên max; xử lý Prometheus hoặc KEDA theo runbook `KedaScalerErrors` |
