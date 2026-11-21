@@ -63,7 +63,8 @@ def _write_csv(path: Path, rows: list[dict]) -> None:
 
 def _session(tmp_path: Path) -> Path:
     sess = tmp_path / "v2-dg2"
-    run = {**KEY, "counted": "True", "slo_violation_s": "120.0"}
+    # slo_alert_s = mốc page của đợt mà build_tables gắn với lần vi phạm
+    run = {**KEY, "counted": "True", "slo_violation_s": "120.0", "slo_alert_s": "220.0"}
     # Dòng của phiên khác trùng run_id (build_tables chạy trên hai phiên): phải bị bỏ
     _write_csv(sess / "tables" / "runs.csv", [run, run | {"session": "v2-dg2-rerun", "attempt": "attempt-2"}])
     alert = {**KEY, "alertname": "LLMSLOBurnFast", "first_s": "220.0",
@@ -84,6 +85,8 @@ def _session(tmp_path: Path) -> Path:
     )
     d = sess / "S1-KB3-1" / "attempt-1"
     d.mkdir(parents=True)
+    # Cột `session` của bảng là tên phiên trong metadata.json (build_tables.session_name)
+    (d / "metadata.json").write_text(json.dumps({"session": "v2-dg2"}), encoding="utf-8")
     lg = {"t0_unix": T0, "phases_s": {"ramp": [0.0, 300.0], "sustain": [300.0, 1020.0]}}
     (d / "loadgen.json").write_text(json.dumps(lg), encoding="utf-8")
     _write_csv(d / "requests.csv", _reqs())
@@ -98,6 +101,35 @@ def test_report_prints_only_pages_that_start_in_the_run(tmp_path):
     # 5 phút trước page (−80, 220): 30 xấu / 220 request; cột alerts.csv in lại để đối chiếu
     assert f"bad5m_truoc_page={30 / 220:.3f} (alerts.csv 0.100)" in line
     assert "phases(bad) ramp=0.100 sustain=0.000 |" in line
+
+
+def test_scan_range_starts_at_violation_only_for_the_scored_page():
+    assert vh.scan_range(120.0, 220.0, True) == (120.0, 220.0, "")
+    lo, hi, label = vh.scan_range(300.0, 250.0, True)  # đợt được tính nhưng kêu trước mốc vi phạm
+    assert (lo, hi) == (60.0, 250.0) and "page trước mốc vi phạm" in label  # 250 − 240 = 10 < 60: cận dưới
+    lo, hi, label = vh.scan_range(120.0, 600.0, False)  # đợt kêu lại về sau
+    assert (lo, hi) == (360.0, 600.0) and "đợt khác" in label
+    assert vh.scan_range(None, 30.0, False)[:2] == (60.0, 30.0)  # page trước khi đủ 1 phút: không quét
+
+
+def test_report_marks_a_later_page_that_is_not_the_scored_one(tmp_path):
+    sess = _session(tmp_path)
+    alerts = sess / "tables" / "alerts.csv"
+    with open(alerts, encoding="utf-8", newline="") as fh:
+        rows = list(csv.DictReader(fh))
+    _write_csv(alerts, [*rows, rows[0] | {"first_s": "350.0"}])  # đợt mới thứ hai, sau khi đã hết lỗi
+    out = vh.report(sess).splitlines()
+    assert len(out) == 2
+    assert out[1].startswith("S1-KB3-1  vi_pham= 120.0 page= 350.0 tre=- | max1m=0.500 @tau=130.0 | ")
+    assert out[1].endswith("(đợt khác, không ứng với slo_alert_s: quét 5 phút trước page)")
+
+
+def test_main_errors_when_runs_have_no_row_of_this_session(tmp_path, capsys):
+    sess = _session(tmp_path)
+    (sess / "S1-KB3-1" / "attempt-1" / "metadata.json").write_text(json.dumps({"session": "khac"}), "utf-8")
+    with pytest.raises(SystemExit):
+        vh.main([str(sess)])
+    assert "không có dòng nào của phiên 'khac'" in capsys.readouterr().err
 
 
 def test_report_without_pages(tmp_path):

@@ -35,11 +35,12 @@ from analysis import metrics as m
 from analysis.build_tables import _json
 
 MINUTE_S = 60.0
+REQUIRED_MARKS = ("block_prometheus", "unblocked")  # hai mốc chia ba khoảng; main() kiểm trước khi tính
 
 
 def windows(t0: float, end: float, marks: Mapping[str, float]) -> list[tuple[str, float, float]]:
     """Ba khoảng quanh lúc chặn và gỡ, cộng cả lượt, theo giây UNIX. Thiếu mốc chặn hoặc gỡ → KeyError."""
-    tb, tu = marks["block_prometheus"], marks["unblocked"]
+    tb, tu = (marks[k] for k in REQUIRED_MARKS)
     return [("truoc_chan", t0, tb), ("dang_chan", tb, tu), ("sau_go", tu, end), ("ca_luot", t0, end)]
 
 
@@ -74,6 +75,10 @@ def report(run: Path) -> str:
         f"t0={t0:.1f} dur={lg['duration_s']} rate={lg['rate_rps']} n={len(reqs)}",
     ]
     out += [f"  {k:18s} rel_t0={t - t0:8.1f} s" for k, t in marks.items()]
+    # Máy tạo tải khởi động chậm (chặn trước t0) hoặc tải ngắn hơn lúc gỡ chặn: một khoảng sẽ rỗng hoặc ngược,
+    # mà dòng in ra trông vẫn bình thường (n=0, SLO=nan). Báo rõ để không đọc nhầm là "SLO không đổi".
+    if not t0 <= marks[REQUIRED_MARKS[0]] <= marks[REQUIRED_MARKS[1]] <= end:
+        out.append("CẢNH BÁO: mốc không theo thứ tự t0 ≤ chặn ≤ gỡ ≤ hết tải; có khoảng rỗng hoặc ngược")
     for name, a, b in windows(t0, end, marks):
         out.append(f"{name:11s} [{a - t0:6.1f}, {b - t0:6.1f}) {fmt(m.phase_stats(reqs, a, b))}")
     out.append("theo phut (t tu t0):")
@@ -92,6 +97,12 @@ def main(argv: list[str] | None = None) -> int:
         ]
         if missing:
             ap.error(f"{run}: thiếu {', '.join(missing)}")
+        # vh.py ghi `unblocked` sau khối finally: lượt lỗi giữa chừng (scenario_error) không có mốc này
+        events = {e["event"] for e in _json(run / "timeline.json")}
+        if lost := [k for k in REQUIRED_MARKS if k not in events]:
+            ap.error(
+                f"{run}: timeline.json thiếu mốc {', '.join(lost)} (lượt dừng giữa chừng, hoặc sai thư mục)"
+            )
     print("\n".join(report(run) for run in args.runs))
     return 0
 

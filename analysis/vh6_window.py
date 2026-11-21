@@ -10,9 +10,13 @@ Khái niệm:
       - client_bad_ratio: tỷ lệ xấu trong 5 phút trước mốc page, dùng để chấm page giả.
     Module này in thêm, cho mỗi đợt page bắt đầu TRONG lượt (bỏ đợt có firing_at_start = True, tức đang kêu
     từ lượt trước):
-      - độ trễ page − vi phạm;
-      - tỷ lệ xấu lớn nhất trên cửa sổ 1 phút (τ − 60, τ], với τ chạy mỗi giây từ mốc vi phạm tới mốc page,
-        cùng quy ước cửa sổ với mốc vi phạm. Số này cho biết lúc cảnh báo còn chờ thì lỗi đã nặng tới đâu;
+      - độ trễ page − vi phạm, chỉ cho đợt mà build_tables dùng làm slo_alert_s (đợt mới đầu tiên còn kêu
+        tới lúc vi phạm); có thể âm nếu đợt đó kêu trước mốc vi phạm;
+      - tỷ lệ xấu lớn nhất trên cửa sổ 1 phút (τ − 60, τ], cùng quy ước với mốc vi phạm. Với đợt ứng với
+        slo_alert_s mà page sau mốc vi phạm, τ chạy mỗi giây từ mốc vi phạm tới mốc page: cho biết lúc cảnh
+        báo còn chờ thì lỗi đã nặng tới đâu. Với đợt khác (kêu lại về sau, page trước mốc vi phạm, lượt không
+        có mốc vi phạm), τ chạy trong 5 phút trước page và dòng được đánh dấu ở cuối (scan_range). τ luôn
+        ≥ t0 + 60 s để cửa sổ đủ 1 phút, như metrics.slo_violation_start;
       - tỷ lệ xấu 5 phút trước page, tính lại để đối chiếu với client_bad_ratio;
       - tỷ lệ xấu của từng pha (1 − slo_attainment ở phases.csv), bỏ pha `main` (cả pha chính).
 Mục đích: Tái lập các số VH6 trong nháp mục 5.5 (cột "tỷ lệ xấu lớn nhất trên 1 phút"). Trước đây các số
@@ -32,9 +36,10 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from analysis import metrics as m
-from analysis.build_tables import _json
+from analysis.build_tables import _fmt, _json, read_session_table, session_name
 
 PAGE_ALERT = "LLMSLOBurnFast"
+MATCH_TOL_S = 0.001  # first_s (alerts.csv) và slo_alert_s (runs.csv) cùng làm tròn 6 chữ số thập phân
 
 
 def _csv(path: Path) -> list[dict[str, str]]:
@@ -42,21 +47,12 @@ def _csv(path: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(fh))
 
 
-def _num(s: str) -> float | None:
-    return float(s) if s not in ("", "nan") else None
-
-
-def _opt(x: float | None, spec: str) -> str:
-    """Số → chuỗi theo `spec`; None (không có giá trị) → "-"."""
-    return "-" if x is None else format(x, spec)
-
-
 def max_bad_ratio(
     reqs: Sequence[m.Request], start: float, end: float, *, window_s: float = m.VIOLATION_WINDOW_S
 ) -> tuple[float | None, float | None]:
     """Tỷ lệ xấu lớn nhất trên cửa sổ (τ − window_s, τ], τ = start, start + 1, …, ≤ end (giây UNIX), và mốc
     τ đầu tiên đạt giá trị đó. Cùng cách chọn request (theo t_sched) với metrics.slo_violation_start.
-    Không cửa sổ nào có request → (None, None)."""
+    Không cửa sổ nào có request, hoặc start > end → (None, None)."""
     rs = sorted(reqs, key=lambda r: r.t_sched)
     ts = [r.t_sched for r in rs]
     best, at = None, None
@@ -72,51 +68,72 @@ def max_bad_ratio(
     return best, at
 
 
-def _own(path: Path, session: Path) -> list[dict[str, str]]:
-    """Dòng của chính phiên này: build_tables chạy trên nhiều phiên thì ghi dòng của mọi phiên vào bảng của
-    phiên đầu tiên, và hai phiên có thể trùng run_id."""
-    return [r for r in _csv(path) if r["session"] == session.name]
+def scan_range(violation: float | None, page: float, scored: bool) -> tuple[float, float, str]:
+    """Khoảng τ (giây từ t0) để tìm tỷ lệ xấu lớn nhất của một đợt page, và nhãn in ở cuối dòng.
+
+    `scored`: đợt này là đợt build_tables dùng làm slo_alert_s. Chỉ khi đó, và page sau mốc vi phạm, mới
+    quét từ mốc vi phạm. Mọi trường hợp khác quét 5 phút trước page (cửa sổ dài của LLMSLOBurnFast), vì mốc
+    vi phạm của lượt không ứng với đợt đó. Cận dưới t0 + 60 s: cửa sổ đầu tiên đủ 1 phút."""
+    floor = m.VIOLATION_WINDOW_S
+    if scored and violation is not None and page >= violation:
+        return max(violation, floor), page, ""
+    label = "page trước mốc vi phạm" if scored else "đợt khác, không ứng với slo_alert_s"
+    return (
+        max(page - m.PAGE_WINDOW_S + m.VIOLATION_WINDOW_S, floor),
+        page,
+        f" ({label}: quét 5 phút trước page)",
+    )
 
 
 def report(session: Path) -> str:
-    tables = session / "tables"
-    runs = {r["run_id"]: r for r in _own(tables / "runs.csv", session) if r["counted"] == "True"}
+    name, tables = session_name(session), session / "tables"
+    # runs.csv phải có dòng của phiên này (read_session_table báo lỗi nếu không); alerts.csv thì có thể không
+    # có đợt nào, nên lọc tay theo cùng tên phiên
+    runs = {r["run_id"]: r for r in read_session_table(session, "runs") if r["counted"] == "True"}
     pages = [
         a
-        for a in _own(tables / "alerts.csv", session)
-        if a["alertname"] == PAGE_ALERT
+        for a in _csv(tables / "alerts.csv")
+        if a["session"] == name
+        and a["alertname"] == PAGE_ALERT
         and a["firing_at_start"] == "False"  # đợt đang kêu từ lượt trước: không phải page của lượt này
         and a["run_id"] in runs
         and a["attempt"] == runs[a["run_id"]]["attempt"]
     ]
-    phases = _own(tables / "phases.csv", session)
+    phases = [x for x in _csv(tables / "phases.csv") if x["session"] == name]
+    loaded: dict[tuple[str, str], tuple[dict, list[m.Request]]] = {}  # mỗi lượt chỉ đọc requests.csv một lần
     out = []
     for a in pages:
-        rid = a["run_id"]
-        d = session / rid / a["attempt"]
-        lg = _json(d / "loadgen.json")
+        rid, att = a["run_id"], a["attempt"]
+        if (rid, att) not in loaded:
+            d = session / rid / att
+            lg = _json(d / "loadgen.json")
+            with open(d / "requests.csv", encoding="utf-8", newline="") as fh:
+                loaded[rid, att] = lg, [m.parse_request(r, lg["t0_unix"]) for r in csv.DictReader(fh)]
+        lg, reqs = loaded[rid, att]
         t0 = lg["t0_unix"]
-        with open(d / "requests.csv", encoding="utf-8", newline="") as fh:
-            reqs = [m.parse_request(r, t0) for r in csv.DictReader(fh)]
-        # Lượt có page nhưng không có mốc vi phạm (slo_violation_s rỗng) là page giả tiềm năng: in để thấy
-        v = _num(runs[rid]["slo_violation_s"])
+        # Lượt có page mà không có mốc vi phạm (slo_violation_s rỗng) là page giả tiềm năng: vẫn in để thấy
+        v = m._float(runs[rid]["slo_violation_s"])
+        sa = m._float(runs[rid].get("slo_alert_s"))
         p = float(a["first_s"])
-        best, at = max_bad_ratio(reqs, t0 + (p if v is None else v), t0 + p)
+        scored = sa is not None and abs(p - sa) < MATCH_TOL_S
+        lo, hi, label = scan_range(v, p, scored)
+        best, at = max_bad_ratio(reqs, t0 + lo, t0 + hi)
         b5 = m.bad_ratio(reqs, t0 + p - m.PAGE_WINDOW_S, t0 + p)
+        cbr = m._float(a["client_bad_ratio"])  # build_tables tính cùng cửa sổ: hai số phải trùng nhau
         ph = [
             f"{x['phase']}={1 - float(x['slo_attainment']):.3f}"
             for x in phases
             if x["run_id"] == rid
-            and x["attempt"] == a["attempt"]
+            and x["attempt"] == att
             and x["phase"] != "main"
-            and x["slo_attainment"] not in ("", "nan")
+            and m._float(x["slo_attainment"]) is not None
         ]
         out.append(
-            f"{rid:9s} vi_pham={_opt(v, '6.1f')} page={p:6.1f} "
-            f"tre={_opt(None if v is None else p - v, '6.1f')} | "
-            f"max1m={_opt(best, '.3f')} @tau={_opt(None if at is None else at - t0, '.1f')} | "
-            f"bad5m_truoc_page={_opt(b5, '.3f')} (alerts.csv {_opt(_num(a['client_bad_ratio']), '.3f')}) | "
-            f"phases(bad) {' '.join(ph)} | phases={lg['phases_s']}"
+            f"{rid:9s} vi_pham={_fmt(v, '6.1f')} page={p:6.1f} "
+            f"tre={_fmt(p - v if scored and v is not None else None, '6.1f')} | "
+            f"max1m={_fmt(best, '.3f')} @tau={_fmt(None if at is None else at - t0, '.1f')} | "
+            f"bad5m_truoc_page={_fmt(b5, '.3f')} (alerts.csv {_fmt(cbr, '.3f')}) | "
+            f"phases(bad) {' '.join(ph)} | phases={lg['phases_s']}{label}"
         )
     return "\n".join(out) if out else f"Không có đợt {PAGE_ALERT} nào bắt đầu trong các lượt của {session}"
 
@@ -132,7 +149,10 @@ def main(argv: list[str] | None = None) -> int:
     ]
     if missing:
         ap.error(f"{args.session}/tables thiếu {', '.join(missing)}: chạy analysis.build_tables trước")
-    print(report(args.session))
+    try:
+        print(report(args.session))
+    except ValueError as e:  # runs.csv không có dòng nào của phiên này (read_session_table)
+        ap.error(str(e))
     return 0
 
 

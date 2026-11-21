@@ -80,6 +80,24 @@ def test_report_splits_requests_by_schedule_into_the_three_windows(tmp_path):
     assert "SLO= 83.33%" in minutes[2]  # 10 xấu / 60
 
 
+def test_report_warns_when_block_comes_before_t0(tmp_path):
+    run = _run(tmp_path)
+    assert not any(line.startswith("CẢNH BÁO") for line in vh.report(run).splitlines())
+    timeline = json.loads((run / "timeline.json").read_text(encoding="utf-8"))
+    timeline[1]["t"] = T0 - 3  # máy tạo tải khởi động chậm: chặn trước khi tải bắt đầu
+    (run / "timeline.json").write_text(json.dumps(timeline), encoding="utf-8")
+    assert any(line.startswith("CẢNH BÁO: mốc không theo thứ tự") for line in vh.report(run).splitlines())
+
+
+def test_main_rejects_run_without_unblocked_mark(tmp_path, capsys):
+    run = _run(tmp_path)
+    timeline = json.loads((run / "timeline.json").read_text(encoding="utf-8"))
+    (run / "timeline.json").write_text(json.dumps(timeline[:3]), encoding="utf-8")  # lỗi trước khi gỡ chặn
+    with pytest.raises(SystemExit):
+        vh.main([str(run)])
+    assert "thiếu mốc unblocked" in capsys.readouterr().err
+
+
 def test_main_rejects_run_without_timeline(tmp_path, capsys):
     run = _run(tmp_path)
     (run / "timeline.json").unlink()
