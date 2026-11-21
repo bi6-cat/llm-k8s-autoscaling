@@ -30,7 +30,7 @@ import math
 from collections import defaultdict
 from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 import matplotlib
 
@@ -339,21 +339,25 @@ def _overlap(a: Any, b: Any) -> float:
 
 def _place_labels(
     ax: Any, labels: Sequence[tuple[float, float, str]], obstacles: Sequence[Any], lines: Sequence[Any]
-) -> list[Any]:
+) -> None:
     """Đặt từng nhãn (x, y theo dữ liệu, chữ) vào vị trí trong LABEL_TRIES có điểm phạt thấp nhất. Phạt theo
     diện tích giao, nặng tới nhẹ: đè nhãn đã đặt hoặc dấu điểm (obstacles, ×100) > phần tràn ra ngoài ô vẽ
     (×10) > cắt vạch tham chiếu (lines, ×1). Đo bằng kích thước chữ thật (renderer) nên không phải đoán độ dài
-    nhãn. Gọi sau fig.canvas.draw(), khi constrained layout đã chốt vị trí các ô, để toạ độ pixel là toạ độ
-    cuối cùng; nhãn đặt in_layout=False để lúc lưu file, layout không dời các ô đi nữa."""
+    nhãn. Gọi khi layout đã chốt (xem plot_c4), để toạ độ pixel là toạ độ cuối cùng.
+    Hạn chế: nếu mọi vị trí thử đều tràn khỏi ô, nhãn vẫn đặt ở vị trí tràn ít nhất và không được so với nhãn
+    của ô bên cạnh. Với nhãn chỉ gồm tên cấu hình thì chưa gặp (V2, dữ liệu sim)."""
     renderer = ax.figure.canvas.get_renderer()
     frame = ax.get_window_extent(renderer)
     placed: list[Any] = []
     for x, y, text in labels:
-        best: tuple[float, Any, Any] | None = None
+        # Một Annotation cho mỗi nhãn, chỉ đổi vị trí và căn lề khi thử: không tạo rồi xoá artist
+        ann = ax.annotate(text, (x, y), xytext=(0, 0), textcoords="offset points", color=INK)
+        ann.set_in_layout(False)
+        best: tuple[float, tuple[float, float, str, str], Any] | None = None
         for dx, dy, ha, va in LABEL_TRIES:
-            ann = ax.annotate(text, (x, y), xytext=(dx, dy), textcoords="offset points", ha=ha, va=va,
-                              color=INK)  # fmt: skip
-            ann.set_in_layout(False)
+            ann.xyann = (dx, dy)
+            ann.set_horizontalalignment(ha)
+            ann.set_verticalalignment(va)
             bb = ann.get_window_extent(renderer)
             cost = (
                 100 * sum(_overlap(bb, o) for o in [*placed, *obstacles])
@@ -361,16 +365,37 @@ def _place_labels(
                 + sum(_overlap(bb, ln) for ln in lines)
             )
             if best is None or cost < best[0]:  # bằng điểm thì giữ vị trí ưu tiên hơn (thử trước)
-                if best is not None:
-                    best[1].remove()
-                best = (cost, ann, bb)
-            else:
-                ann.remove()
+                best = (cost, (dx, dy, ha, va), bb)
             if cost == 0:
                 break
         assert best is not None  # LABEL_TRIES không rỗng
+        dx, dy, ha, va = best[1]
+        ann.xyann = (dx, dy)
+        ann.set_horizontalalignment(ha)
+        ann.set_verticalalignment(va)
         placed.append(best[2])
-    return placed
+
+
+class _Mean(NamedTuple):
+    """Điểm trung bình của một cấu hình trong một ô C4."""
+
+    config: str
+    x: float
+    y: float
+    xy_px: tuple[float, float]  # toạ độ pixel sau khi layout đã chốt
+
+
+def _near_groups(means: Sequence[_Mean], limit_px: float) -> list[list[_Mean]]:
+    """Gom các điểm cách nhau dưới limit_px thành nhóm, có bắc cầu: A gần B, B gần C thì A, B, C chung một
+    nhóm dù A xa C (nếu không, C sẽ có marker đủ cỡ và nhãn riêng đè ngay cạnh nhãn của nhóm A, B). Trong
+    nhóm và giữa các nhóm giữ thứ tự của `means`."""
+    order = {mm.config: i for i, mm in enumerate(means)}
+    groups: list[list[_Mean]] = []
+    for mm in means:
+        near = [g for g in groups if any(math.dist(o.xy_px, mm.xy_px) < limit_px for o in g)]
+        merged = sorted([*(o for g in near for o in g), mm], key=lambda o: order[o.config])
+        groups = [g for g in groups if all(g is not n for n in near)] + [merged]
+    return sorted(groups, key=lambda g: order[g[0].config])
 
 
 def plot_c4(pairs: Mapping[str, Mapping[str, list]], title: str, baseline: str = "S4") -> Any:
@@ -417,37 +442,35 @@ def plot_c4(pairs: Mapping[str, Mapping[str, list]], title: str, baseline: str =
     fig.suptitle(title)
 
     # Điểm trung bình và nhãn vẽ sau cùng: cần toạ độ pixel cuối cùng (sau constrained layout) để biết điểm
-    # nào trùng điểm nào và nhãn nào đè lên gì
-    fig.canvas.draw()
+    # nào trùng điểm nào và nhãn nào đè lên gì. draw_without_rendering chạy layout mà không vẽ raster.
+    fig.draw_without_rendering()
     px = fig.dpi / 72  # 1 point = px pixel
+
+    def box(ax: Any, x: float, y: float, size: float) -> Any:
+        """Hộp vuông (pixel) bao một marker diện tích `size` point² của ô `ax`, kể cả viền trắng 1,2 pt."""
+        cx, cy = ax.transData.transform((x, y))
+        r = (math.sqrt(size) / 2 + 0.6) * px
+        return Bbox.from_extents(cx - r, cy - r, cx + r, cy + r)
+
     for ax, s in zip(axes[0], scen, strict=True):
-        groups: list[list[tuple[str, float, float, int, Any]]] = []
+        means = []
         for c in _ordered(pairs[s], CONFIG_ORDER):
             pts = pairs[s][c]
             mx, my = m.mean(p[0] for p in pts), m.mean(p[1] for p in pts)
-            item = (c, mx, my, len(pts), ax.transData.transform((mx, my)))
-            g = next((g for g in groups if math.dist(g[0][4], item[4]) < NEAR_PT * px), None)
-            if g is None:
-                groups.append([item])
-            else:
-                g.append(item)
-        obstacles = []
+            cx, cy = ax.transData.transform((mx, my))
+            means.append(_Mean(c, mx, my, (float(cx), float(cy))))
+        groups = _near_groups(means, NEAR_PT * px)
+        # Vật cản của nhãn: mọi điểm trung bình (đúng cỡ đã vẽ) và mọi chấm từng lượt
+        obstacles = [box(ax, x, y, RUN_SIZE) for pts in pairs[s].values() for x, y in pts]
         for g in groups:
-            for i, (c, mx, my, _n, _xy) in enumerate(g):
-                color, marker = style(c)
+            for i, mm in enumerate(g):
+                color, marker = style(mm.config)
                 # Điểm sau nhỏ còn 1/4 diện tích (1/2 đường kính): giảm ít hơn thì chấm tròn vẫn che gần hết
                 # tam giác bên dưới
-                ax.scatter([mx], [my], s=MEAN_SIZE / 4**i, marker=marker, color=color, edgecolor="white",
+                size = MEAN_SIZE / 4**i
+                ax.scatter([mm.x], [mm.y], s=size, marker=marker, color=color, edgecolor="white",
                            lw=1.2, zorder=3 + i / 10).set_in_layout(False)  # fmt: skip
-        # Vật cản của nhãn: mọi điểm trung bình và mọi chấm từng lượt (hộp vuông bao marker, kể cả viền trắng)
-        for size, xys in (
-            (MEAN_SIZE, [g[0][1:3] for g in groups]),
-            (RUN_SIZE, [p for pts in pairs[s].values() for p in pts]),
-        ):
-            r = (math.sqrt(size) / 2 + 0.6) * px
-            for x, y in xys:
-                cx, cy = ax.transData.transform((x, y))
-                obstacles.append(Bbox.from_extents(cx - r, cy - r, cx + r, cy + r))
+                obstacles.append(box(ax, mm.x, mm.y, size))
         frame = ax.get_window_extent()
         yn = ax.transData.transform((0, m.ATTAINMENT * 100))[1]
         xb = ax.transData.transform((100, 0))[0]
@@ -455,8 +478,12 @@ def plot_c4(pairs: Mapping[str, Mapping[str, list]], title: str, baseline: str =
             Bbox.from_extents(frame.x0, yn - px, frame.x1, yn + px),  # vạch N1
             Bbox.from_extents(xb - px, frame.y0, xb + px, frame.y1),  # mốc 100 % GPU-giờ
         ]
-        labels = [(g[0][1], g[0][2], ", ".join(c for c, *_ in g)) for g in groups]
+        labels = [(g[0].x, g[0].y, ", ".join(mm.config for mm in g)) for g in groups]
         _place_labels(ax, labels, obstacles, lines)
+    # Chốt layout: _save lưu ở dpi khác (PNG 200, SVG 72) và constrained layout chạy lại thì các ô dời khoảng
+    # 1 pt, trong khi nhãn đã được kiểm va chạm theo vị trí cũ. Không còn layout engine thì vị trí các ô giữ
+    # nguyên (theo tỷ lệ của hình), nên mọi khoảng cách tính bằng point giữ nguyên ở mọi dpi.
+    fig.set_layout_engine("none")
     return fig
 
 
