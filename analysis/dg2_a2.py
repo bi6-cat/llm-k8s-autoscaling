@@ -46,7 +46,7 @@ from pathlib import Path
 from typing import Any
 
 from analysis import metrics as m
-from analysis.build_tables import _json, read_metrics
+from analysis.build_tables import _json, read_metrics, read_session_table
 from analysis.lt5_little import server_series
 from analysis.lt7_hpa import parse_k8s_time
 
@@ -80,21 +80,14 @@ class Run:
     phases: dict[str, tuple[float, float]]
 
 
-def _num(s: str) -> float | None:
-    return float(s) if s not in ("", "nan") else None
-
-
 def load_runs(session: Path) -> list[Run]:
-    """tables/runs.csv của build_tables (chỉ lần thử `counted`) + phases_s của loadgen.json, theo run_id.
-
-    Chỉ lấy dòng của chính phiên này: build_tables chạy trên nhiều phiên thì ghi dòng của mọi phiên vào bảng
-    của phiên đầu tiên, mà thư mục lượt của phiên khác không nằm dưới `session`."""
-    with open(session / "tables" / "runs.csv", encoding="utf-8", newline="") as fh:
-        rows = [r for r in csv.DictReader(fh) if r["counted"] == "True" and r["session"] == session.name]
+    """tables/runs.csv của build_tables (chỉ lần thử `counted` của chính phiên này, read_session_table) +
+    phases_s của loadgen.json, theo run_id. Ô rỗng trong bảng là None hoặc NaN (build_tables._cell_value)."""
+    rows = [r for r in read_session_table(session, "runs") if r["counted"] == "True"]
     out = []
     for r in sorted(rows, key=lambda r: r["run_id"]):
         d = session / r["run_id"] / r["attempt"]
-        mx = _num(r["max_replicas"])
+        mx = m._float(r["max_replicas"])
         out.append(
             Run(
                 run_id=r["run_id"],
@@ -105,8 +98,8 @@ def load_runs(session: Path) -> list[Run]:
                 t0=float(r["t0_unix"]),
                 duration_s=float(r["duration_s"]),
                 n_sent=int(r["n_sent"]),
-                react_s=_num(r["react_s"]),
-                threshold=_num(r["threshold"]),
+                react_s=m._float(r["react_s"]),
+                threshold=m._float(r["threshold"]),
                 max_replicas=None if mx is None else int(mx),
                 phases={k: (a, b) for k, (a, b) in _json(d / "loadgen.json")["phases_s"].items()},
             )
@@ -380,7 +373,10 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
     if not (args.session / "tables" / "runs.csv").exists():
         ap.error(f"không thấy {args.session}/tables/runs.csv: chạy analysis.build_tables trước")
-    print(report(args.session))
+    try:
+        print(report(args.session))
+    except ValueError as e:  # bảng không có dòng nào của phiên này (read_session_table)
+        ap.error(str(e))
     return 0
 
 

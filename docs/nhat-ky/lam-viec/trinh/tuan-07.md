@@ -626,3 +626,10 @@
     Điểm thứ 10 (nhật ký) xử lý bằng chính mục này.
 - **Links:** nhánh `feat/tr8-analysis-scripts`; `analysis/dg2_a2.py`, `analysis/tests/test_dg2_a2.py`, `docs/chi-tiet/05-moi-truong-danh-gia.md` §14.2.
 - **Thesis:** §5.3: phần nguồn của nháp trỏ sang `analysis/dg2_a2.py` thay cho script cục bộ.
+
+## 2026-11-21 – Đọc bảng theo tên phiên trong metadata.json (bổ sung PR #56)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** `/code-review high` của PR (b2) phát hiện lỗi chung với `dg2_a2`: cột `session` của bảng là tên phiên trong `metadata.json` (tên trong ma trận), không phải tên thư mục. Thư mục phiên đổi tên hoặc chép sang chỗ khác thì bộ lọc theo tên thư mục bỏ hết mọi dòng. Thêm `build_tables.session_name` và `read_session_table`: lọc theo tên trong `metadata.json`, và báo `ValueError` khi không có dòng nào, để script đọc bảng không in ra "không có gì" như một kết quả thật. `dg2_a2` dùng hàm này và `metrics._float` thay cho bản viết lại.
+- **Results:** `pytest analysis`: 138 passed (Python 3.15); `test_dg2_a2.py` và `test_build_tables.py` trên Python 3.11: 25 passed. Output trên `runs/v2-vm/v2-dg2` không đổi.
+- **Links:** PR #56; `analysis/build_tables.py`, `analysis/dg2_a2.py`.

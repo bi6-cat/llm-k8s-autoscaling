@@ -180,11 +180,13 @@ def _session(tmp_path: Path) -> Path:
     # Lượt tĩnh S4: chỉ cần loadgen.json và hàng đợi bằng 0
     s4 = sess / "S4-KB2-1" / "attempt-1"
     s4.mkdir(parents=True)
+    (s4 / "metadata.json").write_text(json.dumps({"session": "v2-dg2"}), encoding="utf-8")
     (s4 / "loadgen.json").write_text(json.dumps({"phases_s": KB2_PHASES}), encoding="utf-8")
     _metrics(s4 / "metrics.csv.gz", {("vllm_waiting", "vllm-s4-aaaaa"): dict.fromkeys(grid, 0.0)})
 
     d = sess / "A2-KB2-1" / "attempt-1"
     (d / "logs").mkdir(parents=True)
+    (d / "metadata.json").write_text(json.dumps({"session": "v2-dg2"}), encoding="utf-8")
     (d / "loadgen.json").write_text(json.dumps({"phases_s": KB2_PHASES}), encoding="utf-8")
     rows = [_req(i, i * 0.5, 5.0 if 240 <= i * 0.5 < 400 else 0.2) for i in range(2880)]
     _write_csv(d / "requests.csv", rows)
@@ -268,6 +270,23 @@ def test_report_notes_the_runs_it_skips(tmp_path):
     out = dg.report(sess).splitlines()
     assert "A2-KB2-1 thiếu events.jsonl: bỏ" in out
     assert "A2-KB2-1 thiếu threshold hoặc max_replicas trong runs.csv: bỏ" in out
+
+
+def test_report_follows_session_name_in_metadata_not_directory_name(tmp_path):
+    # Thư mục phiên bị đổi tên: cột `session` vẫn là tên trong metadata.json, nên vẫn đọc được
+    sess = _session(tmp_path).rename(tmp_path / "v2-dg2-copy")
+    assert (
+        "A2-KB2-1 duration 1440.0 : 256->2 271->4 1100->3(×2, mốc lần cuối)" in dg.report(sess).splitlines()
+    )
+
+
+def test_main_errors_when_tables_have_no_row_of_this_session(tmp_path, capsys):
+    sess = _session(tmp_path)
+    (sess / "A2-KB2-1" / "attempt-1" / "metadata.json").write_text(json.dumps({"session": "khac"}), "utf-8")
+    (sess / "S4-KB2-1" / "attempt-1" / "metadata.json").unlink()
+    with pytest.raises(SystemExit):
+        dg.main([str(sess)])
+    assert "không có dòng nào của phiên 'khac'" in capsys.readouterr().err
 
 
 def test_main_requires_tables(tmp_path, capsys):
