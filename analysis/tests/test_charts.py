@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import csv
 import gzip
+import io
 import json
 import math
 from pathlib import Path
@@ -108,6 +109,54 @@ def test_style_and_order_are_fixed_per_config():
     assert ch.style("X9") == ch.OTHER_STYLE  # cấu hình lạ: xám, không lấy màu của cấu hình khác
     assert ch._ordered(["A2", "Z", "S1", "B"], ch.CONFIG_ORDER) == ["S1", "A2", "B", "Z"]
     assert ch._ordered(["A2", None, "X9"], ch.CONFIG_ORDER) == ["A2", None, "X9"]  # metadata thiếu id
+
+
+def test_c4_labels_avoid_collisions_and_share_one_label_when_points_coincide():
+    # Bố cục của V2: ở KB3, A1 và A2 gần trùng nhau (≈ 92 % GPU-giờ, 100 % SLO), sát S4 (100, 100); ở KB2, A1
+    # (95 %) chỉ chạm S4. Bản đặt nhãn theo hướng cố định làm nhãn S4 cắt vạch N1 và nhãn chồng lên nhau.
+    # KB1: chuỗi điểm cách nhau 1,5 % GPU-giờ (≈ 3,5 px, dưới NEAR_PT), hai đầu cách 3 % (≈ 7 px): phải gộp
+    # bắc cầu thành một nhóm.
+    pairs = {
+        "KB1": {"S4": [(100.0, 100.0)], "A1": [(98.5, 100.0)], "A2": [(97.0, 100.0)]},
+        "KB2": {"S1": [(25.0, 12.5)], "S4": [(100.0, 100.0)], "A1": [(95.0, 100.0), (95.5, 100.0)],
+                "A2": [(73.0, 79.0), (73.5, 80.0), (75.0, 81.0)]},
+        "KB3": {"S1": [(25.0, 0.0)], "S4": [(100.0, 100.0)], "A1": [(92.7, 100.0)],
+                "A2": [(91.9, 100.0), (92.0, 100.0)]},
+    }  # fmt: skip
+    fig = ch.plot_c4(pairs, "C4")
+    # Layout đã chốt: lưu ở dpi khác không dời các ô, nên vị trí nhãn kiểm dưới đây cũng là vị trí trong file
+    pos = [ax.get_position().bounds for ax in fig.axes]
+    fig.savefig(io.BytesIO(), format="png", dpi=200)
+    assert [ax.get_position().bounds for ax in fig.axes] == pos
+
+    fig.canvas.draw()
+    r = fig.canvas.get_renderer()
+    px = fig.dpi / 72
+
+    def box(ax, x, y, size):
+        cx, cy = ax.transData.transform((x, y))
+        rad = math.sqrt(size) / 2 * px
+        return ch.Bbox.from_extents(cx - rad, cy - rad, cx + rad, cy + rad)
+
+    kb1, kb2, kb3 = fig.axes
+    for ax, s in ((kb1, "KB1"), (kb2, "KB2"), (kb3, "KB3")):
+        boxes = [t.get_window_extent(r) for t in ax.texts]
+        frame = ax.get_window_extent(r)
+        assert all(ch._overlap(a, b) == 0 for i, a in enumerate(boxes) for b in boxes[i + 1 :])
+        assert all(ch._overlap(b, frame) == b.width * b.height for b in boxes)  # nằm trọn trong ô vẽ
+        yn = ax.transData.transform((0, 95))[1]
+        assert not any(b.y0 < yn < b.y1 for b in boxes)  # không nhãn nào cắt vạch N1
+        for pts in pairs[s].values():
+            mean = (sum(p[0] for p in pts) / len(pts), sum(p[1] for p in pts) / len(pts))
+            marks = [box(ax, *mean, ch.MEAN_SIZE)] + [box(ax, *p, ch.RUN_SIZE) for p in pts]
+            assert all(ch._overlap(b, mk) == 0 for b in boxes for mk in marks)  # không đè điểm nào
+    assert [t.get_text() for t in kb1.texts] == ["S4, A1, A2"]
+    assert sorted(t.get_text() for t in kb3.texts) == ["A1, A2", "S1", "S4"]
+    assert sorted(t.get_text() for t in kb2.texts) == ["A1", "A2", "S1", "S4"]  # chỉ chạm nhau: không gộp
+    assert kb2.get_title(loc="left") == "KB2  (n: S1 1, S4 1, A1 2, A2 3)"
+    # Có khoảng trống trên 100 % cho nhãn, nhưng không có vạch chia nào trên 100 %
+    assert kb2.get_ylim()[1] > 100 and max(kb2.get_yticks()) == 100
+    ch.plt.close(fig)
 
 
 def _session(root: Path) -> Path:

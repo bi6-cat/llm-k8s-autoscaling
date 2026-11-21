@@ -345,3 +345,79 @@
   - Chưa kiểm: severity của `TargetDown` trong chart 92.1.1 (nếu là warning thì exporter chết sẽ không có tin Telegram).
 - **Links:** nhánh `docs/tr4-thesis-monitoring-design`; `docs/luan-van/README.md`, `docs/luan-van/03-04-giam-sat-slo-canh-bao.md`, `docs/luan-van/tai-lieu.bib`, `CONTRIBUTING.md` §1.
 - **Thesis:** §3.4 (bản nháp đầu); Hạn chế (chưa có dead man's switch; `LLMErrorRateHigh` nhạy với đợt lỗi ngắn ở tải thấp); chương 6 (hướng cải tiến cảnh báo lỗi).
+
+## 2026-11-18 – Luận văn: merge PR #51 (khung `docs/luan-van/`, mục 3.4)
+
+- **Task:** chung, TR3, TR4 · **Environment:** none
+- **Done:** CI xanh cả 6 job (alerts, docs, manifests, python 3.11 và 3.15, yaml); `mergeable` = MERGEABLE, không có review hay bình luận; merge bằng merge commit `626769e`, xoá nhánh `docs/tr4-thesis-monitoring-design`. Commit nhật ký merge PR #50 (`d6f03d9`) vào cùng PR này.
+- **Links:** PR #51.
+
+## 2026-11-20 – Kiểm tiến độ V2; review PR #46 (`vh3-delete` giữ 2 pod)
+
+- **Task:** chung (tiến độ V2), Q6 (review) · **Environment:** none
+- **Done:**
+  1. `git fetch`, xem commit trên mọi nhánh, PR, nhật ký của Quang và `van-hanh.md`.
+  2. Review PR #46: đọc diff `experiments/ops/vh.py` và test; ghép nhánh với `origin/main` trong một worktree tạm; chạy test và ruff.
+- **Results:**
+  - Tính tới 20/11, **V2 chưa chạy**. Commit cuối của Quang là 16/11 22:44. Phiên 16/11 trên 2 × RTX 4000 Ada (N = 2) là phiên thử: ĐG1 rút gọn ra C = 5,0 req/s; 2 lượt autoscaling invalid vì máy tạo tải thiếu CPU; 4 kịch bản VH chỉ là số thử. Dữ liệu thử nằm trong `runs/` trên máy của Quang, không có trong Git. Đóng băng dữ liệu theo lịch là 22/11.
+  - PR #46: ghép với `main` không xung đột. `pytest experiments` 162 passed, 4 failed; 4 test hỏng (`test_backup_notify`, rclone giả không chạy trên Windows) hỏng y hệt trên `main` (161 passed, 4 failed). `ruff check` và `ruff format --check` sạch. CI của PR xanh.
+  - Logic của PR đúng. Điểm chính tìm được: bước chờ pod thứ hai (tới 900 s) nằm trong cửa sổ tải cố định 780 s, và chưa có kiểm "sự cố xảy ra khi tải còn chạy". Nếu pod thứ hai Ready sau khoảng 780 s, lệnh xoá chạy khi tải đã dừng, 0 lỗi, vẫn chấm đạt. Ca thường không bị: cold start đo được 66–152 s, nên lệnh xoá rơi vào khoảng 190–270 s. vh2a có cùng rủi ro (chờ rollout tới 1800 s, tải 1200 s). Hai điểm nhỏ: lỗi của `scale_min(1)` trong `finally` đè lên lỗi gốc; bảng VH3 ở `05-moi-truong-danh-gia.md:474` chưa ghi điều kiện "còn ≥ 2 pod Ready".
+- **Incidents:** test của `experiments` không chạy trọn trên Windows (4 test cần shell script giả). Chỉ CI trên Linux chạy đủ.
+- **Links:** PR #46; `experiments/ops/vh.py`.
+- **Thesis:** §Hạn chế hoặc tiến độ: mốc V2 trễ so với lịch 14–15/11.
+
+## 2026-11-21 – Review PR #52 (kết quả V2) và đăng review PR #46
+
+- **Task:** chung (review), TR4, TR7 · **Environment:** none
+- **Done:**
+  1. `git fetch`: V2 đã chạy 18–19/11 trên VM 4 × RTX 4060 Ti. Kết luận "V2 chưa chạy" ở mục 20/11 là sai: commit V2 ghi ngày 19/11 nhưng tới tối 20/11 Quang mới push (PR #52 mở lúc 22:18).
+  2. Đọc trọn diff PR #52 (11 file, +944/−16): `capacity.json` của V2, `matrix-dg1-v2.yaml`, `matrix-v2.yaml`, `dg3.sh`, `test_runner.py`, `nguon-tu-lieu.md`, `quy-tac-viet.md`, nhật ký tuần 07 của Quang, `van-hanh.md`.
+  3. Đối chiếu số ở `nguon-tu-lieu.md` §3 với nhật ký và `capacity.json`. Kiểm `dg3.sh` bằng `bash -n` và shellcheck 0.11.0. Kiểm diff không có IP công khai. Đối chiếu nguyên nhân `AlertmanagerFailedToSendAlerts` với `common/platform/alertmanager-secret.sh` và `envs/cloud/provision/install-platform.sh`.
+  4. Đăng review Approve trên PR #52, và trên PR #46 (bản soạn 20/11, thêm điểm `vh3_kill` rút ra từ V2).
+- **Decision:** Approve cả hai PR, vì các điểm tìm được không làm sai số liệu V2 đã thu. Không chặn merge, để dữ liệu V2 và `vh.py` vào `main` trước mốc đóng băng 22/11.
+- **Results:**
+  - CI của PR #52 xanh 6/6; `bash -n` và shellcheck đạt; diff không có IP công khai.
+  - Khớp nguồn: GPU-giờ so với S4 (A2 × KB1 −75 %; A1 −10/−5/−7 %; A2 × KB2 −25…−28 %; A2 × KB3 −8 %), threshold A2 = 0,8 × 46,3 = 37, L0 trung bình 305,5 s.
+  - Điểm nêu trong review #52:
+    1. `AlertmanagerFailedToSendAlerts` ở V2 nhiều khả năng do PC không có `.env`, nên `alertmanager-secret.sh` bỏ qua Secret Telegram (`exit 0`). Chưa kiểm; cần console `cloud-platform` trong `runs/v2-evidence/`.
+    2. `quy-tac-viet.md` và `nguon-tu-lieu.md` mô tả luồng Markdown + pandoc, trái với quyết định chuyển sang Google Docs nằm trong cùng PR.
+    3. vh3-delete và vh3-kill cùng ghi 67,4 s, cần đối chiếu với `summary.json`.
+    4. `dg3.sh` khi timeout vẫn ghi `trigger_to_ready_s` nhỏ, trông như lượt hợp lệ.
+  - Ghi chú cho luận văn: C = 3,5 req/s là cận dưới (năng lực thật nằm trong [3,5; 4)); ĐG3 có độ phân giải 1 s.
+- **Deviations:** chưa nhận dữ liệu `runs/` của V2, nên chưa kiểm số nào trực tiếp từ dữ liệu thô. Chưa chạy pytest cục bộ trên nhánh PR #52, chỉ dựa vào CI.
+- **Links:** PR #52, PR #46 (review của `trinh-cloud`).
+- **Thesis:** §5.2 (C là cận dưới); §5.4 (độ phân giải ĐG3); §5.5 VH6 và Hạn chế (không có tin Telegram trong V2, nếu xác nhận nguyên nhân).
+
+## 2026-11-21 – Luận văn: tạm viết trên Google Docs
+
+- **Task:** chung (luận văn) · **Environment:** none
+- **Decision:** Trình đồng ý dùng Google Doc do Quang dựng ngày 20/11 làm bản gốc của luận văn, thay cho luồng Markdown + pandoc trong `docs/luan-van/` (quyết định 18/11). Đây là lựa chọn tạm: khi nội dung xong, hai người xét lại có chuyển sang LaTeX không. Doc xuất được .docx, khớp với việc khuôn của trường và góp ý của GVHD đi qua Word, và vẫn chuyển tiếp được (.docx → pandoc → LaTeX).
+  - Không chuyển sang LaTeX ngay: chưa biết khuôn của trường, đổi công cụ lần hai khi còn khoảng 2,5 tuần, và luận văn có ít công thức.
+  - Cách làm: Trình nháp từng mục bằng Markdown (agent viết, agent khác đối chiếu số với nguồn), rồi dán vào Doc. Sau khi dán, mọi sửa đổi chỉ làm trên Doc; góp ý bằng Comment/Suggesting. Trích dẫn đề nghị dùng Zotero cho Google Docs (nhập `tai-lieu.bib`, kiểu IEEE).
+  - Không nháp trong repo qua PR: sau khi dán vào Doc, hai bản dễ lệch nhau, và mỗi mục tốn thêm một PR.
+- **Deviations:** `docs/luan-van/README.md` và `quy-tac-viet.md` (§1, §7, §8, §10) vẫn tả luồng pandoc; sẽ sửa trong một PR sau khi PR #52 merge. Mục 3.4 (bản Markdown đã merge ở PR #51) chưa chép sang Doc, vì Doc chưa được share cho Trình.
+- **Thesis:** quy trình viết (lời mở đầu hoặc phần khai báo dùng AI agent, `quy-tac-viet.md` §9).
+
+## 2026-11-21 – Nhận dữ liệu V2; vẽ lại C1–C4 bản V2, sửa nhãn C4
+
+- **Task:** TR7, TR4 (VH6) · **Environment:** none (máy Trình, dữ liệu V2)
+- **Done:**
+  1. Nhận gói riêng của Quang (`v2-data-20261119.tar.gz`, `runs-all-20261120.tar.gz`, ghi chú). `sha256sum -c SHA256SUMS`: cả hai file nén OK. Giải nén `runs-all` vào `runs/` (đã gồm V2; không trùng file nào đã có). `v2-evidence/SHA256SUMS`: chỉ FAILED `vm-final-state.txt`, đúng như ghi chú của Quang (file ghi 3 s sau khi lập danh sách checksum).
+  2. Đối chiếu số VH6 trong ghi chú của Quang với `runs/v2-vm/v2-dg2/tables/alerts.csv` (47 dòng, 17 lượt): khớp (Results).
+  3. Vẽ lại C1–C4 trên `runs/v2-vm/v2-dg2` (`--baseline S4`) và xem bố cục từng hình: C1 (3 lượt), C2, C3 giữ nguyên; C4 lỗi (Incidents).
+  4. Sửa `plot_c4`: `_place_labels` đo từng nhãn và thử 12 vị trí, chọn vị trí phạt thấp nhất (đè nhãn hoặc dấu điểm > tràn khỏi ô > cắt vạch tham chiếu); `_near_groups` gộp có bắc cầu các điểm trung bình cách nhau dưới 4 pt thành một nhãn ("A1, A2"), điểm sau vẽ 1/4 diện tích để vẫn thấy điểm dưới; số lượt chuyển lên tiêu đề ô; trục tung chừa 14 % phía trên 100 %, không có vạch chia trên 100 %; chốt layout sau khi đặt nhãn. Thêm test.
+  5. `/code-review high`: 10 điểm. Sửa 7 (layout chạy lại khi lưu ở dpi khác; test chưa kiểm chấm từng lượt và layout lúc lưu; điểm nhỏ trong nhóm chưa là vật cản; gộp chưa bắc cầu; vẽ thừa một lần; tạo rồi xoá artist; tuple không tên). Một điểm là chính mục nhật ký này. Không sửa 2: nhãn tràn khỏi ô khi mọi vị trí đều tràn (ghi là hạn chế trong docstring, nhãn chỉ gồm tên cấu hình chưa gặp); nơi đặt hình (Decision).
+  6. Commit SVG C1–C4 và 4 bảng CSV vào `analysis/figures/v2-dg2/`. PNG cho Google Doc giữ ở máy Trình, không commit.
+- **Decision:**
+  - Số lượt của C4 ghi ở tiêu đề ô ("KB2  (n: S1 1, S4 1, A1 2, A2 3)"), nhãn cạnh điểm chỉ ghi tên cấu hình: nhãn "S4 (n=1)" dài hơn khoảng trống bên phải điểm 100 %, nên bị đẩy xuống dưới vạch N1, sát điểm A1 (dễ đọc nhầm). Bỏ: nới trục hoành tới khoảng 145 % (bỏ trống khoảng 30 % bề ngang mỗi ô); hai hàng nhãn phía trên 100 % (khoảng trống trên trục quá lớn).
+  - D73: hình và 4 bảng CSV của V2 nằm ở `analysis/figures/v2-dg2/`, như LT5–LT8 (hình cùng CSV). Dữ liệu thô vẫn giữ riêng, vì console có IP máy thuê; các bảng không có IP hay đường dẫn máy (đã grep). Bỏ: chỉ để trong `runs/` (không kiểm được từ repo); `docs/images/` (CONTRIBUTING dành cho hình vẽ sinh từ `docs/diagrams/`).
+- **Results:**
+  - VH6 (ĐG2 V2, 17 lượt): `LLMSLOBurnFast` 8 đợt, trong đó 7 đợt tính được: bắt đầu kêu 204–374 s sau đầu pha chính, `client_bad_ratio` 0,27–0,73, `false_page` = False ở cả 7. Đợt thứ 8 (A2-KB3-2, −176 s) còn sót từ lượt trước (`firing_at_start` = True). `KubeHpaMaxedOut` 5 đợt (A1 × KB2 hai lượt, A1 × KB3, A2 × KB3 hai lượt). `AlertmanagerFailedToSendAlerts` và `AlertmanagerClusterFailedToSendAlerts` kêu ở cả 17/17 lượt.
+  - `cells.csv` (trung bình các lượt counted): SLO attainment 100 % ở mọi ô của S4, A1 và ở A2 × KB1, KB3; A2 × KB2 80,0 %; S1 × KB2 12,5 %; S1 × KB3 0 %. GPU-giờ so với S4: A2 25 % (KB1), 73 % (KB2), 92 % (KB3); A1 90 %, 95 %, 93 %; S1 25 %.
+  - `pytest analysis` 120 passed; `ruff check`, `ruff format --check` sạch. Chạy lại `analysis.charts` ra SVG giống từng byte. Thử bật lại constrained layout rồi lưu ở 200 dpi: bề rộng ô C4 đổi từ 0,788 lên 0,821 bề rộng hình, nên phải chốt layout.
+- **Incidents:**
+  - C4 bản chạy thử 20/11: nhãn "S4 (n=1)" cắt vạch N1 ở cả 3 ô; nhãn S1 ở KB3 đè lên số 0 của trục x; điểm A2 (92,0 %) che điểm A1 (92,7 %) ở KB3. Nguyên nhân: hướng nhãn cố định theo cấu hình (`LABEL_OFFSET`). Sửa ở bước 4.
+  - File zip của gói nằm trong `docs/` (chưa track): chuyển ra thư mục cục bộ ngoài Git để không commit nhầm 25 MB dữ liệu có IP máy thuê.
+- **Deviations:** Môi trường §14.2 ghi `analysis.charts` ghi hình vào `runs/<phiên>/figures/`; bản V2 dùng `--out analysis/figures/v2-dg2` để đưa vào Git. C5, C6 chưa làm.
+- **Links:** nhánh `fix/tr7-c4-labels`; `analysis/charts.py` (`plot_c4`, `_place_labels`, `_near_groups`), `analysis/tests/test_charts.py`, `analysis/figures/v2-dg2/`.
+- **Thesis:** §5.3 (C1–C4 bản V2); §5.5 VH6 (số đợt cảnh báo); Hạn chế (V2 không có tin Telegram: `FailedToSend` kêu suốt 17 lượt, nhiều khả năng thiếu Secret Telegram, không kiểm trực tiếp được).
