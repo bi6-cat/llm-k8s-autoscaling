@@ -160,16 +160,17 @@ Theo mẫu ở [Môi trường §19](../chi-tiet/05-moi-truong-danh-gia.md#19-ki
 
 ## Kiểm chứng lý thuyết LT5–LT8 (Trình, TR8)
 
-Cùng mẫu với LT1–LT4. Đủ LT5–LT8 (LT5, LT6 còn chờ thêm dữ liệu V2).
+Cùng mẫu với LT1–LT4. Đủ LT5–LT8; LT5, LT6 đã thêm dữ liệu V2 ngày 21/11.
 
-### LT5 – Định luật Little (phân tích 16/11/2026 trên dữ liệu đã đo)
+### LT5 – Định luật Little (phân tích 16/11/2026 trên dữ liệu đã đo; thêm V2 ngày 21/11)
 
 - **Lý thuyết** ([Kiến trúc §10.2](../chi-tiet/03-kien-truc-autoscaling.md#102-a2-số-request-đồng-thời-running--waiting)): ở trạng thái dừng, L = λ × W. A2 dùng chính L = Σ_pod (`running` + `waiting`). Trên một cửa sổ hữu hạn dài T, đẳng thức sau đúng tuyệt đối: L_client = λ\_thực × W + edge, với edge = (vào − tràn) ÷ T. "Vào" là thời gian mà các request gửi trước cửa sổ còn nằm lại trong cửa sổ; "tràn" là thời gian mà các request gửi trong cửa sổ còn nằm lại sau cửa sổ. Khi hệ dừng thì edge ≈ 0; khi hàng đợi đang tăng thì edge < 0.
 - **Dự đoán** (ghi trước khi chạy script trên dữ liệu simulator; dữ liệu nhà đo từ 05–06/11, nhưng Little không có tham số tự do, nên không có gì để chỉnh cho khớp số đo):
   - Mọi cửa sổ dừng: L_server ≈ λ\_thực × W, lệch < 15 %. Lệch còn lại do lấy mẫu 5 s. Theo M/G/∞ (chưa xếp hàng), SE = √((λ ÷ n) × Σ_k (W − 5|k|)+). Ở nhà, W < 5 s và có 24 mẫu, nên SE ≈ √(L ÷ 24), tức 14 % khi L = 2. Ở simulator pha `pre` (W ≈ 13 s), SE ≈ 13 %.
   - Simulator (`patch-sim.yaml`: TTFT 200 ms, ITL 50 ms, 256 token): W = 0,2 + 255 × 0,05 = 12,95 s. Từ đó `pre` (λ 0,5) cho L ≈ 6,5; `spike` của A2 (λ trung bình ≈ 2,21) cho L ≈ 28,6; `drop` có edge dương nhỏ, vì request của `spike` còn trong hệ thống ở mép đầu.
   - Cửa sổ quá tải (λ\_thực > năng lực) thì L < λW. Lượt có request lỗi thì không áp được định luật, vì không biết lúc request lỗi rời server.
-- **Cách đo:** `analysis/lt5_little.py`, bảng mỗi cửa sổ một dòng ở `analysis/figures/lt5-little.csv`. Lệnh: `uv run --project analysis python -m analysis.lt5_little envs/home/experiments/capacity-1.5b.json envs/home/experiments/capacity.json runs/sim/mp-final-w2@1.0162 runs/sim/tr7-kb2-sim-2@1.033 --out analysis/figures/lt5-little.csv`.
+- **Cách đo:** `analysis/lt5_little.py`, bảng mỗi cửa sổ một dòng ở `analysis/figures/lt5-little.csv`. Lệnh: `uv run --project analysis python -m analysis.lt5_little envs/home/experiments/capacity-1.5b.json envs/home/experiments/capacity.json runs/sim/mp-final-w2@1.0162 runs/sim/tr7-kb2-sim-2@1.033 runs/dg1-v2-4060ti runs/v2-vm/v2-dg2 --out analysis/figures/lt5-little.csv`.
+  - V2 (18–19/11, VM 4 × RTX 4060 Ti, Qwen2.5-3B) dùng dữ liệu thô của runner, không dùng bản tóm tắt `capacity.json`: ĐG1 (`dg1-v2-4060ti`, 1 replica, mỗi mức một cửa sổ `steady` 300 s, gồm cả 60 s đầu mà `capacity.json` bỏ) và ĐG2 (`v2-dg2`, 17 lượt A1, A2, S1, S4 × KB1–KB3, 1–4 replica). V2 chạy trên Linux thật nên k = 1 (kiểm ở phần "Hệ quả").
   - File capacity ở nhà chỉ có bản tóm tắt mỗi mức λ (dữ liệu thô nằm trên máy Quang), nên chỉ tính lại được λ\_thực = n\_measured ÷ 120 s và so B_server, B_client với λ\_thực × W.
   - Lượt runner trên simulator có đủ dữ liệu thô. Script tách thêm L_client_sampled, là số request client đang chờ đúng tại các mốc mẫu của Prometheus. Nhờ vậy lệch của server tách được thành hai phần: phần do lấy mẫu (L_client_sampled − L_client) và phần do định nghĩa (L_server − L_client_sampled).
   - Hậu tố `@k` là tốc độ đồng hồ của máy tạo tải (xem giải thích 3).
@@ -187,42 +188,49 @@ Cùng mẫu với LT1–LT4. Đủ LT5–LT8 (LT5, LT6 còn chờ thêm dữ li�
   | Sim A2-KB2-1 `drop` (scale 3 → 1) | 600 s | 0,623 | 12,74 | 7,94 | 8,15 (+0,21) | 8,30 | +4,6 % |
   | Sim S1-KB2-1 `pre` (lượt không hợp lệ) | 120 s | 0,551 | 12,73 | 7,01 | 7,05 (+0,04) | 6,96 | −0,8 % |
   | Sim S1-KB2-1 `spike`, `drop` (có request lỗi) | | | | | | | không áp được |
+  | V2 ĐG1, 3B, 3 mức dừng (λ 2–3,5; 1 replica) | 300 s | 1,94–3,47 | 8,45–12,97 | 16,4–45,0 | lệch −1,5…−0,9 % | | −3,5…−1,0 % |
+  | V2 ĐG1, λ = 4; 5 (quá tải) | 300 s | 4,00; 4,94 | 18,5; 51,4 | 74,1; 253,7 | 71,0 (−4,2 %); 202,1 (edge −51,7; −20,4 %) | 69,2; 199,4 | −6,6; −21,4 % |
+  | V2 ĐG2, 24 cửa sổ chưa xếp hàng (A1, A2, S1, S4 × KB1–KB3; 1–4 replica) | 120–720 s | 1,69–10,72 | 6,63–10,02 | 11,2–107,3 | lệch −3,8…+5,3 % | | −5,8…+4,9 % |
+  | V2 ĐG2, A2-KB3-1, -2 `ramp` (có hàng đợi, waiting 6,0; 10,8) | 300 s | 5,88; 5,98 | 12,42; 13,00 | 73,1; 77,8 | 71,2 (edge −1,84); 76,2 (−1,60) | 69,7; 75,6 | −4,6; −2,8 % |
+  | V2 ĐG2, 10 cửa sổ pha có request lỗi (A2-KB2 `spike`, `drop`; S1-KB2; S1-KB3) | | | | | | | không áp được |
 
-  Sim dùng k = 1,033 cho phiên `tr7-kb2-sim-2` và 1,0162 cho `mp-final-w2` (giải thích 3).
+  Sim dùng k = 1,033 cho phiên `tr7-kb2-sim-2` và 1,0162 cho `mp-final-w2` (giải thích 3). V2 dùng k = 1.
 
 - **So với dự đoán:**
   - Ở cả **18/18 cửa sổ dừng**, L_server lệch λ\_thực × W từ −4,4 % đến +14,3 %, tức đều dưới 15 %. Phía client lệch từ −0,9 % đến +2,6 %. Hai trong 18 cửa sổ thuộc lượt mà runner đánh dấu không hợp lệ: 1,5B λ = 6 (máy tạo tải bị cgroup throttle 4,4 ms) và S1-KB2-1 (pod restart một lần trong lượt). Hai cửa sổ này lệch −1,2 % và −0,8 %; bỏ chúng thì khoảng lệch không đổi.
   - Lệch lớn nhất (+14,3 %, 0,5B λ = 2, L = 1,86) chỉ bằng 1,0 SE do lấy mẫu. Ở 14 cửa sổ chưa xếp hàng, z = (L_server − λW) ÷ SE nằm trong [−0,76; +0,96], trung bình +0,20, nên không thấy thiên lệch có hệ thống.
   - Simulator: λ\_thực × W khớp dự đoán tiên nghiệm trong khoảng −1,5 % (`spike` A2: 28,18 so với 28,6). Ở `pre`, λW = 7,0 so với dự đoán 6,5, vì λ\_thực = 0,55 thay vì 0,5: 64 request trong 120 s, dao động Poisson (SD ±13 %) cộng phần hiệu chỉnh đồng hồ. W ở `pre` đo theo đồng hồ của máy tạo tải là 13,16 s, dài hơn cấu hình 1,6 % (TPOT 50,7–50,8 ms thay vì 50 ms; chưa tách nguyên nhân). Simulator hẹn giờ bằng đồng hồ đơn điệu, nên phần chênh này không phải do k.
+  - **V2 (thêm 21/11, sau khi đã ghi dự đoán ở trên):** ở cả **27/27 cửa sổ chưa xếp hàng** (3 của ĐG1, 24 của ĐG2), L_server lệch λ\_thực × W từ −5,8 % đến +4,9 %; phía client lệch từ −3,8 % đến +5,3 %. z nằm trong [−2,35; +1,57], trung bình −0,42. Ba cửa sổ có |z| > 2 đều rơi vào lúc tải đang đổi: pha `ramp` của A1-KB3-1 và S4-KB3-1, pha `spike` của S4-KB2-1. Ở các cửa sổ đó edge âm (−0,7 đến −1,8), nên phía client cũng lệch âm (−0,7 đến −3,8 %). Tách lệch của 27 cửa sổ thành hai phần: phần lấy mẫu trung bình −0,5 % (−3,4…+1,7 %), phần định nghĩa trung bình −0,3 % (−3,8…+3,0 %), nên không thấy thiên lệch có hệ thống. Cả 53 dòng V2 đều thuộc lượt hợp lệ.
 - **Giải thích:**
-  1. **Quá tải** (1,5B λ = 8; 0,5B λ ≥ 13): lệch âm 5–14 %, và phía client lệch gần bằng phía server, nên đây không phải lỗi đo của Prometheus. Hệ không dừng: request gửi cuối cửa sổ còn nằm trong hàng đợi sau khi cửa sổ đóng (tràn > vào). Lượt simulator S1-CONST2-1 cho thấy rõ bằng số: edge = −19,5 trên λW = 57,4, nên L_client = 37,9 (−34 %), còn L_server chỉ lệch L_client −2,3 %. Đẳng thức có edge vẫn đúng tuyệt đối; chỉ phép xấp xỉ L ≈ λW là không dùng được.
-  2. **Nhiều replica:** ở `spike` và `drop` của A2, tổng running + waiting của mọi pod khớp log client trong 5 %, kể cả khi số pod đổi 1 → 3 → 1 (theo series của pod; pod bị xoá thì series của nó dừng lại). Vậy metric của A2 đo đúng lượng việc của cả hệ thống.
+  1. **Quá tải** (1,5B λ = 8; 0,5B λ ≥ 13): lệch âm 5–14 %, và phía client lệch gần bằng phía server, nên đây không phải lỗi đo của Prometheus. Hệ không dừng: request gửi cuối cửa sổ còn nằm trong hàng đợi sau khi cửa sổ đóng (tràn > vào). Lượt simulator S1-CONST2-1 cho thấy rõ bằng số: edge = −19,5 trên λW = 57,4, nên L_client = 37,9 (−34 %), còn L_server chỉ lệch L_client −2,3 %. Đẳng thức có edge vẫn đúng tuyệt đối; chỉ phép xấp xỉ L ≈ λW là không dùng được. Trên V2, ĐG1 λ = 5 (1,43 C, waiting trung bình 137) cho cùng hình ảnh: edge = −51,7 trên λW = 253,7, L_client lệch −20,4 %, L_server lệch L_client chỉ −1,3 %. Đây là cửa sổ V2 duy nhất nằm ngoài dải ±15 %.
+  2. **Nhiều replica:** ở `spike` và `drop` của A2, tổng running + waiting của mọi pod khớp log client trong 5 %, kể cả khi số pod đổi 1 → 3 → 1 (theo series của pod; pod bị xoá thì series của nó dừng lại). Vậy metric của A2 đo đúng lượng việc của cả hệ thống. V2 kiểm lại điều này trên 4 GPU thật: 13 cửa sổ có trung bình ≥ 3,99 replica Ready (mọi pha của S4, A1-KB2 `spike` và `drop`, A1-KB3 và A2-KB3 `sustain`) lệch −5,8…+4,9 %, kể cả khi λ\_thực × W tới 107. Lệch −5,8 % là pha `ramp` của S4-KB3, lúc tải đang tăng (edge −1,8; phía client −3,8 %).
   3. **Đồng hồ của simulator.** Lần chạy đầu (k = 1), pha `drop` của A2 lệch −11,9 % (L_server 6,99 so với L_client_sampled 8,24). Phần lệch dồn vào 30 s đầu pha (846–871 s): client có 20–33 request đang chờ, còn server chỉ đếm 7–22. Nguyên nhân: loadgen ghi mốc request bằng `perf_counter` (đồng hồ đơn điệu) cộng `t0_unix` (`loadgen/sender.py`), còn Prometheus đóng dấu mẫu bằng giờ thực, và trong VM WSL2 đồng hồ đơn điệu chạy nhanh hơn giờ thực k lần. Các bằng chứng:
      - Độ trễ khớp nhất giữa chuỗi server và chuỗi client tăng dần theo thời gian: −1, −6, −11 s ở các đoạn có tâm 120, 370, 670 s. Đây chỉ là bằng chứng về chiều lệch. Độ dốc suy ra (≈ 1,8 %) là ước lượng thô, vì độ trễ được dò trên số request đang chạy (vốn nhiễu) và lấy trung bình cả đoạn, nên không dùng để chọn k.
      - Runner (giờ thực) thấy loadgen xong lúc t0 + 1419,4 s, trong khi loadgen tự đo được `wall_s` = 1451,6 s. Vậy k ≥ 1,022 (cộng trừ 1 s cho lệch giờ giữa pod và runner). Runner hỏi file DONE theo vòng `kubectl get` + `kubectl exec` + ngủ 10 s, nên thấy DONE muộn nhất khoảng 20 s (dư 5 s cho mỗi lần gọi kubectl), tức k ≤ 1,038 (A2). Với S1, chạy cùng buổi sáng, k ∈ [1,028; 1,044]. Mtime của các file kết quả không giúp gì thêm: đó là lúc `kubectl cp` giải nén, sau `t_main_end` 22 ms.
      - Bản ghi chỉnh giờ của journal trong lượt LT7 cho k = 1,0188 vào chiều 16/11, sau khi VM khởi động lại lúc khoảng 16:17. Ngày 07/11 là 1,0162. Vậy k đổi sau mỗi lần VM khởi động.
 
      Dùng k = 1,033 (giữa cận chung [1,028; 1,038] của hai lượt) thì `drop` chỉ còn lệch +4,6 %. Với mọi k trong cận chung, lệch nằm trong +2,2…+7,4 %; trong cận riêng của A2 thì −0,5…+7,4 %. Cận lấy từ mốc của runner, không dùng dữ liệu Prometheus, nên không phải lập luận vòng. λ × W không phụ thuộc k: W ngắn đi k lần, còn λ tăng đúng k lần.
-  4. **Có request lỗi** (S1-KB2 `spike`, `drop`): L_server gấp 2–3 lần L_client, vì L_client không tính các request lỗi (timeout, bị từ chối kết nối): chúng không có mốc rời hệ thống. Script đánh dấu `applicable = False`.
+  4. **Có request lỗi** (S1-KB2 `spike`, `drop`): L_server gấp 2–3 lần L_client, vì L_client không tính các request lỗi (timeout, bị từ chối kết nối): chúng không có mốc rời hệ thống. Script đánh dấu `applicable = False`. Trên V2, S1-KB2-1 `spike` có 5.468/6.198 request lỗi và L_server gấp 13,6 lần L_client (1.033 so với 75,8). Ngược lại, A2-KB2 `spike` chỉ có 37–93/6.145–6.198 request lỗi (0,6–1,5 %), nên L_server vẫn chỉ lệch +2,4…+7,0 %. Script vẫn bỏ các cửa sổ này theo đúng quy tắc.
 - **Hệ quả:**
   - Prometheus đo đúng L, và L tỷ lệ với λ theo đúng W đo được ở trạng thái dừng. Đây là cơ sở để đặt threshold A2 theo B\* lấy từ ĐG1.
   - Phần kiểm Little trong `experiments/runner/capacity.py` (Môi trường §8 bước 6) trước đây dùng λ danh định, nên báo nhầm ở mức λ thấp: 0,5B λ = 2 lệch 15,7 % và ra `little_ok = False`, trong khi dùng λ\_thực chỉ lệch 14,3 %. Trình đã sửa sang λ\_thực, đếm trên cùng tập request thành công với W, và thêm hai trường `lambda_real_rps`, `window_s` (`lt5_little.py` đọc hai trường này khi có, ví dụ ĐG1 trên V2 đo 240 s mỗi mức). Hai file `capacity*.json` đã có giữ giá trị cũ, vì không có dữ liệu thô trên máy này để tính lại.
   - Ngưỡng 15 % là chặt khi B nhỏ: với 24 mẫu, SE ≈ 1 ÷ √(24 B), tức 14 % ở B = 2. ĐG1 trên V2 đo 4 phút mỗi mức (48 mẫu) thì SE còn 10 % ở B = 2.
-  - Trên simulator trong WSL2, mọi phép so mốc client với Prometheus hoặc mốc pod đều lệch (k − 1) × t. Ví dụ, thời điểm tải tăng của KB2 (t = 240 s) thật ra sớm hơn khoảng 8 s so với `t0_unix + 240`, nên N2a do `build_tables` tính trên simulator ngắn đi khoảng 8 s. Cuối lượt 24 phút, lệch tới khoảng 45 s. V2 chạy trên Linux thật nên không bị (sau V2 kiểm lại: cận k của runner phải chứa 1). Cách sửa gốc là để loadgen ghi thêm giờ thực lúc kết thúc; chưa làm.
+  - Trên simulator trong WSL2, mọi phép so mốc client với Prometheus hoặc mốc pod đều lệch (k − 1) × t. Ví dụ, thời điểm tải tăng của KB2 (t = 240 s) thật ra sớm hơn khoảng 8 s so với `t0_unix + 240`, nên N2a do `build_tables` tính trên simulator ngắn đi khoảng 8 s. Cuối lượt 24 phút, lệch tới khoảng 45 s. V2 chạy trên Linux thật nên không bị: đã kiểm 21/11, cận k của cả 22 lượt V2 (5 ĐG1, 17 ĐG2) đều chứa 1, giao của chúng là [0,9973; 1,0076]. Cách sửa gốc là để loadgen ghi thêm giờ thực lúc kết thúc; chưa làm.
 - **Hình** ([lt5-little.svg](../../analysis/figures/lt5-little.svg), vẽ 18/11 từ `lt5-little.csv` bằng `analysis/lt_charts.py --lt5`): ô trái là L_server theo λ\_thực × W (thang log, đường y = x, dải ±15 %); ô phải là độ lệch, kèm thanh ±1 SE do lấy mẫu ở các cửa sổ chưa xếp hàng. Hình có 23 cửa sổ: 18 cửa sổ dừng và 5 cửa sổ quá tải của bảng trên. Bỏ 3 cửa sổ có request lỗi, và cửa sổ `main` của A2-KB2-1 vì nó chồng lên `pre`, `spike`, `drop`. Chấm rỗng là 9 cửa sổ có hàng đợi (waiting trung bình ≥ 1): 5 cửa sổ quá tải, cộng 4 cửa sổ mà bảng trên xếp vào nhóm dừng nhưng đã có hàng đợi (1,5B λ = 6, 7; 0,5B λ = 12; 12,5). 22/23 cửa sổ nằm trong dải. Chỉ cửa sổ `steady` của S1-CONST2-1 trên simulator (`mp-final-w2`) nằm ngoài dải (−35,5 %, giải thích 1).
-- **Còn thiếu:** chưa có V2.
+  - Vẽ lại 21/11, thêm V2 (màu thứ 4): **54 cửa sổ** = 23 cửa sổ trên + 31 cửa sổ V2. Bỏ 18 cửa sổ có request lỗi (3 cũ, 15 V2) và 8 cửa sổ `main` (1 cũ, 7 V2; KB3 cũng có `main` chồng lên `ramp`, `sustain`). 52/54 cửa sổ nằm trong dải; hai cửa sổ ngoài dải đều là quá tải: S1-CONST2-1 trên simulator và S1-CONST5-1 của ĐG1 V2 (−21,4 %, giải thích 1).
 
-### LT6 – GPU utilization bão hoà (phân tích 16/11/2026 trên dữ liệu đã đo)
+### LT6 – GPU utilization bão hoà (phân tích 16/11/2026 trên dữ liệu đã đo; thêm V2 ngày 21/11)
 
 - **Lý thuyết** ([Kiến thức nền §4.4](../chi-tiet/02-kien-thuc-nen.md#44-vì-sao-gpu_util-bão-hoà)): GPU util là tỷ lệ thời gian có ít nhất một kernel chạy, không phải phần năng lực GPU đang dùng. vLLM chạy kernel liên tục khi còn ít nhất một request, nên util ≈ P(N ≥ 1), với N là số request trong hệ thống. Khi chưa xếp hàng, mỗi request được phục vụ gần như độc lập với số request khác (LT3), nên hệ gần với hàng đợi M/G/∞: N có phân phối Poisson với trung bình L (LT5), và util ≈ 1 − e^(−L).
 - **Dự đoán:**
   - Định tính (Môi trường §19, ghi trước khi đo): util ≈ 100 % ngay từ tải vừa, trong khi `waiting` chênh nhau nhiều lần giữa tải vừa và quá tải.
   - Định lượng: util = 1 − e^(−L), tức 86 % ở L = 2 và 99 % ở L = 4,6. Như vậy util bão hoà khi L mới bằng khoảng 1/6 B\* (B\* = 27–28 ở cả hai model). Công thức này Trình thêm lúc phân tích, sau khi đã thấy bản tóm tắt "89 % ở λ = 1, 100 % từ λ = 2" ở LT3. Nó không có tham số tự do, nên không chỉnh được cho khớp số đo.
   - Tiêu chí "phân biệt được": có một ngưỡng tách được nhóm tải vừa (0,3 C ≤ λ ≤ 0,7 C) khỏi nhóm quá tải (λ > C, SLO không đạt), tức max(tín hiệu ở tải vừa) < min(tín hiệu ở quá tải). Kiểm cả bốn tín hiệu của Kiến trúc §10: A1 util, A2 running + waiting, A3 KV-cache, A4 waiting.
-- **Cách đo:** `analysis/lt6_gpu_util.py`, mỗi mức λ một dòng ở `analysis/figures/lt6-gpu-util.csv`. Lệnh: `uv run --project analysis python -m analysis.lt6_gpu_util envs/home/experiments/capacity-1.5b.json envs/home/experiments/capacity.json --out analysis/figures/lt6-gpu-util.csv`.
+- **Cách đo:** `analysis/lt6_gpu_util.py`, mỗi mức λ một dòng ở `analysis/figures/lt6-gpu-util.csv`. Lệnh: `uv run --project analysis python -m analysis.lt6_gpu_util envs/home/experiments/capacity-1.5b.json envs/home/experiments/capacity.json runs/dg1-v2-4060ti/capacity.json --out analysis/figures/lt6-gpu-util.csv`.
+  - V2 (thêm 21/11): ĐG1 trên VM 4 × RTX 4060 Ti, Qwen2.5-3B, 1 replica, C = 3,5, λ = 2; 3; 3,5; 4; 5 (0,57–1,43 C), mỗi mức đo 240 s (48 mẫu). Phần `curves` của `runs/dg1-v2-4060ti/capacity.json` trùng bản `envs/cloud/experiments/capacity.json` của PR #52 (hai bản chỉ khác `status`, `note`), nên chạy lại bằng file trong `envs/` cho cùng CSV. Từ 21/11, CSV của LT5, LT6 có thêm cột `session` (trường `session` trong JSON hoặc tên phiên runner; file cũ không ghi session thì là tên file). Script gom phép kiểm, còn hình tô màu, theo cặp (env, session), vì các file ĐG1 ở nhà (0,5B), trên V1 (A4000) và trên V2 cùng tên `capacity.json`. Trước đó script gom theo tên file, và lần chạy đầu ngày 21/11 đã gộp nhầm V2 với 0,5B ở nhà.
   - Dữ liệu là ĐG1-mini ở nhà (RTX 5060, 1 replica, các bậc λ, mỗi bậc đo 120 s). util và `waiting` là trung bình của 24 mẫu Prometheus cách nhau 5 s, do runner tính sẵn (`nvidia_smi_utilization_gpu_ratio`, `vllm:num_requests_waiting`).
   - L lấy B_client: trung bình theo thời gian phía client, không có sai số lấy mẫu.
-  - z = (đo − dự đoán) ÷ SE, với SE = √(p(1 − p) ÷ 24) nếu các mẫu độc lập. Thực tế các mẫu có tương quan, vì chu kỳ bận trung bình (e^L − 1) ÷ λ ở 1,5B λ = 1 là 7,5 s, dài hơn bước 5 s, nên SE thật có thể lớn hơn.
+  - z = (đo − dự đoán) ÷ SE, với SE = √(p(1 − p) ÷ n) nếu các mẫu độc lập; n = 24 ở nhà (120 s), 48 ở V2 (240 s). Thực tế các mẫu có tương quan, vì chu kỳ bận trung bình (e^L − 1) ÷ λ ở 1,5B λ = 1 là 7,5 s, dài hơn bước 5 s, nên SE thật có thể lớn hơn.
 - **Số đo, util so với mô hình** (10 mức chưa xếp hàng):
 
   | Model | λ ÷ C | L | util đo | 1 − e^(−L) | z |
@@ -233,6 +241,9 @@ Cùng mẫu với LT1–LT4. Đủ LT5–LT8 (LT5, LT6 còn chờ thêm dữ li�
   | 0,5B | 0,32 | 4,1 | 0,958 | 0,983 | −0,9 |
   | 0,5B | 0,48 | 6,1 | 1,000 | 0,998 | +0,2 |
   | 5 mức còn lại | 0,50–0,83 | 8,7–17,8 | 1,000 | ≥ 0,9998 | |
+  | 3B (V2), 3 mức | 0,57–1,00 | 16,4–46,7 | 1,000 | > 0,99999 | |
+
+  V2 không có mức nào dưới 0,57 C, nên không thêm điểm nào kiểm được phần cong của 1 − e^(−L): ở mức thấp nhất L đã là 16,4.
 
 - **Số đo, tách tải vừa khỏi quá tải** (khoảng hở = min(quá tải) ÷ max(vừa); lớn hơn 1 thì tách được):
 
@@ -244,12 +255,23 @@ Cùng mẫu với LT1–LT4. Đủ LT5–LT8 (LT5, LT6 còn chờ thêm dữ li�
   | waiting (A4) | 0 | 21,8–92,1 | ∞ | 0–0,08 | 52–166 | 630× |
 
   Bỏ hai mức mà máy tạo tải đánh dấu không hợp lệ (1,5B λ = 6 và 8; script in thêm dòng "chỉ mức hợp lệ") thì cả bốn kết luận và bốn khoảng hở không đổi.
+
+  V2 (3B, C = 3,5; cả 5 mức hợp lệ; dải vừa chỉ có một mức):
+
+  | Tín hiệu (cấu hình) | 3B vừa (λ 2) | 3B quá tải (λ 4–5) | Khoảng hở |
+  |---|---|---|---|
+  | GPU util (A1) | 1,000 | 1,000 | 1,00: **không tách được** |
+  | running + waiting (A2) | 16,4 | 75,9–232 | 4,6× |
+  | KV-cache (A3) | 0,062 | 0,240–0,241 | 3,9× |
+  | waiting (A4) | 0 | 12,4–168 | ∞ |
 - **Số đo, quyết định đầu tiên khi đang có 1 replica** (threshold ở nhà: A1 70 %; A2 21 với 1,5B, 23 với 0,5B):
   - A1 đòi 2 replica ở **cả 18 mức**, từ 0,16 C tới quá tải, vì util ≥ 0,78, tức vượt 77 % = 70 % × 1,1. Ở nhà, exporter chỉ thấy 1 GPU vật lý, nên A1 không lên quá 2.
   - A2 giữ 1 replica khi λ < C, đòi 2 ở λ = C, và 3, 6 ở 1,5B λ = 7, 8; 3, 6, 8 ở 0,5B λ = 13; 13,5; 14.
+  - V2 (threshold A2 = 37): A1 đòi 2 replica ở cả 5 mức (util 1,000). A2 giữ 1 ở λ = 2; 3, đòi 2 ở λ = C = 3,5, và 3, 7 ở λ = 4; 5. Cùng quy luật với ở nhà.
 - **So với dự đoán:**
   - Định tính đúng. util = 1,000 từ 0,33 C (1,5B) và 0,48 C (0,5B) cho tới quá tải, trong khi `waiting` tăng từ 0 lên 92 và 166. Ở cả hai model, util không tách được tải vừa khỏi quá tải; ở 0,5B, mức quá tải λ = 14 còn có util thấp hơn mức vừa (0,9996 so với 1,000). Ba tín hiệu còn lại đều tách được.
   - Định lượng: ở 5 mức có dự đoán < 0,999, 1 − e^(−L) khớp util đo với |z| < 1 (lớn nhất 0,91). Ở 5 mức chưa xếp hàng còn lại, dự đoán ≥ 0,9998 và số đo là 1,000. Hai mức có |z| lớn nhất cùng thuộc 0,5B và cùng âm (z = −0,86 và −0,91, lệch −0,064 và −0,024), nhưng mỗi mức chưa tới 1 SE, nên chưa kết luận được có lệch hệ thống.
+  - V2 (thêm 21/11): util = 1,000 ở cả 5 mức, từ 0,57 C tới 1,43 C, trong khi `waiting` tăng từ 0 lên 168. util lại không tách được tải vừa khỏi quá tải; ba tín hiệu còn lại tách được (A2 4,6×, A3 3,9×, A4 ∞). KV-cache lại đứng yên khi quá tải nặng thêm (0,240 → 0,241 trong khi `waiting` tăng 13,5×), đúng như giải thích 2: `max-num-seqs` = 64 chặn số request chạy.
 - **Giải thích:**
   1. **Vì sao bão hoà sớm:** P(N = 0) = e^(−L) giảm theo hàm mũ. Ở 0,33 C (1,5B), L = 5,3, nên GPU chỉ rảnh khoảng 0,5 % thời gian, dù batch trung bình mới bằng 1/5 B\*. util đo "có việc hay không", không đo "bao nhiêu việc".
   2. **KV-cache tách được nhưng không theo được quá tải:** khoảng hở chỉ 1,9–2,3×, và KV đứng yên khi quá tải nặng thêm (0,228 → 0,231 trong khi `waiting` tăng 4×; 0,5B: 0,084 → 0,085). Lý do: vLLM chỉ cấp KV cho request đang chạy, mà số request chạy bị `max-num-seqs` chặn; request trong hàng đợi chưa chiếm KV (LT3: điểm gãy ở nhà do `max-num-seqs`, không do bộ nhớ). A3 vì vậy không biết quá tải nặng tới đâu.
@@ -261,8 +283,9 @@ Cùng mẫu với LT1–LT4. Đủ LT5–LT8 (LT5, LT6 còn chờ thêm dữ li�
 - **Hệ quả:**
   - Con số này lượng hoá dự đoán "A1 gần như Static-4" của [Kiến trúc §10.1](../chi-tiet/03-kien-truc-autoscaling.md#101-a1-gpu-utilization). Nó cũng khớp với V1 (08/11), khi A1 lên 2 replica lúc tải mới khoảng 0,5 C ([log phiên của Quang §13](lam-viec/quang/phien-2026-11-08-a4000.md#13-v1-runner-chạy-2-lượt-đg2-có-keda)).
   - Dự đoán kiểm được ở V2: A1 × KB1 (0,5 C) giữ max replica suốt pha `steady`, nên GPU-giờ của A1 gần bằng S4, nếu L ở 0,5 C trên V2 lớn hơn 4,4 (ở nhà L ở 0,5 C là 8,7, với B\* = 26,8; ở V1, B\* = 52,5).
+    - **Kết quả (kiểm 21/11 trên ĐG2 V2, `analysis/figures/v2-dg2/`):** điều kiện thoả, vì L ở KB1 (λ\_thực 1,69–1,84 req/s) là 11,3–12,0 (LT5), lớn hơn 4,4. Ở cả 2 lượt A1-KB1, A1 tạo thêm pod lúc t = 15 s, 91–100 s và 166–181 s; đủ 4 replica Ready lúc t = 246 s và 231 s; rồi giữ 4 tới hết tải (720 s), với 3 lần scale up và 0 lần scale down. Trong pha `steady` (120–720 s), A1 có trung bình 3,66 và 3,73 replica Ready, tức GPU-giây bằng 97–98 % của S4; tính cả lượt là 90–91 % (`gpu_vs_baseline`). Cùng tải, A2 giữ 1 replica (25 % của S4), và SLO của cả ba cấu hình đều đạt 100 %. Dự đoán đúng. Phần hụt so với "suốt pha" chỉ là 111–126 s đầu pha, khi pod thứ 2–4 còn đang khởi động.
 - **Lệch so với thiết kế:** Môi trường §19 ghi "một lượt tải tăng dần (0,3 → 1,5 C) ở nhà, đọc từ Prometheus". Trình chưa có quyền vào cluster nhà, nên dùng các bậc λ của ĐG1-mini đã có (0,16–1,33 C với 1,5B, 0,16–1,12 C với 0,5B, mỗi bậc 120 s) và các trung bình mà runner đã tính từ Prometheus. Dữ liệu này đủ cho tiêu chí, vì mỗi nhóm có ít nhất 2 mức đo ở mỗi model.
-- **Hình** ([lt6-gpu-util.svg](../../analysis/figures/lt6-gpu-util.svg), vẽ 18/11 từ `lt6-gpu-util.csv` bằng `analysis/lt_charts.py --lt6`): trục hoành λ ÷ C, dải nền là tải vừa. Ô trái là util đo, kèm vạch dự đoán 1 − e^(−L) và mức 77 % mà trên đó A1 thêm pod. Ô phải là running + waiting (thang log), kèm threshold A2 (21; 23). Tiêu đề mỗi ô ghi kết luận tách được hay không, tính bằng cùng hàm `separation` với bảng trên: util không tách được; A2 có khoảng hở 3,9× (1,5B) và 7,7× (0,5B).
+- **Hình** ([lt6-gpu-util.svg](../../analysis/figures/lt6-gpu-util.svg), vẽ 18/11 từ `lt6-gpu-util.csv` bằng `analysis/lt_charts.py --lt6`): trục hoành λ ÷ C, dải nền là tải vừa. Ô trái là util đo, kèm vạch dự đoán 1 − e^(−L) và mức 77 % mà trên đó A1 thêm pod. Ô phải là running + waiting (thang log), kèm threshold A2 (21; 23). Tiêu đề mỗi ô ghi kết luận tách được hay không, tính bằng cùng hàm `separation` với bảng trên: util không tách được; A2 có khoảng hở 3,9× (1,5B) và 7,7× (0,5B). Vẽ lại 21/11, thêm V2 (màu thứ 4, threshold A2 37): util vẫn không tách được; A2 thêm khoảng hở 4,6× (3B).
 - **Còn thiếu:** phần V2 từ lượt A1: so tổng util theo node với số pod đang có request, trên dữ liệu thô (PR sau).
 
 ### LT7 – Thuật toán HPA và trễ phản ứng (đo 16/11/2026 trên simulator)
