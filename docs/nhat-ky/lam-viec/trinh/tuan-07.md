@@ -585,3 +585,51 @@
 - **Deviations:** tài liệu `docs/chi-tiet/` vẫn ghi máy V2 là 4 × RTX A4000, trong khi dữ liệu V2 chạy trên 4 × RTX 4060 Ti 16 GB. Phần này chưa sửa (D80).
 - **Links:** nhánh `docs/tr4-sync-design-docs`; `docs/chi-tiet/00-thong-so.md`, `03-kien-truc-autoscaling.md`, `04-van-hanh.md`, `05-moi-truong-danh-gia.md`; `docs/runbooks/`; `common/observability/`.
 - **Thesis:** §3.4 (định nghĩa TPOT và ITL; `TargetDown` vào Hạn chế); §5.6 (bảng nghiệm thu, đã có trong Môi trường §16); §5.7 Hạn chế (VH6 không kiểm `LLMErrorRateHigh`).
+
+## 2026-11-21 – Merge PR #55 (đồng bộ tài liệu thiết kế)
+
+- **Task:** TR4, TR8 · **Environment:** none
+- **Done:**
+  1. CI xanh cả 6 job (alerts, docs, manifests, python 3.11 và 3.15, yaml); `mergeable` = MERGEABLE; không có review hay bình luận.
+  2. Merge bằng merge commit `34ebbfd`, xoá nhánh `docs/tr4-sync-design-docs`.
+  3. Xoá nhánh remote `docs/tr8-log-pr54`, vì 4 commit của nó đã nằm trong PR #55.
+- **Decision:** điều kiện merge 4 đạt: các object được render ra không đổi (hai file rule chỉ đổi comment, JSON dashboard và values giữ nguyên), nên Argo CD ở nhà không thấy thay đổi.
+- **Links:** PR #55.
+
+## 2026-11-21 – Đưa script số phụ của mục 5.3 vào `analysis/` (dg2_a2)
+
+- **Task:** TR8 · **Environment:** none (dữ liệu V2 ở `runs/v2-vm/v2-dg2`)
+- **Done:**
+  1. Viết `analysis/dg2_a2.py` từ script cục bộ dùng cho nháp 5.3: docstring theo CONTRIBUTING §5, nhận thư mục phiên làm tham số, chọn lượt theo `tables/runs.csv` (lần thử `counted` của chính phiên) thay cho danh sách run_id ghi cứng. Mức so tín hiệu A2 = (max_replicas − 1) × threshold, đọc từ runs.csv. Định nghĩa đạt SLO dùng `metrics.Request.good`; cửa sổ phần 4 lấy từ `phases_s`. Dùng lại `lt5_little.server_series` (tín hiệu A2) và `lt7_hpa.parse_k8s_time`.
+  2. Test `analysis/tests/test_dg2_a2.py` (12 test): hàm thuần và một phiên giả, trong đó pod cũ giữ hàng đợi 50 request tới 640 s, pod mới Ready lúc 320 s, nên mọi số kiểm đều tính tay được.
+  3. Thêm cách chạy vào Môi trường §14.2; sửa comment phụ thuộc trong `analysis/pyproject.toml`.
+  4. `/code-review high` trên nhánh, sửa các điểm được xác nhận (mục Incidents).
+- **Decision:** D81: tách bước (b) của D80 thành 2 PR xếp chồng: (b1) `dg2_a2` cho mục 5.3; (b2) `vh4_windows`, `vh6_window` cho mục 5.5. b2 đặt trên b1 vì cả hai sửa cùng một câu ở Môi trường §14.2. `dg2_a2` cộng test đã khoảng 660 dòng và không tách nhỏ hơn được, nên đầu PR ghi phần nào cần đọc kỹ. Phương án bỏ: một PR khoảng 950 dòng; giữ script ở `.work/` (Quang không kiểm lại được).
+- **Results:**
+  - Chạy trên `runs/v2-vm/v2-dg2`: mọi số của 5 phần trùng bản cũ. Chỗ khác: thêm dòng A2-KB1-1/2 ở phần 1 (không có rescale, in `-`) và S1-KB2-1 ở phần 2 (hàng đợi lớn nhất 1.301, > 0 trong [264; 1054] s); pod xếp theo mẫu metric đầu tiên; phần 4 thêm mẫu > 111 đầu tiên: 714, 709, 702 s (A2-KB2-1/2/3), 364, 324 s (A2-KB3-1/2).
+  - KB3, cửa sổ [300; 1020) s: khoảng từ mép cửa sổ tới mẫu > 111 gần nhất là 64 s và 56 s (A2-KB3-1), 24 s và 1 s (A2-KB3-2); khoảng lớn nhất giữa hai mẫu > 111 là 120 s và 95 s. Mọi khoảng đều < 300 s, nên suốt pha sustain cửa sổ ổn định scale-down luôn có mẫu chặn việc bớt pod. Số này củng cố khẳng định ở nháp 5.3.
+  - Không có event `SuccessfulRescale` nào bị gộp (count > 1) trong 17 lượt V2. Các event có count 8–9 là `ScalingReplicaSet` của Deployment, gộp qua nhiều lượt. Mốc rescale trong nháp 5.3 vì vậy không bị ảnh hưởng.
+  - `uv run --project analysis pytest analysis`: 143 passed (Python 3.15); `test_dg2_a2.py` trên Python 3.11: 12 passed. `ruff check`, `ruff format --check`: đạt.
+- **Incidents:**
+  - Bản đầu dùng f-string lồng nháy kép cùng loại, cú pháp chỉ có từ Python 3.12 (PEP 701), trong khi CONTRIBUTING §5 yêu cầu 3.11. Đã sửa trước commit.
+  - `/code-review high` báo 10 điểm, sửa 9:
+    - lấy cả dòng runs.csv của phiên khác (build_tables chạy nhiều phiên thì ghi chung vào bảng phiên đầu), làm hỏng đường dẫn;
+    - một pod có nhiều chuỗi cùng mốc thì bị ghi đè thay vì cộng;
+    - chia cho 0 ở phần 3 khi cửa sổ không có request;
+    - thiếu `events.jsonl` làm dừng cả báo cáo;
+    - phần 4 không cho thấy hai mép cửa sổ (thêm mẫu vượt mức đầu tiên);
+    - bỏ qua lượt thiếu threshold mà không báo;
+    - cửa sổ phần 4 ghi cứng thay vì lấy từ pha;
+    - viết lại hàm đã có trong package;
+    - event `SuccessfulRescale` bị gộp: runner chỉ lưu `lastTimestamp`, nên không khôi phục được mốc các lần trước; bản mới in "(×count, mốc lần cuối)".
+
+    Điểm thứ 10 (nhật ký) xử lý bằng chính mục này.
+- **Links:** nhánh `feat/tr8-analysis-scripts`; `analysis/dg2_a2.py`, `analysis/tests/test_dg2_a2.py`, `docs/chi-tiet/05-moi-truong-danh-gia.md` §14.2.
+- **Thesis:** §5.3: phần nguồn của nháp trỏ sang `analysis/dg2_a2.py` thay cho script cục bộ.
+
+## 2026-11-21 – Đọc bảng theo tên phiên trong metadata.json (bổ sung PR #56)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** `/code-review high` của PR (b2) phát hiện lỗi chung với `dg2_a2`: cột `session` của bảng là tên phiên trong `metadata.json` (tên trong ma trận), không phải tên thư mục. Thư mục phiên đổi tên hoặc chép sang chỗ khác thì bộ lọc theo tên thư mục bỏ hết mọi dòng. Thêm `build_tables.session_name` và `read_session_table`: lọc theo tên trong `metadata.json`, và báo `ValueError` khi không có dòng nào, để script đọc bảng không in ra "không có gì" như một kết quả thật. `dg2_a2` dùng hàm này và `metrics._float` thay cho bản viết lại.
+- **Results:** `pytest analysis`: 138 passed (Python 3.15); `test_dg2_a2.py` và `test_build_tables.py` trên Python 3.11: 25 passed. Output trên `runs/v2-vm/v2-dg2` không đổi.
+- **Links:** PR #56; `analysis/build_tables.py`, `analysis/dg2_a2.py`.
