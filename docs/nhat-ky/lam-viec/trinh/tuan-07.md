@@ -421,3 +421,28 @@
 - **Deviations:** Môi trường §14.2 ghi `analysis.charts` ghi hình vào `runs/<phiên>/figures/`; bản V2 dùng `--out analysis/figures/v2-dg2` để đưa vào Git. C5, C6 chưa làm.
 - **Links:** nhánh `fix/tr7-c4-labels`; `analysis/charts.py` (`plot_c4`, `_place_labels`, `_near_groups`), `analysis/tests/test_charts.py`, `analysis/figures/v2-dg2/`.
 - **Thesis:** §5.3 (C1–C4 bản V2); §5.5 VH6 (số đợt cảnh báo); Hạn chế (V2 không có tin Telegram: `FailedToSend` kêu suốt 17 lượt, nhiều khả năng thiếu Secret Telegram, không kiểm trực tiếp được).
+
+## 2026-11-21 – TR7: merge PR #53 (nhãn C4, hình và bảng V2)
+
+- **Task:** TR7 · **Environment:** none
+- **Done:** CI xanh cả 6 job (alerts, docs, manifests, yaml, python 3.11, python 3.15); `mergeable` = MERGEABLE, 0 review, 0 bình luận. Merge bằng merge commit, xoá nhánh `fix/tr7-c4-labels`. Xoá luôn nhánh `docs/tr4-log-pr51`, vì 4 commit nhật ký của nó đã vào `main` qua PR này.
+- **Links:** PR #53, merge commit `b0d8b2c`.
+
+## 2026-11-21 – TR8: LT5, LT6 thêm dữ liệu V2
+
+- **Task:** TR8 (LT5, LT6) · **Environment:** none (dữ liệu V2 đã đo 18–19/11)
+- **Done:**
+  1. Chạy `lt5_little` trên dữ liệu thô của runner V2: ĐG1 (`runs/dg1-v2-4060ti`, 5 mức, 1 replica) và ĐG2 (`runs/v2-vm/v2-dg2`, 17 lượt, 1–4 replica), k = 1. Tạo lại `analysis/figures/lt5-little.csv` (27 → 80 dòng; 27 dòng cũ không đổi, ngoài cột `session` mới).
+  2. Chạy `lt6_gpu_util` thêm `runs/dg1-v2-4060ti/capacity.json`; tạo lại `lt6-gpu-util.csv` (18 → 23 dòng; dòng cũ không đổi, ngoài cột `session`).
+  3. `lt5_little`, `lt6_gpu_util`: thêm cột `session` vào CSV. `lt_charts.py`: bảng `SOURCE_GROUP` tra nhóm theo (env, session), thêm nhóm "V2, model 3B" (màu thứ 4), in cảnh báo khi có nguồn chưa có trong bảng; bỏ cả cửa sổ `main` của KB3; tiêu đề ô LT6 tự xuống dòng khi kết luận dài. Vẽ lại `lt5-little.svg`, `lt6-gpu-util.svg`; PNG cho Doc ở `.work/luan-van/hinh/`.
+  4. Kiểm dự đoán LT6 "A1 × KB1 gần bằng S4" trên bảng ĐG2 V2 và `pods_timeline.json` của A1-KB1.
+  5. Ghi kết quả vào `van-hanh.md` (LT5, LT6) và Kế hoạch (dòng LT1–LT8).
+- **Decision:** D74. LT5 lấy V2 từ dữ liệu thô runner thay vì `capacity.json`, vì có thêm edge, L lấy mẫu, cận k và các cửa sổ nhiều replica. LT6 lấy `capacity.json` trong `runs/` (phần `curves` trùng bản của PR #52), không đợi PR #52 merge.
+- **Results:**
+  - LT5 V2: 27/27 cửa sổ chưa xếp hàng lệch −5,8…+4,9 % (z trung bình −0,42; 3 cửa sổ |z| > 2 đều lúc tải đang đổi, edge âm). 13 cửa sổ 4 replica lệch −5,8…+4,9 %. Ngoài dải chỉ có ĐG1 λ = 5 (1,43 C): −21,4 %, client −20,4 %, edge −51,7. Cận k của cả 22 lượt chứa 1 (giao [0,9973; 1,0076]). Hình: 52/54 cửa sổ trong ±15 %.
+  - LT6 V2 (C = 3,5, threshold A2 37): util = 1,000 ở cả 5 mức (0,57–1,43 C), không tách được; A2 4,6×, KV 3,9×, waiting ∞. KV đứng yên khi quá tải nặng (0,240 → 0,241).
+  - Dự đoán A1 × KB1: L = 11,3–12,0 > 4,4; A1 đủ 4 replica Ready lúc t = 231–246 s rồi giữ tới hết tải; pha `steady` 3,66–3,73 replica, GPU-giây 97–98 % S4 (cả lượt 90–91 %); A2 giữ 1 replica. Đúng dự đoán.
+- **Incidents:** lần chạy đầu, `lt6_gpu_util.summary` gom theo tên file nên gộp `capacity.json` V2 với `capacity.json` 0,5B ở nhà ("vừa = λ [4, 6, 8, 2]"). Bản sửa đầu gom theo (env, tên file); `/code-review high` chỉ ra khoá này vẫn gộp V2 với V1 (A4000) và lượt thử 4000 Ada (cùng env cloud, cùng tên file). Sửa gốc: thêm cột `session`, gom và tô màu theo (env, session), thêm test cho cả hai ca trùng tên. Hai CSV chỉ thêm cột, số liệu không đổi. Review còn nêu: tiêu đề LT6 có thể ngắt giữa tên phiên có gạch nối (đã đặt `break_on_hyphens=False`); phiên V2 đổi tên sẽ bị tô xám mà không báo (đã thêm cảnh báo); `van-hanh.md` ghi SE với 24 mẫu, trong khi V2 có 48 mẫu (đã sửa). CI job `docs` đỏ ở lần push đầu: Trình đã thêm "thêm V2 ngày 21/11" vào tiêu đề mục LT5, LT6 của `van-hanh.md`, làm hỏng anchor mà Kiến trúc §10.1 (`03-kien-truc-autoscaling.md`, dòng 384) trỏ tới. Lychee chạy cục bộ trước đó chỉ trên hai file đã sửa (chạy cả repo thì 53 lỗi đường dẫn cũ, CI bỏ qua, che mất lỗi này). Sửa: giữ nguyên tiêu đề, ghi "Thêm dữ liệu V2 ngày 21/11" ở dòng đầu mục; chạy lại lychee trên cả repo với danh sách `--exclude` tạo giống job `docs`: 0 lỗi. Khi ghi `van-hanh.md`, câu về cửa sổ 4 replica ban đầu ghi sai khoảng lệch (−2,6…+4,9 %, sót pha `ramp` S4-KB3); đã kiểm lại bằng số và sửa thành −5,8…+4,9 %.
+- **Deviations:** LT6 vẫn dùng các bậc λ của ĐG1 thay cho lượt tải tăng dần (như 16/11). V2 không có mức dưới 0,57 C nên không thêm điểm kiểm phần cong của 1 − e^(−L).
+- **Links:** nhánh `feat/tr8-lt5-lt6-v2`; `analysis/lt_charts.py`, `analysis/lt6_gpu_util.py`, `analysis/tests/test_lt_charts.py`, `analysis/tests/test_lt6_gpu_util.py`, `analysis/figures/lt5-little.*`, `lt6-gpu-util.*`, `docs/nhat-ky/van-hanh.md` (LT5, LT6), `docs/chi-tiet/06-ke-hoach-quan-ly.md`.
+- **Thesis:** §5 kiểm chứng lý thuyết LT5, LT6: Hình LT5 (54 cửa sổ, 3 môi trường), Hình LT6 (3 model); câu "A2 đo đúng L cả khi 4 replica trên GPU thật"; §5 ĐG2: A1 × KB1 ≈ S4 có cơ chế giải thích (util bão hoà khi L > 4,4).

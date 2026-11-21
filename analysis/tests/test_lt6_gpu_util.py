@@ -175,3 +175,39 @@ def test_main_writes_csv_and_summary(
     assert len(rows) == 3
     text = capsys.readouterr().out
     assert "A1 gpu_util" in text and "A2 L_server" in text
+
+
+@pytest.mark.parametrize(
+    ("first", "second"),
+    [
+        (("home", "dg1-home-05b"), ("cloud", "dg1-v2-4060ti")),  # ĐG1-mini 0,5B ở nhà và ĐG1 V2
+        (("cloud", "dg1-v1-a4000"), ("cloud", "dg1-v2-4060ti")),  # cùng env: V1 (A4000) và V2
+    ],
+)
+def test_summary_keeps_same_file_name_apart(
+    capacity_file: Path, tmp_path: Path, first: tuple[str, str], second: tuple[str, str]
+) -> None:
+    # Các file ĐG1 cùng tên capacity.json: phải kiểm "tách được" riêng theo (env, session), không gộp mức vừa
+    # của nguồn này với mức quá tải của nguồn kia
+    doc = json.loads(capacity_file.read_text(encoding="utf-8"))
+    rows = []
+    for env, session in (first, second):
+        d = tmp_path / session
+        d.mkdir()
+        body = json.dumps({**doc, "env": env, "session": session})
+        (d / "capacity.json").write_text(body, encoding="utf-8")
+        rows.append(lt.from_capacity(d / "capacity.json", window_s=120.0, max_replicas=4))
+    assert rows[0][0]["source"] == rows[1][0]["source"] == "capacity.json"
+    assert (rows[0][0]["session"], rows[1][0]["session"]) == (first[1], second[1])
+    text = lt.summary([rows[0][0], rows[1][1]])  # vừa chỉ ở nguồn đầu, quá tải chỉ ở nguồn sau
+    assert f"{first[0]}/{first[1]}: vừa = λ [3.0], quá tải = λ []" in text
+    assert f"{second[0]}/{second[1]}: vừa = λ [], quá tải = λ [7.0]" in text
+    # 4 tín hiệu × 2 nguồn, nguồn nào cũng thiếu một nhóm; gộp nhầm thì sẽ ra một kết luận "tách được"
+    assert text.count("thiếu một trong hai nhóm") == 8
+    assert "→ tách được" not in text and "KHÔNG tách được" not in text
+
+
+def test_from_capacity_session_falls_back_to_file_name(capacity_file: Path) -> None:
+    # File cũ không ghi session (capacity-1.5b.json ở nhà): khoá là tên file, như trước 21/11
+    (row, _) = lt.from_capacity(capacity_file, window_s=120.0, max_replicas=4)
+    assert row["session"] == capacity_file.name
