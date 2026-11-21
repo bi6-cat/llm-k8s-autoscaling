@@ -660,3 +660,12 @@
   Không làm điểm 9 (cột mới trong `build_tables`, D82). Điểm 10 (nhật ký) xử lý bằng chính mục này.
 - **Links:** nhánh `feat/tr8-vh-scripts` (xếp chồng trên PR #56); `analysis/vh4_windows.py`, `analysis/vh6_window.py`.
 - **Thesis:** §5.5 (VH4: SLO theo khoảng và TPOT theo phút; VH6: cột tỷ lệ xấu lớn nhất trên 1 phút): phần nguồn của nháp trỏ sang hai script này.
+
+## 2026-11-21 – Merge PR #56 (dg2_a2)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. CI xanh cả 6 job trên commit cuối `a5c4ab3`; `mergeable` = MERGEABLE; không có review hay bình luận.
+  2. Đổi base của PR #57 về `main` trước (D42), rồi merge #56 bằng merge commit `af0a5e8` và xoá nhánh `feat/tr8-analysis-scripts`.
+- **Decision:** điều kiện merge 4 đạt: PR chỉ đổi `analysis/` và `docs/`, Argo CD ở nhà không thấy thay đổi.
+- **Links:** PR #56, PR #57.
