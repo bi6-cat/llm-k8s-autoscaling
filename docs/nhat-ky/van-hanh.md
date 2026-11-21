@@ -162,7 +162,9 @@ Theo mẫu ở [Môi trường §19](../chi-tiet/05-moi-truong-danh-gia.md#19-ki
 
 Cùng mẫu với LT1–LT4. Đủ LT5–LT8; LT5, LT6 đã thêm dữ liệu V2 ngày 21/11.
 
-### LT5 – Định luật Little (phân tích 16/11/2026 trên dữ liệu đã đo; thêm V2 ngày 21/11)
+### LT5 – Định luật Little (phân tích 16/11/2026 trên dữ liệu đã đo)
+
+Thêm dữ liệu V2 ngày 21/11 (giữ tên mục để link tới mục không đổi).
 
 - **Lý thuyết** ([Kiến trúc §10.2](../chi-tiet/03-kien-truc-autoscaling.md#102-a2-số-request-đồng-thời-running--waiting)): ở trạng thái dừng, L = λ × W. A2 dùng chính L = Σ_pod (`running` + `waiting`). Trên một cửa sổ hữu hạn dài T, đẳng thức sau đúng tuyệt đối: L_client = λ\_thực × W + edge, với edge = (vào − tràn) ÷ T. "Vào" là thời gian mà các request gửi trước cửa sổ còn nằm lại trong cửa sổ; "tràn" là thời gian mà các request gửi trong cửa sổ còn nằm lại sau cửa sổ. Khi hệ dừng thì edge ≈ 0; khi hàng đợi đang tăng thì edge < 0.
 - **Dự đoán** (ghi trước khi chạy script trên dữ liệu simulator; dữ liệu nhà đo từ 05–06/11, nhưng Little không có tham số tự do, nên không có gì để chỉnh cho khớp số đo):
@@ -219,7 +221,9 @@ Cùng mẫu với LT1–LT4. Đủ LT5–LT8; LT5, LT6 đã thêm dữ liệu V2
 - **Hình** ([lt5-little.svg](../../analysis/figures/lt5-little.svg), vẽ 18/11 từ `lt5-little.csv` bằng `analysis/lt_charts.py --lt5`): ô trái là L_server theo λ\_thực × W (thang log, đường y = x, dải ±15 %); ô phải là độ lệch, kèm thanh ±1 SE do lấy mẫu ở các cửa sổ chưa xếp hàng. Hình có 23 cửa sổ: 18 cửa sổ dừng và 5 cửa sổ quá tải của bảng trên. Bỏ 3 cửa sổ có request lỗi, và cửa sổ `main` của A2-KB2-1 vì nó chồng lên `pre`, `spike`, `drop`. Chấm rỗng là 9 cửa sổ có hàng đợi (waiting trung bình ≥ 1): 5 cửa sổ quá tải, cộng 4 cửa sổ mà bảng trên xếp vào nhóm dừng nhưng đã có hàng đợi (1,5B λ = 6, 7; 0,5B λ = 12; 12,5). 22/23 cửa sổ nằm trong dải. Chỉ cửa sổ `steady` của S1-CONST2-1 trên simulator (`mp-final-w2`) nằm ngoài dải (−35,5 %, giải thích 1).
   - Vẽ lại 21/11, thêm V2 (màu thứ 4): **54 cửa sổ** = 23 cửa sổ trên + 31 cửa sổ V2. Bỏ 18 cửa sổ có request lỗi (3 cũ, 15 V2) và 8 cửa sổ `main` (1 cũ, 7 V2; KB3 cũng có `main` chồng lên `ramp`, `sustain`). 52/54 cửa sổ nằm trong dải; hai cửa sổ ngoài dải đều là quá tải: S1-CONST2-1 trên simulator và S1-CONST5-1 của ĐG1 V2 (−21,4 %, giải thích 1).
 
-### LT6 – GPU utilization bão hoà (phân tích 16/11/2026 trên dữ liệu đã đo; thêm V2 ngày 21/11)
+### LT6 – GPU utilization bão hoà (phân tích 16/11/2026 trên dữ liệu đã đo)
+
+Thêm dữ liệu V2 ngày 21/11 (giữ tên mục để link tới mục không đổi).
 
 - **Lý thuyết** ([Kiến thức nền §4.4](../chi-tiet/02-kien-thuc-nen.md#44-vì-sao-gpu_util-bão-hoà)): GPU util là tỷ lệ thời gian có ít nhất một kernel chạy, không phải phần năng lực GPU đang dùng. vLLM chạy kernel liên tục khi còn ít nhất một request, nên util ≈ P(N ≥ 1), với N là số request trong hệ thống. Khi chưa xếp hàng, mỗi request được phục vụ gần như độc lập với số request khác (LT3), nên hệ gần với hàng đợi M/G/∞: N có phân phối Poisson với trung bình L (LT5), và util ≈ 1 − e^(−L).
 - **Dự đoán:**
