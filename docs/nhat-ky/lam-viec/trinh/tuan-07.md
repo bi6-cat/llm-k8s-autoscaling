@@ -669,3 +669,12 @@
   2. Đổi base của PR #57 về `main` trước (D42), rồi merge #56 bằng merge commit `af0a5e8` và xoá nhánh `feat/tr8-analysis-scripts`.
 - **Decision:** điều kiện merge 4 đạt: PR chỉ đổi `analysis/` và `docs/`, Argo CD ở nhà không thấy thay đổi.
 - **Links:** PR #56, PR #57.
+
+## 2026-11-21 – Merge PR #57 (vh4_windows, vh6_window)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. CI xanh cả 6 job trên commit cuối `a85faaa` (sau khi gộp `origin/main` có PR #56); `mergeable` = MERGEABLE, `mergeStateStatus` = CLEAN; không có review hay bình luận.
+  2. Merge #57 bằng merge commit `af18429` và xoá nhánh `feat/tr8-vh-scripts`.
+- **Decision:** điều kiện merge 4 đạt: PR chỉ đổi `analysis/` và `docs/`, Argo CD ở nhà không thấy thay đổi. Với #57, bước 2 của D80 (đưa script tính số vào `analysis/`) đã xong; còn bước 3 là Hình 7.
+- **Links:** PR #57, `analysis/vh4_windows.py`, `analysis/vh6_window.py`.
