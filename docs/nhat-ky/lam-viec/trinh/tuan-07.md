@@ -397,3 +397,27 @@
   - Không nháp trong repo qua PR: sau khi dán vào Doc, hai bản dễ lệch nhau, và mỗi mục tốn thêm một PR.
 - **Deviations:** `docs/luan-van/README.md` và `quy-tac-viet.md` (§1, §7, §8, §10) vẫn tả luồng pandoc; sẽ sửa trong một PR sau khi PR #52 merge. Mục 3.4 (bản Markdown đã merge ở PR #51) chưa chép sang Doc, vì Doc chưa được share cho Trình.
 - **Thesis:** quy trình viết (lời mở đầu hoặc phần khai báo dùng AI agent, `quy-tac-viet.md` §9).
+
+## 2026-11-21 – Nhận dữ liệu V2; vẽ lại C1–C4 bản V2, sửa nhãn C4
+
+- **Task:** TR7, TR4 (VH6) · **Environment:** none (máy Trình, dữ liệu V2)
+- **Done:**
+  1. Nhận gói riêng của Quang (`v2-data-20261119.tar.gz`, `runs-all-20261120.tar.gz`, ghi chú). `sha256sum -c SHA256SUMS`: cả hai file nén OK. Giải nén `runs-all` vào `runs/` (đã gồm V2; không trùng file nào đã có). `v2-evidence/SHA256SUMS`: chỉ FAILED `vm-final-state.txt`, đúng như ghi chú của Quang (file ghi 3 s sau khi lập danh sách checksum).
+  2. Đối chiếu số VH6 trong ghi chú của Quang với `runs/v2-vm/v2-dg2/tables/alerts.csv` (47 dòng, 17 lượt): khớp (Results).
+  3. Vẽ lại C1–C4 trên `runs/v2-vm/v2-dg2` (`--baseline S4`) và xem bố cục từng hình: C1 (3 lượt), C2, C3 giữ nguyên; C4 lỗi (Incidents).
+  4. Sửa `plot_c4`: `_place_labels` đo từng nhãn và thử 12 vị trí, chọn vị trí phạt thấp nhất (đè nhãn hoặc dấu điểm > tràn khỏi ô > cắt vạch tham chiếu); `_near_groups` gộp có bắc cầu các điểm trung bình cách nhau dưới 4 pt thành một nhãn ("A1, A2"), điểm sau vẽ 1/4 diện tích để vẫn thấy điểm dưới; số lượt chuyển lên tiêu đề ô; trục tung chừa 14 % phía trên 100 %, không có vạch chia trên 100 %; chốt layout sau khi đặt nhãn. Thêm test.
+  5. `/code-review high`: 10 điểm. Sửa 7 (layout chạy lại khi lưu ở dpi khác; test chưa kiểm chấm từng lượt và layout lúc lưu; điểm nhỏ trong nhóm chưa là vật cản; gộp chưa bắc cầu; vẽ thừa một lần; tạo rồi xoá artist; tuple không tên). Một điểm là chính mục nhật ký này. Không sửa 2: nhãn tràn khỏi ô khi mọi vị trí đều tràn (ghi là hạn chế trong docstring, nhãn chỉ gồm tên cấu hình chưa gặp); nơi đặt hình (Decision).
+  6. Commit SVG C1–C4 và 4 bảng CSV vào `analysis/figures/v2-dg2/`. PNG cho Google Doc giữ ở máy Trình, không commit.
+- **Decision:**
+  - Số lượt của C4 ghi ở tiêu đề ô ("KB2  (n: S1 1, S4 1, A1 2, A2 3)"), nhãn cạnh điểm chỉ ghi tên cấu hình: nhãn "S4 (n=1)" dài hơn khoảng trống bên phải điểm 100 %, nên bị đẩy xuống dưới vạch N1, sát điểm A1 (dễ đọc nhầm). Bỏ: nới trục hoành tới khoảng 145 % (bỏ trống khoảng 30 % bề ngang mỗi ô); hai hàng nhãn phía trên 100 % (khoảng trống trên trục quá lớn).
+  - D73: hình và 4 bảng CSV của V2 nằm ở `analysis/figures/v2-dg2/`, như LT5–LT8 (hình cùng CSV). Dữ liệu thô vẫn giữ riêng, vì console có IP máy thuê; các bảng không có IP hay đường dẫn máy (đã grep). Bỏ: chỉ để trong `runs/` (không kiểm được từ repo); `docs/images/` (CONTRIBUTING dành cho hình vẽ sinh từ `docs/diagrams/`).
+- **Results:**
+  - VH6 (ĐG2 V2, 17 lượt): `LLMSLOBurnFast` 8 đợt, trong đó 7 đợt tính được: bắt đầu kêu 204–374 s sau đầu pha chính, `client_bad_ratio` 0,27–0,73, `false_page` = False ở cả 7. Đợt thứ 8 (A2-KB3-2, −176 s) còn sót từ lượt trước (`firing_at_start` = True). `KubeHpaMaxedOut` 5 đợt (A1 × KB2 hai lượt, A1 × KB3, A2 × KB3 hai lượt). `AlertmanagerFailedToSendAlerts` và `AlertmanagerClusterFailedToSendAlerts` kêu ở cả 17/17 lượt.
+  - `cells.csv` (trung bình các lượt counted): SLO attainment 100 % ở mọi ô của S4, A1 và ở A2 × KB1, KB3; A2 × KB2 80,0 %; S1 × KB2 12,5 %; S1 × KB3 0 %. GPU-giờ so với S4: A2 25 % (KB1), 73 % (KB2), 92 % (KB3); A1 90 %, 95 %, 93 %; S1 25 %.
+  - `pytest analysis` 120 passed; `ruff check`, `ruff format --check` sạch. Chạy lại `analysis.charts` ra SVG giống từng byte. Thử bật lại constrained layout rồi lưu ở 200 dpi: bề rộng ô C4 đổi từ 0,788 lên 0,821 bề rộng hình, nên phải chốt layout.
+- **Incidents:**
+  - C4 bản chạy thử 20/11: nhãn "S4 (n=1)" cắt vạch N1 ở cả 3 ô; nhãn S1 ở KB3 đè lên số 0 của trục x; điểm A2 (92,0 %) che điểm A1 (92,7 %) ở KB3. Nguyên nhân: hướng nhãn cố định theo cấu hình (`LABEL_OFFSET`). Sửa ở bước 4.
+  - File zip của gói nằm trong `docs/` (chưa track): chuyển ra thư mục cục bộ ngoài Git để không commit nhầm 25 MB dữ liệu có IP máy thuê.
+- **Deviations:** Môi trường §14.2 ghi `analysis.charts` ghi hình vào `runs/<phiên>/figures/`; bản V2 dùng `--out analysis/figures/v2-dg2` để đưa vào Git. C5, C6 chưa làm.
+- **Links:** nhánh `fix/tr7-c4-labels`; `analysis/charts.py` (`plot_c4`, `_place_labels`, `_near_groups`), `analysis/tests/test_charts.py`, `analysis/figures/v2-dg2/`.
+- **Thesis:** §5.3 (C1–C4 bản V2); §5.5 VH6 (số đợt cảnh báo); Hạn chế (V2 không có tin Telegram: `FailedToSend` kêu suốt 17 lượt, nhiều khả năng thiếu Secret Telegram, không kiểm trực tiếp được).
