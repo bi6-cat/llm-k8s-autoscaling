@@ -452,3 +452,25 @@
 - **Task:** TR8 · **Environment:** none
 - **Done:** lần push đầu, CI job `docs` đỏ vì anchor mục LT6 bị đổi (mục ngay trên, Incidents); sửa và push lại thì cả 6 job xanh (alerts, docs, manifests, yaml, python 3.11, python 3.15). `mergeable` = MERGEABLE, 0 review, 0 bình luận. Merge bằng merge commit; xoá nhánh `feat/tr8-lt5-lt6-v2` và `docs/tr7-log-pr53` (commit nhật ký merge #53 đã vào `main` qua PR này).
 - **Links:** PR #54, merge commit `041c6f7`.
+
+## 2026-11-21 – Luận văn: nháp bảng nghiệm thu F1–F7, N1–N8 (mục 5.6)
+
+- **Task:** TR8 (luận văn) · **Environment:** none
+- **Done:**
+  1. Đối chiếu các số của nhật ký Quang (18–19/11) và `nguon-tu-lieu.md` §3 với dữ liệu thô V2: `runs.csv`, `phases.csv`, `alerts.csv` của ĐG2; `summary.json` của 6 kịch bản VH; `summary.txt` của 5 lượt ĐG3.
+  2. Tìm bằng chứng cho F1–F7 trong `van-hanh.md`, nhật ký Trình tuần 04–06, Thông số §3, `install-platform.sh`, `Makefile` (`alerts-coverage`) và `vh.py` bản đã chạy trên V2.
+  3. Viết nháp mục 5.6 bằng Markdown, ngoài Git, chờ dán vào Google Doc. Nháp gồm bảng N1–N8, bảng F1–F7 và khuyến nghị chọn A2, mỗi số kèm dòng nguồn.
+- **Decision:** D75. Cột kết luận dùng năm mức: Đạt, Đạt một phần, Không đạt, Báo cáo, Chưa đo.
+  - F2 ghi Đạt dù T6 ở nhà và T7 chưa chạy: ĐG2 đã cho thấy scale 1 → 4 rồi giảm lại trên GPU thật, còn T7 (A4) chỉ ở mức Could.
+  - N4 chỉ dẫn 3 lượt A2 × KB2, không dẫn 5 lượt.
+  - N8 ghi Chưa đo.
+- **Results:**
+  - Đạt: N1 (A2 × KB1 và A2 × KB3 pha `sustain`, 100% ở cả 4 lượt); N2a (79,7–81,5 s); N3 ở KB1 (25% GPU-giờ của S4, SLO attainment chênh 0 điểm); N4; N5 (77,7 / 305,5 s = 25,4%); N6 (fallback 16,8 s, dựng lại 8 phút 22 giây); N7 (S1 × KB3 104,5 s; 0 page giả trong 17 lượt).
+  - Báo cáo: N2b (409–430 s). Chưa đo: N8 (người thứ hai dựng lại cluster; tổng chi phí).
+  - F1, F2, F4 đạt. Đạt một phần: F3 (chưa cập nhật qua Git rồi `git revert`), F5 (chưa có ảnh chụp dashboard trên GPU thật), F6 (chưa có tin tới Telegram thật). F7 chưa đo (checklist chưa chạy).
+  - Mức Must còn thiếu: VH1, VH2 ở nhà; ảnh chụp dashboard trên GPU thật; tin Telegram thật.
+- **Incidents:** hai điểm lệch giữa nhật ký và dữ liệu thô.
+  - Thứ tự ĐG3: `nguon-tu-lieu.md` §6 ghi "3 lượt L2 chạy sau L0". Theo `pod_created`, L2-2 (18:44:33Z) chạy trước L0-2 (18:46:48Z); chỉ L2-1 và L2-3 chạy sau. L2-2 và L2-1 cùng cho 76 s, nên việc compile cache được tạo lại không làm đổi kết quả L2.
+  - Pha `drop`: câu "pha `drop` của 5 lượt KB2: 0 lỗi" đúng về số lỗi. Tuy vậy, hai lượt A1 giữ 4 replica suốt pha (`scale_downs` = 0), nên chỉ 3 lượt A2 (`scale_downs` = 3) là bằng chứng cho scale-down an toàn.
+- **Links:** không đổi file nào trong repo ngoài nhật ký này. Nguồn: `runs/v2-vm/` (gói dữ liệu V2).
+- **Thesis:** §5.6 bảng nghiệm thu và khuyến nghị cấu hình; §5 Hạn chế (sửa câu về thứ tự lượt L2).
