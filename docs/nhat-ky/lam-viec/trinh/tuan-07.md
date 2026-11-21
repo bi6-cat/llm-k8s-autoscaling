@@ -633,3 +633,39 @@
 - **Done:** `/code-review high` của PR (b2) phát hiện lỗi chung với `dg2_a2`: cột `session` của bảng là tên phiên trong `metadata.json` (tên trong ma trận), không phải tên thư mục. Thư mục phiên đổi tên hoặc chép sang chỗ khác thì bộ lọc theo tên thư mục bỏ hết mọi dòng. Thêm `build_tables.session_name` và `read_session_table`: lọc theo tên trong `metadata.json`, và báo `ValueError` khi không có dòng nào, để script đọc bảng không in ra "không có gì" như một kết quả thật. `dg2_a2` dùng hàm này và `metrics._float` thay cho bản viết lại.
 - **Results:** `pytest analysis`: 138 passed (Python 3.15); `test_dg2_a2.py` và `test_build_tables.py` trên Python 3.11: 25 passed. Output trên `runs/v2-vm/v2-dg2` không đổi.
 - **Links:** PR #56; `analysis/build_tables.py`, `analysis/dg2_a2.py`.
+
+## 2026-11-21 – Đưa script số VH4, VH6 của mục 5.5 vào `analysis/`
+
+- **Task:** TR8 · **Environment:** none (dữ liệu `runs/v2-vm/ops-vh4-20261118-183127`, hai lượt VH4 trên simulator ngày 09/11 và 16/11, `runs/v2-vm/v2-dg2`)
+- **Done:**
+  1. `analysis/vh4_windows.py`: SLO của một lượt VH4 theo ba khoảng (trước khi chặn Prometheus, đang chặn, sau khi gỡ) và theo từng phút, tính bằng `metrics.phase_stats` (cùng định nghĩa với bảng ĐG2). Nhận nhiều thư mục lượt.
+  2. `analysis/vh6_window.py`: với mỗi đợt `LLMSLOBurnFast` bắt đầu trong lượt: độ trễ page − vi phạm, tỷ lệ xấu lớn nhất trên cửa sổ 1 phút, tỷ lệ xấu 5 phút trước page (đối chiếu `client_bad_ratio`), tỷ lệ xấu theo pha.
+  3. Test: `test_vh4_windows.py` (6 test), `test_vh6_window.py` (7 test), dựng lượt và phiên giả.
+  4. Thêm cách chạy vào Môi trường §14.2. PR xếp chồng trên PR #56 (D81).
+  5. `/code-review high`, sửa các điểm được xác nhận (mục Incidents).
+- **Decision:** D82: chỉ đợt page có `first_s` bằng `slo_alert_s` (đợt build_tables gắn với lần vi phạm) mà page sau mốc vi phạm mới quét từ mốc vi phạm tới page. Đợt khác (kêu lại về sau, kêu trước mốc vi phạm, lượt không có vi phạm) quét 5 phút trước page, không trước t0 + 60 s, và được đánh dấu cuối dòng. Cửa sổ 1 phút dùng quy ước (τ − 60, τ] như `metrics.slo_violation_start`. Phương án bỏ: thêm cột `peak_bad_1m` vào `build_tables`, vì đổi schema bảng ngay trước ngày đóng băng dữ liệu 22/11.
+- **Results:**
+  - VH4 (3 lượt) và VH6 (7 đợt page trong 17 lượt V2): output trùng từng ký tự với script cục bộ đã dùng cho nháp 5.5. Cả 7 đợt đều là đợt được tính và page sau mốc vi phạm, nên đổi quy ước cửa sổ sang (τ − 60, τ] không làm đổi số (max1m 0,683–1,000).
+  - `pytest analysis`: 151 passed trên Python 3.15 và 3.11. `ruff check`, `ruff format --check`: đạt.
+- **Incidents:** `/code-review high` báo 10 điểm, sửa 8:
+  - mọi đợt page đều so với một mốc vi phạm duy nhất của lượt (sửa theo D82);
+  - thiếu mốc `unblocked` (lượt lỗi giữa chừng) làm script dừng bằng traceback;
+  - mốc chặn trước t0 hoặc gỡ sau khi hết tải cho ra khoảng rỗng mà trông vẫn bình thường (thêm dòng cảnh báo);
+  - lọc dòng theo tên thư mục thay vì tên phiên trong `metadata.json` (sửa chung ở PR #56);
+  - cửa sổ chưa đủ 1 phút ở đầu lượt;
+  - viết lại hàm đã có (`_fmt`, `_float`);
+  - bộ lọc phiên viết hai lần;
+  - đọc lại `requests.csv` cho mỗi đợt.
+
+  Không làm điểm 9 (cột mới trong `build_tables`, D82). Điểm 10 (nhật ký) xử lý bằng chính mục này.
+- **Links:** nhánh `feat/tr8-vh-scripts` (xếp chồng trên PR #56); `analysis/vh4_windows.py`, `analysis/vh6_window.py`.
+- **Thesis:** §5.5 (VH4: SLO theo khoảng và TPOT theo phút; VH6: cột tỷ lệ xấu lớn nhất trên 1 phút): phần nguồn của nháp trỏ sang hai script này.
+
+## 2026-11-21 – Merge PR #56 (dg2_a2)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. CI xanh cả 6 job trên commit cuối `a5c4ab3`; `mergeable` = MERGEABLE; không có review hay bình luận.
+  2. Đổi base của PR #57 về `main` trước (D42), rồi merge #56 bằng merge commit `af0a5e8` và xoá nhánh `feat/tr8-analysis-scripts`.
+- **Decision:** điều kiện merge 4 đạt: PR chỉ đổi `analysis/` và `docs/`, Argo CD ở nhà không thấy thay đổi.
+- **Links:** PR #56, PR #57.
