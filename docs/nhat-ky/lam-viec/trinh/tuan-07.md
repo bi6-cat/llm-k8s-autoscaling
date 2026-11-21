@@ -585,3 +585,13 @@
 - **Deviations:** tài liệu `docs/chi-tiet/` vẫn ghi máy V2 là 4 × RTX A4000, trong khi dữ liệu V2 chạy trên 4 × RTX 4060 Ti 16 GB. Phần này chưa sửa (D80).
 - **Links:** nhánh `docs/tr4-sync-design-docs`; `docs/chi-tiet/00-thong-so.md`, `03-kien-truc-autoscaling.md`, `04-van-hanh.md`, `05-moi-truong-danh-gia.md`; `docs/runbooks/`; `common/observability/`.
 - **Thesis:** §3.4 (định nghĩa TPOT và ITL; `TargetDown` vào Hạn chế); §5.6 (bảng nghiệm thu, đã có trong Môi trường §16); §5.7 Hạn chế (VH6 không kiểm `LLMErrorRateHigh`).
+
+## 2026-11-21 – Merge PR #55 (đồng bộ tài liệu thiết kế)
+
+- **Task:** TR4, TR8 · **Environment:** none
+- **Done:**
+  1. CI xanh cả 6 job (alerts, docs, manifests, python 3.11 và 3.15, yaml); `mergeable` = MERGEABLE; không có review hay bình luận.
+  2. Merge bằng merge commit `34ebbfd`, xoá nhánh `docs/tr4-sync-design-docs`.
+  3. Xoá nhánh remote `docs/tr8-log-pr54`, vì 4 commit của nó đã nằm trong PR #55.
+- **Decision:** điều kiện merge 4 đạt: các object được render ra không đổi (hai file rule chỉ đổi comment, JSON dashboard và values giữ nguyên), nên Argo CD ở nhà không thấy thay đổi.
+- **Links:** PR #55.
