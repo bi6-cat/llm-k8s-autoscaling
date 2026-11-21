@@ -446,3 +446,9 @@
 - **Deviations:** LT6 vẫn dùng các bậc λ của ĐG1 thay cho lượt tải tăng dần (như 16/11). V2 không có mức dưới 0,57 C nên không thêm điểm kiểm phần cong của 1 − e^(−L).
 - **Links:** nhánh `feat/tr8-lt5-lt6-v2`; `analysis/lt_charts.py`, `analysis/lt6_gpu_util.py`, `analysis/tests/test_lt_charts.py`, `analysis/tests/test_lt6_gpu_util.py`, `analysis/figures/lt5-little.*`, `lt6-gpu-util.*`, `docs/nhat-ky/van-hanh.md` (LT5, LT6), `docs/chi-tiet/06-ke-hoach-quan-ly.md`.
 - **Thesis:** §5 kiểm chứng lý thuyết LT5, LT6: Hình LT5 (54 cửa sổ, 3 môi trường), Hình LT6 (3 model); câu "A2 đo đúng L cả khi 4 replica trên GPU thật"; §5 ĐG2: A1 × KB1 ≈ S4 có cơ chế giải thích (util bão hoà khi L > 4,4).
+
+## 2026-11-21 – TR8: merge PR #54 (LT5, LT6 thêm V2)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** lần push đầu, CI job `docs` đỏ vì anchor mục LT6 bị đổi (mục ngay trên, Incidents); sửa và push lại thì cả 6 job xanh (alerts, docs, manifests, yaml, python 3.11, python 3.15). `mergeable` = MERGEABLE, 0 review, 0 bình luận. Merge bằng merge commit; xoá nhánh `feat/tr8-lt5-lt6-v2` và `docs/tr7-log-pr53` (commit nhật ký merge #53 đã vào `main` qua PR này).
+- **Links:** PR #54, merge commit `041c6f7`.
