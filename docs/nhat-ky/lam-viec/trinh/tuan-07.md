@@ -365,3 +365,25 @@
 - **Incidents:** test của `experiments` không chạy trọn trên Windows (4 test cần shell script giả). Chỉ CI trên Linux chạy đủ.
 - **Links:** PR #46; `experiments/ops/vh.py`.
 - **Thesis:** §Hạn chế hoặc tiến độ: mốc V2 trễ so với lịch 14–15/11.
+
+## 2026-11-21 – Review PR #52 (kết quả V2) và đăng review PR #46
+
+- **Task:** chung (review), TR4, TR7 · **Environment:** none
+- **Done:**
+  1. `git fetch`: V2 đã chạy 18–19/11 trên VM 4 × RTX 4060 Ti. Kết luận "V2 chưa chạy" ở mục 20/11 là sai: commit V2 ghi ngày 19/11 nhưng tới tối 20/11 Quang mới push (PR #52 mở lúc 22:18).
+  2. Đọc trọn diff PR #52 (11 file, +944/−16): `capacity.json` của V2, `matrix-dg1-v2.yaml`, `matrix-v2.yaml`, `dg3.sh`, `test_runner.py`, `nguon-tu-lieu.md`, `quy-tac-viet.md`, nhật ký tuần 07 của Quang, `van-hanh.md`.
+  3. Đối chiếu số ở `nguon-tu-lieu.md` §3 với nhật ký và `capacity.json`. Kiểm `dg3.sh` bằng `bash -n` và shellcheck 0.11.0. Kiểm diff không có IP công khai. Đối chiếu nguyên nhân `AlertmanagerFailedToSendAlerts` với `common/platform/alertmanager-secret.sh` và `envs/cloud/provision/install-platform.sh`.
+  4. Đăng review Approve trên PR #52, và trên PR #46 (bản soạn 20/11, thêm điểm `vh3_kill` rút ra từ V2).
+- **Decision:** Approve cả hai PR, vì các điểm tìm được không làm sai số liệu V2 đã thu. Không chặn merge, để dữ liệu V2 và `vh.py` vào `main` trước mốc đóng băng 22/11.
+- **Results:**
+  - CI của PR #52 xanh 6/6; `bash -n` và shellcheck đạt; diff không có IP công khai.
+  - Khớp nguồn: GPU-giờ so với S4 (A2 × KB1 −75 %; A1 −10/−5/−7 %; A2 × KB2 −25…−28 %; A2 × KB3 −8 %), threshold A2 = 0,8 × 46,3 = 37, L0 trung bình 305,5 s.
+  - Điểm nêu trong review #52:
+    1. `AlertmanagerFailedToSendAlerts` ở V2 nhiều khả năng do PC không có `.env`, nên `alertmanager-secret.sh` bỏ qua Secret Telegram (`exit 0`). Chưa kiểm; cần console `cloud-platform` trong `runs/v2-evidence/`.
+    2. `quy-tac-viet.md` và `nguon-tu-lieu.md` mô tả luồng Markdown + pandoc, trái với quyết định chuyển sang Google Docs nằm trong cùng PR.
+    3. vh3-delete và vh3-kill cùng ghi 67,4 s, cần đối chiếu với `summary.json`.
+    4. `dg3.sh` khi timeout vẫn ghi `trigger_to_ready_s` nhỏ, trông như lượt hợp lệ.
+  - Ghi chú cho luận văn: C = 3,5 req/s là cận dưới (năng lực thật nằm trong [3,5; 4)); ĐG3 có độ phân giải 1 s.
+- **Deviations:** chưa nhận dữ liệu `runs/` của V2, nên chưa kiểm số nào trực tiếp từ dữ liệu thô. Chưa chạy pytest cục bộ trên nhánh PR #52, chỉ dựa vào CI.
+- **Links:** PR #52, PR #46 (review của `trinh-cloud`).
+- **Thesis:** §5.2 (C là cận dưới); §5.4 (độ phân giải ĐG3); §5.5 VH6 và Hạn chế (không có tin Telegram trong V2, nếu xác nhận nguyên nhân).
