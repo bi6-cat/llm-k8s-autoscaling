@@ -421,3 +421,9 @@
 - **Deviations:** Môi trường §14.2 ghi `analysis.charts` ghi hình vào `runs/<phiên>/figures/`; bản V2 dùng `--out analysis/figures/v2-dg2` để đưa vào Git. C5, C6 chưa làm.
 - **Links:** nhánh `fix/tr7-c4-labels`; `analysis/charts.py` (`plot_c4`, `_place_labels`, `_near_groups`), `analysis/tests/test_charts.py`, `analysis/figures/v2-dg2/`.
 - **Thesis:** §5.3 (C1–C4 bản V2); §5.5 VH6 (số đợt cảnh báo); Hạn chế (V2 không có tin Telegram: `FailedToSend` kêu suốt 17 lượt, nhiều khả năng thiếu Secret Telegram, không kiểm trực tiếp được).
+
+## 2026-11-21 – TR7: merge PR #53 (nhãn C4, hình và bảng V2)
+
+- **Task:** TR7 · **Environment:** none
+- **Done:** CI xanh cả 6 job (alerts, docs, manifests, yaml, python 3.11, python 3.15); `mergeable` = MERGEABLE, 0 review, 0 bình luận. Merge bằng merge commit, xoá nhánh `fix/tr7-c4-labels`. Xoá luôn nhánh `docs/tr4-log-pr51`, vì 4 commit nhật ký của nó đã vào `main` qua PR này.
+- **Links:** PR #53, merge commit `b0d8b2c`.
