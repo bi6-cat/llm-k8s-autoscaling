@@ -256,3 +256,18 @@ def test_main_writes_csv_with_empty_nan(tmp_path, capsys):
     assert row["react_s"] == "80.0" and row["counted"] == "True"
     assert {p.name for p in out.iterdir()} == {"runs.csv", "phases.csv", "cells.csv", "alerts.csv"}
     assert "s/A2-KB2-1/attempt-1: SLO" in capsys.readouterr().out
+
+
+def test_read_session_table_keeps_rows_of_this_session_by_metadata_name(tmp_path):
+    # Thư mục đổi tên ("copy-of-v2") nhưng metadata.json vẫn ghi phiên v2-dg2; bảng có cả dòng của phiên khác
+    sess = tmp_path / "copy-of-v2"
+    meta = sess / "A2-KB2-1" / "attempt-1" / "metadata.json"
+    meta.parent.mkdir(parents=True)
+    meta.write_text(json.dumps({"session": "v2-dg2"}), encoding="utf-8")
+    (sess / "tables").mkdir()
+    rows = [{"session": "v2-dg2", "run_id": "A2-KB2-1"}, {"session": "other", "run_id": "A2-KB2-1"}]
+    bt.write_csv(sess / "tables" / "runs.csv", rows, ["session", "run_id"])
+    assert bt.read_session_table(sess, "runs") == [{"session": "v2-dg2", "run_id": "A2-KB2-1"}]
+    meta.write_text(json.dumps({"session": "v9"}), encoding="utf-8")
+    with pytest.raises(ValueError, match="không có dòng nào của phiên 'v9'"):
+        bt.read_session_table(sess, "runs")
