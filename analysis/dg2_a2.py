@@ -20,7 +20,7 @@ Khái niệm:
          3 × 37 = 111. Ở max_replicas pod, HPA tính desired = ⌈tổng ÷ threshold⌉, nên tín hiệu ≤ mức này
          thì HPA muốn bớt 1 pod. Cửa sổ ổn định scale-down 300 s lấy desired LỚN NHẤT trong 5 phút gần nhất
          (Thông số §9.3), nên chỉ cần một mẫu vượt mức là việc bớt pod bị lùi lại. In tỷ lệ mẫu ≤ mức, mẫu
-         vượt mức cuối cùng và khoảng cách lớn nhất giữa hai mẫu vượt mức liên tiếp.
+         vượt mức đầu và cuối, và khoảng cách lớn nhất giữa hai mẫu vượt mức liên tiếp.
       5. Request không đạt SLO trong pha spike của A2 × KB2, tách theo lúc gửi: trước hay sau lúc pod mới
          đầu tiên Ready (đầu pha spike + react_s của runs.csv). Cho biết bao nhiêu phần request xấu là do
          chờ pod mới, bao nhiêu xảy ra khi đã đủ pod. "Đạt SLO" lấy đúng metrics.Request.good.
@@ -42,19 +42,19 @@ import re
 from collections import defaultdict
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from analysis import metrics as m
 from analysis.build_tables import _json, read_metrics
+from analysis.lt5_little import server_series
+from analysis.lt7_hpa import parse_k8s_time
 
 CONFIG = "A2"  # cấu hình được phân tích ở phần 3–5
 # Phần 3, KB2: từ lúc cả 4 pod đã Ready (≈ 320 s) tới trước lúc hàng đợi của pod cũ tan (≈ 640–650 s, phần 2)
 SHARE_WINDOW_S = (360.0, 600.0)
-# Phần 4: KB2 lấy đoạn cuối pha spike, sau khi hàng đợi cũ đã tan, tới lúc tải giảm (840 s); KB3 lấy cả pha
-# sustain [300; 1020) s (Thông số §7). Đây là các đoạn mà A2 đã ở 4 replica và tải không đổi.
-SIGNAL_WINDOWS_S = {"KB2": (700.0, 840.0), "KB3": (300.0, 1020.0)}
+# Phần 4, KB2: đoạn cuối pha spike, từ sau khi hàng đợi cũ đã tan tới lúc tải giảm (signal_window)
+KB2_TAIL_START_S = 700.0
 NEW_SIZE = re.compile(r"New size: (\d+)")
 CHAT_POST = "POST /v1/chat/completions"
 # Giờ ở đầu mỗi dòng `kubectl logs --timestamps`: RFC 3339, UTC, phần lẻ tới nano giây
@@ -85,9 +85,12 @@ def _num(s: str) -> float | None:
 
 
 def load_runs(session: Path) -> list[Run]:
-    """tables/runs.csv của build_tables (chỉ lần thử `counted`) + phases_s của loadgen.json, theo run_id."""
+    """tables/runs.csv của build_tables (chỉ lần thử `counted`) + phases_s của loadgen.json, theo run_id.
+
+    Chỉ lấy dòng của chính phiên này: build_tables chạy trên nhiều phiên thì ghi dòng của mọi phiên vào bảng
+    của phiên đầu tiên, mà thư mục lượt của phiên khác không nằm dưới `session`."""
     with open(session / "tables" / "runs.csv", encoding="utf-8", newline="") as fh:
-        rows = [r for r in csv.DictReader(fh) if r["counted"] == "True"]
+        rows = [r for r in csv.DictReader(fh) if r["counted"] == "True" and r["session"] == session.name]
     out = []
     for r in sorted(rows, key=lambda r: r["run_id"]):
         d = session / r["run_id"] / r["attempt"]
@@ -111,8 +114,16 @@ def load_runs(session: Path) -> list[Run]:
     return out
 
 
-def _ratio(num: float, den: float) -> float:
-    return num / den if den else m.NAN
+def signal_window(run: Run) -> tuple[float, float] | None:
+    """Cửa sổ của phần 4, lấy theo pha trong loadgen.json để không lệch khi kịch bản đổi độ dài pha.
+
+    KB2: [KB2_TAIL_START_S, cuối pha spike). KB3: cả pha sustain (Thông số §7). Đây là các đoạn mà A2 đã ở
+    4 replica và tải không đổi. Kịch bản khác → None."""
+    if run.scenario == "KB2" and "spike" in run.phases:
+        return KB2_TAIL_START_S, run.phases["spike"][1]
+    if run.scenario == "KB3" and "sustain" in run.phases:
+        return run.phases["sustain"]
+    return None
 
 
 def pod_suffix(pod: str) -> str:
@@ -120,21 +131,21 @@ def pod_suffix(pod: str) -> str:
     return pod.rsplit("-", 1)[-1]
 
 
-def iso_unix(s: str) -> float:
-    """Giờ ISO 8601 của Kubernetes ("2026-11-18T10:51:01Z") → giây UNIX."""
-    return datetime.fromisoformat(s.replace("Z", "+00:00")).timestamp()
-
-
 # ── 1. Mốc scale ──────────────────────────────────────────────────────────────────────────────────────
 
 
-def rescales(events: Iterable[Mapping[str, Any]], t0: float) -> list[tuple[float, int]]:
-    """Sự kiện SuccessfulRescale → [(giây từ t0, số replica mới)], theo thời gian."""
+def rescales(events: Iterable[Mapping[str, Any]], t0: float) -> list[tuple[float, int, int]]:
+    """Sự kiện SuccessfulRescale → [(giây từ t0, số replica mới, count)], theo thời gian.
+
+    Lưu ý: Kubernetes gộp các event giống hệt nhau thành một (count > 1), và runner chỉ ghi `lastTimestamp`
+    (experiments/runner/collect.py), nên với count > 1 chỉ biết mốc của lần cuối; các lần trước bị mất.
+    Ví dụ A2 đi 4 → 3 → 4 thì hai message "New size: 4" gộp làm một. Vì vậy trả cả count để báo cáo đánh
+    dấu, không nhân bản theo count như lt7_hpa.rescales_from_events (hàm đó đọc `firstTimestamp`)."""
     out = []
     for e in events:
         hit = NEW_SIZE.search(e.get("message", "")) if e.get("reason") == "SuccessfulRescale" else None
         if hit:
-            out.append((iso_unix(e["time"]) - t0, int(hit.group(1))))
+            out.append((parse_k8s_time(e["time"]) - t0, int(hit.group(1)), int(e.get("count") or 1)))
     return sorted(out)
 
 
@@ -145,10 +156,12 @@ def by_pod(rows: Iterable[tuple[float, dict[str, str], float]], t0: float) -> di
     """Các mẫu của một metric (một dòng read_metrics) → {pod: {giây từ t0: giá trị}}.
 
     Làm tròn tới giây: query_range của runner trả mọi chuỗi trên cùng lưới 5 s, nên làm tròn chỉ để các pod
-    và các metric khớp mốc với nhau khi cộng, và in gọn. Hai mẫu không thể rơi vào cùng một giây."""
+    và các metric khớp mốc với nhau, và in gọn. Một pod có nhiều chuỗi cùng mốc (runner lấy running, waiting
+    thô, không `sum by (pod)`) thì cộng lại, như câu PromQL của A2 cộng mọi chuỗi."""
     out: dict[str, dict[int, float]] = defaultdict(dict)
     for ts, labels, v in rows:
-        out[labels.get("pod", "?")][round(ts - t0)] = v
+        s, t = out[labels.get("pod", "?")], round(ts - t0)
+        s[t] = s.get(t, 0.0) + v
     return out
 
 
@@ -164,27 +177,26 @@ def value_near(series: Mapping[int, float], t: float) -> float:
 
 
 def signal(met: Mapping[str, Sequence[tuple[float, dict[str, str], float]]], t0: float) -> dict[int, float]:
-    """Tín hiệu A2 mỗi mốc = Σ_pod (running + waiting). Pod thiếu một trong hai metric ở mốc đó thì tính 0,
-    như `or vector(0)` trong câu PromQL của A2."""
-    total: dict[int, float] = defaultdict(float)
-    for name in ("vllm_running", "vllm_waiting"):
-        for series in by_pod(met.get(name, []), t0).values():
-            for t, v in series.items():
-                total[t] += v
-    return dict(total)
+    """Tín hiệu A2 mỗi mốc (giây từ t0) = Σ mọi chuỗi (running + waiting), dùng chung cách cộng với LT5
+    (lt5_little.server_series). Pod thiếu metric ở mốc nào thì đóng góp 0, như `or vector(0)` của A2."""
+    return {round(ts - t0): v for ts, v in server_series(met)}
 
 
 def signal_stats(sig: Mapping[int, float], a: float, b: float, level: float) -> dict[str, Any]:
-    """Thống kê tín hiệu trên [a, b) so với mức `level` (phần 4)."""
+    """Thống kê tín hiệu trên [a, b) so với mức `level` (phần 4).
+
+    max_gap_above chỉ đo giữa hai mẫu vượt mức liên tiếp; hai mép (a → mẫu đầu, mẫu cuối → b) đọc từ
+    first_above và last_above. Dưới hai mẫu vượt mức thì max_gap_above là None."""
     ts = sorted(t for t in sig if a <= t < b)
     v = [sig[t] for t in ts]
     hi = [t for t in ts if sig[t] > level]
     return {
         "n": len(v),
         "min": min(v, default=m.NAN),
-        "mean": _ratio(sum(v), len(v)),
+        "mean": m._ratio(sum(v), len(v)),
         "max": max(v, default=m.NAN),
-        "frac_le": _ratio(sum(1 for x in v if x <= level), len(v)),
+        "frac_le": m._ratio(sum(1 for x in v if x <= level), len(v)),
+        "first_above": hi[0] if hi else None,
         "last_above": hi[-1] if hi else None,
         "max_gap_above": max((y - x for x, y in zip(hi, hi[1:], strict=False)), default=None),
     }
@@ -198,7 +210,7 @@ def log_time(line: str) -> float | None:
     hit = LOG_TIME.match(line)
     if not hit:
         return None
-    return iso_unix(hit.group(1) + "Z") + float("0." + (hit.group(2) or "0"))
+    return parse_k8s_time(hit.group(1) + "Z") + float("0." + (hit.group(2) or "0"))
 
 
 def arrivals(lines: Iterable[str], t0: float) -> list[float]:
@@ -260,7 +272,7 @@ def bad_split(reqs: Sequence[m.Request], start: float, end: float, ready: float)
     before = sum(1 for r in bad if (r.t_sched if r.t_send is None else r.t_send) < ready)
     return {
         "n": len(sel),
-        "slo": _ratio(len(sel) - len(bad), len(sel)),
+        "slo": m._ratio(len(sel) - len(bad), len(sel)),
         "before": before,
         "after": len(bad) - before,
     }
@@ -273,20 +285,23 @@ def _pct(x: float | None) -> str:
     return "?" if x is None else f"{x:.1%}"
 
 
-def _n(x: float | None) -> str:
-    return "?" if x is None else f"{x:.0f}"
+def _n(x: float | None, none: str = "?") -> str:
+    """Số nguyên để in; None → `none` ("?" = không đo được, "-" = không có)."""
+    return none if x is None else f"{x:.0f}"
 
 
 def report(session: Path) -> str:
     runs = load_runs(session)
     out = ["## 1. SuccessfulRescale (mốc s -> replica)"]
-    for r in runs:
-        if r.config_type == "scaledobject":
-            with open(r.dir / "events.jsonl", encoding="utf-8") as fh:
-                ev = rescales((json.loads(line) for line in fh if line.strip()), r.t0)
-            out.append(
-                f"{r.run_id} duration {r.duration_s} : " + (" ".join(f"{t:.0f}->{n}" for t, n in ev) or "-")
-            )
+    for r in (r for r in runs if r.config_type == "scaledobject"):
+        if not (r.dir / "events.jsonl").exists():
+            out.append(f"{r.run_id} thiếu events.jsonl: bỏ")
+            continue
+        with open(r.dir / "events.jsonl", encoding="utf-8") as fh:
+            ev = rescales((json.loads(line) for line in fh if line.strip()), r.t0)
+        # Event bị gộp: in "(×count, mốc lần cuối)" để người đọc biết mốc của các lần trước đã mất
+        txt = " ".join(f"{t:.0f}->{n}" + (f"(×{c}, mốc lần cuối)" if c > 1 else "") for t, n, c in ev)
+        out.append(f"{r.run_id} duration {r.duration_s} : {txt or '-'}")
 
     out.append("\n## 2. vllm_waiting theo pod (KB2)")
     for r in (r for r in runs if r.scenario == "KB2"):
@@ -305,8 +320,9 @@ def report(session: Path) -> str:
         for p in sh["pods"]:
             arr, done = p["arrived"], p["done"]
             rate = "?" if done is None else f"{done / sh['window_s']:.2f}"
+            share = _pct(None if arr is None else m._ratio(arr, sh["sent"]))  # cửa sổ không có request → nan
             parts.append(
-                f"{pod_suffix(p['pod'])}: đến {_n(arr)} ({_pct(None if arr is None else arr / sh['sent'])}), "
+                f"{pod_suffix(p['pod'])}: đến {_n(arr)} ({share}), "
                 f"xong {_n(done)} ({rate} req/s), "
                 f"đến/xong {_pct(None if arr is None or not done else arr / done)}, "
                 f"chờ {_n(p['wait_start'])}->{_n(p['wait_end'])}"
@@ -317,17 +333,21 @@ def report(session: Path) -> str:
         )
 
     out.append("\n## 4. Tín hiệu A2 = tổng running + waiting")
-    for r in runs:
-        win = SIGNAL_WINDOWS_S.get(r.scenario)
-        if r.config != CONFIG or win is None or r.threshold is None or r.max_replicas is None:
+    for r in (r for r in runs if r.config == CONFIG):
+        win = signal_window(r)
+        if win is None:
+            continue  # KB1: tải thấp, A2 ở 1 replica, không có gì để xét ở phần này
+        if r.threshold is None or r.max_replicas is None:
+            # runs.csv chỉ có hai cột này khi ma trận ghi đè (overrides) giá trị của ScaledObject
+            out.append(f"{r.run_id} thiếu threshold hoặc max_replicas trong runs.csv: bỏ")
             continue
         level = (r.max_replicas - 1) * r.threshold
         s = signal_stats(signal(read_metrics(r.dir / "metrics.csv.gz"), r.t0), *win, level)
         out.append(
             f"{r.run_id} [{win[0]:.0f};{win[1]:.0f}) n={s['n']} min={s['min']:.0f} tb={s['mean']:.1f} "
-            f"max={s['max']:.0f} tỷ lệ mẫu ≤ {level:.0f}: {s['frac_le']:.0%}; mẫu > {level:.0f} cuối "
-            f"{'-' if s['last_above'] is None else s['last_above']} s, khoảng cách lớn nhất giữa hai mẫu "
-            f"> {level:.0f}: {s['max_gap_above']} s"
+            f"max={s['max']:.0f} tỷ lệ mẫu ≤ {level:.0f}: {s['frac_le']:.0%}; mẫu > {level:.0f} đầu "
+            f"{_n(s['first_above'], '-')} s, cuối {_n(s['last_above'], '-')} s, khoảng cách lớn nhất giữa "
+            f"hai mẫu > {level:.0f}: {_n(s['max_gap_above'], '-')} s"
         )
 
     out.append(
@@ -346,8 +366,8 @@ def report(session: Path) -> str:
         nb = s["before"] + s["after"]
         out.append(
             f"{r.run_id} pod mới Ready lúc {ready:.1f} s; n={s['n']} SLO={s['slo']:.4f}; không đạt: "
-            f"trước {s['before']} ({_pct(_ratio(s['before'], nb))}), "
-            f"sau {s['after']} ({_pct(_ratio(s['after'], nb))})"
+            f"trước {s['before']} ({_pct(m._ratio(s['before'], nb))}), "
+            f"sau {s['after']} ({_pct(m._ratio(s['after'], nb))})"
         )
     return "\n".join(out)
 

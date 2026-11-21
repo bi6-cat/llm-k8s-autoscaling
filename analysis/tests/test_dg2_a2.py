@@ -45,6 +45,7 @@ def test_rescales_reads_new_size_in_time_order_and_skips_other_events():
             "time": _iso(T0 + 300),
             "reason": "SuccessfulRescale",
             "message": "New size: 4; reason: above target",
+            "count": 2,  # hai lần lên 4 bị Kubernetes gộp; `time` là lần cuối
         },
         {"time": _iso(T0 + 100), "reason": "ScalingReplicaSet", "message": "Scaled up to 2"},
         {
@@ -55,7 +56,7 @@ def test_rescales_reads_new_size_in_time_order_and_skips_other_events():
         {"time": _iso(T0 + 270), "reason": "FailedGetExternalMetric", "message": "New size: 9"},
     ]
     got = dg.rescales(events, T0)
-    assert [n for _, n in got] == [2, 4]
+    assert [(n, c) for _, n, c in got] == [(2, 1), (4, 2)]  # không có `count` → 1
     assert got[0][0] == pytest.approx(260 - 0.25)  # event chỉ có giờ tới giây
 
 
@@ -100,13 +101,22 @@ def test_signal_sums_running_and_waiting_over_pods_missing_metric_counts_zero():
     assert dg.signal(met, T0) == {5: 44.0, 10: 9.0}
 
 
+def test_by_pod_adds_up_series_of_the_same_pod():
+    # Hai chuỗi của cùng một pod (ví dụ nhãn `engine` khác nhau) phải cộng lại, như KEDA cộng mọi chuỗi
+    rows = [(T0 + 5, {"pod": OLD, "engine": "0"}, 60.0), (T0 + 5, {"pod": OLD, "engine": "1"}, 60.0)]
+    assert dg.by_pod(rows, T0) == {OLD: {5: 120.0}}
+
+
 def test_signal_stats_fraction_below_level_and_gap_between_samples_above():
     sig = {t: 100.0 for t in range(700, 840, 5)} | {720: 120.0, 760: 115.0, 840: 500.0}  # 840: ngoài [a, b)
     s = dg.signal_stats(sig, 700, 840, 111)
     assert s["n"] == 28
     assert s["frac_le"] == pytest.approx(26 / 28)
-    assert (s["last_above"], s["max_gap_above"], s["max"]) == (760, 40, 120.0)
-    assert dg.signal_stats({t: 50.0 for t in range(0, 20, 5)}, 0, 20, 111)["last_above"] is None
+    assert (s["first_above"], s["last_above"], s["max_gap_above"], s["max"]) == (720, 760, 40, 120.0)
+    low = dg.signal_stats({t: 50.0 for t in range(0, 20, 5)}, 0, 20, 111)
+    assert (low["first_above"], low["last_above"], low["max_gap_above"]) == (None, None, None)
+    one = dg.signal_stats({0: 200.0, 5: 50.0}, 0, 20, 111)  # một mẫu vượt mức: chưa có khoảng cách
+    assert (one["first_above"], one["max_gap_above"]) == (0, None)
 
 
 def test_bad_split_counts_bad_requests_sent_before_and_after_ready():
@@ -139,9 +149,9 @@ def _metrics(path: Path, series: dict[tuple[str, str], dict[int, float]]) -> Non
 
 
 def _run_row(run_id: str, config: str, scenario: str, **kw: str) -> dict:
-    row = {"run_id": run_id, "attempt": "attempt-1", "config": config, "scenario": scenario,
-           "counted": "True", "t0_unix": str(T0), "duration_s": "1440.0", "n_sent": "2560", "react_s": "",
-           "threshold": "", "max_replicas": "", "config_type": "static"}  # fmt: skip
+    row = dict(session="v2-dg2", run_id=run_id, attempt="attempt-1", config=config, scenario=scenario)
+    row |= dict(counted="True", t0_unix=str(T0), duration_s="1440.0", n_sent="2560", react_s="")
+    row |= dict(threshold="", max_replicas="", config_type="static")
     return row | kw
 
 
@@ -162,6 +172,8 @@ def _session(tmp_path: Path) -> Path:
             ),  # fmt: skip
             _run_row("A2-KB1-1", "A2", "KB1", threshold="37", max_replicas="4", config_type="scaledobject")
             | {"counted": "False"},  # lần thử không được tính: bỏ
+            # Dòng của phiên khác (build_tables chạy trên hai phiên): thư mục không nằm dưới phiên này, bỏ
+            _run_row("A2-KB2-9", "A2", "KB2", config_type="scaledobject") | {"session": "v2-dg2-rerun"},
         ],
     )
     grid = range(0, 1440, 5)
@@ -197,6 +209,12 @@ def _session(tmp_path: Path) -> Path:
     events = [
         {"time": _iso(T0 + 256), "reason": "SuccessfulRescale", "message": "New size: 2; reason: x"},
         {"time": _iso(T0 + 271), "reason": "SuccessfulRescale", "message": "New size: 4; reason: x"},
+        {
+            "time": _iso(T0 + 1100),
+            "reason": "SuccessfulRescale",
+            "message": "New size: 3; reason: x",
+            "count": 2,
+        },
     ]
     (d / "events.jsonl").write_text("".join(json.dumps(e) + "\n" for e in events), encoding="utf-8")
     return sess
@@ -220,9 +238,10 @@ def test_request_share_counts_arrivals_from_logs_and_completions_from_counter(tm
 
 def test_report_on_synthetic_session(tmp_path):
     out = dg.report(_session(tmp_path)).splitlines()
-    # Phần 1: chỉ lượt có ScaledObject; lượt không được tính (A2-KB1-1) bị bỏ
-    assert "A2-KB2-1 duration 1440.0 : 256->2 271->4" in out
-    assert not any(line.startswith(("S4-KB2-1 duration", "A2-KB1-1")) for line in out)
+    # Phần 1: chỉ lượt có ScaledObject; lượt không được tính (A2-KB1-1) và lượt của phiên khác bị bỏ;
+    # event bị gộp được đánh dấu
+    assert "A2-KB2-1 duration 1440.0 : 256->2 271->4 1100->3(×2, mốc lần cuối)" in out
+    assert not any(line.startswith(("S4-KB2-1 duration", "A2-KB1-1", "A2-KB2-9")) for line in out)
     # Phần 2: hàng đợi pod cũ > 0 trong [265; 640] (mẫu 720, 760 kéo dài khoảng), lượt S4 cũng được in
     assert "A2-KB2-1 old00 max=100 >0 trong [265;760] = 495 s ; new11 max=0" in out
     assert "S4-KB2-1 aaaaa max=0" in out
@@ -230,13 +249,25 @@ def test_report_on_synthetic_session(tmp_path):
     assert "old00: đến 240 (50.0%), xong 720 (3.00 req/s), đến/xong 33.3%, chờ 50->50" in share
     # Phần 4: tín hiệu 20 ở [700, 840), riêng 720 và 760 là 120 > 111 = (4 − 1) × 37
     sig = next(line for line in out if line.startswith("A2-KB2-1 [700;840)"))
-    assert "n=28 min=20 tb=27.1 max=120 tỷ lệ mẫu ≤ 111: 93%; mẫu > 111 cuối 760 s" in sig
+    assert "n=28 min=20 tb=27.1 max=120 tỷ lệ mẫu ≤ 111: 93%; mẫu > 111 đầu 720 s, cuối 760 s" in sig
     assert sig.endswith("khoảng cách lớn nhất giữa hai mẫu > 111: 40 s")
     # Phần 5: pod mới Ready lúc 240 + 80 = 320 s
     assert (
         "A2-KB2-1 pod mới Ready lúc 320.0 s; n=1200 SLO=0.7333; không đạt: trước 160 (50.0%), sau 160 (50.0%)"
         in out
     )
+
+
+def test_report_notes_the_runs_it_skips(tmp_path):
+    sess = _session(tmp_path)
+    (sess / "A2-KB2-1" / "attempt-1" / "events.jsonl").unlink()
+    runs_csv = sess / "tables" / "runs.csv"
+    with open(runs_csv, encoding="utf-8", newline="") as fh:
+        rows = [r | {"threshold": ""} for r in csv.DictReader(fh)]  # ma trận không ghi đè threshold
+    _write_csv(runs_csv, rows)
+    out = dg.report(sess).splitlines()
+    assert "A2-KB2-1 thiếu events.jsonl: bỏ" in out
+    assert "A2-KB2-1 thiếu threshold hoặc max_replicas trong runs.csv: bỏ" in out
 
 
 def test_main_requires_tables(tmp_path, capsys):
