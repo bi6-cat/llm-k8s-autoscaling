@@ -39,6 +39,7 @@ matplotlib.use("Agg")  # vẽ thẳng ra file, không cần màn hình (VM thuê
 import matplotlib.pyplot as plt  # noqa: E402  (phải chọn backend trước khi nạp pyplot)
 from matplotlib.lines import Line2D  # noqa: E402
 from matplotlib.ticker import FixedLocator, FuncFormatter, MaxNLocator, NullFormatter  # noqa: E402
+from matplotlib.transforms import Bbox  # noqa: E402
 
 from analysis import build_tables as bt  # noqa: E402
 from analysis import metrics as m  # noqa: E402
@@ -61,8 +62,27 @@ SCENARIO_ORDER = ["KB1", "KB2", "KB3"]
 # C1 so ba cấu hình đáng so về hành vi theo thời gian (Môi trường §16): tĩnh cấp theo đỉnh và hai cách scale.
 # S1 quá tải suốt pha spike nên chỉ thêm một đường TTFT nằm ở trần; đổi bằng --c1-configs khi cần.
 C1_CONFIGS = ("S4", "A1", "A2")
-# Hướng đặt nhãn cạnh điểm ở C4, cố định theo cấu hình, để hai điểm trùng chỗ không đè nhãn lên nhau
-LABEL_OFFSET = {"A2": (7, 5), "S4": (7, -12), "A1": (-7, 5), "S1": (-7, -12)}
+# C4: các vị trí thử cho nhãn của điểm trung bình, theo thứ tự ưu tiên: (dx, dy) tính bằng point so với tâm
+# điểm, căn ngang, căn dọc. Vòng hai xa điểm gấp 2,5 lần, cho khi các điểm chụm lại. _place_labels đo nhãn
+# thật và chọn vị trí ít va chạm nhất. Hướng cố định theo cấu hình (bản trước) đè lên vạch N1 và lên nhãn
+# khác khi dữ liệu V2 có các điểm sát nhau (A1, A2 cùng ≈ 92 % GPU-giờ ở KB3).
+LABEL_TRIES = [
+    (k * dx, k * dy, ha, va)
+    for k in (1.0, 2.5)
+    for dx, dy, ha, va in (
+        (6, 4, "left", "bottom"),
+        (-6, 4, "right", "bottom"),
+        (6, -4, "left", "top"),
+        (-6, -4, "right", "top"),
+        (0, 7, "center", "bottom"),
+        (0, -7, "center", "top"),
+    )
+]
+MEAN_SIZE, RUN_SIZE = 64.0, 16.0  # diện tích marker (point²) của điểm trung bình và của chấm từng lượt
+# Hai điểm trung bình cách nhau dưới 4 point (nửa cỡ marker, mức mà điểm trên che gần hết điểm dưới) coi như
+# trùng: chung một nhãn, điểm sau vẽ nhỏ hơn. Xa hơn thì hai marker chỉ chạm nhau, vẫn nhận ra từng cái.
+NEAR_PT = 4.0
+HEADROOM = 0.14  # C4 chừa 14 % chiều cao trục tung phía trên mức 100 % để đặt nhãn của các điểm ở 100 %
 INK, INK_2, INK_3, GRID, PHASE_FILL = "#0b0b0b", "#52514e", "#8a8984", "#e4e3df", "#f1f0ed"
 
 
@@ -310,9 +330,53 @@ def plot_bars(
     return fig
 
 
+def _overlap(a: Any, b: Any) -> float:
+    """Diện tích phần giao (pixel²) của hai Bbox; 0 nếu rời nhau."""
+    w = min(a.x1, b.x1) - max(a.x0, b.x0)
+    h = min(a.y1, b.y1) - max(a.y0, b.y0)
+    return w * h if w > 0 and h > 0 else 0.0
+
+
+def _place_labels(
+    ax: Any, labels: Sequence[tuple[float, float, str]], obstacles: Sequence[Any], lines: Sequence[Any]
+) -> list[Any]:
+    """Đặt từng nhãn (x, y theo dữ liệu, chữ) vào vị trí trong LABEL_TRIES có điểm phạt thấp nhất. Phạt theo
+    diện tích giao, nặng tới nhẹ: đè nhãn đã đặt hoặc dấu điểm (obstacles, ×100) > phần tràn ra ngoài ô vẽ
+    (×10) > cắt vạch tham chiếu (lines, ×1). Đo bằng kích thước chữ thật (renderer) nên không phải đoán độ dài
+    nhãn. Gọi sau fig.canvas.draw(), khi constrained layout đã chốt vị trí các ô, để toạ độ pixel là toạ độ
+    cuối cùng; nhãn đặt in_layout=False để lúc lưu file, layout không dời các ô đi nữa."""
+    renderer = ax.figure.canvas.get_renderer()
+    frame = ax.get_window_extent(renderer)
+    placed: list[Any] = []
+    for x, y, text in labels:
+        best: tuple[float, Any, Any] | None = None
+        for dx, dy, ha, va in LABEL_TRIES:
+            ann = ax.annotate(text, (x, y), xytext=(dx, dy), textcoords="offset points", ha=ha, va=va,
+                              color=INK)  # fmt: skip
+            ann.set_in_layout(False)
+            bb = ann.get_window_extent(renderer)
+            cost = (
+                100 * sum(_overlap(bb, o) for o in [*placed, *obstacles])
+                + 10 * (bb.width * bb.height - _overlap(bb, frame))
+                + sum(_overlap(bb, ln) for ln in lines)
+            )
+            if best is None or cost < best[0]:  # bằng điểm thì giữ vị trí ưu tiên hơn (thử trước)
+                if best is not None:
+                    best[1].remove()
+                best = (cost, ann, bb)
+            else:
+                ann.remove()
+            if cost == 0:
+                break
+        assert best is not None  # LABEL_TRIES không rỗng
+        placed.append(best[2])
+    return placed
+
+
 def plot_c4(pairs: Mapping[str, Mapping[str, list]], title: str, baseline: str = "S4") -> Any:
     """Mỗi kịch bản một ô: trục hoành GPU-giờ (% S4), trục tung SLO attainment (%); điểm lớn = trung bình,
-    chấm nhạt = từng lượt, nhãn chữ cạnh mỗi điểm."""
+    chấm nhạt = từng lượt, nhãn chữ cạnh mỗi điểm (đặt tránh va chạm, xem _place_labels). Các điểm trung
+    bình gần như trùng nhau (dưới NEAR_PT) dùng chung một nhãn, điểm vẽ sau nhỏ dần để vẫn thấy điểm dưới."""
     scen = _ordered(pairs, SCENARIO_ORDER)
     fig, axes = plt.subplots(1, len(scen), sharey=True, figsize=(2.9 * len(scen) + 0.8, 3.5),
                              layout="constrained",
@@ -321,26 +385,28 @@ def plot_c4(pairs: Mapping[str, Mapping[str, list]], title: str, baseline: str =
     for ax, s in zip(axes[0], scen, strict=True):
         for c in _ordered(pairs[s], CONFIG_ORDER):
             pts, (color, marker) = pairs[s][c], style(c)
-            mx, my = m.mean(p[0] for p in pts), m.mean(p[1] for p in pts)
-            ax.scatter([p[0] for p in pts], [p[1] for p in pts], s=16, marker=marker, color=color, alpha=0.4,
-                       lw=0, zorder=2)  # fmt: skip
-            ax.scatter([mx], [my], s=64, marker=marker, color=color, edgecolor="white", lw=1.2, zorder=3)
-            dx, dy = LABEL_OFFSET.get(c, (7, 5))
-            ax.annotate(f"{c} (n={len(pts)})", (mx, my), xytext=(dx, dy), textcoords="offset points",
-                        color=INK, ha="left" if dx > 0 else "right")  # fmt: skip
+            ax.scatter([p[0] for p in pts], [p[1] for p in pts], s=RUN_SIZE, marker=marker, color=color,
+                       alpha=0.4, lw=0, zorder=2)  # fmt: skip
             seen.add(c)
         ax.axhline(m.ATTAINMENT * 100, color=INK_2, lw=1, ls="--", zorder=1)
         ax.axvline(100, color=INK_3, lw=0.8, zorder=1)
-        ax.set_title(s, loc="left")
+        # Số lượt ghi ở tiêu đề ô, không ở nhãn cạnh điểm: nhãn "S4 (n=1)" quá dài để nằm bên phải điểm 100 %,
+        # nên bị đẩy xuống dưới vạch N1, sát điểm của cấu hình khác (dễ đọc nhầm)
+        ns = ", ".join(f"{c} {len(pairs[s][c])}" for c in _ordered(pairs[s], CONFIG_ORDER))
+        ax.set_title(f"{s}  (n: {ns})", loc="left")
         ax.set_xlabel(f"GPU-giờ (% so với {baseline})")
         # Chừa 25 % bên phải cho nhãn của điểm xa nhất; luôn thấy mốc 100 % (bằng baseline)
         xmax = max([100.0, *(p[0] for pts in pairs[s].values() for p in pts)])
         ax.set_xlim(0, xmax * 1.25)
         _comma(ax)
-    # Trục tung tới 100 % và cận dưới không cao hơn 90 %: để tự co thì chênh 0,3 điểm phần trăm trông như rất
-    # lớn, trong khi ngưỡng thực tiễn là 5 điểm (Thông số §6)
+    # Trục tung: cận dưới không cao hơn 90 %, vì để tự co thì chênh 0,3 điểm phần trăm trông như rất lớn,
+    # trong khi ngưỡng thực tiễn là 5 điểm (Thông số §6). Phía trên 100 % chừa HEADROOM cho nhãn (nhiều cấu
+    # hình đạt đúng 100 %), nhưng không ghi vạch chia nào trên 100 %, vì attainment không vượt được 100 %.
     ys = [p[1] for c in pairs.values() for pts in c.values() for p in pts]
-    axes[0][0].set_ylim(min([90.0, *ys]) - 2, 101)
+    lo = min([90.0, *ys]) - 2
+    axes[0][0].set_ylim(lo, 100 + HEADROOM * (100 - lo))
+    ticks = MaxNLocator(nbins=6, steps=[1, 2, 2.5, 5, 10]).tick_values(lo, 100)
+    axes[0][0].yaxis.set_major_locator(FixedLocator([t for t in ticks if lo <= t <= 100]))
     axes[0][0].set_ylabel("SLO attainment (%)")
     handles = [
         Line2D([], [], ls="", marker=style(c)[1], color=style(c)[0], markersize=7, label=c)
@@ -349,6 +415,48 @@ def plot_c4(pairs: Mapping[str, Mapping[str, list]], title: str, baseline: str =
     handles.append(Line2D([], [], color=INK_2, lw=1, ls="--", label=f"mục tiêu N1 {m.ATTAINMENT * 100:g} %"))
     fig.legend(handles=handles, loc="outside lower center", ncols=len(handles))
     fig.suptitle(title)
+
+    # Điểm trung bình và nhãn vẽ sau cùng: cần toạ độ pixel cuối cùng (sau constrained layout) để biết điểm
+    # nào trùng điểm nào và nhãn nào đè lên gì
+    fig.canvas.draw()
+    px = fig.dpi / 72  # 1 point = px pixel
+    for ax, s in zip(axes[0], scen, strict=True):
+        groups: list[list[tuple[str, float, float, int, Any]]] = []
+        for c in _ordered(pairs[s], CONFIG_ORDER):
+            pts = pairs[s][c]
+            mx, my = m.mean(p[0] for p in pts), m.mean(p[1] for p in pts)
+            item = (c, mx, my, len(pts), ax.transData.transform((mx, my)))
+            g = next((g for g in groups if math.dist(g[0][4], item[4]) < NEAR_PT * px), None)
+            if g is None:
+                groups.append([item])
+            else:
+                g.append(item)
+        obstacles = []
+        for g in groups:
+            for i, (c, mx, my, _n, _xy) in enumerate(g):
+                color, marker = style(c)
+                # Điểm sau nhỏ còn 1/4 diện tích (1/2 đường kính): giảm ít hơn thì chấm tròn vẫn che gần hết
+                # tam giác bên dưới
+                ax.scatter([mx], [my], s=MEAN_SIZE / 4**i, marker=marker, color=color, edgecolor="white",
+                           lw=1.2, zorder=3 + i / 10).set_in_layout(False)  # fmt: skip
+        # Vật cản của nhãn: mọi điểm trung bình và mọi chấm từng lượt (hộp vuông bao marker, kể cả viền trắng)
+        for size, xys in (
+            (MEAN_SIZE, [g[0][1:3] for g in groups]),
+            (RUN_SIZE, [p for pts in pairs[s].values() for p in pts]),
+        ):
+            r = (math.sqrt(size) / 2 + 0.6) * px
+            for x, y in xys:
+                cx, cy = ax.transData.transform((x, y))
+                obstacles.append(Bbox.from_extents(cx - r, cy - r, cx + r, cy + r))
+        frame = ax.get_window_extent()
+        yn = ax.transData.transform((0, m.ATTAINMENT * 100))[1]
+        xb = ax.transData.transform((100, 0))[0]
+        lines = [
+            Bbox.from_extents(frame.x0, yn - px, frame.x1, yn + px),  # vạch N1
+            Bbox.from_extents(xb - px, frame.y0, xb + px, frame.y1),  # mốc 100 % GPU-giờ
+        ]
+        labels = [(g[0][1], g[0][2], ", ".join(c for c, *_ in g)) for g in groups]
+        _place_labels(ax, labels, obstacles, lines)
     return fig
 
 
