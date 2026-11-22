@@ -37,12 +37,13 @@
 |---|---|---|---|
 | **TTFT** | Tỷ lệ request có thời gian tới token đầu không vượt ngưỡng | Histogram `vllm:time_to_first_token_seconds` | Người dùng cảm nhận rõ nhất; tăng đầu tiên khi quá tải |
 | **Tỷ lệ lỗi** | Tỷ lệ request không trả 5xx | Metric của Traefik `traefik_service_requests_total` | Đo ở cửa vào, gồm cả lỗi khi không còn pod Ready |
-| TPOT (theo dõi) | Thời gian trung bình giữa các token | Histogram `vllm:inter_token_latency_seconds` | Ít biến động hơn TTFT; chỉ đưa lên dashboard, không cảnh báo |
+| TPOT (theo dõi) | Thời gian trung bình cho mỗi token output của một request: (t token cuối − t token đầu) ÷ (số token − 1), cùng công thức với log máy tạo tải ([Môi trường §15](05-moi-truong-danh-gia.md#15-chỉ-số-và-cách-tính)) | Histogram `vllm:request_time_per_output_token_seconds`, mỗi request một mẫu (vLLM v0.31.0, `vllm/v1/metrics/stats.py`) | Ít biến động hơn TTFT; chỉ đưa lên dashboard, không cảnh báo |
 
-Giá trị SLO nằm ở [Thông số §6](00-thong-so.md#6-slo). **Ba điểm cần lưu ý:**
+Giá trị SLO nằm ở [Thông số §6](00-thong-so.md#6-slo). **Bốn điểm cần lưu ý:**
 - Histogram chỉ đếm được **theo biên bucket**. Ngưỡng SLO của TTFT phải **trùng một biên bucket có thật** trong `/metrics` của phiên bản vLLM đã ghim. Nếu ghi `le="2"` mà không có bucket đó, truy vấn trả về rỗng và cảnh báo **không bao giờ kêu**. Cảnh báo (N7) và nghiệm thu (N1) dùng **cùng một ngưỡng** ([ADR-005](../adr/005-sua-thiet-ke-sau-review.md) T3).
 - Request bị cắt **giữa stream** vẫn có mã 200, vì header đã gửi đi. Lỗi loại này không hiện trong tỷ lệ 5xx. Nó được theo dõi qua metric request bị huỷ của vLLM (ví dụ `vllm:request_success_total` theo `finished_reason`, kiểm tra tên theo phiên bản) và qua log của máy tạo tải khi đánh giá.
 - Histogram TTFT chỉ ghi khi request **có token đầu**. Request bị timeout trong hàng đợi không vào SLI phía server; chỉ log phía client thấy nó. Vì vậy số liệu nghiệm thu lấy từ log client.
+- TPOT khác **ITL** (inter-token latency, `vllm:inter_token_latency_seconds`). ITL ghi từng khoảng giữa hai token liên tiếp, nên đuôi phân phối của ITL thường dài hơn của TPOT khi có lúc bị chen (prefill của request khác, preemption). SLO và nghiệm thu dùng TPOT; dashboard SLO và chi phí vẽ TPOT. Dashboard Serving và GPU vẽ ITL để chẩn đoán, và vạch 100 ms trên panel đó chỉ để tham chiếu. *(Sửa 21/11: bản trước ghi nguồn của TPOT là histogram ITL.)*
 
 ### 2.2. SLO và ngân sách lỗi
 
@@ -68,7 +69,7 @@ Với SLO 95%, ngân sách lỗi là 5% request; với SLO lỗi 99%, ngân sác
     / sum(rate(traefik_service_requests_total{service=~"llm-serving-.*"}[5m]))
 ```
 
-Viết `tổng − tốt` chứ không viết `1 − tốt/tổng` là có chủ ý. Khi không có traffic, `1 − 0/ε` cho ra 100% request xấu và gây cảnh báo giả, còn `(0 − 0)/0` cho ra NaN và không kêu.
+Khi không có traffic, tử và mẫu đều bằng 0, nên tỷ lệ ra NaN và cảnh báo không kêu. Dạng `1 − tốt/tổng` cũng ra NaN (`1 − 0/0`), nên hai cách viết cho cùng kết quả; viết `tổng − tốt` chỉ để đọc thẳng ra phần request xấu. Unit test "im lặng khi không có traffic" giữ hành vi này. *(Sửa 21/11: bản trước ghi dạng `1 − tốt/tổng` gây báo giả khi không có traffic; thử bằng promtool ngày 18/11 thì cả hai dạng đều ra NaN.)*
 
 ---
 
@@ -89,13 +90,13 @@ Viết `tổng − tốt` chứ không viết `1 − tốt/tổng` là có chủ
 | Cảnh báo | Điều kiện (rút gọn) | Mức | Ý nghĩa |
 |---|---|---|---|
 | `LLMSLOBurnFast` | Tỷ lệ request TTFT vượt ngưỡng ≥ 20% (burn rate 4) trên **cả** cửa sổ 5 phút và 1 phút, `for: 1m` | page | Người dùng đang phải chờ lâu |
-| `LLMErrorRateHigh` | Tỷ lệ 5xx ≥ 1% trong 5 phút, `for: 1m` (một lần chuyển pod có thể sinh vài 503 lẻ; không page vì một đợt lỗi vài giây) | page | Request bị từ chối |
+| `LLMErrorRateHigh` | Tỷ lệ 5xx ≥ 1% trong 5 phút, `for: 1m`. `for` không lọc được một đợt lỗi ngắn, vì đợt lỗi nằm trong cửa sổ 5 phút suốt 5 phút: ở 1 req/s, một đợt 5 lỗi 503 vẫn page khoảng 4 phút (promtool, 18/11). Giữ nguyên trong đợt đánh giá; hướng sửa là burn rate hai cửa sổ. Chỉ có dữ liệu khi request đi qua Traefik | page | Request bị từ chối |
 | `LLMAtMaxReplicas` | Số replica bằng max trong 15 phút **và** hàng đợi > 0 | ticket | Autoscaling đã hết dư địa; cần thêm GPU hoặc giới hạn tải |
 | `LLMPodPending` | Pod vLLM ở trạng thái Pending > 10 phút | ticket | Thường do hết GPU: rolling update bị kẹt, hoặc max replica lớn hơn số GPU |
 | `LLMPodNotReady` / `LLMPodCrashLooping` | Pod vLLM không Ready > 15 phút (lâu hơn cold start tối đa); hoặc container ở `CrashLoopBackOff` > 5 phút | page | Pod không khởi động được: OOM, sai tham số, lỗi CUDA |
 | `KedaScalerErrors` | ScaledObject có condition `Fallback=True` hoặc `Ready` khác True, trừ lúc `Paused=True`; `for: 1m`. Đọc condition qua kube-state-metrics (`kube_scaledobject_status_condition`). Không dùng bộ đếm `keda_scaler_detail_errors_total`, vì KEDA 2.21 ngừng đếm khi đã fallback (đo 15/11) | page | Autoscaling bị "mù": lỗi liên tiếp quá `failureThreshold` (lần thứ 4) thì vào chế độ fallback, giữ số replica cố định |
 
-**Cảnh báo phụ** (Could, chỉ thêm nếu còn thời gian): `LLMSLOBurnSlow` (≥ 10% trên cả 30 phút và 5 phút, ticket); `LLMPreemptions` (`num_preemptions_total` tăng trong 5 phút, ticket); `GPUTemperatureHigh` (> 83 °C trong 5 phút, ticket); `GPUXidError` (lỗi XID, page). Có sẵn từ kube-prometheus-stack: `TargetDown`, `Watchdog`.
+**Cảnh báo phụ** (Could, chỉ thêm nếu còn thời gian): `LLMSLOBurnSlow` (≥ 10% trên cả 30 phút và 5 phút, ticket); `LLMPreemptions` (`num_preemptions_total` tăng trong 5 phút, ticket); `GPUTemperatureHigh` (> 83 °C trong 5 phút, ticket); `GPUXidError` (lỗi XID, page). Có sẵn từ kube-prometheus-stack: `TargetDown`, `Watchdog`. Ở chart 92.1.1, `TargetDown` có severity `warning` và `Watchdog` có `none`, mà định tuyến ở §3.4 chỉ gửi `page`, `ticket` và `critical`. Vì vậy khi một exporter hay target chết thì không có tin Telegram, chỉ thấy trong Prometheus. Muốn gửi thì đặt `customRules.TargetDown.severity` trong values của chart (chưa làm).
 
 ### 3.3. Quy tắc mẫu
 
@@ -205,7 +206,7 @@ Runbook được dùng thật trong các kịch bản vận hành và trong ph�
 | Nguyên nhân | Hành động |
 |---|---|
 | Tải vừa tăng, pod mới đang cold start | Theo dõi. Cảnh báo sẽ tự tắt khi pod mới Ready và hàng đợi rút hết, thường trong vài phút. Nếu cold start lâu hơn 3 phút, kiểm tra image đã có sẵn trên node chưa và model có nằm trên NVMe không |
-| Đã chạy tối đa replica | Thắt giới hạn tốc độ ở Traefik để bảo vệ phần lớn người dùng; báo người dùng; đề xuất thêm GPU (§9) |
+| Đã chạy tối đa replica | Báo người dùng; đề xuất thêm GPU (§9). Không có giới hạn tốc độ ở Traefik để cắt bớt tải: lớp này đã lược ngày 12/11 (§8) |
 | Một pod chậm bất thường | Xem GPU của pod đó (nhiệt độ, XID); xoá pod để nó chuyển đi |
 | Ngay sau một lần cập nhật | Rollback bằng `git revert` rồi để Argo CD sync (§5.4) |
 | KEDA đang lỗi | Autoscaling đã fallback lên max; xử lý Prometheus hoặc KEDA theo runbook `KedaScalerErrors` |
@@ -217,7 +218,7 @@ Runbook được dùng thật trong các kịch bản vận hành và trong ph�
 | Cảnh báo | Hành động đầu tiên |
 |---|---|
 | `LLMErrorRateHigh` | Xem còn pod Ready nào không (`kubectl get pods`); xem log Traefik và log vLLM |
-| `LLMAtMaxReplicas` | Xem đỉnh tải so với năng lực (§9); thắt giới hạn tốc độ nếu SLO đang bị vi phạm |
+| `LLMAtMaxReplicas` | Xem đỉnh tải so với năng lực (§9); đề xuất thêm GPU. Không có giới hạn tốc độ để thắt: lớp này đã lược ngày 12/11 (§8) |
 | `LLMPodPending` | `kubectl describe pod`: nếu báo `Insufficient nvidia.com/gpu` và đang có rollout thì xem §5; nếu không thì kiểm tra `maxReplicaCount` |
 | `LLMPodNotReady` / `LLMPodCrashLooping` | `kubectl logs --previous`: OOM, thiếu `/dev/shm`, sai đường dẫn model, sai tham số sau cập nhật → rollback |
 | `KedaScalerErrors` | Xem condition của ScaledObject (`kubectl describe scaledobject`); kiểm tra Prometheus còn sống không, KEDA có tới được Prometheus không (mã lỗi trong `keda_scaler_http_requests_total`), PromQL có trả về giá trị không (`kubectl get hpa`) |
@@ -421,7 +422,7 @@ Có. Các kịch bản VH3, VH4 và VH6 được làm theo runbook, và trong ph
 Khoảng giảm có giới hạn: một replica, trong 1–2 phút mỗi lần thay pod, và được đo trong VH2. Khi chỉ có 1 replica, quy trình tạm nâng lên 2 replica trước, nên không mất dịch vụ. Nếu không chấp nhận được việc giảm năng lực thì dùng phương án (c), với cái giá đã nêu rõ.
 
 **Cửa sổ burn-rate 5 phút và 1 phút chỉ hợp với thực nghiệm. Bằng chứng nào cho thấy cửa sổ thật (1 giờ và 5 phút) cũng phát hiện kịp?**
-Công thức và cách tính không đổi khi đổi cửa sổ; `promtool test rules` kiểm tra logic của biểu thức với cả hai bộ cửa sổ. Điều thay đổi là thời gian phát hiện: với cửa sổ 1 giờ, cảnh báo kêu chậm hơn, đổi lại ít báo giả hơn. Luận văn ghi rõ N7 được đo với cửa sổ rút ngắn, và ước tính thời gian phát hiện với cửa sổ thật bằng cùng phương pháp.
+Công thức và cách tính không đổi khi đổi cửa sổ. Unit test (`promtool test rules`) hiện chỉ kiểm bộ cửa sổ rút ngắn 5 phút và 1 phút; muốn kiểm bộ 1 giờ và 5 phút thì thêm recording rule `[1h]` và một test cùng dạng (chưa làm). Điều thay đổi là thời gian phát hiện: với cửa sổ 1 giờ, cảnh báo kêu chậm hơn, đổi lại ít báo giả hơn. Luận văn ghi rõ N7 được đo với cửa sổ rút ngắn, và ước tính thời gian phát hiện với cửa sổ thật bằng cùng phương pháp.
 
 **Sao không dùng Loki hay tracing?**
 Các kịch bản của đồ án chẩn đoán được bằng metric, sự kiện Kubernetes và `kubectl logs`. Log tập trung là phần mở rộng hợp lý khi có nhiều dịch vụ hơn.

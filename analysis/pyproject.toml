@@ -17,14 +17,14 @@ name = "analysis"
 version = "0.1.0"
 description = "Bảng phân tích kết quả đánh giá autoscaling vLLM (đồ án autoscaling LLM trên Kubernetes)"
 requires-python = ">=3.11"
-dependencies = []                    # build_tables, metrics, lt5–lt8: chỉ thư viện chuẩn (csv, gzip, json)
+dependencies = []                    # mọi module trừ charts, lt_charts: chỉ thư viện chuẩn (csv, gzip, json)
 
 [dependency-groups]
 dev = [
     "pytest>=9.1,<10",
     "ruff>=0.17,<0.18",
 ]
-# Chỉ charts.py (C1–C4) và lt_charts.py (hình LT7, LT8) cần; build_tables, metrics, lt5–lt8 không import.
+# Chỉ charts.py (C1–C4) và lt_charts.py (hình LT7, LT8) cần; các module khác không import.
 # Bật mặc định (default-groups) để `uv run` và CI cài sẵn, nên test của hai file vẽ chạy ở CI. Chỉ cần bảng
 # (ví dụ trên VM thuê) thì chạy
 # `python3 -m analysis.build_tables` không qua uv, hoặc `uv run --no-group plot …` để không tải matplotlib.

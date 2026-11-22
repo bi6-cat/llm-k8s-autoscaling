@@ -34,15 +34,26 @@ def _write(p: Path, columns: Sequence[str], rows: Sequence[dict[str, Any]]) -> P
 
 
 def _lt5_csv(tmp: Path) -> Path:
-    def win(src, env, run, window, *, ok=True, valid=True, pred=7.0, srv=7.2, wait=0.0, se=0.9):
+    def win(src, env, run, window, *, ok=True, valid=True, pred=7.0, srv=7.2, wait=0.0, se=0.9, session=None):
         dev = "" if srv == "" else srv / pred - 1
-        return {"source": src, "env": env, "run_id": run, "attempt": "attempt-1" if env == "sim" else "",
-                "valid": valid, "window": window, "applicable": ok, "L_pred": pred, "L_server": srv,
+        return {"source": src, "session": session or src, "env": env, "run_id": run,
+                "attempt": "attempt-1" if env == "sim" else "", "valid": valid, "window": window,
+                "applicable": ok, "L_pred": pred, "L_server": srv,
                 "waiting_mean": wait, "se_sampling": se if wait < 1 else "", "dev_server": dev}  # fmt: skip
 
     rows = [
         win("capacity-1.5b.json", "home", "lambda-1", "measure", pred=2.0, srv=2.3, se=0.29),
-        win("capacity.json", "home", "S1-CONST14-1", "measure", valid=False, pred=211, srv=182, wait=166),
+        win(
+            "capacity.json",
+            "home",
+            "S1-CONST14-1",
+            "measure",
+            valid=False,
+            pred=211,
+            srv=182,
+            wait=166,
+            session="dg1-home-05b",
+        ),
         win("tr7-kb2-sim-2", "sim", "A2-KB2-1", "pre"),
         win("tr7-kb2-sim-2", "sim", "A2-KB2-1", "main", pred=16.1, srv=16.1),  # chồng lên pre: bỏ
         win("tr7-kb2-sim-2", "sim", "S1-KB2-1", "spike", ok=False, pred=70.6, srv=143.6, wait=128),
@@ -63,7 +74,7 @@ def test_lt5_points_skip_by_reason_and_parse_types(tmp_path):
         ("lambda-1", "measure"), ("S1-CONST14-1", "measure"), ("A2-KB2-1", "pre"), ("S1-CONST2-1", "steady"),
     ]  # fmt: skip
     assert skipped == {
-        "có request lỗi": 2, "main (chồng lên pre, spike, drop)": 1, "thiếu số liệu": 1,
+        "có request lỗi": 2, "main (chồng lên các pha)": 1, "thiếu số liệu": 1,
         "có L_server = 0 (thang log)": 1,
     }  # fmt: skip
     # Không có lý do nào thì không ghi lý do đó
@@ -71,16 +82,37 @@ def test_lt5_points_skip_by_reason_and_parse_types(tmp_path):
 
 
 def test_source_group_and_queued():
-    assert lc.source_group({"source": "capacity-1.5b.json", "env": "home"}) == "nhà, model 1,5B"
-    assert lc.source_group({"source": "capacity.json", "env": "home"}) == "nhà, model 0,5B"
-    assert lc.source_group({"source": "tr7-kb2-sim-2", "env": "sim"}) == "simulator"
-    # Nguồn chưa có trong bảng, kể cả trùng tên file với nguồn ở nhà (ĐG1 trên V2 cũng ghi capacity.json):
-    # ghi môi trường và tên file, vẽ màu xám, không nhận nhầm là model 0,5B
-    other = {"source": "capacity.json", "env": "v2"}
-    assert lc.source_group(other) == "v2, capacity.json"
-    assert lc.GROUP_COLOR.get(lc.source_group(other), lc.OTHER_COLOR) == lc.OTHER_COLOR
-    rows = [other, {"source": "x", "env": "sim"}, {"source": "capacity.json", "env": "home"}]
-    assert lc._ordered_groups(rows) == ["nhà, model 0,5B", "simulator", "v2, capacity.json"]
+    def src(source, env, session=None):
+        return {"source": source, "session": session, "env": env}
+
+    # File cũ không ghi session (capacity-1.5b.json): khoá là tên file
+    assert lc.source_group(src("capacity-1.5b.json", "home")) == "nhà, model 1,5B"
+    assert lc.source_group(src("capacity.json", "home", "dg1-home-05b")) == "nhà, model 0,5B"
+    assert lc.source_group(src("tr7-kb2-sim-2", "sim", "tr7-kb2-sim-2")) == "simulator"
+    # V2: capacity.json của ĐG1 (session dg1-v2-4060ti) và hai phiên runner ĐG1, ĐG2 cùng một nhóm, màu thứ
+    # 4; màu ba nhóm cũ không đổi
+    v2 = [src("capacity.json", "cloud", "dg1-v2-4060ti"), src("dg1-v2-4060ti", "cloud", "dg1-v2-4060ti"),
+          src("v2-dg2", "cloud", "v2-dg2")]  # fmt: skip
+    assert {lc.source_group(r) for r in v2} == {"V2, model 3B"}
+    assert lc.GROUP_COLOR["V2, model 3B"] == lc.SERIES_COLORS[3]
+    assert lc.GROUP_COLOR["nhà, model 1,5B"] == lc.SERIES_COLORS[0]
+    # Cùng env, cùng tên file capacity.json nhưng khác máy (V1 A4000, lượt thử 4000 Ada): mỗi phiên một nhóm
+    # xám, không nhận nhầm là V2; CSV cũ không có cột session cũng không nhận nhầm
+    v1 = src("capacity.json", "cloud", "dg1-v1-a4000")
+    ada = src("capacity.json", "cloud", "dg1-try-4000ada")
+    assert lc.source_group(v1) == "VM thuê, dg1-v1-a4000"
+    assert lc.source_group(ada) == "VM thuê, dg1-try-4000ada"
+    assert lc.source_group({"source": "capacity.json", "env": "cloud"}) == "VM thuê, capacity.json"
+    assert lc.source_group({"source": "capacity.json", "env": "home"}) == "nhà, capacity.json"
+    assert lc.GROUP_COLOR.get(lc.source_group(v1), lc.OTHER_COLOR) == lc.OTHER_COLOR
+    assert lc.source_group(src("capacity.json", "v9", "x")) == "v9, x"
+    rows = [v1, v2[0], src("x", "sim"), src("capacity.json", "home", "dg1-home-05b"), ada]
+    assert lc._ordered_groups(rows) == [
+        "nhà, model 0,5B", "simulator", "V2, model 3B", "VM thuê, dg1-try-4000ada", "VM thuê, dg1-v1-a4000",
+    ]  # fmt: skip
+    # Nhóm xám được liệt kê để main in cảnh báo; simulator không tính là nguồn lạ
+    assert lc.unmapped(rows) == ["VM thuê, dg1-try-4000ada", "VM thuê, dg1-v1-a4000"]
+    assert lc.unmapped(v2) == []
     # LT5 gộp mọi phiên simulator (cùng cấu hình); LT6 tách từng phiên, như lt6_gpu_util.summary
     sims = [{"source": "a", "env": "sim"}, {"source": "b", "env": "sim"}]
     assert lc._ordered_groups(sims) == ["simulator"]
@@ -104,7 +136,8 @@ def test_comma_log_labels_minor_ticks_only_on_narrow_axis():
 
 def _lt6_rows() -> list[dict[str, Any]]:
     def lvl(src, load, band, util, l_srv, *, wait=0.0, valid=True):
-        return {"source": src, "env": "home", "run_id": f"l-{load}", "valid": valid, "load": load,
+        return {"source": src, "session": "dg1-home-05b" if src == "capacity.json" else src, "env": "home",
+                "run_id": f"l-{load}", "valid": valid, "load": load,
                 "band": band, "gpu_util": util, "util_pred": 1.0 if wait < 1 else None, "L_server": l_srv,
                 "waiting_mean": wait, "a1_target_pct": 70.0,
                 "a2_target": 21.0 if "1.5b" in src else 23.0}  # fmt: skip

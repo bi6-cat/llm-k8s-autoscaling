@@ -82,7 +82,7 @@ CLOCK_MARGIN_S = 1.0  # giờ thực của pod máy tạo tải và của runner
 QUEUE_MIN = 1.0
 
 COLUMNS = [
-    "source", "env", "run_id", "attempt", "valid", "window", "start_s", "end_s", "lambda_nominal",
+    "source", "session", "env", "run_id", "attempt", "valid", "window", "start_s", "end_s", "lambda_nominal",
     "clock_rate", "clock_rate_min", "clock_rate_max",
     "n_sent", "n_error", "applicable",
     "lambda_real", "e2e_mean_s", "L_pred",
@@ -260,6 +260,7 @@ def analyze_attempt(d: Path, clock_rate: float = 1.0) -> list[dict[str, Any]]:
         windows.append(("main", [0.0, duration]))
     ident = {
         "source": str(d.parent.parent.name),
+        "session": meta.get("session") or str(d.parent.parent.name),
         "env": meta.get("env"),
         "run_id": meta.get("run_id"),
         "attempt": meta.get("attempt_dir", d.name),
@@ -331,6 +332,7 @@ def from_capacity(path: Path, window_s: float) -> list[dict[str, Any]]:
         rows.append(
             {
                 "source": path.name,
+                "session": d.get("session") or path.name,  # file cũ không ghi session
                 "env": d.get("env"),
                 "run_id": lv["run_id"],
                 "attempt": NAN,

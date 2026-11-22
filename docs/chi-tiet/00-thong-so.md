@@ -124,7 +124,7 @@ Hai phút đầu của KB1 và KB2 là thời gian ổn định, không tính.
 | Output | **Cố định 256 token** (`max_tokens=256`, `ignore_eos=true`) |
 | Streaming | `stream=true`, `stream_options.include_usage=true` |
 | Timeout | 120 s; quá hạn tính là lỗi |
-| Đường đi | Qua Traefik bằng **route riêng cho máy tạo tải** (chỉ truy cập được trong cluster) với giới hạn tốc độ cao; khoá API vẫn được vLLM kiểm ([ADR-005](../adr/005-sua-thiet-ke-sau-review.md) T5) |
+| Đường đi | Gọi thẳng Service `vllm.llm-serving.svc:8000` trong cluster, không qua Traefik; khoá API vẫn được vLLM kiểm. **Sửa 21/11:** route riêng qua Traefik ([ADR-005](../adr/005-sua-thiet-ke-sau-review.md) T5) đã lược cùng rate limit ([ADR-006 §3.1](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md#31-quyết-định-ngày-12112026)), nên trong mọi lượt đánh giá (nhà, simulator, VM thuê) tỷ lệ 5xx đo ở Traefik không có dữ liệu ([Môi trường §13](05-moi-truong-danh-gia.md#13-kịch-bản-vận-hành-vh1vh6)) |
 
 ---
 
@@ -222,8 +222,8 @@ B\* và KV\* là số request đồng thời trung bình và mức KV-cache trê
 | Tham số | Giá trị |
 |---|---|
 | Chu kỳ scrape vLLM, Traefik | 5 s |
-| Chu kỳ thu metric GPU (DCGM hoặc `nvidia_gpu_exporter`) | 5 s |
-| Retention Prometheus | Cloud: 15 ngày. Nhà: 3 ngày (RAM 16 GB) |
+| Chu kỳ thu metric GPU (`nvidia_gpu_exporter`; không dùng DCGM, lý do ở `common/platform/gpu-exporter/daemonset.yaml`) | 5 s |
+| Retention Prometheus | Cloud: mặc định của chart 92.1.1 (10 ngày). Nhà: 3 ngày, tối đa 4 GB (RAM 16 GB). Simulator: 1 ngày. *(Sửa 21/11: bản trước ghi cloud 15 ngày, nhưng `envs/cloud/platform/` không đặt; `retention: 72h` ở values chung là của Alertmanager)* |
 | Số dashboard / số cảnh báo | 3 / 6 ([F5](#3-yêu-cầu-chức-năng), [F6](#3-yêu-cầu-chức-năng)) |
 | Định tuyến cảnh báo (Alertmanager → Telegram) | Gom theo `alertname`; `group_wait` 30 s, `group_interval` 5 phút. `page` nhắc lại mỗi 1 giờ, báo cả lúc hết; `ticket` của nhóm và `critical` của chart nhắc lại sau 24 giờ, không báo lúc hết; warning/info của chart không gửi. Tối đa 8 dòng mỗi danh sách trong một tin ([Vận hành §3.4](04-van-hanh.md#34-alertmanager-định-tuyến)) |
 

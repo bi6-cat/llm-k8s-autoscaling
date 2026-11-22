@@ -26,10 +26,11 @@ Mục đích: Cho thấy bằng hình điều bảng ở van-hanh.md đã nói b
     dữ liệu thô của phiên lt8 (prom.json, timeline.json), chỉ có trên máy đã đo. Lần bơm không hợp lệ theo
     lt8_burn.analyze_rep thì không vẽ.
 Hạn chế: Màu ở LT7, LT8 gắn với chuỗi đo (r_5m, r_1m, các chặng trễ), ở LT5, LT6 gắn với nguồn dữ liệu (model
-    ở nhà, simulator), không gắn với cấu hình A2, S4…, vì LT không so cấu hình. Tên model của file capacity ở
-    nhà tra bảng SOURCE_MODEL theo (env, tên file), vì CSV không có cột model; nguồn mới (ví dụ V2) chưa có
-    trong bảng thì vẽ màu xám và ghi tên file, cần thêm vào bảng. LT5 bỏ cửa sổ có request lỗi (không áp
-    được định luật) và cửa sổ `main` của KB2 (chồng lên pre, spike, drop), số cửa sổ bị bỏ ghi dưới trục.
+    ở nhà, simulator, V2), không gắn với cấu hình A2, S4…, vì LT không so cấu hình. Nhóm của mỗi nguồn tra
+    bảng SOURCE_GROUP theo (env, session), vì CSV không có cột model; nguồn chưa có trong bảng (ví dụ V1)
+    thì vẽ màu xám, ghi tên phiên và in cảnh báo, cần thêm vào bảng. LT5 bỏ cửa sổ có request lỗi (không
+    áp được định luật) và cửa sổ `main` của kịch bản nhiều pha (KB2, KB3: chồng lên các pha), số cửa sổ bị
+    bỏ ghi dưới trục.
     Mốc của LT8 theo giờ thực, sai dưới 1 s do WSL kéo giờ (lt8_burn, "Đồng hồ").
 
 Chạy (từ gốc repo):
@@ -43,6 +44,7 @@ from __future__ import annotations
 import argparse
 import csv
 import math
+import textwrap
 from collections import defaultdict
 from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
@@ -78,17 +80,26 @@ PRE_S, POST_S = 60.0, 120.0  # LT8: vẽ từ 60 s trước lúc bơm tới 120 
 # Vị trí (theo trục tung) của các vạch firing ở LT8, trên mọi đường tỷ lệ (≤ 0,62 ở x = 0,6)
 FIRE_Y_PRED, FIRE_Y0, FIRE_DY, Y_TOP = 0.86, 0.81, 0.045, 0.92
 
-# LT5, LT6: màu theo nguồn dữ liệu, thứ tự cố định (màu đi theo nguồn, không theo thứ hạng). File capacity ở
-# nhà chỉ ghi model trong JSON (capacity-1.5b.json: trường `model` = Qwen2.5-1.5B-Instruct; capacity.json:
-# ghi chú "ĐG1-mini ở nhà với Qwen2.5-0.5B"), CSV thì chỉ có env và tên file, nên tra ở đây theo cả hai:
-# ĐG1 trên V2 cũng ghi ra capacity.json, không được nhận nhầm là 0,5B.
-SOURCE_MODEL = {("home", "capacity-1.5b.json"): "1,5B", ("home", "capacity.json"): "0,5B"}
-ENV_NAME = {"home": "nhà", "sim": "simulator"}
-GROUP_ORDER = ("nhà, model 1,5B", "nhà, model 0,5B", "simulator")
+# LT5, LT6: màu theo nguồn dữ liệu, thứ tự cố định (màu đi theo nguồn, không theo thứ hạng; nhóm thêm sau
+# xếp cuối để màu nhóm cũ không đổi). Model chỉ ghi trong JSON (capacity-1.5b.json: trường `model` =
+# Qwen2.5-1.5B-Instruct; capacity.json ở nhà: ghi chú "ĐG1-mini ở nhà với Qwen2.5-0.5B"; V2: cờ --model của
+# vLLM = Qwen2.5-3B-Instruct), CSV thì có env và session, nên tra ở đây theo cả hai. Không tra theo tên file:
+# ĐG1 ở nhà (0,5B), trên V1 (A4000), lượt thử 4000 Ada và V2 đều ghi ra capacity.json, ba file sau cùng env
+# cloud. session của file capacity là trường `session` trong JSON (file cũ không có thì là tên file), của
+# phiên runner là tên phiên, nên ĐG1 V2 có cùng session ở LT5 (dữ liệu thô) và LT6 (capacity.json).
+V2_GROUP = "V2, model 3B"
+SOURCE_GROUP = {
+    ("home", "capacity-1.5b.json"): "nhà, model 1,5B",  # file cũ, không ghi session
+    ("home", "dg1-home-05b"): "nhà, model 0,5B",
+    ("cloud", "dg1-v2-4060ti"): V2_GROUP,  # ĐG1 V2 (1 replica): phiên runner ở LT5, capacity.json ở LT6
+    ("cloud", "v2-dg2"): V2_GROUP,  # ĐG2 V2 (1–4 replica), LT5
+}
+ENV_NAME = {"home": "nhà", "sim": "simulator", "cloud": "VM thuê"}
+GROUP_ORDER = ("nhà, model 1,5B", "nhà, model 0,5B", "simulator", V2_GROUP)
 GROUP_COLOR = dict(zip(GROUP_ORDER, SERIES_COLORS, strict=False))
 OTHER_COLOR = ch.OTHER_STYLE[0]  # nguồn chưa có trong GROUP_ORDER: xám, không lấy màu ô 4+
-LT5_TEXT = ("source", "env", "run_id", "attempt", "window")
-LT6_TEXT = ("source", "env", "run_id", "band")
+LT5_TEXT = ("source", "session", "env", "run_id", "attempt", "window")
+LT6_TEXT = ("source", "session", "env", "run_id", "band")
 
 
 def _num(v: str) -> float | None:
@@ -114,13 +125,18 @@ def lt7_rows(path: Path) -> list[dict[str, Any]]:
 
 
 def source_group(r: Mapping[str, Any]) -> str:
-    """Nhóm (và màu) của một dòng LT5: file capacity ở nhà theo model, mọi phiên simulator chung một nhóm
-    (cùng cấu hình patch-sim.yaml), nguồn khác thì ghi môi trường và tên nguồn."""
-    env = ENV_NAME.get(r["env"], r["env"])
-    model = SOURCE_MODEL.get((r["env"], r["source"]))
-    if model:
-        return f"{env}, model {model}"
-    return "simulator" if r["env"] == "sim" else f"{env}, {r['source']}"
+    """Nhóm (và màu) của một dòng LT5: nguồn có trong SOURCE_GROUP theo bảng (ở nhà theo model, V2 gộp ĐG1 và
+    ĐG2), mọi phiên simulator chung một nhóm (cùng cấu hình patch-sim.yaml), nguồn khác thì ghi môi trường và
+    tên phiên (mỗi phiên một nhóm, không gộp hai máy khác nhau)."""
+    known = SOURCE_GROUP.get((r["env"], _session(r)))
+    if known:
+        return known
+    return "simulator" if r["env"] == "sim" else f"{ENV_NAME.get(r['env'], r['env'])}, {_session(r)}"
+
+
+def _session(r: Mapping[str, Any]) -> str:
+    """session của dòng; CSV cũ (trước 21/11) không có cột này thì dùng source."""
+    return r.get("session") or r["source"]
 
 
 def lt6_group(r: Mapping[str, Any]) -> str:
@@ -128,13 +144,19 @@ def lt6_group(r: Mapping[str, Any]) -> str:
     "tách được" và đường nối các mức λ chỉ có nghĩa trong một lượt ĐG1 (lt6_gpu_util.summary cũng kiểm
     theo từng nguồn)."""
     g = source_group(r)
-    return f"{g} ({r['source']})" if g == "simulator" else g
+    return f"{g} ({_session(r)})" if g == "simulator" else g
 
 
 def _ordered_groups(rows: Sequence[Mapping[str, Any]], group: Callable[..., str] = source_group) -> list[str]:
     """Các nhóm có trong dữ liệu: nhóm đã biết theo GROUP_ORDER, nhóm lạ theo tên, xếp sau."""
     have = {group(r) for r in rows}
     return [g for g in GROUP_ORDER if g in have] + sorted(have - set(GROUP_ORDER))
+
+
+def unmapped(rows: Sequence[Mapping[str, Any]]) -> list[str]:
+    """Nhóm vẽ màu xám vì nguồn chưa có trong SOURCE_GROUP (trừ simulator), để main in cảnh báo: phiên mới
+    hoặc đổi tên (ví dụ chạy lại V2) không lặng lẽ tách khỏi nhóm của nó."""
+    return [g for g in _ordered_groups(rows) if g not in GROUP_ORDER]
 
 
 def queued(r: Mapping[str, Any]) -> bool:
@@ -148,10 +170,11 @@ def lt5_points(rows: Sequence[Mapping[str, Any]]) -> tuple[list[Mapping[str, Any
     """Cửa sổ vẽ được trên hình LT5, kèm số cửa sổ bị bỏ theo lý do (chỉ lý do có ít nhất một cửa sổ).
 
     Bỏ: (có request lỗi) applicable = False, vì không biết request lỗi rời server lúc nào; (cửa sổ `main`)
-    cửa sổ cả pha chính của KB2, chồng lên pre, spike, drop, nên mỗi request bị tính hai lần; (thiếu số liệu)
-    không có λ_thực × W dương hoặc L_server; (L_server = 0) mọi mẫu server bằng 0, không đặt được lên thang
-    log. Bảng ở van-hanh.md cũng không ghi dòng `main`."""
-    main, zero = "main (chồng lên pre, spike, drop)", "có L_server = 0 (thang log)"
+    cửa sổ cả pha chính của kịch bản nhiều pha (KB2: pre, spike, drop; KB3: ramp, sustain), chồng lên các
+    pha, nên mỗi request bị tính hai lần; (thiếu số liệu) không có λ_thực × W dương hoặc L_server;
+    (L_server = 0) mọi mẫu server bằng 0, không đặt được lên thang log. Bảng ở van-hanh.md cũng không ghi
+    dòng `main`."""
+    main, zero = "main (chồng lên các pha)", "có L_server = 0 (thang log)"
     skipped = {"có request lỗi": 0, main: 0, "thiếu số liệu": 0, zero: 0}
     pts = []
     for r in rows:
@@ -405,7 +428,11 @@ def plot_lt6(rows: Sequence[Mapping[str, Any]]) -> Any:
     ax_l.set_yscale("log")
     ax_u.set_xlim(0, max(r["load"] for r in rows) * 1.08)
     ax_u.xaxis.set_major_locator(MultipleLocator(0.2))
-    s_u, s_l = separation_text(rows, "gpu_util"), separation_text(rows, "L_server")
+    # Kết luận dài (3 model trở lên) thì xuống dòng, để không tràn khỏi ô (ô rộng ~3,7 inch, vừa ~44 ký tự;
+    # lấy 40 để chừa lề)
+    s_u, s_l = (
+        textwrap.fill(separation_text(rows, k), 40, break_on_hyphens=False) for k in ("gpu_util", "L_server")
+    )
     ax_u.set_title("GPU util (tín hiệu A1)" + (f"\n{s_u}" if s_u else ""), loc="left")
     ax_l.set_title("running + waiting (tín hiệu A2), thang log" + (f"\n{s_l}" if s_l else ""), loc="left")
     ax_u.set_ylabel("GPU util")
@@ -575,12 +602,14 @@ def main(argv: list[str] | None = None) -> int:
     errors: list[str] = []
     if a.lt5:
         points, skipped5 = lt5_points(read_rows(a.lt5, LT5_TEXT, ("valid", "applicable")))
+        log += [f"cảnh báo LT5: nguồn chưa có trong SOURCE_GROUP, vẽ màu xám: {g}" for g in unmapped(points)]
         if points:
             log += [f"ghi {f}" for f in ch._save(plot_lt5(points, skipped5), a.out / "lt5-little", formats)]
         else:
             errors.append(f"LT5: {a.lt5} không có cửa sổ nào vẽ được")
     if a.lt6:
         rows6 = [r for r in read_rows(a.lt6, LT6_TEXT, ("valid",)) if r["load"] is not None]
+        log += [f"cảnh báo LT6: nguồn chưa có trong SOURCE_GROUP, vẽ màu xám: {g}" for g in unmapped(rows6)]
         if rows6:
             log += [f"ghi {f}" for f in ch._save(plot_lt6(rows6), a.out / "lt6-gpu-util", formats)]
         else:

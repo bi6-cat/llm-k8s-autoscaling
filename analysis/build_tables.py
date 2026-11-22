@@ -357,6 +357,33 @@ def analyze_attempt(d: Path) -> tuple[dict[str, Any], list[dict[str, Any]], list
 # ── Ghép nhiều lần thử ────────────────────────────────────────────────────────────────────────────────
 
 
+def session_name(session_dir: Path) -> str | None:
+    """Tên phiên mà runner ghi trong metadata.json của các lượt, tức giá trị cột `session` của bảng. Tên này
+    là tên phiên trong ma trận, có thể khác tên thư mục (thư mục được đổi tên hoặc chép sang chỗ khác)."""
+    for p in sorted(session_dir.glob("*/attempt-*/metadata.json")):
+        if name := _json(p).get("session"):
+            return str(name)
+    return None
+
+
+def read_session_table(session_dir: Path, table: str) -> list[dict[str, str]]:
+    """Đọc <phiên>/tables/<table>.csv (runs, phases, alerts…) do main() ghi, chỉ giữ dòng của chính phiên này.
+
+    Dùng cho các script đọc lại bảng (dg2_a2, vh6_window). Cần lọc vì chạy main() trên nhiều phiên thì dòng
+    của mọi phiên được ghi vào bảng của phiên đầu tiên, và hai phiên có thể trùng run_id. Không có dòng nào
+    của phiên này → ValueError, để script đọc bảng không in ra "không có gì" như một kết quả thật."""
+    name = session_name(session_dir)
+    with open(session_dir / "tables" / f"{table}.csv", encoding="utf-8", newline="") as fh:
+        rows = list(csv.DictReader(fh))
+    own = [r for r in rows if r["session"] == name]
+    if not own:
+        found = sorted({r["session"] for r in rows})
+        raise ValueError(
+            f"{session_dir}/tables/{table}.csv không có dòng nào của phiên {name!r} (có: {found})"
+        )
+    return own
+
+
 def find_attempts(session_dir: Path) -> tuple[list[Path], list[str]]:
     """Mọi thư mục <run_id>/attempt-<n> có đủ file để phân tích, và danh sách thư mục bị bỏ kèm lý do
     (lần thử lỗi giữa chừng chỉ có error.txt; máy tạo tải không chạy nên thiếu requests.csv)."""

@@ -61,7 +61,7 @@ UNCLAMPED = 10**6  # max replica "vô hạn": để thấy HPA muốn bao nhiêu
 SIGNALS = [("gpu_util", "A1"), ("L_server", "A2"), ("kv_cache_usage", "A3"), ("waiting_mean", "A4")]
 
 COLUMNS = [
-    "source", "env", "run_id", "valid", "lambda_nominal", "C", "load", "band", "slo_attainment",
+    "source", "session", "env", "run_id", "valid", "lambda_nominal", "C", "load", "band", "slo_attainment",
     "lambda_real", "e2e_mean_s", "L_client", "L_server", "waiting_mean", "kv_cache_usage",
     "gpu_util", "util_pred", "util_dev", "util_se", "util_z",
     "a1_target_pct", "a2_target", "a1_desired_1", "a2_desired_1",
@@ -162,6 +162,7 @@ def from_capacity(path: Path, window_s: float, max_replicas: int) -> list[dict[s
         rows.append(
             {
                 "source": path.name,
+                "session": d.get("session") or path.name,  # file cũ không ghi session
                 "env": d.get("env"),
                 "run_id": lv["run_id"],
                 "valid": lv["valid"],
@@ -218,21 +219,24 @@ _CELLS = [
 
 
 def summary(rows: Sequence[dict[str, Any]]) -> str:
-    """Bảng chữ mỗi mức λ một dòng, rồi phép kiểm "tách được" của từng tín hiệu theo từng nguồn."""
+    """Bảng chữ mỗi mức λ một dòng, rồi phép kiểm "tách được" của từng tín hiệu theo từng nguồn.
+
+    Nguồn là cặp (env, session): file ĐG1 của V1, V2 (env cloud) và ĐG1-mini 0,5B ở nhà cùng tên
+    capacity.json, gộp theo tên file thì các máy, các model khác nhau bị kiểm chung một lần."""
     cols = " ".join(f"{title:>{width}}" for title, _, _, width in _CELLS)
-    head = f"{'nguồn':<20} {'nhóm':<8} {cols}  ghi chú"
+    head = f"{'nguồn':<24} {'nhóm':<8} {cols}  ghi chú"
     out = [head, "-" * len(head)]
     for r in rows:
         nums = " ".join(f"{_f(r[key], spec):>{width}}" for _, key, spec, width in _CELLS)
         note = "" if r["valid"] else "lượt không hợp lệ"
-        out.append(f"{r['source'][:20]:<20} {r['band']:<8} {nums}  {note}")
+        out.append(f"{_name(r)[:24]:<24} {r['band']:<8} {nums}  {note}")
     out.append("")
     out.append(
         f"A1ₙ, A2ₙ: số replica leo tới nếu cùng tải chạy trên node {rows[0]['max_replicas']} GPU, "
         "mỗi pod một GPU (chỉ tính ở mức chưa xếp hàng)."
     )
-    for src in dict.fromkeys(r["source"] for r in rows):
-        sel = [r for r in rows if r["source"] == src]
+    for src in dict.fromkeys(_name(r) for r in rows):
+        sel = [r for r in rows if _name(r) == src]
         lam = {b: [r["lambda_nominal"] for r in sel if r["band"] == b] for b in ("vừa", "quá tải")}
         t = sel[0]["a1_target_pct"] / 100
         lo, hi = l_for_util(t * (1 - TOLERANCE)), l_for_util(t * (1 + TOLERANCE))
@@ -248,6 +252,12 @@ def summary(rows: Sequence[dict[str, Any]]) -> str:
             if has_invalid:
                 out.append(f"     {'chỉ mức hợp lệ':<15} {_verdict(separation(sel, key, valid_only=True))}")
     return "\n".join(out)
+
+
+def _name(r: dict[str, Any]) -> str:
+    """Tên nguồn trong bảng chữ và khoá gom phép kiểm: `<env>/<session>` (session của phiên ĐG1 ghi trong
+    JSON; file cũ không ghi session thì là tên file; env None với file cũ không ghi env)."""
+    return f"{r['env']}/{r.get('session') or r['source']}"
 
 
 def _verdict(s: dict[str, Any]) -> str:

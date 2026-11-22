@@ -27,6 +27,12 @@ def test_delete_needs_zero_errors():
     assert grade("vh3-delete", DIRTY, {"recovered": True})
 
 
+def test_delete_with_a_single_pod_is_not_a_pass():
+    # Xoá pod duy nhất thì không còn pod phục vụ: dù không ghi nhận lỗi cũng không kết luận được
+    assert grade("vh3-delete", CLEAN, {"recovered": True, "ready_before": 1})
+    assert not grade("vh3-delete", CLEAN, {"recovered": True, "ready_before": 2})
+
+
 def test_kill_allows_errors_but_needs_restart():
     assert not grade("vh3-kill", DIRTY, {"recovered": True, "restarted": True})
     assert grade("vh3-kill", CLEAN, {"recovered": True, "restarted": False})

@@ -28,7 +28,7 @@
 
 ![Hình 2 – Kiến trúc tổng thể](../images/02-kien-truc-tong-the.svg)
 
-*Hình 2. Kiến trúc tổng thể. Request đi từ client qua Traefik (giới hạn tốc độ) và Service tới các pod vLLM (kiểm API key), mỗi pod gắn một GPU. Prometheus thu metric từ vLLM và exporter GPU; Alertmanager gửi cảnh báo. KEDA chạy PromQL và cung cấp external metric cho HPA; HPA cập nhật `spec.replicas` của Deployment. Pod mới chỉ nhận traffic sau khi đã Ready.*
+*Hình 2. Kiến trúc tổng thể. Request đi từ client qua Traefik (giới hạn tốc độ: đã lược ngày 12/11, [ADR-006 §3.1](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md#31-quyết-định-ngày-12112026)) và Service tới các pod vLLM (kiểm API key), mỗi pod gắn một GPU. Prometheus thu metric từ vLLM và exporter GPU; Alertmanager gửi cảnh báo. KEDA chạy PromQL và cung cấp external metric cho HPA; HPA cập nhật `spec.replicas` của Deployment. Pod mới chỉ nhận traffic sau khi đã Ready.*
 
 | Thành phần | Vai trò | Ghi chú |
 |---|---|---|
@@ -36,7 +36,7 @@
 | NVIDIA device plugin, exporter GPU | Công bố `nvidia.com/gpu`; metric GPU | Driver cài sẵn trên máy; GPU Operator chỉ dùng nếu cần (`driver.enabled=false`) |
 | vLLM (Deployment) | Phục vụ model qua API OpenAI; kiểm API key | 1 GPU/pod; probe, preStop, `--shutdown-timeout`; rolling update `maxSurge: 0` |
 | Lưu trữ model | Lưu weights để không phải tải lại | NVMe cục bộ (VM thuê) hoặc PVC (nhà); Job prefetch, DaemonSet pre-pull |
-| Traefik (Ingress) | Điểm vào, giới hạn tốc độ | Có sẵn trong k3s; không dùng ingress-nginx (đã ngừng bảo trì từ 3/2026); bật metric |
+| Traefik (Ingress) | Điểm vào; giới hạn tốc độ đã lược ngày 12/11 ([ADR-006 §3.1](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md#31-quyết-định-ngày-12112026)) | Có sẵn trong k3s; không dùng ingress-nginx (đã ngừng bảo trì từ 3/2026); bật metric |
 | KEDA | Chuyển metric Prometheus thành external metric, tạo HPA | A2 là cấu hình chính thức |
 | Prometheus, Alertmanager (kube-prometheus-stack) | Thu metric, tính SLI, gửi cảnh báo | Recording rule; cảnh báo theo burn rate tới Telegram |
 | Grafana | Dashboard | 3 dashboard (§17.3) |
@@ -124,6 +124,7 @@ Manifest thật nằm trong repo, mỗi dòng có comment giải thích: [common
 - **ingress-nginx** đã được Kubernetes cho **ngừng bảo trì từ tháng 3/2026**, nên không nên dùng cho hệ thống mới.
 - **Traefik** có sẵn trong k3s và hỗ trợ SSE streaming tốt. Envoy Gateway (Gateway API) là lựa chọn thay thế nếu muốn dùng `LEAST_REQUEST`.
 - Với streaming dài, cần kiểm tra **timeout** của entrypoint và route để stream không bị cắt giữa chừng, và kiểm tra rằng proxy không gom (buffer) response lại.
+- **Sửa 21/11:** route riêng cho máy tạo tải và `rateLimit` đã lược ([ADR-006 §3.1](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md#31-quyết-định-ngày-12112026)). Runner gọi thẳng Service `vllm.llm-serving.svc:8000` ở mọi môi trường, không qua Traefik ([Thông số §7](00-thong-so.md#7-kịch-bản-tải)). Thiết kế ban đầu ở gạch đầu dòng dưới.
 - **Khi đánh giá**, máy tạo tải vẫn đi qua Traefik như người dùng thật, để số đo gồm cả xác thực và giới hạn tốc độ. Vì middleware `rateLimit` tính theo header `Authorization` áp **cùng một mức** cho mọi khoá, máy tạo tải dùng **route riêng** (ví dụ host nội bộ `llm-eval`) gắn middleware có giới hạn cao. Nếu không, các lượt KB2, KB3 sẽ nhận 429 và bị tính là lỗi ([ADR-005](../adr/005-sua-thiet-ke-sau-review.md) T5).
 
 Các biện pháp bảo mật và checklist nằm ở [Vận hành §8](04-van-hanh.md#8-bảo-mật-tối-thiểu).
@@ -155,7 +156,7 @@ Overlay `sim` cho phép simulator dùng **đúng** Deployment, Service và Scale
 *Hình 3. Vòng đời một request và các metric độ trễ. Khi tải tăng, thời gian chờ trong hàng đợi (queue time) tăng đầu tiên, kéo theo TTFT tăng. Đây là tín hiệu sớm nhất cho biết hệ thống cần scale.*
 
 1. Client gửi `POST /v1/chat/completions` với `stream: true` và khoá API tới Traefik.
-2. Traefik áp giới hạn tốc độ; Service chọn một pod đang Ready; vLLM kiểm khoá API rồi đưa request vào hàng đợi (*waiting*).
+2. Traefik chuyển request vào Service (giới hạn tốc độ đã lược ngày 12/11); Service chọn một pod đang Ready; vLLM kiểm khoá API rồi đưa request vào hàng đợi (*waiting*).
 3. Khi còn chỗ trong batch và còn KV-cache, request chuyển sang *running*: prefill rồi decode.
 4. Mỗi token sinh ra được gửi về dưới dạng Server-Sent Events.
 5. Thời điểm vào hàng đợi, token đầu và kết thúc được vLLM ghi vào histogram; Prometheus dùng chúng để tính SLI.

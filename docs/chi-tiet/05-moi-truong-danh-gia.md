@@ -476,6 +476,8 @@ Ma trận 17 lượt và lý do phân bổ nằm ở [Thông số §8.2](00-thon
 | **VH5** | Dựng lại từ máy trắng | GPU thuê (đầu phiên V2); nhà | `make bootstrap prefetch` trên VM trắng; người thứ hai dựng lại cluster nhà qua Tailscale, hoặc cluster kind + simulator, chỉ theo README | Theo [N6, N8](00-thong-so.md#4-chỉ-tiêu-nghiệm-thu) | F4, N6, N8 |
 | **VH6** | Cảnh báo đúng, không báo giả | Ghi lại trong mọi lượt ĐG2; nhà | So sánh thời điểm vi phạm SLO (từ log client) với thời điểm cảnh báo chuyển sang firing (truy vấn `ALERTS`) | Theo [N7](00-thong-so.md#4-chỉ-tiêu-nghiệm-thu), gồm định nghĩa "page giả" | F6, N7 |
 
+**Giới hạn của VH6** (ghi 21/11). Runner gọi thẳng Service `vllm.llm-serving.svc:8000` ở mọi môi trường (`envs/*/experiments/matrix*.yaml`), không qua Traefik ([Thông số §7](00-thong-so.md#7-kịch-bản-tải)); simulator và VM thuê còn không có Ingress. Vì vậy `llm:error_ratio:rate5m` không có dữ liệu trong các lượt đánh giá: VH6 trong V2 chỉ kiểm được `LLMSLOBurnFast`, còn `LLMErrorRateHigh` mới được kiểm bằng unit test. Muốn VH6 kiểm cả quy tắc này thì runner phải gọi qua Ingress của Traefik (ở nhà đã có `envs/home/serving/ingress.yaml`).
+
 Mỗi kịch bản có một mục trong `docs/nhat-ky/van-hanh.md`: ngày, môi trường, các bước, số đo, đạt hay không, và runbook đã dùng.
 
 ---
@@ -534,7 +536,7 @@ Các cột của `requests.csv`. Thời gian tính bằng giây kể từ `t0_un
 | `status` | Mã HTTP của phần đầu câu trả lời. Stream bị cắt giữa chừng vẫn có `status` 200 |
 | `error` | **Rỗng nghĩa là request thành công.** Khác rỗng là lỗi: `HTTPStatus` (mã khác 200), `Timeout` (quá 120 s), `IncompleteStream` (không có chunk `usage`), `StreamError` (vLLM báo lỗi giữa stream), hoặc tên exception (lỗi mạng). Mọi chỉ số lỗi ở §15 lọc theo cột này, không theo `status` |
 
-Script `analysis/build_tables.py` (công thức ở `analysis/metrics.py`, có unit test) đọc các thư mục này và ghi 4 bảng CSV: `runs.csv` mỗi lần thử một dòng (cột `valid`; `counted` = lần thử hợp lệ cuối cùng của lượt), `phases.csv` mỗi lần thử × pha một dòng, `cells.csv` mỗi ô môi trường × cấu hình × kịch bản một dòng (trung bình, min, max, §16), `alerts.csv` mỗi đợt kêu của mỗi chuỗi cảnh báo một dòng (một chuỗi kêu hai lần = hai dòng). Script `analysis/charts.py` vẽ C1–C4 (§16) từ cùng các số đó (gọi thẳng `build_tables`, nên hình và bảng không lệch nhau) ra SVG và PNG; C5, C6 làm sau khi có dữ liệu ĐG3, VH2. Chạy từ gốc repo: `uv run --project analysis python -m analysis.build_tables runs/<phiên> [--baseline S4]`, rồi `uv run --project analysis python -m analysis.charts runs/<phiên>` (ghi vào `runs/<phiên>/figures/`).
+Script `analysis/build_tables.py` (công thức ở `analysis/metrics.py`, có unit test) đọc các thư mục này và ghi 4 bảng CSV: `runs.csv` mỗi lần thử một dòng (cột `valid`; `counted` = lần thử hợp lệ cuối cùng của lượt), `phases.csv` mỗi lần thử × pha một dòng, `cells.csv` mỗi ô môi trường × cấu hình × kịch bản một dòng (trung bình, min, max, §16), `alerts.csv` mỗi đợt kêu của mỗi chuỗi cảnh báo một dòng (một chuỗi kêu hai lần = hai dòng). Script `analysis/charts.py` vẽ C1–C4 (§16) từ cùng các số đó (gọi thẳng `build_tables`, nên hình và bảng không lệch nhau) ra SVG và PNG; C5, C6 làm sau khi có dữ liệu ĐG3, VH2. Chạy từ gốc repo: `uv run --project analysis python -m analysis.build_tables runs/<phiên> [--baseline S4]`, rồi `uv run --project analysis python -m analysis.charts runs/<phiên>` (ghi vào `runs/<phiên>/figures/`). Vài số của chương 5 không có trong 4 bảng, vì phải đọc lại dữ liệu thô: `analysis/dg2_a2.py` tính mốc rescale, hàng đợi theo pod, phần request mới mỗi pod nhận, tín hiệu A2 và request xấu trước hoặc sau lúc pod mới Ready cho mục 5.3 (`uv run --project analysis python -m analysis.dg2_a2 runs/<phiên>`, sau `build_tables`). Cho mục 5.5, `analysis/vh4_windows.py runs/<lượt vh4>` tính SLO của VH4 theo ba khoảng (trước khi chặn, đang chặn, sau khi gỡ) và theo từng phút; `analysis/vh6_window.py runs/<phiên>` tính tỷ lệ request xấu quanh mốc vi phạm và mốc page của mỗi đợt `LLMSLOBurnFast` (VH6).
 
 ---
 
@@ -588,20 +590,24 @@ Script `analysis/build_tables.py` (công thức ở `analysis/metrics.py`, có u
 
 Không dùng biểu đồ hai trục tung; màu gắn cố định với từng cấu hình; mọi biểu đồ có ghi số lượt.
 
-**Bảng nghiệm thu** (khung, điền sau phiên V2):
+**Bảng nghiệm thu** (điền ngày 21/11 từ dữ liệu phiên V2: model 3B, vLLM v0.31.0, N = 4; số từng lượt và nguồn của từng số ở mục 5.6 của luận văn). Cột "Đạt?" dùng năm mức: Đạt; Đạt một phần (phần chính đã đo và đạt, một phần cách kiểm chứng chưa làm); Không đạt; Báo cáo (chỉ tiêu không có ngưỡng); Chưa đo.
 
 | Yêu cầu | Chỉ tiêu ([Thông số §4](00-thong-so.md#4-chỉ-tiêu-nghiệm-thu)) | Kết quả đo | Đạt? | Ghi chú |
 |---|---|---|---|---|
-| N1 | SLO attainment của A2 ở KB1, KB3 (`sustain`) | … | … | … |
-| N2a | Replica mới Ready (KB2) | … | … | … |
-| N2b | Hồi phục SLO (KB2) | … | (báo cáo) | … |
-| N3 | GPU-giờ A2 so với S4 ở KB1; chênh lệch SLO | … | … | … |
-| N4 | 0 lỗi khi scale-down và rolling update | … | … | … |
-| N5 | Cold start L2 so với L0 | … | … | … |
-| N6 | Tự phục hồi; fallback; dựng lại | … | … | … |
-| N7 | Thời gian tới cảnh báo; page giả | … | … | … |
-| N8 | Phiên bản ghim; dựng lại theo README; chi phí | … | … | … |
-| F1–F7 | Theo cách kiểm chứng ở [Thông số §3](00-thong-so.md#3-yêu-cầu-chức-năng) | … | … | … |
+| N1 | SLO attainment của A2 ở KB1, KB3 (`sustain`) | KB1: 100% (2 lượt). KB3: 100% (2 lượt) | Đạt | KB2 (chỉ báo cáo): 79,4–80,7% (3 lượt) |
+| N2a | Replica mới Ready (KB2) | 79,7–81,5 s (3 lượt) | Đạt | Phát hiện 14,7–16,4 s; tạo pod tới Ready 65–66 s (mức L2) |
+| N2b | Hồi phục SLO (KB2) | 409–430 s (3 lượt) | Báo cáo | Dài hơn mức dự kiến 5 phút: hàng đợi dồn ở pod có sẵn không chuyển sang pod mới (luận văn mục 5.3) |
+| N3 | GPU-giờ A2 so với S4 ở KB1; chênh lệch SLO | 25% GPU-giờ của S4; SLO attainment chênh 0 điểm phần trăm (2 lượt) | Đạt | KB2: 71,8–75,2% GPU-giờ, SLO kém 19,3–20,6 điểm. KB3: 91,7–92,3%, chênh 0 điểm |
+| N4 | 0 lỗi khi scale-down và rolling update | Scale-down: 0 lỗi trong pha `drop` của 3 lượt A2 × KB2. Rolling update (VH2 trên VM thuê): 0 lỗi khi đi từ 1 replica và khi cả 4 GPU đều có pod | Đạt | Đo trên VM thuê. VH1, VH2 ở nhà là mục Must riêng ở [Thông số §5](00-thong-so.md#5-mức-độ-thành-công), chưa chạy |
+| N5 | Cold start L2 so với L0 | L2: 77,7 s (3 lượt). L0: 305,5 s (2 lượt). Tỷ lệ 25,4% | Đạt | L0 đo từ 0 lên 1 pod, L2 đo từ 1 lên 2 pod |
+| N6 | Tự phục hồi; fallback; dựng lại | Xoá pod: pod thay thế Ready sau 67,4 s, 0 lỗi. Kill tiến trình: Ready lại sau 67,4 s. Fallback (VH4) lên 4 replica sau 16,8 s, 0 lỗi. Dựng lại từ VM trắng: 8 phút 22 giây (1 lần, bấm tay) | Đạt | Ca kill có 129/1.041 request lỗi, lúc đó chỉ có 1 pod |
+| N7 | Thời gian tới cảnh báo; page giả | S1 × KB3: 104,5 s (1 lượt). Page giả: 0 trong 17 lượt | Đạt | Chỉ kiểm `LLMSLOBurnFast` (§13) |
+| N8 | Phiên bản ghim; dựng lại theo README; chi phí | Phiên bản: đã ghim. Người thứ hai dựng lại theo README: chưa đo. Tổng chi phí thuê: chưa có | Chưa đo | |
+| F1, F2, F4 | Theo cách kiểm chứng ở [Thông số §3](00-thong-so.md#3-yêu-cầu-chức-năng) | API có streaming, ĐG1–ĐG3 chạy đủ; A2 scale 1 → 4 → về lại; dựng VM trắng bằng `make` trong 8 phút 22 giây | Đạt | F2: T6 mới kiểm trên simulator; T7 (Could) chưa làm |
+| F3 | VH2: cập nhật và rollback qua Git | Triển khai qua Git: Argo CD quản lý cluster nhà (App-of-Apps, 7 app Synced). Rolling update trên VM thuê (không qua Git, vì VM không dùng Argo CD): 0 lỗi. Cập nhật rồi `git revert` qua Argo CD: chưa chạy | Đạt một phần | Thiếu bước cập nhật và rollback qua Git; VH2 ở nhà là mục Must ([Thông số §5](00-thong-so.md#5-mức-độ-thành-công)) |
+| F5 | Ba dashboard, ảnh chụp | 3 dashboard cài cùng nền tảng; truy vấn chạy được trên simulator, CI kiểm PromQL | Đạt một phần | Chưa có ảnh chụp trên GPU thật |
+| F6 | Sáu cảnh báo tới Telegram, có runbook | 7 quy tắc, mỗi quy tắc có runbook và unit test. Alertmanager → Telegram kiểm với API giả trên simulator | Đạt một phần | Chưa gửi tới Telegram thật; trong V2 Alertmanager báo lỗi gửi ở cả 17 lượt |
+| F7 | Checklist bảo mật | API key trong Secret; VM thuê chỉ mở SSH | Chưa đo | Checklist chưa chạy; phạm vi đã thu hẹp ngày 12/11 |
 
 Yêu cầu không đạt **không bị giấu đi**. Luận văn phân tích nguyên nhân và nêu cách khắc phục; nếu đã sửa thì đo lại và ghi cả hai lần.
 

@@ -36,7 +36,8 @@ spec:
         #
         # le="2.5": phải trùng một biên bucket có thật, nếu không truy vấn rỗng và cảnh báo không bao
         # giờ kêu. Đã đối chiếu mã nguồn vLLM v0.31.0 (vllm/v1/metrics/buckets.py, TIME_TO_FIRST_TOKEN_
-        # BUCKETS có 2.5). Còn phải xác nhận trên /metrics của pod thật: curl <pod>:8000/metrics.
+        # BUCKETS có 2.5). Đã xác nhận trên GPU thật: trong phiên V2, LLMSLOBurnFast có kêu, điều chỉ xảy
+        # ra khi bucket này có trong /metrics (thiếu bucket thì vế trừ rỗng và kết quả rỗng).
         #
         # namespace="llm-serving": nhãn này do Prometheus gắn theo pod được scrape (PodMonitor), không
         # phải do vLLM. sum(...) gộp mọi pod: SLO tính cho cả dịch vụ, không theo từng pod.
@@ -71,6 +72,8 @@ spec:
         # Ingress ở envs/home/serving trỏ cổng theo tên `http`, nên tên dự kiến là
         # llm-serving-vllm-http@kubernetes (cần kiểm chứng trên cluster nhà).
         # code=~"5..": regex, mọi mã 500–599.
+        # Request không qua Traefik thì không được đếm: runner gọi thẳng Service vllm.llm-serving.svc:8000
+        # ở mọi môi trường, nên chuỗi này rỗng trong mọi lượt đánh giá (Thông số §7, Môi trường §13).
         - record: llm:error_ratio:rate5m
           expr: |
             sum(rate(traefik_service_requests_total{service=~"llm-serving-.*", code=~"5.."}[5m]))

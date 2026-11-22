@@ -345,3 +345,327 @@
   - Chưa kiểm: severity của `TargetDown` trong chart 92.1.1 (nếu là warning thì exporter chết sẽ không có tin Telegram).
 - **Links:** nhánh `docs/tr4-thesis-monitoring-design`; `docs/luan-van/README.md`, `docs/luan-van/03-04-giam-sat-slo-canh-bao.md`, `docs/luan-van/tai-lieu.bib`, `CONTRIBUTING.md` §1.
 - **Thesis:** §3.4 (bản nháp đầu); Hạn chế (chưa có dead man's switch; `LLMErrorRateHigh` nhạy với đợt lỗi ngắn ở tải thấp); chương 6 (hướng cải tiến cảnh báo lỗi).
+
+## 2026-11-18 – Luận văn: merge PR #51 (khung `docs/luan-van/`, mục 3.4)
+
+- **Task:** chung, TR3, TR4 · **Environment:** none
+- **Done:** CI xanh cả 6 job (alerts, docs, manifests, python 3.11 và 3.15, yaml); `mergeable` = MERGEABLE, không có review hay bình luận; merge bằng merge commit `626769e`, xoá nhánh `docs/tr4-thesis-monitoring-design`. Commit nhật ký merge PR #50 (`d6f03d9`) vào cùng PR này.
+- **Links:** PR #51.
+
+## 2026-11-20 – Kiểm tiến độ V2; review PR #46 (`vh3-delete` giữ 2 pod)
+
+- **Task:** chung (tiến độ V2), Q6 (review) · **Environment:** none
+- **Done:**
+  1. `git fetch`, xem commit trên mọi nhánh, PR, nhật ký của Quang và `van-hanh.md`.
+  2. Review PR #46: đọc diff `experiments/ops/vh.py` và test; ghép nhánh với `origin/main` trong một worktree tạm; chạy test và ruff.
+- **Results:**
+  - Tính tới 20/11, **V2 chưa chạy**. Commit cuối của Quang là 16/11 22:44. Phiên 16/11 trên 2 × RTX 4000 Ada (N = 2) là phiên thử: ĐG1 rút gọn ra C = 5,0 req/s; 2 lượt autoscaling invalid vì máy tạo tải thiếu CPU; 4 kịch bản VH chỉ là số thử. Dữ liệu thử nằm trong `runs/` trên máy của Quang, không có trong Git. Đóng băng dữ liệu theo lịch là 22/11.
+  - PR #46: ghép với `main` không xung đột. `pytest experiments` 162 passed, 4 failed; 4 test hỏng (`test_backup_notify`, rclone giả không chạy trên Windows) hỏng y hệt trên `main` (161 passed, 4 failed). `ruff check` và `ruff format --check` sạch. CI của PR xanh.
+  - Logic của PR đúng. Điểm chính tìm được: bước chờ pod thứ hai (tới 900 s) nằm trong cửa sổ tải cố định 780 s, và chưa có kiểm "sự cố xảy ra khi tải còn chạy". Nếu pod thứ hai Ready sau khoảng 780 s, lệnh xoá chạy khi tải đã dừng, 0 lỗi, vẫn chấm đạt. Ca thường không bị: cold start đo được 66–152 s, nên lệnh xoá rơi vào khoảng 190–270 s. vh2a có cùng rủi ro (chờ rollout tới 1800 s, tải 1200 s). Hai điểm nhỏ: lỗi của `scale_min(1)` trong `finally` đè lên lỗi gốc; bảng VH3 ở `05-moi-truong-danh-gia.md:474` chưa ghi điều kiện "còn ≥ 2 pod Ready".
+- **Incidents:** test của `experiments` không chạy trọn trên Windows (4 test cần shell script giả). Chỉ CI trên Linux chạy đủ.
+- **Links:** PR #46; `experiments/ops/vh.py`.
+- **Thesis:** §Hạn chế hoặc tiến độ: mốc V2 trễ so với lịch 14–15/11.
+
+## 2026-11-21 – Review PR #52 (kết quả V2) và đăng review PR #46
+
+- **Task:** chung (review), TR4, TR7 · **Environment:** none
+- **Done:**
+  1. `git fetch`: V2 đã chạy 18–19/11 trên VM 4 × RTX 4060 Ti. Kết luận "V2 chưa chạy" ở mục 20/11 là sai: commit V2 ghi ngày 19/11 nhưng tới tối 20/11 Quang mới push (PR #52 mở lúc 22:18).
+  2. Đọc trọn diff PR #52 (11 file, +944/−16): `capacity.json` của V2, `matrix-dg1-v2.yaml`, `matrix-v2.yaml`, `dg3.sh`, `test_runner.py`, `nguon-tu-lieu.md`, `quy-tac-viet.md`, nhật ký tuần 07 của Quang, `van-hanh.md`.
+  3. Đối chiếu số ở `nguon-tu-lieu.md` §3 với nhật ký và `capacity.json`. Kiểm `dg3.sh` bằng `bash -n` và shellcheck 0.11.0. Kiểm diff không có IP công khai. Đối chiếu nguyên nhân `AlertmanagerFailedToSendAlerts` với `common/platform/alertmanager-secret.sh` và `envs/cloud/provision/install-platform.sh`.
+  4. Đăng review Approve trên PR #52, và trên PR #46 (bản soạn 20/11, thêm điểm `vh3_kill` rút ra từ V2).
+- **Decision:** Approve cả hai PR, vì các điểm tìm được không làm sai số liệu V2 đã thu. Không chặn merge, để dữ liệu V2 và `vh.py` vào `main` trước mốc đóng băng 22/11.
+- **Results:**
+  - CI của PR #52 xanh 6/6; `bash -n` và shellcheck đạt; diff không có IP công khai.
+  - Khớp nguồn: GPU-giờ so với S4 (A2 × KB1 −75 %; A1 −10/−5/−7 %; A2 × KB2 −25…−28 %; A2 × KB3 −8 %), threshold A2 = 0,8 × 46,3 = 37, L0 trung bình 305,5 s.
+  - Điểm nêu trong review #52:
+    1. `AlertmanagerFailedToSendAlerts` ở V2 nhiều khả năng do PC không có `.env`, nên `alertmanager-secret.sh` bỏ qua Secret Telegram (`exit 0`). Chưa kiểm; cần console `cloud-platform` trong `runs/v2-evidence/`.
+    2. `quy-tac-viet.md` và `nguon-tu-lieu.md` mô tả luồng Markdown + pandoc, trái với quyết định chuyển sang Google Docs nằm trong cùng PR.
+    3. vh3-delete và vh3-kill cùng ghi 67,4 s, cần đối chiếu với `summary.json`.
+    4. `dg3.sh` khi timeout vẫn ghi `trigger_to_ready_s` nhỏ, trông như lượt hợp lệ.
+  - Ghi chú cho luận văn: C = 3,5 req/s là cận dưới (năng lực thật nằm trong [3,5; 4)); ĐG3 có độ phân giải 1 s.
+- **Deviations:** chưa nhận dữ liệu `runs/` của V2, nên chưa kiểm số nào trực tiếp từ dữ liệu thô. Chưa chạy pytest cục bộ trên nhánh PR #52, chỉ dựa vào CI.
+- **Links:** PR #52, PR #46 (review của `trinh-cloud`).
+- **Thesis:** §5.2 (C là cận dưới); §5.4 (độ phân giải ĐG3); §5.5 VH6 và Hạn chế (không có tin Telegram trong V2, nếu xác nhận nguyên nhân).
+
+## 2026-11-21 – Luận văn: tạm viết trên Google Docs
+
+- **Task:** chung (luận văn) · **Environment:** none
+- **Decision:** Trình đồng ý dùng Google Doc do Quang dựng ngày 20/11 làm bản gốc của luận văn, thay cho luồng Markdown + pandoc trong `docs/luan-van/` (quyết định 18/11). Đây là lựa chọn tạm: khi nội dung xong, hai người xét lại có chuyển sang LaTeX không. Doc xuất được .docx, khớp với việc khuôn của trường và góp ý của GVHD đi qua Word, và vẫn chuyển tiếp được (.docx → pandoc → LaTeX).
+  - Không chuyển sang LaTeX ngay: chưa biết khuôn của trường, đổi công cụ lần hai khi còn khoảng 2,5 tuần, và luận văn có ít công thức.
+  - Cách làm: Trình nháp từng mục bằng Markdown (agent viết, agent khác đối chiếu số với nguồn), rồi dán vào Doc. Sau khi dán, mọi sửa đổi chỉ làm trên Doc; góp ý bằng Comment/Suggesting. Trích dẫn đề nghị dùng Zotero cho Google Docs (nhập `tai-lieu.bib`, kiểu IEEE).
+  - Không nháp trong repo qua PR: sau khi dán vào Doc, hai bản dễ lệch nhau, và mỗi mục tốn thêm một PR.
+- **Deviations:** `docs/luan-van/README.md` và `quy-tac-viet.md` (§1, §7, §8, §10) vẫn tả luồng pandoc; sẽ sửa trong một PR sau khi PR #52 merge. Mục 3.4 (bản Markdown đã merge ở PR #51) chưa chép sang Doc, vì Doc chưa được share cho Trình.
+- **Thesis:** quy trình viết (lời mở đầu hoặc phần khai báo dùng AI agent, `quy-tac-viet.md` §9).
+
+## 2026-11-21 – Nhận dữ liệu V2; vẽ lại C1–C4 bản V2, sửa nhãn C4
+
+- **Task:** TR7, TR4 (VH6) · **Environment:** none (máy Trình, dữ liệu V2)
+- **Done:**
+  1. Nhận gói riêng của Quang (`v2-data-20261119.tar.gz`, `runs-all-20261120.tar.gz`, ghi chú). `sha256sum -c SHA256SUMS`: cả hai file nén OK. Giải nén `runs-all` vào `runs/` (đã gồm V2; không trùng file nào đã có). `v2-evidence/SHA256SUMS`: chỉ FAILED `vm-final-state.txt`, đúng như ghi chú của Quang (file ghi 3 s sau khi lập danh sách checksum).
+  2. Đối chiếu số VH6 trong ghi chú của Quang với `runs/v2-vm/v2-dg2/tables/alerts.csv` (47 dòng, 17 lượt): khớp (Results).
+  3. Vẽ lại C1–C4 trên `runs/v2-vm/v2-dg2` (`--baseline S4`) và xem bố cục từng hình: C1 (3 lượt), C2, C3 giữ nguyên; C4 lỗi (Incidents).
+  4. Sửa `plot_c4`: `_place_labels` đo từng nhãn và thử 12 vị trí, chọn vị trí phạt thấp nhất (đè nhãn hoặc dấu điểm > tràn khỏi ô > cắt vạch tham chiếu); `_near_groups` gộp có bắc cầu các điểm trung bình cách nhau dưới 4 pt thành một nhãn ("A1, A2"), điểm sau vẽ 1/4 diện tích để vẫn thấy điểm dưới; số lượt chuyển lên tiêu đề ô; trục tung chừa 14 % phía trên 100 %, không có vạch chia trên 100 %; chốt layout sau khi đặt nhãn. Thêm test.
+  5. `/code-review high`: 10 điểm. Sửa 7 (layout chạy lại khi lưu ở dpi khác; test chưa kiểm chấm từng lượt và layout lúc lưu; điểm nhỏ trong nhóm chưa là vật cản; gộp chưa bắc cầu; vẽ thừa một lần; tạo rồi xoá artist; tuple không tên). Một điểm là chính mục nhật ký này. Không sửa 2: nhãn tràn khỏi ô khi mọi vị trí đều tràn (ghi là hạn chế trong docstring, nhãn chỉ gồm tên cấu hình chưa gặp); nơi đặt hình (Decision).
+  6. Commit SVG C1–C4 và 4 bảng CSV vào `analysis/figures/v2-dg2/`. PNG cho Google Doc giữ ở máy Trình, không commit.
+- **Decision:**
+  - Số lượt của C4 ghi ở tiêu đề ô ("KB2  (n: S1 1, S4 1, A1 2, A2 3)"), nhãn cạnh điểm chỉ ghi tên cấu hình: nhãn "S4 (n=1)" dài hơn khoảng trống bên phải điểm 100 %, nên bị đẩy xuống dưới vạch N1, sát điểm A1 (dễ đọc nhầm). Bỏ: nới trục hoành tới khoảng 145 % (bỏ trống khoảng 30 % bề ngang mỗi ô); hai hàng nhãn phía trên 100 % (khoảng trống trên trục quá lớn).
+  - D73: hình và 4 bảng CSV của V2 nằm ở `analysis/figures/v2-dg2/`, như LT5–LT8 (hình cùng CSV). Dữ liệu thô vẫn giữ riêng, vì console có IP máy thuê; các bảng không có IP hay đường dẫn máy (đã grep). Bỏ: chỉ để trong `runs/` (không kiểm được từ repo); `docs/images/` (CONTRIBUTING dành cho hình vẽ sinh từ `docs/diagrams/`).
+- **Results:**
+  - VH6 (ĐG2 V2, 17 lượt): `LLMSLOBurnFast` 8 đợt, trong đó 7 đợt tính được: bắt đầu kêu 204–374 s sau đầu pha chính, `client_bad_ratio` 0,27–0,73, `false_page` = False ở cả 7. Đợt thứ 8 (A2-KB3-2, −176 s) còn sót từ lượt trước (`firing_at_start` = True). `KubeHpaMaxedOut` 5 đợt (A1 × KB2 hai lượt, A1 × KB3, A2 × KB3 hai lượt). `AlertmanagerFailedToSendAlerts` và `AlertmanagerClusterFailedToSendAlerts` kêu ở cả 17/17 lượt.
+  - `cells.csv` (trung bình các lượt counted): SLO attainment 100 % ở mọi ô của S4, A1 và ở A2 × KB1, KB3; A2 × KB2 80,0 %; S1 × KB2 12,5 %; S1 × KB3 0 %. GPU-giờ so với S4: A2 25 % (KB1), 73 % (KB2), 92 % (KB3); A1 90 %, 95 %, 93 %; S1 25 %.
+  - `pytest analysis` 120 passed; `ruff check`, `ruff format --check` sạch. Chạy lại `analysis.charts` ra SVG giống từng byte. Thử bật lại constrained layout rồi lưu ở 200 dpi: bề rộng ô C4 đổi từ 0,788 lên 0,821 bề rộng hình, nên phải chốt layout.
+- **Incidents:**
+  - C4 bản chạy thử 20/11: nhãn "S4 (n=1)" cắt vạch N1 ở cả 3 ô; nhãn S1 ở KB3 đè lên số 0 của trục x; điểm A2 (92,0 %) che điểm A1 (92,7 %) ở KB3. Nguyên nhân: hướng nhãn cố định theo cấu hình (`LABEL_OFFSET`). Sửa ở bước 4.
+  - File zip của gói nằm trong `docs/` (chưa track): chuyển ra thư mục cục bộ ngoài Git để không commit nhầm 25 MB dữ liệu có IP máy thuê.
+- **Deviations:** Môi trường §14.2 ghi `analysis.charts` ghi hình vào `runs/<phiên>/figures/`; bản V2 dùng `--out analysis/figures/v2-dg2` để đưa vào Git. C5, C6 chưa làm.
+- **Links:** nhánh `fix/tr7-c4-labels`; `analysis/charts.py` (`plot_c4`, `_place_labels`, `_near_groups`), `analysis/tests/test_charts.py`, `analysis/figures/v2-dg2/`.
+- **Thesis:** §5.3 (C1–C4 bản V2); §5.5 VH6 (số đợt cảnh báo); Hạn chế (V2 không có tin Telegram: `FailedToSend` kêu suốt 17 lượt, nhiều khả năng thiếu Secret Telegram, không kiểm trực tiếp được).
+
+## 2026-11-21 – TR7: merge PR #53 (nhãn C4, hình và bảng V2)
+
+- **Task:** TR7 · **Environment:** none
+- **Done:** CI xanh cả 6 job (alerts, docs, manifests, yaml, python 3.11, python 3.15); `mergeable` = MERGEABLE, 0 review, 0 bình luận. Merge bằng merge commit, xoá nhánh `fix/tr7-c4-labels`. Xoá luôn nhánh `docs/tr4-log-pr51`, vì 4 commit nhật ký của nó đã vào `main` qua PR này.
+- **Links:** PR #53, merge commit `b0d8b2c`.
+
+## 2026-11-21 – TR8: LT5, LT6 thêm dữ liệu V2
+
+- **Task:** TR8 (LT5, LT6) · **Environment:** none (dữ liệu V2 đã đo 18–19/11)
+- **Done:**
+  1. Chạy `lt5_little` trên dữ liệu thô của runner V2: ĐG1 (`runs/dg1-v2-4060ti`, 5 mức, 1 replica) và ĐG2 (`runs/v2-vm/v2-dg2`, 17 lượt, 1–4 replica), k = 1. Tạo lại `analysis/figures/lt5-little.csv` (27 → 80 dòng; 27 dòng cũ không đổi, ngoài cột `session` mới).
+  2. Chạy `lt6_gpu_util` thêm `runs/dg1-v2-4060ti/capacity.json`; tạo lại `lt6-gpu-util.csv` (18 → 23 dòng; dòng cũ không đổi, ngoài cột `session`).
+  3. `lt5_little`, `lt6_gpu_util`: thêm cột `session` vào CSV. `lt_charts.py`: bảng `SOURCE_GROUP` tra nhóm theo (env, session), thêm nhóm "V2, model 3B" (màu thứ 4), in cảnh báo khi có nguồn chưa có trong bảng; bỏ cả cửa sổ `main` của KB3; tiêu đề ô LT6 tự xuống dòng khi kết luận dài. Vẽ lại `lt5-little.svg`, `lt6-gpu-util.svg`; PNG cho Doc ở `.work/luan-van/hinh/`.
+  4. Kiểm dự đoán LT6 "A1 × KB1 gần bằng S4" trên bảng ĐG2 V2 và `pods_timeline.json` của A1-KB1.
+  5. Ghi kết quả vào `van-hanh.md` (LT5, LT6) và Kế hoạch (dòng LT1–LT8).
+- **Decision:** D74. LT5 lấy V2 từ dữ liệu thô runner thay vì `capacity.json`, vì có thêm edge, L lấy mẫu, cận k và các cửa sổ nhiều replica. LT6 lấy `capacity.json` trong `runs/` (phần `curves` trùng bản của PR #52), không đợi PR #52 merge.
+- **Results:**
+  - LT5 V2: 27/27 cửa sổ chưa xếp hàng lệch −5,8…+4,9 % (z trung bình −0,42; 3 cửa sổ |z| > 2 đều lúc tải đang đổi, edge âm). 13 cửa sổ 4 replica lệch −5,8…+4,9 %. Ngoài dải chỉ có ĐG1 λ = 5 (1,43 C): −21,4 %, client −20,4 %, edge −51,7. Cận k của cả 22 lượt chứa 1 (giao [0,9973; 1,0076]). Hình: 52/54 cửa sổ trong ±15 %.
+  - LT6 V2 (C = 3,5, threshold A2 37): util = 1,000 ở cả 5 mức (0,57–1,43 C), không tách được; A2 4,6×, KV 3,9×, waiting ∞. KV đứng yên khi quá tải nặng (0,240 → 0,241).
+  - Dự đoán A1 × KB1: L = 11,3–12,0 > 4,4; A1 đủ 4 replica Ready lúc t = 231–246 s rồi giữ tới hết tải; pha `steady` 3,66–3,73 replica, GPU-giây 97–98 % S4 (cả lượt 90–91 %); A2 giữ 1 replica. Đúng dự đoán.
+- **Incidents:** lần chạy đầu, `lt6_gpu_util.summary` gom theo tên file nên gộp `capacity.json` V2 với `capacity.json` 0,5B ở nhà ("vừa = λ [4, 6, 8, 2]"). Bản sửa đầu gom theo (env, tên file); `/code-review high` chỉ ra khoá này vẫn gộp V2 với V1 (A4000) và lượt thử 4000 Ada (cùng env cloud, cùng tên file). Sửa gốc: thêm cột `session`, gom và tô màu theo (env, session), thêm test cho cả hai ca trùng tên. Hai CSV chỉ thêm cột, số liệu không đổi. Review còn nêu: tiêu đề LT6 có thể ngắt giữa tên phiên có gạch nối (đã đặt `break_on_hyphens=False`); phiên V2 đổi tên sẽ bị tô xám mà không báo (đã thêm cảnh báo); `van-hanh.md` ghi SE với 24 mẫu, trong khi V2 có 48 mẫu (đã sửa). CI job `docs` đỏ ở lần push đầu: Trình đã thêm "thêm V2 ngày 21/11" vào tiêu đề mục LT5, LT6 của `van-hanh.md`, làm hỏng anchor mà Kiến trúc §10.1 (`03-kien-truc-autoscaling.md`, dòng 384) trỏ tới. Lychee chạy cục bộ trước đó chỉ trên hai file đã sửa (chạy cả repo thì 53 lỗi đường dẫn cũ, CI bỏ qua, che mất lỗi này). Sửa: giữ nguyên tiêu đề, ghi "Thêm dữ liệu V2 ngày 21/11" ở dòng đầu mục; chạy lại lychee trên cả repo với danh sách `--exclude` tạo giống job `docs`: 0 lỗi. Khi ghi `van-hanh.md`, câu về cửa sổ 4 replica ban đầu ghi sai khoảng lệch (−2,6…+4,9 %, sót pha `ramp` S4-KB3); đã kiểm lại bằng số và sửa thành −5,8…+4,9 %.
+- **Deviations:** LT6 vẫn dùng các bậc λ của ĐG1 thay cho lượt tải tăng dần (như 16/11). V2 không có mức dưới 0,57 C nên không thêm điểm kiểm phần cong của 1 − e^(−L).
+- **Links:** nhánh `feat/tr8-lt5-lt6-v2`; `analysis/lt_charts.py`, `analysis/lt6_gpu_util.py`, `analysis/tests/test_lt_charts.py`, `analysis/tests/test_lt6_gpu_util.py`, `analysis/figures/lt5-little.*`, `lt6-gpu-util.*`, `docs/nhat-ky/van-hanh.md` (LT5, LT6), `docs/chi-tiet/06-ke-hoach-quan-ly.md`.
+- **Thesis:** §5 kiểm chứng lý thuyết LT5, LT6: Hình LT5 (54 cửa sổ, 3 môi trường), Hình LT6 (3 model); câu "A2 đo đúng L cả khi 4 replica trên GPU thật"; §5 ĐG2: A1 × KB1 ≈ S4 có cơ chế giải thích (util bão hoà khi L > 4,4).
+
+## 2026-11-21 – TR8: merge PR #54 (LT5, LT6 thêm V2)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** lần push đầu, CI job `docs` đỏ vì anchor mục LT6 bị đổi (mục ngay trên, Incidents); sửa và push lại thì cả 6 job xanh (alerts, docs, manifests, yaml, python 3.11, python 3.15). `mergeable` = MERGEABLE, 0 review, 0 bình luận. Merge bằng merge commit; xoá nhánh `feat/tr8-lt5-lt6-v2` và `docs/tr7-log-pr53` (commit nhật ký merge #53 đã vào `main` qua PR này).
+- **Links:** PR #54, merge commit `041c6f7`.
+
+## 2026-11-21 – Luận văn: nháp bảng nghiệm thu F1–F7, N1–N8 (mục 5.6)
+
+- **Task:** TR8 (luận văn) · **Environment:** none
+- **Done:**
+  1. Đối chiếu các số của nhật ký Quang (18–19/11) và `nguon-tu-lieu.md` §3 với dữ liệu thô V2: `runs.csv`, `phases.csv`, `alerts.csv` của ĐG2; `summary.json` của 6 kịch bản VH; `summary.txt` của 5 lượt ĐG3.
+  2. Tìm bằng chứng cho F1–F7 trong `van-hanh.md`, nhật ký Trình tuần 04–06, Thông số §3, `install-platform.sh`, `Makefile` (`alerts-coverage`) và `vh.py` bản đã chạy trên V2.
+  3. Viết nháp mục 5.6 bằng Markdown, ngoài Git, chờ dán vào Google Doc. Nháp gồm bảng N1–N8, bảng F1–F7 và khuyến nghị chọn A2, mỗi số kèm dòng nguồn.
+- **Decision:** D75. Cột kết luận dùng năm mức: Đạt, Đạt một phần, Không đạt, Báo cáo, Chưa đo.
+  - F2 ghi Đạt dù T6 ở nhà và T7 chưa chạy: ĐG2 đã cho thấy scale 1 → 4 rồi giảm lại trên GPU thật, còn T7 (A4) chỉ ở mức Could.
+  - N4 chỉ dẫn 3 lượt A2 × KB2, không dẫn 5 lượt.
+  - N8 ghi Chưa đo.
+- **Results:**
+  - Đạt: N1 (A2 × KB1 và A2 × KB3 pha `sustain`, 100% ở cả 4 lượt); N2a (79,7–81,5 s); N3 ở KB1 (25% GPU-giờ của S4, SLO attainment chênh 0 điểm); N4; N5 (77,7 / 305,5 s = 25,4%); N6 (fallback 16,8 s, dựng lại 8 phút 22 giây); N7 (S1 × KB3 104,5 s; 0 page giả trong 17 lượt).
+  - Báo cáo: N2b (409–430 s). Chưa đo: N8 (người thứ hai dựng lại cluster; tổng chi phí).
+  - F1, F2, F4 đạt. Đạt một phần: F3 (chưa cập nhật qua Git rồi `git revert`), F5 (chưa có ảnh chụp dashboard trên GPU thật), F6 (chưa có tin tới Telegram thật). F7 chưa đo (checklist chưa chạy).
+  - Mức Must còn thiếu: VH1, VH2 ở nhà; ảnh chụp dashboard trên GPU thật; tin Telegram thật.
+- **Incidents:** hai điểm lệch giữa nhật ký và dữ liệu thô.
+  - Thứ tự ĐG3: `nguon-tu-lieu.md` §6 ghi "3 lượt L2 chạy sau L0". Theo `pod_created`, L2-2 (18:44:33Z) chạy trước L0-2 (18:46:48Z); chỉ L2-1 và L2-3 chạy sau. L2-2 và L2-1 cùng cho 76 s, nên việc compile cache được tạo lại không làm đổi kết quả L2.
+  - Pha `drop`: câu "pha `drop` của 5 lượt KB2: 0 lỗi" đúng về số lỗi. Tuy vậy, hai lượt A1 giữ 4 replica suốt pha (`scale_downs` = 0), nên chỉ 3 lượt A2 (`scale_downs` = 3) là bằng chứng cho scale-down an toàn.
+- **Links:** không đổi file nào trong repo ngoài nhật ký này. Nguồn: `runs/v2-vm/` (gói dữ liệu V2).
+- **Thesis:** §5.6 bảng nghiệm thu và khuyến nghị cấu hình; §5 Hạn chế (sửa câu về thứ tự lượt L2).
+
+## 2026-11-21 – Luận văn: nháp mục 5.3 (autoscaling so với cấu hình tĩnh)
+
+- **Task:** TR7, TR8 (luận văn) · **Environment:** none
+- **Done:**
+  1. Đọc thiết kế ĐG2 (Thông số §4, §6–§9.3; Môi trường §11, §15, §16), `quy-tac-viet.md` và `nguon-tu-lieu.md` (nhánh của PR #52), nhật ký Quang 18–19/11.
+  2. Tính thêm từ dữ liệu thô V2 bằng một script cục bộ, đọc `events.jsonl`, `metrics.csv.gz`, access log vLLM và `requests.csv`. Các số tính được:
+     - mốc rescale của HPA;
+     - hàng đợi theo pod;
+     - số request mỗi pod nhận;
+     - tín hiệu A2;
+     - request không đạt SLO, tách theo lúc gửi trước hay sau khi pod mới đầu tiên Ready.
+  3. Phiên Claude viết nháp 5.3 bằng Markdown, ngoài Git. Nháp gồm Bảng 5.3a (11 ô, giá trị từng lượt), hình C4, hình C1 của lượt 1 và 4 tiểu mục; mỗi đoạn có số đều kèm dòng nguồn.
+  4. Một agent khác (Opus, effort xhigh) đối chiếu độc lập. Phiên chính tính lại các lỗi được báo, rồi sửa 5 lỗi chính và 6 lỗi nhẹ. Sửa thêm 2 câu của nháp 5.6 cho khớp với 5.3. Trình chưa đọc lại nháp.
+- **Decision:** D76.
+  - Thân bài 5.3 dùng Bảng 5.3a, hình C4 và hình C1 của lượt 1. C2, C3 và C1 của lượt 2, 3 đưa vào phụ lục.
+  - Thêm phép kiểm cách chia request theo pod để có số cho nguyên nhân của A2 × KB2.
+- **Results:**
+  - **A2 × KB2, cách chia request:** trong [360; 600) s, khi cả 4 pod đã Ready, pod cũ nhận 24,3–25,7% số request mới, các pod mới nhận 23,3–26,1%. Số này đếm từ access log; tổng theo pod khớp đúng `n_sent`. Pod cũ xử lý 3,60–3,78 req/s, nhưng trong 240 s đó hàng đợi chỉ giảm từ 370–400 xuống 38–80 request.
+  - **A2 × KB2, request không đạt SLO trong pha `spike`:** 42–44% được gửi trước lúc pod mới đầu tiên Ready (319,7–321,5 s), 56–58% gửi sau đó.
+  - **Nhịp scale của A2 × KB2:** HPA đặt đủ 4 replica sau 30–36 s kể từ lúc tải tăng. A2 về 1 replica sau 369–420 s kể từ lúc tải giảm.
+  - **A2 × KB3, pha `sustain`:**
+    - Tín hiệu A2 dao động 64–152 (trung bình 101,1 và 106,1), và 65–74% số mẫu không quá 111 (= 3 × 37).
+    - Hai mẫu liên tiếp trên 111 cách nhau nhiều nhất 120 s và 95 s, ngắn hơn cửa sổ 300 s. Vì vậy A2 giữ 4 replica và không có flapping.
+  - **A1:** chỉ bớt pod 308–315 s sau khi kịch bản tải kết thúc, ở cả 5 lượt.
+  - **Chưa giải thích:** cold start L2 trong ĐG2 là 65–66 s (tính từ lúc tạo pod), trong ĐG3 là 76–81 s (tính từ lệnh scale). Chênh 10–15 s; đã ghi lại để xử lý khi viết mục 5.4.
+- **Incidents:** bản đầu ước lượng số request mỗi pod nhận bằng Δ`vllm_success_total` + Δ(running + waiting), ra 21–24% cho pod cũ.
+  - Nguyên nhân: `vllm_success_total` không đếm request timeout. Các request này (37, 82, 93 ở ba lượt) đều nằm ở pod cũ và bị cắt trong cửa sổ đo.
+  - Agent đối chiếu phát hiện lỗi. Đã sửa bằng cách đếm access log.
+- **Links:** trong repo chỉ đổi nhật ký này. Nháp ở `.work/luan-van/05-03-autoscaling-so-voi-tinh.md`, ngoài Git. Nguồn: `runs/v2-vm/v2-dg2/` (gói dữ liệu V2).
+- **Thesis:**
+  - §5.3: nháp xong, đã đối chiếu.
+  - §5.6: sửa dòng N1, vì pha được chấm của KB2 là `pre`, `spike`, `drop`.
+  - §5.7 Hạn chế: chưa kiểm theo từng request câu "request vi phạm sau lúc pod mới Ready phần lớn xếp sau hàng đợi cũ".
+  - §6 hướng phát triển: định tuyến theo hàng đợi; giữ tối thiểu 2 replica.
+
+## 2026-11-21 – Luận văn: nháp mục 5.5, phần VH4 và VH6
+
+- **Task:** TR6, TR8 (luận văn) · **Environment:** none (dữ liệu V2 đã thu)
+- **Done:**
+  1. Đọc dữ liệu VH4 của ba lượt: V2 (18/11, 4 × RTX 4060 Ti), máy thuê thử N = 2 (16/11), simulator (09/11). Đối chiếu với hàm `vh4` trong `experiments/ops/vh.py`; hàm này trùng với bản đã chạy trên V2 (`runs/v2-evidence/config/`).
+  2. Chia lượt VH4 của V2 thành ba khoảng theo mốc chặn và mốc gỡ chặn, tính SLO bằng `analysis.metrics`, cùng định nghĩa với bảng ĐG2. Tính thêm TPOT theo từng phút.
+  3. VH6: đọc `runs.csv`, `alerts.csv` của 17 lượt ĐG2. Tính tỷ lệ request xấu lớn nhất trên cửa sổ 1 phút, giữa mốc vi phạm và mốc page.
+  4. Viết nháp. Agent Opus (xhigh) đối chiếu và tự tính lại ba bảng: khớp hết. Agent tìm ra 12 lỗi ở các câu suy luận và mô tả cách đo; đã sửa cả 12.
+  5. Sửa dòng F6 của nháp 5.6 theo cùng cách nói.
+- **Decision:** D77. Phần VH4, VH6 viết chung một file, tạm đánh số tiểu mục theo mã kịch bản (5.5.4, 5.5.6).
+  - VH4 lấy lượt V2 làm số chính thức. Hai lượt thử chỉ dùng để thấy thời gian fallback ít phụ thuộc môi trường, không dùng cho kết luận N6.
+  - Không viết thời điểm pod Ready như một sự thật, vì lượt VH4 không ghi mốc Ready. TPOT chỉ được dùng làm bằng chứng gián tiếp.
+- **Results:**
+  - **VH4, lượt V2** (tải trung bình 1,75 req/s = 0,5 C, chặn 301 s):
+    - Fallback lên 4 replica sau 16,8 s, đạt N6 (≤ 30 s). Lượt thử: 17,2 s (N = 2), 18,8 s (simulator).
+    - SLO attainment 100% ở cả ba khoảng, 0 lỗi / 1.263 request.
+    - TTFT p95: 305 → 254 → 221 ms. TPOT p50: 30,7 → 25,7 → 25,3 ms.
+  - **VH4, TPOT theo phút:** giảm từ 30,6–31,2 ms xuống 25,2–25,5 ms từ phút thứ tư. Hai mức này trùng với mức của 1 replica (A2 × KB1: 30,9 và 31,8 ms) và 4 replica (S4 × KB1: 25,3 ms) ở cùng 0,5 C.
+  - **VH4, gỡ chặn:** condition `Fallback` hết trong ≤ 5,3 s, ở lần đọc thứ hai. Không đo lúc về 1 replica, vì tải dừng 305 s sau khi gỡ chặn.
+  - **VH6:**
+    - 7/17 lượt có vi phạm SLO theo log client. Mỗi lượt có đúng 1 page `LLMSLOBurnFast`, sau 99–111 s; riêng S1 × KB3 là 104,5 s, đạt N7.
+    - 10 lượt không vi phạm, 0 page; 0 page giả.
+    - Cửa sổ 1 phút đạt 68–100% request xấu trước lúc page, nên kêu nhanh hơn LT8 (215–242 s ở x = 0,3; 159–163 s ở x = 0,6).
+- **Incidents:** lỗi trong nháp đầu, do agent đối chiếu phát hiện.
+  - Bản đầu dẫn dòng "không có TELEGRAM_BOT_TOKEN" trong console runner làm bằng chứng máy điều khiển thiếu `.env`. Bằng chứng đó không dùng được: ma trận ĐG2 chạy trên VM, repo rsync lên đã bỏ `.env`, và runner chỉ đọc biến môi trường. Đã thay bằng dòng Decision "PC chưa có `.env`" trong nhật ký Quang 18/11.
+  - Câu "chỉ heartbeat bên ngoài mới phát hiện được lỗi gửi" sai: heartbeat đi qua một receiver khác nên vẫn tới nơi.
+- **Deviations:**
+  - Trong ĐG2, máy tạo tải gọi thẳng Service `vllm.llm-serving.svc:8000`, không qua Traefik. Vì vậy `LLMErrorRateHigh` (đo 5xx tại Traefik) không có dữ liệu, và VH6 không kiểm được quy tắc này. Môi trường §13 không nêu điểm này.
+  - VH4 và VH6 chưa chạy ở nhà (Môi trường §13 ghi "Nhà; GPU thuê").
+  - Lỗ hổng định tuyến thấy trong V2: `AlertmanagerFailedToSendAlerts` ở mức warning nên không được gửi; `AlertmanagerClusterFailedToSendAlerts` ở mức critical thì đi tới Telegram, tức đúng đường đang hỏng. Đề xuất kiểm đầu-cuối lúc dựng cluster bằng một tin thử; chưa làm.
+- **Links:** trong repo chỉ đổi nhật ký này. Nháp ở `.work/luan-van/05-05b-vh4-vh6.md`, ngoài Git. Nguồn: `runs/v2-vm/ops-vh4-20261118-183127/`, `runs/v2-vm/v2-dg2/tables/`.
+- **Thesis:**
+  - §5.5.4, §5.5.6 (số tiểu mục tạm).
+  - §5.6, dòng N6, N7, F6.
+  - §5.7 Hạn chế: VH4 chỉ 1 lượt ở tải thấp; `LLMErrorRateHigh` không được kiểm; vùng 20–23% của N7 chưa đo.
+  - §6 hướng phát triển: kiểm đầu-cuối đường cảnh báo.
+  - Độ dài: ba nháp chương 5 của Trình có khoảng 8.400 chữ, nên rút gọn khi ghép chương.
+
+## 2026-11-21 – Đồng bộ tài liệu thiết kế với cái đã làm (PR đồng bộ, phần a)
+
+- **Task:** TR4, TR8 · **Environment:** none
+- **Done:**
+  1. Tạo nhánh `docs/tr4-sync-design-docs` từ `docs/tr8-log-pr54` (đã có 4 commit nhật ký chưa PR), để gộp vào cùng PR.
+  2. Sửa các điểm lệch ghi ở mục 18/11 (Deviations) và D71:
+     - comment `LLMErrorRateHigh` trong `llm.yaml`, Vận hành §3.2 và runbook: `for: 1m` không lọc được đợt lỗi ngắn;
+     - Vận hành §2.3: bỏ câu sai về `1 − tốt/tổng`;
+     - Vận hành §2.1: nguồn của TPOT;
+     - Vận hành §11: unit test chỉ có cặp cửa sổ 5m/1m;
+     - Thông số §9.4: retention ở cloud, exporter GPU;
+     - Thông số §7 và Kiến trúc §3.5: máy tạo tải gọi thẳng Service;
+     - hai runbook và Vận hành §4.3: bỏ "thắt giới hạn tốc độ";
+     - `slo.yaml`: bucket `le="2.5"` đã xác nhận trên GPU; README dashboard: hàng KEDA.
+  3. Môi trường §13: thêm giới hạn của VH6 trong V2 (`LLMErrorRateHigh` không có dữ liệu). Môi trường §16: điền bảng nghiệm thu từ nháp 5.6 (D75).
+  4. Kiểm điểm còn để ngỏ: severity của `TargetDown` trong chart 92.1.1.
+- **Decision:**
+  - D78: TPOT trong SLI và nghiệm thu là trung bình mỗi request (`vllm:request_time_per_output_token_seconds`); ITL chỉ dùng để chẩn đoán. JSON dashboard giữ nguyên, vì sửa sẽ làm ConfigMap ở nhà đổi.
+  - D79: `TargetDown` không tới Telegram; chỉ ghi là hạn chế, chưa đổi values.
+  - D80: tách bước đồng bộ thành 3 PR: tài liệu (PR này), script tính số vào `analysis/`, và Hình 7. Tên máy V2 trong `docs/chi-tiet/` thuộc Q2 nên báo Quang, không sửa ở đây.
+- **Results:**
+  - Mã vLLM v0.31.0 (`vllm/v1/metrics/stats.py`): `mean_time_per_output_token = decode_time / (num_generation_tokens − 1)`, với `decode_time = last_token_ts − first_token_ts`. Công thức này trùng công thức TPOT ở Môi trường §15.
+  - Chart kube-prometheus-stack 92.1.1 (`templates/prometheus/rules-1.14/general.rules.yaml`): `TargetDown` có severity mặc định `warning`, `Watchdog` có `none`. Repo không đặt `customRules`, mà định tuyến chỉ gửi `page`, `ticket` và `critical`, nên exporter chết sẽ không có tin Telegram.
+  - Retention Prometheus ở cloud là mặc định 10d của chart (`values.yaml`, `prometheusSpec.retention`). `retention: 72h` ở values chung là của `alertmanagerSpec`.
+  - `make alerts-test`: SUCCESS. `yamllint -s common/observability`: đạt. lychee trên các file đã sửa: 0 lỗi. `llm.yaml` và `slo.yaml` sau khi parse YAML giống hệt `origin/main` (chỉ đổi comment), nên Argo CD ở nhà không thấy thay đổi.
+- **Incidents:** `/code-review high` trên nhánh báo 9 điểm. Sửa 6 điểm:
+  - câu truy vấn trong runbook `LLMErrorRateHigh` dùng cửa sổ 5 phút nên không cho biết lỗi đã dừng; đổi sang `increase(...[1m])`;
+  - Vận hành §4.2 còn "Thắt giới hạn tốc độ" (lần grep đầu chỉ tìm chữ thường nên sót);
+  - runner gọi thẳng Service ở mọi môi trường (`envs/{home,sim,cloud}/experiments/matrix*.yaml`), không riêng V2;
+  - Kiến trúc Hình 2, bảng thành phần và luồng request còn ghi Traefik giới hạn tốc độ;
+  - thêm promtool test cho đợt 5 lỗi 503 ở 1 req/s (firing ở phút 12 và 14, hết ở phút 16). Thử đột biến bỏ đợt lỗi thì test FAILED;
+  - comment nguồn ở `docs/luan-van/03-04-…` còn ghi 3 điểm lệch đã sửa.
+
+  Hai điểm F3 và N4 được viết rõ hơn nhưng giữ nguyên mức. F3 có triển khai qua Git và rolling update trên VM, chỉ thiếu `git revert`. N4 theo Thông số §4 lấy nguồn từ ĐG2, VH1, VH2, không đòi chạy ở nhà. Mô tả panel trong JSON dashboard (`slo-cost.json` ghi "cloud 15 ngày", `serving-gpu.json` ghi "ngưỡng TPOT của SLO") để lại, vì sửa sẽ làm ConfigMap ở nhà đổi (D78).
+- **Deviations:** tài liệu `docs/chi-tiet/` vẫn ghi máy V2 là 4 × RTX A4000, trong khi dữ liệu V2 chạy trên 4 × RTX 4060 Ti 16 GB. Phần này chưa sửa (D80).
+- **Links:** nhánh `docs/tr4-sync-design-docs`; `docs/chi-tiet/00-thong-so.md`, `03-kien-truc-autoscaling.md`, `04-van-hanh.md`, `05-moi-truong-danh-gia.md`; `docs/runbooks/`; `common/observability/`.
+- **Thesis:** §3.4 (định nghĩa TPOT và ITL; `TargetDown` vào Hạn chế); §5.6 (bảng nghiệm thu, đã có trong Môi trường §16); §5.7 Hạn chế (VH6 không kiểm `LLMErrorRateHigh`).
+
+## 2026-11-21 – Merge PR #55 (đồng bộ tài liệu thiết kế)
+
+- **Task:** TR4, TR8 · **Environment:** none
+- **Done:**
+  1. CI xanh cả 6 job (alerts, docs, manifests, python 3.11 và 3.15, yaml); `mergeable` = MERGEABLE; không có review hay bình luận.
+  2. Merge bằng merge commit `34ebbfd`, xoá nhánh `docs/tr4-sync-design-docs`.
+  3. Xoá nhánh remote `docs/tr8-log-pr54`, vì 4 commit của nó đã nằm trong PR #55.
+- **Decision:** điều kiện merge 4 đạt: các object được render ra không đổi (hai file rule chỉ đổi comment, JSON dashboard và values giữ nguyên), nên Argo CD ở nhà không thấy thay đổi.
+- **Links:** PR #55.
+
+## 2026-11-21 – Đưa script số phụ của mục 5.3 vào `analysis/` (dg2_a2)
+
+- **Task:** TR8 · **Environment:** none (dữ liệu V2 ở `runs/v2-vm/v2-dg2`)
+- **Done:**
+  1. Viết `analysis/dg2_a2.py` từ script cục bộ dùng cho nháp 5.3: docstring theo CONTRIBUTING §5, nhận thư mục phiên làm tham số, chọn lượt theo `tables/runs.csv` (lần thử `counted` của chính phiên) thay cho danh sách run_id ghi cứng. Mức so tín hiệu A2 = (max_replicas − 1) × threshold, đọc từ runs.csv. Định nghĩa đạt SLO dùng `metrics.Request.good`; cửa sổ phần 4 lấy từ `phases_s`. Dùng lại `lt5_little.server_series` (tín hiệu A2) và `lt7_hpa.parse_k8s_time`.
+  2. Test `analysis/tests/test_dg2_a2.py` (12 test): hàm thuần và một phiên giả, trong đó pod cũ giữ hàng đợi 50 request tới 640 s, pod mới Ready lúc 320 s, nên mọi số kiểm đều tính tay được.
+  3. Thêm cách chạy vào Môi trường §14.2; sửa comment phụ thuộc trong `analysis/pyproject.toml`.
+  4. `/code-review high` trên nhánh, sửa các điểm được xác nhận (mục Incidents).
+- **Decision:** D81: tách bước (b) của D80 thành 2 PR xếp chồng: (b1) `dg2_a2` cho mục 5.3; (b2) `vh4_windows`, `vh6_window` cho mục 5.5. b2 đặt trên b1 vì cả hai sửa cùng một câu ở Môi trường §14.2. `dg2_a2` cộng test đã khoảng 660 dòng và không tách nhỏ hơn được, nên đầu PR ghi phần nào cần đọc kỹ. Phương án bỏ: một PR khoảng 950 dòng; giữ script ở `.work/` (Quang không kiểm lại được).
+- **Results:**
+  - Chạy trên `runs/v2-vm/v2-dg2`: mọi số của 5 phần trùng bản cũ. Chỗ khác: thêm dòng A2-KB1-1/2 ở phần 1 (không có rescale, in `-`) và S1-KB2-1 ở phần 2 (hàng đợi lớn nhất 1.301, > 0 trong [264; 1054] s); pod xếp theo mẫu metric đầu tiên; phần 4 thêm mẫu > 111 đầu tiên: 714, 709, 702 s (A2-KB2-1/2/3), 364, 324 s (A2-KB3-1/2).
+  - KB3, cửa sổ [300; 1020) s: khoảng từ mép cửa sổ tới mẫu > 111 gần nhất là 64 s và 56 s (A2-KB3-1), 24 s và 1 s (A2-KB3-2); khoảng lớn nhất giữa hai mẫu > 111 là 120 s và 95 s. Mọi khoảng đều < 300 s, nên suốt pha sustain cửa sổ ổn định scale-down luôn có mẫu chặn việc bớt pod. Số này củng cố khẳng định ở nháp 5.3.
+  - Không có event `SuccessfulRescale` nào bị gộp (count > 1) trong 17 lượt V2. Các event có count 8–9 là `ScalingReplicaSet` của Deployment, gộp qua nhiều lượt. Mốc rescale trong nháp 5.3 vì vậy không bị ảnh hưởng.
+  - `uv run --project analysis pytest analysis`: 143 passed (Python 3.15); `test_dg2_a2.py` trên Python 3.11: 12 passed. `ruff check`, `ruff format --check`: đạt.
+- **Incidents:**
+  - Bản đầu dùng f-string lồng nháy kép cùng loại, cú pháp chỉ có từ Python 3.12 (PEP 701), trong khi CONTRIBUTING §5 yêu cầu 3.11. Đã sửa trước commit.
+  - `/code-review high` báo 10 điểm, sửa 9:
+    - lấy cả dòng runs.csv của phiên khác (build_tables chạy nhiều phiên thì ghi chung vào bảng phiên đầu), làm hỏng đường dẫn;
+    - một pod có nhiều chuỗi cùng mốc thì bị ghi đè thay vì cộng;
+    - chia cho 0 ở phần 3 khi cửa sổ không có request;
+    - thiếu `events.jsonl` làm dừng cả báo cáo;
+    - phần 4 không cho thấy hai mép cửa sổ (thêm mẫu vượt mức đầu tiên);
+    - bỏ qua lượt thiếu threshold mà không báo;
+    - cửa sổ phần 4 ghi cứng thay vì lấy từ pha;
+    - viết lại hàm đã có trong package;
+    - event `SuccessfulRescale` bị gộp: runner chỉ lưu `lastTimestamp`, nên không khôi phục được mốc các lần trước; bản mới in "(×count, mốc lần cuối)".
+
+    Điểm thứ 10 (nhật ký) xử lý bằng chính mục này.
+- **Links:** nhánh `feat/tr8-analysis-scripts`; `analysis/dg2_a2.py`, `analysis/tests/test_dg2_a2.py`, `docs/chi-tiet/05-moi-truong-danh-gia.md` §14.2.
+- **Thesis:** §5.3: phần nguồn của nháp trỏ sang `analysis/dg2_a2.py` thay cho script cục bộ.
+
+## 2026-11-21 – Đọc bảng theo tên phiên trong metadata.json (bổ sung PR #56)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** `/code-review high` của PR (b2) phát hiện lỗi chung với `dg2_a2`: cột `session` của bảng là tên phiên trong `metadata.json` (tên trong ma trận), không phải tên thư mục. Thư mục phiên đổi tên hoặc chép sang chỗ khác thì bộ lọc theo tên thư mục bỏ hết mọi dòng. Thêm `build_tables.session_name` và `read_session_table`: lọc theo tên trong `metadata.json`, và báo `ValueError` khi không có dòng nào, để script đọc bảng không in ra "không có gì" như một kết quả thật. `dg2_a2` dùng hàm này và `metrics._float` thay cho bản viết lại.
+- **Results:** `pytest analysis`: 138 passed (Python 3.15); `test_dg2_a2.py` và `test_build_tables.py` trên Python 3.11: 25 passed. Output trên `runs/v2-vm/v2-dg2` không đổi.
+- **Links:** PR #56; `analysis/build_tables.py`, `analysis/dg2_a2.py`.
+
+## 2026-11-21 – Đưa script số VH4, VH6 của mục 5.5 vào `analysis/`
+
+- **Task:** TR8 · **Environment:** none (dữ liệu `runs/v2-vm/ops-vh4-20261118-183127`, hai lượt VH4 trên simulator ngày 09/11 và 16/11, `runs/v2-vm/v2-dg2`)
+- **Done:**
+  1. `analysis/vh4_windows.py`: SLO của một lượt VH4 theo ba khoảng (trước khi chặn Prometheus, đang chặn, sau khi gỡ) và theo từng phút, tính bằng `metrics.phase_stats` (cùng định nghĩa với bảng ĐG2). Nhận nhiều thư mục lượt.
+  2. `analysis/vh6_window.py`: với mỗi đợt `LLMSLOBurnFast` bắt đầu trong lượt: độ trễ page − vi phạm, tỷ lệ xấu lớn nhất trên cửa sổ 1 phút, tỷ lệ xấu 5 phút trước page (đối chiếu `client_bad_ratio`), tỷ lệ xấu theo pha.
+  3. Test: `test_vh4_windows.py` (6 test), `test_vh6_window.py` (7 test), dựng lượt và phiên giả.
+  4. Thêm cách chạy vào Môi trường §14.2. PR xếp chồng trên PR #56 (D81).
+  5. `/code-review high`, sửa các điểm được xác nhận (mục Incidents).
+- **Decision:** D82: chỉ đợt page có `first_s` bằng `slo_alert_s` (đợt build_tables gắn với lần vi phạm) mà page sau mốc vi phạm mới quét từ mốc vi phạm tới page. Đợt khác (kêu lại về sau, kêu trước mốc vi phạm, lượt không có vi phạm) quét 5 phút trước page, không trước t0 + 60 s, và được đánh dấu cuối dòng. Cửa sổ 1 phút dùng quy ước (τ − 60, τ] như `metrics.slo_violation_start`. Phương án bỏ: thêm cột `peak_bad_1m` vào `build_tables`, vì đổi schema bảng ngay trước ngày đóng băng dữ liệu 22/11.
+- **Results:**
+  - VH4 (3 lượt) và VH6 (7 đợt page trong 17 lượt V2): output trùng từng ký tự với script cục bộ đã dùng cho nháp 5.5. Cả 7 đợt đều là đợt được tính và page sau mốc vi phạm, nên đổi quy ước cửa sổ sang (τ − 60, τ] không làm đổi số (max1m 0,683–1,000).
+  - `pytest analysis`: 151 passed trên Python 3.15 và 3.11. `ruff check`, `ruff format --check`: đạt.
+- **Incidents:** `/code-review high` báo 10 điểm, sửa 8:
+  - mọi đợt page đều so với một mốc vi phạm duy nhất của lượt (sửa theo D82);
+  - thiếu mốc `unblocked` (lượt lỗi giữa chừng) làm script dừng bằng traceback;
+  - mốc chặn trước t0 hoặc gỡ sau khi hết tải cho ra khoảng rỗng mà trông vẫn bình thường (thêm dòng cảnh báo);
+  - lọc dòng theo tên thư mục thay vì tên phiên trong `metadata.json` (sửa chung ở PR #56);
+  - cửa sổ chưa đủ 1 phút ở đầu lượt;
+  - viết lại hàm đã có (`_fmt`, `_float`);
+  - bộ lọc phiên viết hai lần;
+  - đọc lại `requests.csv` cho mỗi đợt.
+
+  Không làm điểm 9 (cột mới trong `build_tables`, D82). Điểm 10 (nhật ký) xử lý bằng chính mục này.
+- **Links:** nhánh `feat/tr8-vh-scripts` (xếp chồng trên PR #56); `analysis/vh4_windows.py`, `analysis/vh6_window.py`.
+- **Thesis:** §5.5 (VH4: SLO theo khoảng và TPOT theo phút; VH6: cột tỷ lệ xấu lớn nhất trên 1 phút): phần nguồn của nháp trỏ sang hai script này.
+
+## 2026-11-21 – Merge PR #56 (dg2_a2)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. CI xanh cả 6 job trên commit cuối `a5c4ab3`; `mergeable` = MERGEABLE; không có review hay bình luận.
+  2. Đổi base của PR #57 về `main` trước (D42), rồi merge #56 bằng merge commit `af0a5e8` và xoá nhánh `feat/tr8-analysis-scripts`.
+- **Decision:** điều kiện merge 4 đạt: PR chỉ đổi `analysis/` và `docs/`, Argo CD ở nhà không thấy thay đổi.
+- **Links:** PR #56, PR #57.
