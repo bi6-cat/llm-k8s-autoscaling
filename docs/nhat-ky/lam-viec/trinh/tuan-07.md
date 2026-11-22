@@ -693,3 +693,15 @@
 - **Deviations:** nhánh mới push để có bản sao, chưa mở PR, chưa chạy `/code-review high`; PR mở sau khi chốt văn phong và Trình đọc lại ba nháp.
 - **Links:** nhánh `docs/tr8-thesis-ch5-drafts`; `docs/luan-van/05-03-autoscaling-so-voi-tinh.md`, `docs/luan-van/05-05b-vh4-vh6.md`, `docs/luan-van/05-06-bang-nghiem-thu.md`.
 - **Thesis:** §5.3, §5.5, §5.6 (nháp); Lời cam đoan (khai báo dùng AI agent, `quy-tac-viet.md` §9).
+
+## 2026-11-22 – Luận văn: chốt văn phong và công cụ kiểm văn phong
+
+- **Task:** chung (luận văn) · **Environment:** none
+- **Done:**
+  1. Review ba lớp quy tắc viết: `docs/luan-van/README.md` (trên `main`), `quy-tac-viet.md` của Quang (PR #52, chưa merge), các điểm D84. Tìm ra điểm cũ sau D83 (sở hữu file, tách a/b, review 48 giờ, "người sở hữu đối chiếu từng số") và điểm còn thiếu (làm tròn số, mật độ mã định danh, độ dài câu, dấu hiệu văn do AI sinh).
+  2. Viết bổ sung văn phong (bản cục bộ, gộp vào `quy-tac-viet.md` bằng PR sau khi PR #52 merge): giọng văn, quy tắc 20/80 (1–3 thông điệp mỗi mục, câu đầu đoạn là kết luận), câu tối đa 35 chữ, tối đa 4 mã định danh mỗi đoạn, quy ước làm tròn, không kể quá trình và ngày tháng trong thân bài, danh sách cụm sáo rỗng và dấu hiệu cấu trúc, dấu hiệu chữ của văn AI kèm cách thay, quy trình soát cho giai đoạn bản base.
+  3. Viết công cụ kiểm văn phong bằng Python (chỉ báo cáo, có số dòng): câu và đoạn, mã định danh, cụm sáo rỗng, gạch dài, mũi tên, dấu hai chấm và chấm phẩy, ngày tháng, dấu thập phân, số dính đơn vị, đoạn có số mà thiếu comment nguồn. Thử trên câu mẫu; sửa 4 loại báo nhầm (danh sách dính vào đoạn dẫn, chú thích bảng, số mục kiểu "5.2–5.5", "ổn định" bị bắt như "ổn").
+- **Decision:** D85: giọng văn chuyên nghiệp ở nội dung, không ở từ ngữ; đúng trọng tâm theo 20/80; ngôn từ tự nhiên như sinh viên viết; không có dấu hiệu văn AI. Các yêu cầu này được viết thành quy tắc kiểm được, có công cụ chạy trước mỗi PR, vì lời dặn chung chung thì mỗi agent hiểu một kiểu. Mẫu văn là mục 3.4 viết lại theo quy tắc mới; Trình duyệt rồi mới viết các mục khác.
+- **Results:** chạy công cụ trên bốn mục đã viết, tổng cộng 140 điểm cần xem. Mục 3.4: trung bình 29,3 chữ/câu, 28/83 câu dài hơn 35 chữ. Mục 5.3: 10/22 đoạn có hơn 4 mã định danh. Phần 5.5: 11/24 đoạn mở bằng cụm in đậm, 2 chỗ ghi ngày tháng, 2 chỗ "chứng minh". Mục 5.6: "0,5C" thiếu dấu cách. Có 15 đoạn có số liệu mà comment nguồn đặt xa.
+- **Links:** nhánh `docs/tr8-thesis-ch5-drafts`.
+- **Thesis:** áp cho mọi chương; Lời cam đoan (khai báo dùng AI agent).
