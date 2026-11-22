@@ -54,7 +54,7 @@ Số mục theo dàn ý ở Kế hoạch §11.1. Bản base do Trình viết; ng
 | 1.1 Bối cảnh, 1.2 Phát biểu bài toán | Bài toán §1–§7 (§4: Hình 1; §5: vì sao vận hành LLM trên GPU khó; §6: ba yêu cầu kéo nhau); mô tả tổng |
 | 1.3 Mục tiêu, phạm vi và giả định | Bài toán §9 (bảy mục tiêu của đề cương), §11, §12 (phạm vi, giả định G1–G7); mô tả tổng; ADR-002, ADR-004 |
 | 1.4 Phương pháp và tổ chức thực hiện | Kế hoạch §1, §2 (lịch, mốc, kế hoạch tuần), §5.1 (phân công), §7 (quy trình làm việc); CONTRIBUTING §7 (PR, CI); `docs/adr/`; nhật ký họp; cách trình bày: `quy-tac-viet.md` §2.2 |
-| 1.5 Đóng góp, 1.6 Cấu trúc luận văn | Ba thông điệp T1–T3 (Kế hoạch §11.1); số ở §3 dưới đây |
+| 1.5 Đóng góp, 1.6 Cấu trúc luận văn | Ba thông điệp TĐ1–TĐ3 (Kế hoạch §11.1); số ở §3 dưới đây |
 | 2.1 Phục vụ LLM và vLLM | Kiến thức nền §1, §2; LT1–LT3 trong `VH` (phần lý thuyết) |
 | 2.2 Hàng đợi và năng lực phục vụ | Bài toán §3; LT5 trong `VH` (phần lý thuyết) |
 | 2.3 GPU trên Kubernetes | Kiến thức nền §4; LT6 trong `VH` (phần lý thuyết) |
@@ -70,7 +70,7 @@ Số mục theo dàn ý ở Kế hoạch §11.1. Bản base do Trình viết; ng
 | 3.2 Kiến trúc tổng thể | Kiến trúc §1–§5, §18; Vận hành §7–§9 (dựng lại, bảo mật, chi phí); Môi trường §1–§3 (hai tầng dùng chung manifest); Thông số §10; ADR-004 §7; ADR-006 C2, §3.1; Hình 2, 3, 6 |
 | 3.3 Thiết kế autoscaling | Kiến trúc §6, §9–§16; Thông số §8, §9; ADR-006 C7 (truy vấn A1); Hình 4, 14, 15 |
 | 3.4 Cold start và thay đổi an toàn | Kiến trúc §3, §7, §8; Vận hành §5; ADR-005; Hình 5, 12, 13, 16 |
-| 3.5 Giám sát, cảnh báo, xử lý sự cố | **Đã có bản nháp**: [`03-04-giam-sat-slo-canh-bao.md`](03-04-giam-sat-slo-canh-bao.md) (đánh số 3.4 theo dàn ý cũ; khi viết lại thì đổi số và chuyển giá trị SLO sang 3.1); Kiến trúc §17; Vận hành §1–§4, §6; Hình 7 |
+| 3.5 Giám sát, cảnh báo, xử lý sự cố | **Đã có bản nháp**: [`03-05-giam-sat-slo-canh-bao.md`](03-05-giam-sat-slo-canh-bao.md) (viết theo dàn ý cũ; khi viết lại thì thêm phần xử lý sự cố và chuyển giá trị SLO sang 3.1); Kiến trúc §17; Vận hành §1–§4, §6; Hình 7 |
 | 3.6 Thiết kế đánh giá | Môi trường §7–§17, §19; Thông số §7, §8; Bài toán §9 (chỉ số của đề cương); cách chấm cảnh báo và page giả: `analysis/vh6_window.py`, LT8 |
 
 ### Chương 4
@@ -97,15 +97,15 @@ Số mục theo dàn ý ở Kế hoạch §11.1. Bản base do Trình viết; ng
 |---|---|
 | 5.1 Môi trường và điều kiện đo | `Q-07` (18/11: probe, máy 4060 Ti thay A4000, 17/17 lượt hợp lệ); `runs/v2-evidence/` (UUID GPU, `systemd-detect-virt`); Môi trường §4–§6 |
 | 5.1 Chi phí | `Q-05` (06/11: khảo sát giá); `phien-2026-11-08-a4000.md` §15; `Q-07` (18/11: giá 1,5 USD/giờ); chi phí thực tế của V2 chưa có (§4) |
-| 5.2 Năng lực một replica (ĐG1) | `Q-07` (18/11: bảng ĐG1); [`envs/cloud/experiments/capacity.json`](../../envs/cloud/experiments/capacity.json); `phien-2026-11-08-a4000.md` §12 (ĐG1 thử); LT1, LT5 trong `VH` |
-| 5.3 Autoscaling so với tĩnh (C1–C4) | `Q-07` (18/11: bảng 11 ô; 19/11: nguyên nhân lỗi A2 × KB2, pha giảm tải); [`analysis/figures/v2-dg2/`](../../analysis/figures/v2-dg2/) (`runs.csv`, `cells.csv`, `phases.csv`, hình C1–C4); `analysis/dg2_a2.py`; LT5, LT6, LT7 |
+| 5.2 Năng lực một replica (ĐG1) | `Q-07` (18/11: bảng ĐG1); [`envs/cloud/experiments/capacity.json`](../../envs/cloud/experiments/capacity.json); `phien-2026-11-08-a4000.md` §12 (ĐG1 thử); LT1–LT3 trong `VH` |
+| 5.3 Autoscaling so với tĩnh (C1–C4) | `Q-07` (18/11: bảng 11 ô; 19/11: nguyên nhân lỗi A2 × KB2, pha giảm tải); [`analysis/figures/v2-dg2/`](../../analysis/figures/v2-dg2/) (`runs.csv`, `cells.csv`, `phases.csv`, hình C1–C4); `analysis/dg2_a2.py`; LT5 (phần V2 lấy số ĐG1, `Q-07` 18/11), LT6, LT7 |
 | 5.4 Cold start (C5) | `Q-07` (19/11: ĐG3); `runs/v2-vm/dg3-v2-4060ti/*/summary.txt`, `vllm_log.json` (đủ 8 mốc pha) |
 | 5.5 VH1–VH3, VH5 | `Q-07` (19/11); `runs/v2-vm/ops-vh*/summary.json`; VH1 trên máy thuê là pha giảm tải của KB2 (dẫn chéo 5.3); VH3 drain chỉ có trên kind (`VH` 09/11) |
 | 5.5 VH4, VH6 | VH4: `Q-07` (19/11: fallback 16,8 s), `analysis/vh4_windows.py`; VH6: `analysis/figures/v2-dg2/alerts.csv`, `analysis/vh6_window.py`, LT8 |
 | 5.5 Graceful shutdown | `VH` 06/11 (144/144 stream; ca đối chứng grace 5 s) |
 | 5.6 Tổng hợp | Bảng nghiệm thu: Bài toán (bảng yêu cầu → đánh giá → chỉ số), Thông số §4, số ở §3 dưới đây; bảng LT1–LT8: `VH`, Môi trường §19; khuyến nghị cấu hình: Kiến trúc §16 |
 | 5.7 Hạn chế của phép đo | §6 dưới đây |
-| 6.1 Kết luận | Ba thông điệp T1–T3 (Kế hoạch §11.1) |
+| 6.1 Kết luận | Ba thông điệp TĐ1–TĐ3 (Kế hoạch §11.1) |
 | 6.2 Hạn chế của hệ thống và phạm vi | §6 dưới đây; Bài toán §11, §12; ADR-006 §3.1 |
 | 6.3 Hướng phát triển | Kế hoạch §12 (E1–E13); `docs/bao-cao/de-xuat-v3/`; `Q-06` (13–15/11: các hướng nâng cấp) |
 | Phụ lục A–F | A: `common/serving/`, `common/autoscaling/`; B: `common/observability/alerts/` (kèm `tests/`); C: `docs/runbooks/`; D: `docs/phien-ban.md`; E: `analysis/figures/v2-dg2/`; F: Kế hoạch §1, §5.1 |

@@ -33,7 +33,7 @@ Tóm tắt viết **sau cùng**. Tóm tắt phải nêu bài toán, cách làm, 
 
 ## 2. Mỗi chương nói gì
 
-Luận văn có một mạch chung: ba thông điệp T1–T3 và năm hướng giải P1–P5, đi qua chương 3–6 (Kế hoạch §11.1). Mục nào không phục vụ một thông điệp, một yêu cầu F/N hoặc một mục tiêu của đề cương thì đưa xuống phụ lục hoặc bỏ.
+Luận văn có một mạch chung: ba thông điệp TĐ1–TĐ3 và năm hướng giải HG1–HG5, đi qua chương 3–6 (Kế hoạch §11.1). Mục nào không phục vụ một thông điệp, một yêu cầu F/N hoặc một mục tiêu của đề cương thì đưa xuống phụ lục hoặc bỏ.
 
 Mỗi sự kiện chỉ được trình bày **đầy đủ ở một chỗ**; ở chỗ khác thì dẫn chéo "(mục 4.5)". Chương nào nói gì:
 
@@ -214,7 +214,8 @@ Những thứ này chỉ nằm trong comment nguồn. Ngoại lệ: mục phân 
 
 - Ô ma trận viết "A2 × KB2".
 - Tối đa 4 mã trong một đoạn. Câu chủ đề viết bằng lời, không mở bằng mã.
-- Mã chỉ tiêu (F1–F7, N1–N8) chỉ dùng ở mục 3.1 và 5.6. Chỗ khác nói bằng lời kèm số, ví dụ "thời gian phản ứng không quá 2 phút".
+- Mã yêu cầu và chỉ tiêu (F1–F7, N1–N8) chỉ dùng ở bảng ánh xạ mục tiêu của mục 1.3 (kèm tên ngắn, vì mã được định nghĩa ở 3.1), ở mục 3.1, ở câu so với chỉ tiêu của chương 5 (§5) và ở bảng nghiệm thu 5.6. Chỗ khác nói bằng lời kèm số, ví dụ "thời gian phản ứng không quá 2 phút".
+- TĐ1–TĐ3 (ba thông điệp) và HG1–HG5 (năm hướng giải) là nhãn của dàn ý (Kế hoạch §11.1), không dùng trong thân bài; trong bài nói bằng lời.
 - Tên pha viết tiếng Việt, không để trong `code`: pha nền (`pre`), pha tăng đột ngột (`spike`), pha giảm (`drop`), pha ổn định (`steady`), pha tăng dần (`ramp`), pha duy trì (`sustain`).
 - `code` chỉ dành cho tên người đọc có thể tra hoặc gõ lại: metric, tham số cấu hình, tên file, tên cảnh báo.
 - Mã C1–C6 của tài liệu thiết kế là tên nội bộ của biểu đồ. Trong bài dùng số hình ("Hình 5.3"), không viết "C1", vì C đã là ký hiệu năng lực.

@@ -1,6 +1,6 @@
 # 5. Môi trường triển khai và đánh giá
 
-> Thuộc [bộ tài liệu đồ án](../mo-ta-chi-tiet-do-an.md#bộ-tài-liệu) · Dùng cho mục 3.6, 4.1, 4.11 và chương 5 của luận văn · Cấu hình máy, kịch bản, ma trận và ngân sách: [Thông số](00-thong-so.md) · Quyết định: [ADR-004](../adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md)
+> Thuộc [bộ tài liệu đồ án](../mo-ta-chi-tiet-do-an.md#bộ-tài-liệu) · Dùng cho mục 3.2, 3.6, 4.1, 4.7 và chương 5 của luận văn · Cấu hình máy, kịch bản, ma trận và ngân sách: [Thông số](00-thong-so.md) · Quyết định: [ADR-004](../adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md)
 
 **Tóm tắt nhanh**
 - **Tầng 1 (máy nhà và simulator):** PC RTX 5060 chia thành 2 GPU replica (time-slicing) để chạy 2 pod vLLM model 0,5B, dựng k3s có GPU; máy không GPU dùng `llm-d-inference-sim`. Đây là **môi trường chức năng**: phát triển, kiểm thử, kịch bản vận hành; không dùng số liệu hiệu năng.
@@ -603,7 +603,7 @@ Không dùng biểu đồ hai trục tung; màu gắn cố định với từng 
 | N6 | Tự phục hồi; fallback; dựng lại | Xoá pod: pod thay thế Ready sau 67,4 s, 0 lỗi. Kill tiến trình: Ready lại sau 67,4 s. Fallback (VH4) lên 4 replica sau 16,8 s, 0 lỗi. Dựng lại từ VM trắng: 8 phút 22 giây (1 lần, bấm tay) | Đạt | Ca kill có 129/1.041 request lỗi, lúc đó chỉ có 1 pod |
 | N7 | Thời gian tới cảnh báo; page giả | S1 × KB3: 104,5 s (1 lượt). Page giả: 0 trong 17 lượt | Đạt | Chỉ kiểm `LLMSLOBurnFast` (§13) |
 | N8 | Phiên bản ghim; dựng lại theo README; chi phí | Phiên bản: đã ghim. Người thứ hai dựng lại theo README: chưa đo. Tổng chi phí thuê: chưa có | Chưa đo | |
-| F1, F2, F4 | Theo cách kiểm chứng ở [Thông số §3](00-thong-so.md#3-yêu-cầu-chức-năng) | API có streaming, ĐG1–ĐG3 chạy đủ; A2 scale 1 → 4 → về lại; dựng VM trắng bằng `make` trong 8 phút 22 giây | Đạt | F2: T6 mới kiểm trên simulator; T7 (Could) chưa làm |
+| F1, F2, F4 | Theo cách kiểm chứng ở [Thông số §3](00-thong-so.md#3-yêu-cầu-chức-năng) | API có streaming, ĐG1–ĐG3 chạy đủ; A2 scale 1 → 4 → về lại; dựng VM trắng trong 8 phút 22 giây (1 lần, chạy tay từng lệnh `make`, chưa chạy `make vh5`) | Đạt | F2: T6 mới kiểm trên simulator; T7 (Could) chưa làm |
 | F3 | VH2: cập nhật và rollback qua Git | Triển khai qua Git: Argo CD quản lý cluster nhà (App-of-Apps, 7 app Synced). Rolling update trên VM thuê (không qua Git, vì VM không dùng Argo CD): 0 lỗi. Cập nhật rồi `git revert` qua Argo CD: chưa chạy | Đạt một phần | Thiếu bước cập nhật và rollback qua Git; VH2 ở nhà là mục Must ([Thông số §5](00-thong-so.md#5-mức-độ-thành-công)) |
 | F5 | Ba dashboard, ảnh chụp | 3 dashboard cài cùng nền tảng; truy vấn chạy được trên simulator, CI kiểm PromQL | Đạt một phần | Chưa có ảnh chụp trên GPU thật |
 | F6 | Sáu cảnh báo tới Telegram, có runbook | 7 quy tắc, mỗi quy tắc có runbook và unit test. Alertmanager → Telegram kiểm với API giả trên simulator | Đạt một phần | Chưa gửi tới Telegram thật; trong V2 Alertmanager báo lỗi gửi ở cả 17 lượt |
