@@ -1,6 +1,6 @@
 # 1. Bài toán, yêu cầu và phạm vi
 
-> Thuộc [bộ tài liệu đồ án](../mo-ta-chi-tiet-do-an.md#bộ-tài-liệu) · Dùng cho chương 1 và mục 3.1 của luận văn · Giá trị các yêu cầu và chỉ tiêu: [Thông số và chỉ tiêu](00-thong-so.md)
+> Thuộc [bộ tài liệu đồ án](../mo-ta-chi-tiet-do-an.md#bộ-tài-liệu) · Dùng cho chương 1, mục 2.2 và 3.1 của luận văn · Giá trị các yêu cầu và chỉ tiêu: [Thông số và chỉ tiêu](00-thong-so.md)
 
 **Tóm tắt nhanh**
 - Chi phí chính của một dịch vụ LLM là **GPU**. Nhu cầu GPU phụ thuộc vào số request đang được xử lý cùng lúc, và con số này dao động mạnh theo thời gian.

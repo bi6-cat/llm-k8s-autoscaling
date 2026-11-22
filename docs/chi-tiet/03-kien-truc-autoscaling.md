@@ -1,6 +1,6 @@
 # 3. Kiến trúc hệ thống và thiết kế autoscaling
 
-> Thuộc [bộ tài liệu đồ án](../mo-ta-chi-tiet-do-an.md#bộ-tài-liệu) · Dùng cho mục 3.2–3.3, 4.3–4.5 của luận văn · Giá trị tham số: [Thông số §8–§9](00-thong-so.md#8-cấu-hình-và-ma-trận-đánh-giá)
+> Thuộc [bộ tài liệu đồ án](../mo-ta-chi-tiet-do-an.md#bộ-tài-liệu) · Dùng cho mục 3.2–3.5, 4.2–4.5 của luận văn · Giá trị tham số: [Thông số §8–§9](00-thong-so.md#8-cấu-hình-và-ma-trận-đánh-giá)
 
 **Tóm tắt nhanh**
 - Năm nguyên tắc thiết kế: **đơn giản và minh bạch, tái lập được, quan sát được, vận hành được, an toàn khi thay đổi**.
