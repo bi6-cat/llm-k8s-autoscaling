@@ -678,3 +678,17 @@
   2. Merge #57 bằng merge commit `af18429` và xoá nhánh `feat/tr8-vh-scripts`.
 - **Decision:** điều kiện merge 4 đạt: PR chỉ đổi `analysis/` và `docs/`, Argo CD ở nhà không thấy thay đổi. Với #57, bước 2 của D80 (đưa script tính số vào `analysis/`) đã xong; còn bước 3 là Hình 7.
 - **Links:** PR #57, `analysis/vh4_windows.py`, `analysis/vh6_window.py`.
+
+## 2026-11-22 – Luận văn: đưa ba nháp chương 5 vào `docs/luan-van/`
+
+- **Task:** chung (luận văn), TR8 · **Environment:** none
+- **Done:**
+  1. Trình và Quang chốt cách viết mới: Trình (cùng AI agent) viết bản base của toàn bộ luận văn theo dàn ý (Kế hoạch §11.1); khi bản base xong, Quang review, sửa và cập nhật số liệu mới.
+  2. Đưa ba nháp soạn ngày 21/11 (mục 5.3; phần VH4, VH6 của mục 5.5; mục 5.6), trước đó chỉ có bản cục bộ, vào `docs/luan-van/` bằng một script chuyển đổi: 50 dòng nguồn dạng chữ `[nguồn: …]` thành comment `<!-- nguồn: … -->` như README; hạ mọi tiêu đề một cấp (`## 5.3.`, `### 5.3.1.`); bỏ phần ghi chú nội bộ ở cuối file; đường dẫn bảng `runs/v2-vm/v2-dg2/tables/` (thư mục `runs/` không có trong Git) đổi sang `analysis/figures/v2-dg2/` (`cmp` xác nhận hai bản giống hệt); hai hình trỏ vào SVG ở `analysis/figures/v2-dg2/`. Thân bài giữ nguyên.
+  3. Kiểm: lychee offline 7/7 link OK; pandoc 3.13 ghép `docs/luan-van/[0-9]*.md` ra `.docx`, không có lỗi trích dẫn.
+- **Decision:** D83: bản base viết bằng Markdown trong `docs/luan-van/` (quay về D70), thay phần "Google Doc của Quang là bản gốc, không mở PR cho từng mục" của D72; nháp đưa vào repo để có bản sao trên GitHub và Quang đọc được bất cứ lúc nào. Bỏ phương án giữ nháp ở `.work/` chờ Doc (chỉ có một bản, trên một máy).
+- **Results:** thân bài (bỏ comment, `wc -w`): 5.3 có 2.785 chữ, phần 5.5 có 3.296, 5.6 có 1.911; tổng khoảng 8.000 chữ, tức khoảng 18–20 trang (ước tính 400–450 chữ một trang), trong khi Kế hoạch §11.1 dành 10–12 trang cho cả chương 5. Nguyên nhân chính là mật độ (số của từng lượt nhắc lại trong văn xuôi dù đã có trong bảng), không phải câu dài.
+- **Incidents:** pandoc cảnh báo không chuyển được SVG vì máy thiếu `rsvg-convert`; SVG vẫn được nhúng vào `.docx` (Word 365 hiển thị được). Để lại cho bước định dạng.
+- **Deviations:** nhánh mới push để có bản sao, chưa mở PR, chưa chạy `/code-review high`; PR mở sau khi chốt văn phong và Trình đọc lại ba nháp.
+- **Links:** nhánh `docs/tr8-thesis-ch5-drafts`; `docs/luan-van/05-03-autoscaling-so-voi-tinh.md`, `docs/luan-van/05-05b-vh4-vh6.md`, `docs/luan-van/05-06-bang-nghiem-thu.md`.
+- **Thesis:** §5.3, §5.5, §5.6 (nháp); Lời cam đoan (khai báo dùng AI agent, `quy-tac-viet.md` §9).
