@@ -27,6 +27,21 @@ Phần trăm là ước lượng theo đầu việc, không phải giờ đã d�
 
 **Nhánh và PR** (09/11): PR #24, #25, #26 đã merge vào `main`. PR #27 merge nhầm vào `feat/v2-prep` (base không phải `main`), nên 7 commit dọn dẹp được đưa vào `main` bằng nhánh `chore/v2-prep-to-main`. Từ nay tách nhánh mới từ `main`; trước khi merge PR dưới của một chồng PR, đổi base PR trên về `main`.
 
+## 1b. Bàn giao 20/11 (W7, sau V2): đọc mục này trước
+
+Phần dưới (1a, 2–6) viết trước V2, phần lớn đã xong hoặc lỗi thời. Chi tiết V2 ở [nhật ký tuần 07](tuan-07.md) (18–20/11).
+
+- **Đã xong:** V2 trên VM 4 × RTX 4060 Ti (18–19/11): ĐG1 (C = 3,5 req/s), ĐG2 17/17 lượt hợp lệ, ĐG3 (L2 77,7 s, L0 305,5 s), VH2–VH4; VM đã xoá. Dữ liệu V2, `capacity.json`, `dg3.sh`, nhật ký nằm ở **PR #52** (CI xanh, chờ Trình review).
+- **Luận văn viết trên Google Docs** (Quang chốt 20/11, lệch D70): thư mục Drive "Luận văn vLLM autoscaling" của Quang, một doc khung cho cả quyển; mỗi mục có người viết, câu hỏi phải trả lời, nguồn. Quy tắc viết: [`docs/luan-van/quy-tac-viet.md`](../../../luan-van/quy-tac-viet.md); nguồn từng mục và số đã chốt: [`docs/luan-van/nguon-tu-lieu.md`](../../../luan-van/nguon-tu-lieu.md).
+- **Việc tiếp của Quang, theo thứ tự:**
+  1. Viết các mục ít phụ thuộc số liệu: 2.1, 2.2, 2.4 → 3.2, 3.3 (serving), 3.5, 3.6 → 1.1–1.3, 1.5 → 4.1, 4.3, 4.8, 4.9, 4.12 (bảng khó khăn đã có sẵn trong doc). Chương 5 và 1.4 viết sau khi có ADR-003 và hình.
+  2. ADR-003 (C, B\*, SLO, threshold), số đã có ở `envs/cloud/experiments/capacity.json`.
+  3. Hình cold start 8 pha (C5) từ `runs/v2-vm/dg3-v2-4060ti/*/vllm_log.json`.
+  4. Chi phí thực tế V2 từ trang Billing của Vast; chụp trang Vast vào `runs/v2-evidence/`.
+  5. Merge PR #46 (`vh.py` đã dùng trong V2).
+- **Chờ Trình:** review PR #52; đồng ý chuyển sang Google Docs, chép mục 3.4 sang doc; vẽ lại C1–C4 trên `runs/v2-vm/v2-dg2`; bảng nghiệm thu; VH5 ở nhà (N8). Cần gửi Trình file dữ liệu `v2-data-20261119.tar.gz` và chia sẻ doc.
+- **Thứ chỉ có trên máy dev cũ** (không nằm trong Git): `runs/` (68 MB; nén ở `runs/_share/runs-all-20261120.tar.gz`, checksum `runs/_share/handoff-20261120.sha256`), memory của Claude (`claude-memory-20261120.tar.gz`), kubeconfig nhà `~/.kube/llm-home.yaml`. `runs/` vẫn chưa có bản sao lưu R2 (chưa có `.env`).
+
 ## 1a. Cập nhật 16/11 (W7)
 
 Các mục dưới viết ngày 09/11; phần này ghi những gì đã đổi, chi tiết ở [nhật ký tuần 07](tuan-07.md).
