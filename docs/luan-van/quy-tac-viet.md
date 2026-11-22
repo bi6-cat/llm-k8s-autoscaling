@@ -14,37 +14,41 @@ Chưa có khuôn của trường. Đến khi có, viết theo các thông lệ p
 
 | Mục | Thông lệ tạm dùng | Ghi chú |
 |---|---|---|
-| Độ dài | 55–65 trang thân bài (Kế hoạch §11.1) | Không tính phụ lục |
+| Độ dài | 55–65 trang thân bài; số trang từng chương ở Kế hoạch §11.1 | Không tính phụ lục. Ước tính khoảng 300 chữ văn xuôi mỗi trang, chưa hiệu chỉnh trên khuôn của trường |
 | Phông, cỡ, giãn dòng, lề | Áp theo khuôn của trường | Chờ khuôn |
 | Cấp tiêu đề | Tối đa 3 cấp số: `3.4.1.` | Cần chia nhỏ hơn thì dùng đoạn mở bằng cụm in đậm |
 | Trích dẫn | IEEE, đánh số `[1]` theo thứ tự xuất hiện | Pandoc tự đánh số qua `[@key]` |
 
 Thứ tự các phần của quyển (tên file dự kiến ở khung luận văn, chưa dựng):
 1. Bìa, nhiệm vụ đồ án: theo mẫu của trường.
-2. Lời cam đoan, lời cảm ơn.
+2. Lời cam đoan (có khai báo dùng công cụ AI, §9), lời cảm ơn.
 3. Tóm tắt tiếng Việt và *Abstract*: mỗi bản khoảng 1 trang.
-4. Mục lục, danh mục hình, danh mục bảng, danh mục chữ viết tắt.
+4. Mục lục, danh mục hình, danh mục bảng, danh mục chữ viết tắt, mã định danh và thuật ngữ.
 5. Chương 1–6.
 6. Tài liệu tham khảo, phụ lục.
+
+Nếu khuôn của trường đòi phần "Mở đầu" và "Kết luận" không đánh số thay cho chương 1 và 6 thì chỉ đổi tên, giữ nguyên nội dung.
 
 Tóm tắt viết **sau cùng**. Tóm tắt phải nêu bài toán, cách làm, môi trường đo, và **2–3 kết quả chính có số** (ví dụ GPU-giờ của A2 so với S4). Không viết chung chung kiểu "đã xây dựng thành công hệ thống".
 
 ## 2. Mỗi chương nói gì
 
+Luận văn có một mạch chung: ba thông điệp T1–T3 và năm hướng giải P1–P5, đi qua chương 3–6 (Kế hoạch §11.1). Mục nào không phục vụ một thông điệp, một yêu cầu F/N hoặc một mục tiêu của đề cương thì đưa xuống phụ lục hoặc bỏ.
+
 Mỗi sự kiện chỉ được trình bày **đầy đủ ở một chỗ**; ở chỗ khác thì dẫn chéo "(mục 4.5)". Chương nào nói gì:
 
 | Chương | Trả lời câu hỏi | Không đặt ở đây |
 |---|---|---|
-| 1 | Vì sao bài toán đáng làm, mục tiêu, đóng góp, phạm vi | Chi tiết kỹ thuật, số đo |
+| 1 | Vì sao bài toán đáng làm; mục tiêu, phạm vi và giả định; phương pháp thực hiện; đóng góp | Chi tiết kỹ thuật. Số đo chỉ có 2–3 số chính ở mục Đóng góp, kèm dẫn chéo tới chương 5 |
 | 2 | Kiến thức chung mà người đọc cần để hiểu các chương sau (LLM inference, vLLM, autoscaling, SLO, GitOps), và giải pháp liên quan | Bất cứ gì về hệ thống của nhóm |
 | 3 | Hệ thống **cần** gì và **được thiết kế** thế nào, vì sao chọn phương án đó | "Đã cài", lệnh, sự cố |
 | 4 | **Đã làm** thế nào, gặp gì, lệch thiết kế ở đâu, kiểm chứng ra sao | Bảng kết quả đánh giá (để chương 5) |
 | 5 | Số đo, giải thích, so với chỉ tiêu, hạn chế của phép đo | Lặp lại cách cài đặt |
-| 6 | Tổng kết, hạn chế chính, hướng phát triển | Kết quả mới chưa nêu ở chương 5 |
+| 6 | Kết luận theo ba thông điệp, hạn chế của hệ thống và phạm vi, hướng phát triển | Kết quả mới chưa nêu ở chương 5 |
 
 **Khung của một chương:**
 - **Đoạn mở đầu chương:** 3–5 câu, nói chương trả lời câu hỏi gì và gồm các mục nào. Đoạn này nằm ở file `CC-00-<ten>.md`.
-- **Mỗi mục cấp 2:** mở bằng 1–2 câu nói mục giải quyết việc gì.
+- **Mỗi mục cấp 2:** mở bằng 1–2 câu nói mục giải quyết việc gì (không viết "Mục này trình bày…"). Trước khi viết, ghi 1–3 thông điệp chính của mục vào comment đầu file: `<!-- Thông điệp: … -->`. Đoạn nào không phục vụ một thông điệp thì bỏ hoặc chuyển xuống phụ lục.
 - **Mục cuối "Kết chương":** 1 đoạn, nói chương rút ra điều gì và dẫn sang chương sau.
 
 Cách chia tiểu mục:
@@ -63,13 +67,41 @@ Rủi ro R21 của kế hoạch là hội đồng xem đồ án thiên về cài
 5. **Sự cố và điểm lệch:** triệu chứng → nguyên nhân → cách sửa. Đây là phần cho thấy năng lực vận hành, nên đừng cắt.
 6. **Bài học hoặc khuyến nghị:** 1–2 câu.
 
+### 2.2. Trình bày quy trình làm việc và con người
+
+Chỉ mô tả quy trình đã thật sự diễn ra. Ví dụ: không viết "hai thành viên review chéo mọi thay đổi" khi thực tế không như vậy; viết đúng điều đã làm, như "mọi thay đổi đi qua PR và được CI kiểm tự động trước khi merge".
+
+- **Mục 1.4 Phương pháp và tổ chức thực hiện** (khoảng 300 chữ): làm theo vòng (thiết kế; dựng và thử trên simulator; kiểm trên máy nhà; đo trên máy thuê); kế hoạch theo tuần có mốc; phân công theo hai mảng; quản lý thay đổi bằng Git (PR, CI tự kiểm); ghi quyết định kiến trúc (ADR) và nhật ký vận hành.
+- **Con người trong vòng vận hành** (mục 3.5, 4.5, 4.6): hệ thống tự xử lý việc lặp lại (scale, thay pod hỏng, fallback). Người trực vào cuộc khi có page, làm theo runbook, và quyết định những việc cần phán đoán (rollback, thêm GPU).
+- **Quyết định** viết theo kiểu ADR: "Nhóm cân nhắc A và B; chọn A vì …; đánh đổi là …".
+- **Phụ lục F** có bảng kế hoạch và phân công, kèm tên thành viên (theo mẫu của trường).
+
 ## 3. Văn phong
 
+**Giọng văn cần đạt:** một sinh viên kỹ thuật vững chuyên môn trình bày cho hội đồng: rõ, chắc, khiêm tốn, không văn hoa. Chuyên nghiệp ở nội dung (đúng, có số, có lý do), không ở từ ngữ to tát. Đọc lên phải giống người thật viết.
+
+**Người đọc:** giảng viên CNTT chưa vận hành Kubernetes hay vLLM. Không giả định người đọc biết pod, HPA, KV cache, TTFT, PromQL. Chương 2 giải thích mỗi khái niệm **một lần**; chương 3–6 dùng thẳng. Chương sau cần khái niệm mà chương 2 chưa có thì bổ sung vào chương 2, không giải thích tại chỗ.
+
+### 3.1. Trọng tâm và mật độ
+
+- **Quy tắc 20/80:** mỗi mục tập trung vào 1–3 thông điệp chính (§2), là điều người đọc phải nhớ sau khi đọc xong.
+- **Câu đầu đoạn là kết luận**, các câu sau là bằng chứng (số, lý do). Không dẫn dắt vòng trước khi vào ý.
+- **Một ý nói một lần.** Không kết đoạn hay kết mục bằng câu nhắc lại điều vừa nói.
+- **Cắt:** bối cảnh chung mà chương 2 đã có; diễn biến theo thời gian không đổi kết luận; số phụ; giới hạn nhỏ (gom vào mục Hạn chế).
+- **Mật độ gọn:** văn xuôi nêu khoảng giá trị kèm số lượt, ví dụ "79,7–81,5 s (3 lượt)"; số của từng lượt chỉ để trong bảng. Không lặp ở văn xuôi điều bảng đã nói; câu sau bảng nêu điều người đọc cần thấy.
+
+### 3.2. Câu và đoạn
+
 - **Ngôi:** dùng ngôi thứ ba: "nhóm", "đồ án", "hệ thống". Chỉ lời cảm ơn được dùng "chúng em".
-- **Câu:** câu ngắn, mỗi câu một ý. Đoạn văn 3–7 câu và có câu chủ đề ở đầu.
+- **Câu:** mỗi câu một ý, tối đa 35 chữ, trung bình khoảng 18–25 chữ; độ dài thay đổi tự nhiên. Không lồng định nghĩa vào câu ("…, tức …", hay "(*…*, viết tắt)" giữa một câu liệt kê). Liệt kê từ 3 vế trở lên mà vế nào cũng cần giải thích thì tách câu hoặc lập bảng.
+- **Đoạn:** 3–7 câu. Thân bài là văn xuôi; danh sách chỉ dùng khi liệt kê từ 3 mục song song, ngắn, không lồng nhau. Chỉ mở đoạn bằng cụm in đậm khi tiểu mục có từ 3 khía cạnh song song (thay cho tiêu đề cấp 4, §1); không in đậm giữa câu.
+- **Chủ ngữ rõ:** "Nhóm chọn …", "A2 thêm replica …"; không viết câu cụt chủ ngữ kiểu "Được thiết kế để …". Giải thích lý do như khi trình bày cho thầy cô: "Nhóm không dùng GPU utilization vì …".
 - **Không dùng văn nói:** không viết "khá", "rất nhiều", "cực kỳ", "ổn", "ngon", "chạy ngon", "khủng". Thay bằng số: "nhanh hơn 4 lần" thay cho "nhanh hơn rất nhiều".
 - **Không cảm thán, không câu hỏi tu từ, không "ta thấy rằng".** Cần nêu nhận xét thì viết "Kết quả cho thấy…".
 - **Thì:** thiết kế viết ở thì hiện tại ("A2 đọc tổng số request đang chạy và đang chờ"); việc đã làm và đã đo viết như sự kiện, có điều kiện đo ("Trong phiên đo V2, A2 dùng 25% GPU-giờ so với S4").
+
+### 3.3. Mức chắc chắn và cách nói về kết quả
+
 - **Mức chắc chắn:** ba mức dưới đây phải viết khác nhau, và không trộn trong một câu.
 
   | Mức | Viết là |
@@ -82,11 +114,47 @@ Rủi ro R21 của kế hoạch là hội đồng xem đồ án thiên về cài
   - Không dùng "tối ưu", "hoàn hảo", "luôn luôn", "chứng minh" khi chỉ có 1–3 lượt đo. Dùng "trong điều kiện đo, …".
   - Không viết "giảm chi phí 75%" trống trơn. Viết "giảm 75% GPU-giờ so với S4 ở kịch bản KB1".
 - **Kết quả xấu là kết quả:** ví dụ A2 không đạt SLO dưới tải tăng đột ngột (KB2). Trình bày như một phát hiện: có số, có nguyên nhân, có hướng khắc phục; không giấu, không xin lỗi.
-- **Không nhắc chuyện nội bộ trong thân bài:**
-  - mã việc (Q6, TR7), số PR, commit, quyết định D68;
-  - tên người, "nhật ký", "phiên Claude";
-  - đường dẫn `docs/`.
-  - Những thứ này chỉ nằm trong comment nguồn. Ngoại lệ: mục phân công ở slide.
+- **Nói thẳng điều chưa làm:** "Nhóm chưa đo …". Không tự khen hệ thống của mình.
+
+### 3.4. Tránh văn sáo và dấu hiệu văn do máy sinh
+
+**Cụm sáo rỗng, không dùng.** Thay bằng nội dung cụ thể, hoặc bỏ hẳn:
+
+| Không viết | Viết thay |
+|---|---|
+| "đóng vai trò quan trọng/then chốt", "yếu tố then chốt", "chìa khoá" | nói nó làm gì: "KEDA quyết định số replica" |
+| "trong bối cảnh … ngày càng …", "ngày càng phát triển mạnh mẽ" | nêu sự kiện có số, hoặc bỏ |
+| "không chỉ … mà còn …" | hai câu thường |
+| "một cách hiệu quả/linh hoạt/toàn diện/nhanh chóng" | số: "trong 16,8 s" |
+| "toàn diện", "mạnh mẽ", "vượt trội", "liền mạch", "tối ưu (hoá)", "hiệu quả cao", "mang lại lợi ích" | số so sánh, hoặc bỏ |
+| "góp phần", "hướng tới", "nhằm mục đích", "với mục tiêu" | "để" |
+| "Điều này cho thấy", "Có thể thấy rằng", "Đáng chú ý là", "Nhìn chung", "Tóm lại" (trừ Kết chương) | bỏ, nói thẳng kết luận |
+| "tiến hành", "thực hiện việc", "việc … việc …" | động từ thường: đo, chạy, thêm, chọn, sửa |
+| "được … bởi …" (bị động dịch từ tiếng Anh) | câu chủ động: "Runner ghi …" |
+
+**Dấu hiệu cấu trúc, tránh:**
+- Mọi đoạn cùng một khuôn (in đậm mở đầu, 4 câu, câu tóm tắt cuối).
+- Bộ ba tính từ cho kêu ("nhanh, ổn định và tiết kiệm") khi không có số cho từng vế.
+- Cặp "không phải X, mà là Y" để tạo kịch tính; rào đón kép ("về cơ bản là tương đối").
+- Hai đoạn liên tiếp cùng mở bằng từ nối ("Bên cạnh đó", "Ngoài ra", "Hơn nữa"). Mỗi đoạn dùng tối đa một từ nối loại này.
+
+**Dấu hiệu chữ, tránh:**
+- Gạch dài "—" trong câu: dùng dấu phẩy, ngoặc đơn, hoặc tách câu. Gạch ngắn "–" chỉ dùng cho khoảng số.
+- Mũi tên "→" trong văn xuôi: viết "từ Prometheus tới Alertmanager". Mũi tên chỉ dùng trong bảng và hình.
+- Hơn một dấu hai chấm hoặc hơn một dấu chấm phẩy trong một đoạn: tách câu.
+
+**Ví dụ.**
+- Không viết: "Trong bối cảnh nhu cầu sử dụng LLM ngày càng tăng, việc tối ưu hoá chi phí GPU đóng vai trò then chốt. Hệ thống không chỉ đảm bảo chất lượng dịch vụ mà còn tiết kiệm tài nguyên một cách hiệu quả."
+- Viết: "GPU thuê theo giờ vẫn tính tiền khi không có request nào. Nhóm muốn biết có thể tắt bớt GPU lúc tải thấp mà vẫn giữ TTFT dưới 2,5 s cho 95% request hay không."
+
+### 3.5. Không nhắc chuyện nội bộ trong thân bài
+
+- mã việc (Q6, TR7), số PR, commit, mã quyết định (D68);
+- tên người, nhật ký cá nhân, "phiên làm việc", "phiên Claude";
+- AI agent và tên công cụ AI (chỉ khai báo một lần ở Lời cam đoan, §9);
+- đường dẫn `docs/`.
+
+Những thứ này chỉ nằm trong comment nguồn. Ngoại lệ: mục phân công ở slide và Phụ lục F.
 
 ## 4. Thuật ngữ và tên gọi thống nhất
 
@@ -145,13 +213,20 @@ Rủi ro R21 của kế hoạch là hội đồng xem đồ án thiên về cài
   | V0–V2 | các phiên đo |
 
 - Ô ma trận viết "A2 × KB2".
+- Tối đa 4 mã trong một đoạn. Câu chủ đề viết bằng lời, không mở bằng mã.
+- Mã chỉ tiêu (F1–F7, N1–N8) chỉ dùng ở mục 3.1 và 5.6. Chỗ khác nói bằng lời kèm số, ví dụ "thời gian phản ứng không quá 2 phút".
+- Tên pha viết tiếng Việt, không để trong `code`: pha nền (`pre`), pha tăng đột ngột (`spike`), pha giảm (`drop`), pha ổn định (`steady`), pha tăng dần (`ramp`), pha duy trì (`sustain`).
+- `code` chỉ dành cho tên người đọc có thể tra hoặc gõ lại: metric, tham số cấu hình, tên file, tên cảnh báo.
 - Mã C1–C6 của tài liệu thiết kế là tên nội bộ của biểu đồ. Trong bài dùng số hình ("Hình 5.3"), không viết "C1", vì C đã là ký hiệu năng lực.
 - **Ký hiệu:** C = năng lực một replica (req/s); B\* = số request đồng thời ở mức năng lực; λ = tốc độ đến (req/s); N = số GPU ("N = 4"). Không dùng lại các chữ này cho nghĩa khác.
 
 ## 5. Trình bày số liệu và kết quả
 
 - **Số nào cũng có điều kiện đo**, ghi ở câu đó hoặc ở chú thích bảng: máy, model, tải, số lượt. Điều kiện chung của cả chương ghi một lần ở mục 5.1, các chỗ sau dẫn chéo.
-- **Độ chính xác:** giữ đúng độ chính xác của nguồn, không thêm chữ số. Khi lấy trung bình mà chỉ có 3 lượt trở xuống thì ghi cả giá trị từng lượt: "77,7 s (3 lượt: 76; 76; 81 s)".
+- **Làm tròn:** phần trăm 1 chữ số thập phân (75,4%); thời gian 1 chữ số thập phân nếu dưới 100 s, số nguyên nếu từ 100 s trở lên; GPU-giờ và req/s 2 chữ số thập phân. Không thêm chữ số mà nguồn không có.
+- **Ít lượt:** khi chỉ có 3 lượt trở xuống, văn xuôi ghi khoảng giá trị kèm số lượt ("76–81 s (3 lượt)"), không ghi trung bình đứng một mình; giá trị từng lượt để ở bảng hoặc Phụ lục E (§3.1).
+- **Chênh lệch** giữa hai tỷ lệ viết bằng "điểm phần trăm". Ký hiệu năng lực có dấu cách: "0,5 C".
+- **Ngày tháng** chỉ ghi một lần cho phiên đo, ở mục 5.1. Bối cảnh phát hiện (ví dụ "phát hiện trên simulator ngày 01/11") để ở phần sự cố của chương 4, hoặc trong comment nguồn.
 - **Khoảng giá trị:** "80–82 s" (gạch ngang ngắn, không cách). Phép nhân: "4 × RTX 4060 Ti". Đẳng thức: "λ = 3,5 req/s" (có cách hai bên).
 - **Đơn vị:** s, ms, phút (không viết "min"), req/s, GB hoặc GiB đúng như nguồn, USD. Phần trăm và mọi định dạng số khác: theo README.
 - **Nhãn nguồn gốc:** số nào không phải đo thật thì gắn nhãn ngay cạnh:
@@ -161,7 +236,7 @@ Rủi ro R21 của kế hoạch là hội đồng xem đồ án thiên về cài
   - Số mô phỏng và số đề xuất chỉ xuất hiện ở chương 6 hoặc trong mục có tiêu đề nói rõ.
 - **So với chỉ tiêu:** khi nêu kết quả của một chỉ tiêu (N1…N8), nêu theo thứ tự: chỉ tiêu, số đo, đạt/không đạt, rồi lý do nếu không đạt. Bảng nghiệm thu tổng hợp lại đúng các câu đó, không có số mới.
 - **Mỗi bảng hoặc hình kết quả có một câu nhận xét chính** đứng ngay sau, nói điều người đọc cần thấy. Không chỉ viết "kết quả ở Bảng 5.2".
-- **Hạn chế của phép đo** gom vào mục Hạn chế ở chương 5 (danh sách ở `nguon-tu-lieu.md` §6). Chương 6 chỉ nhắc lại các hạn chế lớn nhất.
+- **Hạn chế của phép đo** gom vào mục 5.7 (danh sách ở `nguon-tu-lieu.md` §6). Hạn chế của hệ thống và phạm vi viết ở mục 6.2.
 
 ## 6. Hình, bảng, mã nguồn
 
@@ -196,19 +271,29 @@ Rủi ro R21 của kế hoạch là hội đồng xem đồ án thiên về cài
 
 ## 8. Phối hợp giữa hai người
 
-- **Sở hữu file:** mỗi file một người viết (README). Muốn góp ý mục của người kia thì góp qua review PR, không sửa thẳng.
-- **Mục chia đôi** (3.3, 4.11; một phần chương 2 và 5): trước khi viết, hai người chốt danh sách tiểu mục và câu hỏi mỗi tiểu mục trả lời, ghi vào comment đầu file `a`. Như vậy không ai viết trùng.
+- **Người viết:** từ 22/11/2026, Trình viết bản base toàn bộ luận văn (Kế hoạch §11.1), nên mỗi mục là một file, không tách phần `a`, `b` theo người viết. Khi base xong, Quang review, sửa và cập nhật số. Người sở hữu tính năng theo Kế hoạch §5.1 soát kỹ mục tương ứng.
+- **Quy trình cho mỗi chương:**
+  1. Chốt dàn ý của chương: tiểu mục, thông điệp của từng mục, ngân sách chữ.
+  2. Viết nháp theo README, file này và mẫu văn.
+  3. Soát: đối chiếu toàn bộ số với comment nguồn, soát văn phong theo §3.
+  4. Người viết đọc lại ý và soát xác suất vài số, rồi mở một PR cho cả chương.
+- **Mẫu văn:** mục 3.5 viết theo file này và được duyệt trước khi viết các mục khác.
+- **Góp ý:** tới bước định dạng (W9), bản gốc là Markdown. Góp ý qua review PR hoặc comment trên file `.docx` ghép thử; người viết sửa ở Markdown rồi xuất lại.
 - **Ranh giới hay trùng nhau.** Viết đầy đủ ở mục ghi trong bảng, chỗ khác dẫn chéo:
 
-  | Nội dung | Viết đầy đủ ở | Chỗ khác chỉ |
+  | Nội dung | Viết đầy đủ ở | Chỗ khác |
   |---|---|---|
-  | Định nghĩa SLO, TTFT, TPOT | 2 (khái niệm) và 3.4 (giá trị của đồ án) | dẫn chéo |
-  | Lý do chọn tín hiệu A2 | 3.3b | 5.3 chỉ đối chiếu với số đo |
-  | Cold start: thiết kế, cách làm, số đo | 3.3a, 4.5, 5.4 | mỗi chỗ một vai trò, theo §2 |
-  | Kịch bản vận hành VH | 3.5 (thiết kế), 4.8, 4.9 (cách làm), 5.5 (kết quả) | |
+  | SLO, TTFT, TPOT | 2 (khái niệm), 3.1 (giá trị của đồ án), 3.5 (SLI và cảnh báo) | Chương 5 chỉ báo SLO attainment |
+  | Lý do chọn tín hiệu A2 | 3.3 | 5.3 chỉ đối chiếu với số đo |
+  | Cold start: thiết kế, cách làm, số đo | 3.4, 4.4, 5.4 | Mỗi chỗ một vai trò, theo §2 |
+  | Tính hợp lệ của lượt đo | 3.6 (tiêu chí, lý do), 4.7 (runner kiểm thế nào), 5.1 (kết quả) | |
+  | Scale-down không rớt request | 5.3 | 5.5 chỉ dẫn chéo |
+  | Kịch bản vận hành VH | 3.6 (thiết kế phép thử), 4.1, 4.5, 4.6 (cách làm), 5.5 (kết quả) | |
+  | Cách chấm cảnh báo, định nghĩa page giả | 3.6 | 5.5 chỉ báo kết quả |
+  | Hạn chế | 5.7 (phép đo), 6.2 (hệ thống, phạm vi) | |
 
 - **Review:**
-  - Người kia review trong 48 giờ (CONTRIBUTING §7).
+  - Người review đọc trong 48 giờ (CONTRIBUTING §7).
   - Người review đối chiếu **mọi số** với comment nguồn, và kiểm thuật ngữ theo §4.
   - Không duyệt PR có số mà không có nguồn.
 - **Ghép thử:** mỗi tối Chủ nhật, người ghép (Trình) chạy pandoc ra `.docx` để cả hai đọc thử liền mạch. Lỗi chung (thuật ngữ lệch, lặp nội dung) ghi vào issue, không sửa vội.
@@ -218,18 +303,21 @@ Rủi ro R21 của kế hoạch là hội đồng xem đồ án thiên về cài
 
 - Agent được viết nháp **từ nguồn trong repo**, và phải đặt comment nguồn sau mỗi đoạn có số.
 - Agent không được thêm số, khẳng định hay trích dẫn mà không có nguồn.
-- Người sở hữu mục phải đọc lại toàn bộ và đối chiếu từng số. **Người sở hữu chịu trách nhiệm về nội dung**, không phải agent.
+- Bước soát ở §8 do một agent khác với agent viết nháp làm; người viết vẫn đọc lại và đối chiếu số. **Người viết và người review chịu trách nhiệm về nội dung**, không phải agent.
 - Ghi vào nhật ký cá nhân mục nào do agent viết nháp, mục nào đã soát.
-- Trước khi nộp, đọc quy định của trường về dùng công cụ AI; nếu trường yêu cầu khai báo thì khai báo trong lời cam đoan hoặc phần mở đầu.
+- **Thân bài (chương 1–6) không nhắc** AI agent hay tên công cụ AI (§3.5). Đồ án nói về phục vụ LLM, nên không dùng chữ "AI" chung chung: "model", "LLM" là đối tượng mà hệ thống phục vụ.
+- **Khai báo một lần, ở Lời cam đoan,** theo quy định của trường (cần hỏi GVHD hoặc khoa), và đúng mức dùng thật. Dự án dùng công cụ AI cho cả viết mã, phân tích số liệu, soạn và rà soát văn bản, nên không viết nhẹ hơn thực tế. Câu mẫu (hai người chốt câu cuối cùng): "Trong quá trình thực hiện, nhóm dùng công cụ AI để hỗ trợ viết mã, phân tích số liệu, soạn thảo và rà soát văn bản. Nhóm đã kiểm tra lại các kết quả đó và chịu trách nhiệm hoàn toàn về nội dung đồ án. Mọi số liệu trong báo cáo đều truy được về dữ liệu đo lưu trong kho mã của đồ án."
+- **Comment trong file luận văn** (repo công khai) chỉ ghi nguồn và trạng thái soát, theo dạng trung tính: `<!-- Soát số: <ngày> · Soát văn phong: <ngày> · Người viết đọc lại: <ngày> -->`. Việc dùng AI ghi ở nhật ký cá nhân và Lời cam đoan.
 
 ## 10. Checklist trước khi mở PR một mục
 
-- [ ] Dòng đầu là comment mục đích và người viết; tiêu đề và số mục khớp dàn ý.
-- [ ] Mục nói đúng phần việc của chương (§2), không lặp mục khác; chỗ cần thì dẫn chéo.
+- [ ] Dòng đầu là comment mục đích và người viết; có comment thông điệp (§2) và trạng thái soát (§9); tiêu đề và số mục khớp dàn ý (Kế hoạch §11.1).
+- [ ] Mục nói đúng phần việc của chương (§2), không lặp mục khác (bảng ranh giới ở §8); chỗ cần thì dẫn chéo.
 - [ ] Mọi số, mọi khẳng định kỹ thuật có comment nguồn; không có số "chưa đo" (`nguon-tu-lieu.md` §4).
+- [ ] Văn phong theo §3: câu đầu đoạn là kết luận; không có cụm sáo và dấu hiệu ở §3.4.
 - [ ] Thuật ngữ, tên sản phẩm, mã định danh theo §4; thuật ngữ mới đã giải thích ở lần đầu và đã vào danh mục chữ viết tắt.
 - [ ] Số và đơn vị theo README và §5; số không phải đo thật có nhãn nguồn gốc.
 - [ ] Hình, bảng có chú thích, được nhắc trong bài trước khi xuất hiện, có câu nhận xét đi sau.
-- [ ] Không có văn nói, mã việc, số PR, tên người, đường dẫn `docs/` trong thân bài.
+- [ ] Không có văn nói và không nhắc chuyện nội bộ (§3.5) trong thân bài.
 - [ ] `pandoc … --citeproc` chạy không lỗi, không cảnh báo trích dẫn (lệnh ở README).
 - [ ] Đã ghi nhật ký cá nhân (AGENTS.md).
