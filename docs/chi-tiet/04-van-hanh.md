@@ -1,6 +1,6 @@
 # 4. Vận hành nền tảng
 
-> Thuộc [bộ tài liệu đồ án](../mo-ta-chi-tiet-do-an.md#bộ-tài-liệu) · Dùng cho mục 3.4–3.5 và 4.6–4.10 của luận văn · Giá trị SLO và tham số: [Thông số](00-thong-so.md)
+> Thuộc [bộ tài liệu đồ án](../mo-ta-chi-tiet-do-an.md#bộ-tài-liệu) · Dùng cho mục 3.2, 3.4–3.5, 4.1, 4.5–4.6 của luận văn · Giá trị SLO và tham số: [Thông số](00-thong-so.md)
 
 **Tóm tắt nhanh**
 - Vận hành ở đây là những việc phải làm **sau khi** nền tảng đã chạy: biết khi nào chất lượng giảm, biết phải làm gì, cập nhật phiên bản an toàn, xử lý sự cố, dựng lại khi mất cluster, giữ an toàn và biết mình đang tốn bao nhiêu.

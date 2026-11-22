@@ -4,7 +4,7 @@
 Thư mục này chứa **nội dung** luận văn, viết bằng Markdown, mỗi mục một file. Ở bước định dạng (W9), pandoc ghép các file thành một file `.docx` theo khuôn của trường.
 
 - Dàn ý và số trang: [Kế hoạch §11.1](../chi-tiet/06-ke-hoach-quan-ly.md#111-dàn-ý-luận-văn-5565-trang).
-- Ai viết mục nào: [Kế hoạch §5.1](../chi-tiet/06-ke-hoach-quan-ly.md#51-phân-công). Ghép và định dạng: Trình.
+- Người viết: từ 22/11/2026, Trình viết bản base toàn bộ luận văn; Quang review, sửa và cập nhật số. Người sở hữu tính năng theo [Kế hoạch §5.1](../chi-tiet/06-ke-hoach-quan-ly.md#51-phân-công) soát kỹ mục tương ứng. Ghép và định dạng: Trình.
 - Nguồn sự kiện: nhật ký làm việc ([AGENTS.md](../../AGENTS.md)), thiết kế ở `docs/chi-tiet/`, mã nguồn, và số liệu trong `analysis/`.
 
 **Vì sao không viết thẳng trong Word:** file Markdown xem được diff, review được qua PR, AI agent sửa được, và mỗi số liệu đặt được một comment ghi nguồn. Word vẫn là định dạng cuối: GVHD góp ý trên file `.docx`, nhóm sửa ở đây rồi xuất lại.
@@ -13,14 +13,13 @@ Thư mục này chứa **nội dung** luận văn, viết bằng Markdown, mỗi
 
 | File | Nội dung |
 |---|---|
-| `CC-SS-<ten>.md` | Chương `CC`, mục `SS`. Hai chữ số để thứ tự khi ghép đúng với thứ tự mục, ví dụ `03-04-giam-sat-slo-canh-bao.md` đứng trước `04-10-bao-mat.md` |
+| `CC-SS-<ten>.md` | Chương `CC`, mục `SS`. Hai chữ số để thứ tự khi ghép đúng với thứ tự mục, ví dụ `03-05-<ten>.md` đứng trước `04-01-<ten>.md` |
 | `CC-00-<ten>.md` | Tiêu đề chương (`# Chương CC. …`) và đoạn mở đầu chương |
 | `tai-lieu.bib` | Danh mục tài liệu tham khảo dùng chung (BibTeX) |
 | [`quy-tac-viet.md`](quy-tac-viet.md) | Quy tắc viết chung cho hai người: chương nào nói gì, văn phong, thuật ngữ thống nhất, trình bày kết quả, review, checklist trước PR. Không ghép vào `.docx` |
 | [`nguon-tu-lieu.md`](nguon-tu-lieu.md) | Mục nào lấy tư liệu ở đâu, số liệu đã chốt, những gì chưa có số, cách lấy dữ liệu V2. Không ghép vào `.docx` |
 
-- **Mỗi file chỉ một người viết**, là người sở hữu mục đó theo §5.1, nên hai người không sửa cùng một file. Muốn góp ý mục của người kia thì góp qua review PR.
-- Mục mà §5.1 chia cho hai người (như 3.3, 4.11) tách thành phần `a`, `b`: `03-03a-<ten>.md` có tiêu đề `## 3.3.` và các tiểu mục của người thứ nhất, `03-03b-<ten>.md` chỉ có các tiểu mục `###` của người thứ hai. Hai người thống nhất số tiểu mục trước khi viết.
+- **Mỗi mục cấp 2 là một file**, không tách phần `a`, `b` theo người viết. Góp ý qua review PR hoặc comment trên `.docx` ghép thử ([quy tắc viết §8](quy-tac-viet.md#8-phối-hợp-giữa-hai-người)).
 - Dòng đầu mỗi file là comment `<!-- Mục đích: … Người viết: … -->` (CONTRIBUTING §2). Comment HTML không xuất hiện trong `.docx`.
 - Tiêu đề trong file mục: `## 3.4. …`, `### 3.4.1. …`. Số mục đánh tay, khớp dàn ý §11.1.
 - Hình lấy thẳng từ chỗ gốc, không chép vào đây: sơ đồ ở `docs/images/png/` (sinh từ `docs/diagrams/`), biểu đồ kết quả ở `analysis/figures/`.
