@@ -72,3 +72,29 @@
 - **Deviations:** 2.305 chữ văn xuôi, vượt ngân sách chương 3 (10–12 trang cho 6 mục; 3.1 và 3.5 đã khoảng 2.650 chữ). Ba chỗ cắt được: đoạn quy ước tính (chuyển sang 5.1), chi tiết reset, làm ấm và cooldown (sang 4.7), đoạn ca đối chứng (sang 5.5).
 - **Links:** PR #64; `docs/luan-van/03-06-thiet-ke-danh-gia.md`.
 - **Thesis:** 3.6; dẫn chéo từ 3.1 (mục 3.6), 4.7 (runner kiểm tính hợp lệ), 5.1–5.5.
+## 2026-11-23 – Luận văn: đo trang bằng dàn trang thử, chốt ngân sách từng mục chương 3
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Dàn trang thử bốn bản nháp chương 3 (3.1, 3.3, 3.5, 3.6) bằng pandoc 3.13 và Typst 0.15.1, theo hai khuôn A4 giãn 1,5 dòng: khuôn A Times New Roman 13 pt, lề 2/2/3/2 cm; khuôn B 14 pt, lề 3,5/3/3,5/2 cm. Bảng dùng cỡ chữ nhỏ hơn văn xuôi 1 pt, được ngắt qua trang, cột co theo nội dung.
+  2. Ghi vào quy tắc viết: ngân sách theo trang (§1), thứ tự cắt khi vượt ngân sách (§3.1), quy tắc bảng (§6). Thêm ngân sách từng mục chương 3 vào Kế hoạch §11.1.
+- **Decision:** Trình giao việc chọn độ dài, yêu cầu nội dung chuyên nghiệp, đúng trọng tâm 20/80 và câu nào cũng có giá trị.
+  - Giữ tổng 55–65 trang (ADR-004 K12) và khoảng trang của từng chương. Ngân sách đổi đơn vị từ "300 chữ mỗi trang" sang **trang, gồm cả bảng và hình**.
+  - Chương 3 lấy mức trên, 12 trang: mở đầu và kết chương 0,5 · 3.1 1,5 · 3.2 2 · 3.3 2,5 · 3.4 1,5 · 3.5 2 · 3.6 2. Mục 3.3 nhiều nhất vì mang TĐ1.
+  - Không chọn nâng chương 3 lên 14–16 trang: phải lấy chỗ của chương 4 hoặc chương 2, trong khi gần một nửa số trang thừa là bảng.
+  - Script dàn trang chỉ để trên máy, không đưa vào repo. Khi có khuôn .docx của trường thì đo lại bằng `--reference-doc` và Word.
+- **Results:** số trang (mỗi mục dàn riêng, nên trang cuối lẻ tính tròn một trang):
+
+  | Phần | Khuôn A | Khuôn B |
+  |---|---|---|
+  | 3.1 (1.181 chữ văn xuôi, 5 bảng) | 5 | 7 |
+  | 3.3 (1.659 chữ, 3 bảng) | 5 | 6 |
+  | 3.5 (1.464 chữ, 2 bảng) | 4 | 5 |
+  | 3.6 (2.305 chữ, 7 bảng) | 10 | 13 |
+  | Bốn mục ghép liền | 22 | 29 |
+  | Chỉ văn xuôi của bốn mục (6.609 chữ) | 13 | 16 |
+
+  Văn xuôi khoảng 510 chữ/trang (A) và 415 chữ/trang (B). Bảng trung bình 0,5–0,75 trang mỗi bảng. Bốn mục mới viết gấp 2,75–3,6 lần ngân sách 8 trang của chính chúng, và đã vượt 10–12 trang của cả sáu mục.
+- **Incidents:** lần dàn đầu, bảng không ngắt qua trang (để lại trang gần trống) và cột chia đều, nên số trang bị đội; lần sửa thứ hai đếm số cột từ file Markdown, lệch vì có bảng trong comment. Cuối cùng giữ số cột Pandoc sinh ra, chỉ đổi độ rộng sang `auto`, và soát bằng ảnh trang trước khi lấy số.
+- **Links:** `docs/luan-van/quy-tac-viet.md` (§1, §3.1, §6); `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§11.1).
+- **Thesis:** áp cho mọi mục; trước mắt là cắt 3.1, 3.3, 3.5, 3.6 về ngân sách, và viết 3.2, 3.4 theo ngân sách.
