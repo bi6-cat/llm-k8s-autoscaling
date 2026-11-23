@@ -564,19 +564,23 @@ def fig_slo_alert():
         s.arrow([(252, y + 27), (300, y + 27)], VIOLET, sw=1.5, dash="5 4")
 
     s.rect(300, 134, 260, 252, fill=VIOLET_T, stroke="#d6d1ef", rx=12)
-    s.box(316, 150, 228, 92, "Recording rule", ["tỷ lệ request xấu", "theo cửa sổ 1, 5, 30 phút"], tsize=13)
+    s.box(316, 150, 228, 92, "Recording rule", ["tỷ lệ TTFT xấu: 1, 5, 30 phút", "tỷ lệ lỗi 5xx: 5 phút"], tsize=13)
     s.box(316, 278, 228, 92, "Alert rule", ["7 quy tắc: SLO · pod · HPA · KEDA", "có unit test (promtool)"],
           tsize=13)
     s.arrow([(430, 242), (430, 278)], INK2, sw=1.5)
 
-    # Inhibit rule không khai báo trong values của nhóm: dùng mặc định của chart kube-prometheus-stack.
+    # Không ghi inhibit: nhóm giữ inhibit_rules mặc định của chart (critical chặn warning/info), không chạm
+    # tới page và ticket. Ticket không nhắc lại trong 24 h (repeat_interval), nhưng cảnh báo mới vào cùng
+    # nhóm vẫn có tin sau group_interval 5 phút.
     s.rect(608, 134, 250, 252, fill=ORANGE_T, stroke="#f3cdb9", rx=12)
     s.box(624, 150, 218, 92, "page", ["người dùng đang bị ảnh hưởng", "→ Telegram, nhắc lại mỗi giờ"], tsize=13,
           stroke=CRIT)
-    s.box(624, 278, 218, 92, "ticket (+ critical)", ["xử lý trong giờ làm việc", "→ Telegram, báo một lần"],
+    s.box(624, 278, 218, 92, "ticket", ["xử lý trong giờ làm việc", "→ Telegram, không nhắc lại trong 24 h"],
           tsize=13, stroke=WARN)
-    s.text(733, 264, "gom theo tên · inhibit mặc định chart", size=11, fill=INK2, anchor="middle")
-    s.text(733, 410, "warning, info của chart: không gửi", size=11, fill=INK2, anchor="middle")
+    s.text(733, 264, "gom theo tên cảnh báo: mỗi nhóm một tin", size=11, fill=INK2, anchor="middle")
+    # Cảnh báo có sẵn của chart kube-prometheus-stack: critical đi chung route với ticket
+    s.text(733, 403, "cảnh báo có sẵn của chart:", size=11, fill=INK2, anchor="middle")
+    s.text(733, 419, "critical → ticket · warning, info: không gửi", size=11, fill=INK2, anchor="middle")
     s.arrow([(544, 312), (584, 312), (584, 196), (624, 196)], ORANGE, sw=2)
     s.arrow([(544, 336), (624, 336)], ORANGE, sw=2)
 

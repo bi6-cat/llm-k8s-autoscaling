@@ -34,3 +34,20 @@
 - **Deviations:** phần "thay đổi so với dàn ý trước" ở Kế hoạch §11.1 chỉ giữ 6 ý chính, không chép đủ 8 ý của bản nháp bố cục.
 - **Links:** `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§3 M4, M5; §5.1; §11.1; §11.4); `docs/chi-tiet/01`, `03`, `04`, `05` (phần đầu; 05 dòng F4); `docs/luan-van/quy-tac-viet.md`, `nguon-tu-lieu.md`, `README.md`, `03-05-giam-sat-slo-canh-bao.md`.
 - **Thesis:** dàn ý toàn bộ; 1.4 (cách trình bày quy trình); Lời cam đoan (khai báo công cụ AI).
+
+## 2026-11-23 – TR8: sửa Hình 7 (SLO → cảnh báo → runbook) cho khớp cái đã làm
+
+- **Task:** TR8 (luận văn), TR4 · **Environment:** none
+- **Done:**
+  1. Đối chiếu `fig_slo_alert()` ở `docs/diagrams/build_diagrams.py` với `common/observability/alerts/llm.yaml`, `rules/slo.yaml`, `common/platform/alertmanager-values.yaml`, `common/platform/gpu-exporter/`, `docs/runbooks/` và `envs/cloud/README.md`, theo 6 điểm lệch ghi ngày 18/11.
+  2. Sửa hình: nguồn GPU là `nvidia_gpu_exporter` (đọc nvidia-smi), chỉ vẽ dashboard; bỏ cảnh báo nhiệt độ và XID; ô Alert rule ghi 7 quy tắc (SLO, pod, HPA, KEDA); kube-state-metrics có thêm condition của ScaledObject (nguồn của `KedaScalerErrors`); hành động bỏ "thắt giới hạn tốc độ", thêm "xoá pod chậm" và "đề xuất thêm GPU" theo runbook; ô Git ghi Argo CD chỉ sync ở nhà, VM thuê áp lại bằng `make cloud-platform`.
+  3. Sinh lại SVG, xuất PNG, tự xem ảnh PNG để kiểm cả 6 điểm.
+  4. `/code-review high`: 8 điểm, sửa cả 8. Đáng kể nhất: nhãn "inhibit mặc định của chart" đặt giữa page và ticket vẫn gợi ý sai, vì inhibit mặc định (critical chặn warning/info) không chạm tới page và ticket, nên bỏ hẳn; ticket ghi "không nhắc lại trong 24 h" thay cho "báo một lần" (cảnh báo mới vào cùng nhóm vẫn có tin sau `group_interval` 5 phút); critical của chart chuyển thành chú thích riêng dưới khung Alertmanager; ô Recording rule tách TTFT (1, 5, 30 phút) và lỗi 5xx (5 phút); script xuất PNG ghi ra file tạm rồi mới thay, để lần xuất hỏng không xoá PNG đã commit.
+- **Results:** chỉ `07-slo-canh-bao-runbook.svg` và `.png` đổi; các hình khác sinh lại giống hệt (khác duy nhất ở CRLF, đã đổi về LF). shellcheck đạt. ruff trên `build_diagrams.py` báo 8 lỗi, đúng bằng số lỗi trước khi sửa (thư mục `docs/diagrams/` không nằm trong CI).
+- **Incidents:**
+  - `export_png.sh` báo xuất xong nhưng không ghi PNG nào: trong Git Bash, `file://$PWD/...` thành `file:///d/Data/...`, Chrome trên Windows không mở được; thêm nữa, `--screenshot` với đường dẫn tương đối không ghi vào thư mục hiện tại; script giấu output của Chrome nên không thấy lỗi. Sửa: đổi đường dẫn bằng `cygpath -m`, ghi `--screenshot` bằng đường dẫn tuyệt đối, tự chọn Chrome của Windows khi có `cygpath`, báo lỗi khi Chrome không ghi được file.
+  - `python -I build_diagrams.py` lỗi `No module named 'chuyen_sau'`, vì `-I` bỏ thư mục của script khỏi `sys.path`; chạy không kèm `-I` (code trong repo).
+  - Python trên Windows ghi SVG bằng CRLF; chạy `sed -i 's/\r$//'` sau khi sinh.
+- **Deviations:** PNG của Hình 7 nay xuất bằng Chrome trên Windows (font Segoe UI), các PNG khác vẫn là bản Quang xuất trên macOS; khác font nhẹ khi đặt cạnh nhau.
+- **Links:** nhánh `docs/tr8-fig7-slo-alerts`; `docs/diagrams/build_diagrams.py`, `docs/diagrams/export_png.sh`, `docs/images/07-slo-canh-bao-runbook.svg`, `docs/images/png/07-slo-canh-bao-runbook.png`.
+- **Thesis:** Hình 7 dùng được cho §3.5 (chưa chèn vào bản mẫu 3.5, vì bản mẫu đang chờ Trình duyệt).
