@@ -90,9 +90,10 @@
   |---|---|---|---|---|
   | Base (trước khi cắt) | 1.181 | 5 | 5 trang | 7 trang |
   | Lần thử 1 (giữ bảng mã gọn) | 580 | 2 | 2,43 | 3,25 |
-  | Bản cuối | 344 | 1 | 1,16 | 1,49 |
+  | Lần thử 2 (trước `/code-review`) | 344 | 1 | 1,16 | 1,49 |
+  | Bản cuối (sau khi sửa theo review) | 314 | 1 | 1,17 | 1,44 |
 
-  `kiem_van.py` 0 điểm; lychee `docs/luan-van/*.md` 0 lỗi.
-- **Deviations:** quy-tac-viet §4 ghi "mã định danh định nghĩa ở chương 3, gom vào một bảng"; nay bảng gom nằm ở danh mục đầu quyển, còn chương 3 định nghĩa từng mã ở mục dùng nó. Tiêu chí N1 trong bảng không còn ghi pha; pha ổn định của KB1 để mục 3.6 mô tả.
-- **Links:** `docs/luan-van/03-01-yeu-cau-chi-tieu.md`, `docs/luan-van/nguon-tu-lieu.md` (dòng 3.1); PR #63.
+  `kiem_van.py` 0 điểm; lychee `docs/luan-van/*.md` 0 lỗi. `/code-review high`: 10 điểm, sửa cả 10. Phần lớn do nén bảng làm mất điều kiện của chỉ tiêu (pha của N1, "so với S4" của N3, ca 1 replica của N4, điều kiện fallback của N6, mốc tính giờ của N2a). Ngoài ra: lý do ngưỡng TTFT bị đảo so với ADR-005 T3, câu chủ đề "mọi ngưỡng tính từ nền tảng" mâu thuẫn với mức 95% theo thông lệ, "tức …" lồng định nghĩa (quy-tac-viet §3.2). Bỏ lý do TPOT 100 ms (ghi ở `nguon-tu-lieu.md`) để giữ trong 1,5 trang.
+- **Deviations:** quy-tac-viet §4 trước ghi "mã định danh định nghĩa ở chương 3, gom vào một bảng"; đã sửa thành: mỗi mã định nghĩa ở mục chương 3 dùng nó, bảng gom nằm ở danh mục đầu quyển. Kế hoạch §11.1 (dòng chương 3) bỏ "truy vết, bảng mã định danh" khỏi 3.1.
+- **Links:** `docs/luan-van/03-01-yeu-cau-chi-tieu.md`, `docs/luan-van/nguon-tu-lieu.md` (dòng 3.1), `docs/luan-van/quy-tac-viet.md` §4, `docs/chi-tiet/06-ke-hoach-quan-ly.md` §11.1; PR #63.
 - **Thesis:** §3.1; danh mục mã định danh ở phần đầu quyển lấy từ bảng mã của bản base (commit `fbe651b`).
