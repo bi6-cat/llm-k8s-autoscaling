@@ -61,3 +61,13 @@
 - **Incidents:** lần dàn đầu, bảng không ngắt qua trang (để lại trang gần trống) và cột chia đều, nên số trang bị đội; lần sửa thứ hai đếm số cột từ file Markdown, lệch vì có bảng trong comment. Cuối cùng giữ số cột Pandoc sinh ra, chỉ đổi độ rộng sang `auto`, và soát bằng ảnh trang trước khi lấy số.
 - **Links:** `docs/luan-van/quy-tac-viet.md` (§1, §3.1, §6); `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§11.1).
 - **Thesis:** áp cho mọi mục; trước mắt là cắt 3.1, 3.3, 3.5, 3.6 về ngân sách, và viết 3.2, 3.4 theo ngân sách.
+
+## 2026-11-24 – Luận văn: bản base mục 3.2 (Kiến trúc tổng thể)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** viết `docs/luan-van/03-02-kien-truc-tong-the.md` theo bố cục 3.2 (ba luồng: request, autoscaling, thay đổi qua Git; hai tầng môi trường dùng chung base Kustomize; bảo vệ tối thiểu). Đối chiếu từng khẳng định với Kiến trúc §1–§5, §18; Môi trường §1, §2.7; Thông số §3, §9, §10; Vận hành §7–§8; ADR-006 §3, §3.1; `envs/home/argocd/apps/`, `Makefile`, `docs/phien-ban.md`. Thêm `argocd-cluster-bootstrapping` (Argo CD v3.5.4) vào `tai-lieu.bib`. Đo trang, cắt, chạy `/code-review high`, sửa, đo lại.
+- **Decision:** chèn tạm hình kiến trúc hiện có (Hình 2 của `docs/chi-tiet/`) làm Hình 3.2a để đo trang có tính hình; hình phải vẽ lại trước khi ghép, vì còn ghi giới hạn tốc độ ở Traefik và chưa có Argo CD. Không chèn Hình 6 (còn A4000, A3/A4): Bảng 3.2a thay cho nó. Giữ cách gọi "hai tầng" của Môi trường §1, bảng vẫn tách ba cột (simulator, máy nhà, VM thuê).
+- **Results:** 1.240 → 505 chữ văn xuôi, 1 bảng, 1 hình. Dàn trang thử có chèn hình: bản đầu 2,87 trang (khuôn B), bản cuối 1,65 trang (khuôn A), 1,98 trang (khuôn B). kiem_van 0 điểm; lychee 0 lỗi.
+- **Incidents:** `/code-review high` báo 10 điểm, sửa cả 10: đếm sai số lớp bảo vệ còn giữ (là ba lớp, gồm ghim phiên bản, không phải hai); lý do lược bảo mật viết lệch ADR-006 §3.1; thiếu GPU replica ở máy nhà; `make bootstrap` là Ansible, không phải Helm; "ba môi trường" lệch "hai tầng" của nguồn; thiếu điều kiện self-heal; nói quá về simulator; chú thích hình sai khuôn README; ô tiêu đề bảng trống; "Ba đánh giá" chưa được định nghĩa. Script đo `run.sh` dừng khi `31.md` rỗng (`grep` trả mã 1 dưới `set -e`), nên mục 3.2 được đo ở vị trí của `31.md`.
+- **Links:** `docs/luan-van/03-02-kien-truc-tong-the.md`, `docs/luan-van/tai-lieu.bib`.
+- **Thesis:** §3.2. Việc kéo theo: chương 2 định nghĩa Kustomize base/overlay, App-of-Apps, k3s, time-slicing, external metric; tên đầy đủ Qwen2.5-0.5B/3B-Instruct xuất hiện lần đầu trước 3.2; mục 6.2 nhận ba lớp bảo vệ bị lược.
