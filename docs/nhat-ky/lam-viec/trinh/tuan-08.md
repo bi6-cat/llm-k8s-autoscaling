@@ -75,3 +75,24 @@
 - **Incidents:** lần dàn đầu, bảng không ngắt qua trang (để lại trang gần trống) và cột chia đều, nên số trang bị đội; lần sửa thứ hai đếm số cột từ file Markdown, lệch vì có bảng trong comment. Cuối cùng giữ số cột Pandoc sinh ra, chỉ đổi độ rộng sang `auto`, và soát bằng ảnh trang trước khi lấy số.
 - **Links:** `docs/luan-van/quy-tac-viet.md` (§1, §3.1, §6); `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§11.1).
 - **Thesis:** áp cho mọi mục; trước mắt là cắt 3.1, 3.3, 3.5, 3.6 về ngân sách, và viết 3.2, 3.4 theo ngân sách.
+
+## 2026-11-24 – Luận văn: cắt mục 3.1 về 1,5 trang
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Merge `origin/main` vào nhánh `docs/tr8-thesis-3-1-base` (PR #63) để có ngân sách trang (D94).
+  2. Viết lại `03-01-yeu-cau-chi-tieu.md`: 5 bảng còn 1 (F1–F7 và N1–N8 gộp, mỗi dòng một cụm ngắn); bỏ 4 tiểu mục; giá trị SLO và lý do của ngưỡng viết thành văn xuôi.
+  3. Ghi các ý đã cắt và nơi chứa chúng vào dòng 3.1 của `nguon-tu-lieu.md`, và vào comment nguồn của mục.
+- **Decision:** bảng mã định danh đầy đủ (S, A, KB, ĐG, VH, LT, L, V, C, B\*, N) chuyển khỏi 3.1 sang danh mục mã định danh ở phần đầu quyển (quy-tac-viet §1 mục 4, §4). Thân bài 3.1 chỉ giữ bảng F/N và một câu dẫn tới mục 3.3–3.6, nơi từng mã được định nghĩa. Lý do: bảng mã tốn khoảng 0,8 trang (khuôn B), hơn nửa ngân sách 1,5 trang. Không chọn giữ bảng mã và bỏ bảng F/N, vì F/N là nội dung chính của mục. Ma trận truy vết (Bảng 3.1 cũ) bỏ khỏi thân bài; cột "Phép thử" của bảng F/N vẫn nối mỗi yêu cầu tới phép thử.
+- **Results:** đo bằng dàn trang thử (pandoc + Typst, hai khuôn như mục 23/11):
+
+  | Bản | Chữ văn xuôi | Bảng | Khuôn A | Khuôn B |
+  |---|---|---|---|---|
+  | Base (trước khi cắt) | 1.181 | 5 | 5 trang | 7 trang |
+  | Lần thử 1 (giữ bảng mã gọn) | 580 | 2 | 2,43 | 3,25 |
+  | Bản cuối | 344 | 1 | 1,16 | 1,49 |
+
+  `kiem_van.py` 0 điểm; lychee `docs/luan-van/*.md` 0 lỗi.
+- **Deviations:** quy-tac-viet §4 ghi "mã định danh định nghĩa ở chương 3, gom vào một bảng"; nay bảng gom nằm ở danh mục đầu quyển, còn chương 3 định nghĩa từng mã ở mục dùng nó. Tiêu chí N1 trong bảng không còn ghi pha; pha ổn định của KB1 để mục 3.6 mô tả.
+- **Links:** `docs/luan-van/03-01-yeu-cau-chi-tieu.md`, `docs/luan-van/nguon-tu-lieu.md` (dòng 3.1); PR #63.
+- **Thesis:** §3.1; danh mục mã định danh ở phần đầu quyển lấy từ bảng mã của bản base (commit `fbe651b`).

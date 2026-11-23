@@ -66,7 +66,7 @@ Số mục theo dàn ý ở Kế hoạch §11.1. Bản base do Trình viết; ng
 
 | Mục | Nguồn |
 |---|---|
-| 3.1 Yêu cầu và chỉ tiêu nghiệm thu | **Đã có bản base**: [`03-01-yeu-cau-chi-tieu.md`](03-01-yeu-cau-chi-tieu.md); Thông số §3–§6 (§6: giá trị SLO); Bài toán §8–§10 (ma trận truy vết); bảng mã định danh: `quy-tac-viet.md` §4 |
+| 3.1 Yêu cầu và chỉ tiêu nghiệm thu | **Đã có bản base**, cắt về 1,5 trang ngày 24/11: [`03-01-yeu-cau-chi-tieu.md`](03-01-yeu-cau-chi-tieu.md) (một bảng F1–F7, N1–N8; giá trị SLO và lý do ngưỡng viết thành văn xuôi); Thông số §3–§6 (§6: giá trị SLO). Phần chuyển ra từ bản base (xem lịch sử Git của `03-01-yeu-cau-chi-tieu.md`, commit `fbe651b`): bảng mã định danh đầy đủ (S, A, KB, ĐG, VH, LT, L, V, C, B\*, N) → danh mục mã định danh ở phần đầu quyển, dùng làm bản gốc khi ghép; ma trận truy vết từng mã tới mục thiết kế, triển khai, đánh giá → Bài toán §10, Kế hoạch §11.1; F3 kiểm ở cluster nhà vì VM thuê không chạy Argo CD, cách cập nhật bằng annotation trên VM → 3.6 (VH2); các hạng mục bảo vệ đã lược của F7 → 6.2; mục tiêu 99% request không 5xx đo ở Traefik (không có số trong lượt đánh giá) → 6.2; lý do ngưỡng 30 phút dựng lại (đặt khi còn dự kiến model 7B) → 5.5 nếu cần |
 | 3.2 Kiến trúc tổng thể | Kiến trúc §1–§5, §18; Vận hành §7–§9 (dựng lại, bảo mật, chi phí); Môi trường §1–§3 (hai tầng dùng chung manifest); Thông số §10; ADR-004 §7; ADR-006 C2, §3.1; Hình 2, 3, 6 |
 | 3.3 Thiết kế autoscaling | Kiến trúc §6, §9–§16; Thông số §8, §9; ADR-006 C7 (truy vấn A1); Hình 4, 14, 15 |
 | 3.4 Cold start và thay đổi an toàn | Kiến trúc §3, §7, §8; Vận hành §5; ADR-005; Hình 5, 12, 13, 16 |
