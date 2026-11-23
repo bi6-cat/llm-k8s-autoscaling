@@ -70,7 +70,7 @@ Số mục theo dàn ý ở Kế hoạch §11.1. Bản base do Trình viết; ng
 | 3.2 Kiến trúc tổng thể | Kiến trúc §1–§5, §18; Vận hành §7–§9 (dựng lại, bảo mật, chi phí); Môi trường §1–§3 (hai tầng dùng chung manifest); Thông số §10; ADR-004 §7; ADR-006 C2, §3.1; Hình 2, 3, 6 |
 | 3.3 Thiết kế autoscaling | Kiến trúc §6, §9–§16; Thông số §8, §9; ADR-006 C7 (truy vấn A1); Hình 4, 14, 15 |
 | 3.4 Cold start và thay đổi an toàn | Kiến trúc §3, §7, §8; Vận hành §5; ADR-005; Hình 5, 12, 13, 16 |
-| 3.5 Giám sát, cảnh báo, xử lý sự cố | **Đã có bản nháp**: [`03-05-giam-sat-slo-canh-bao.md`](03-05-giam-sat-slo-canh-bao.md) (viết theo dàn ý cũ; khi viết lại thì thêm phần xử lý sự cố và chuyển giá trị SLO sang 3.1); Kiến trúc §17; Vận hành §1–§4, §6; Hình 7 |
+| 3.5 Giám sát, cảnh báo, xử lý sự cố | **Đã có bản mẫu văn**: [`03-05-giam-sat-slo-canh-bao.md`](03-05-giam-sat-slo-canh-bao.md) (viết theo bố cục mới: có phần xử lý sự cố và vai trò người trực; giá trị SLO đặt ở 3.1, ở đây chỉ dẫn chéo); Kiến trúc §17; Vận hành §1–§4, §6; Hình 7 |
 | 3.6 Thiết kế đánh giá | Môi trường §7–§17, §19; Thông số §7, §8; Bài toán §9 (chỉ số của đề cương); cách chấm cảnh báo và page giả: `analysis/vh6_window.py`, LT8 |
 
 ### Chương 4
