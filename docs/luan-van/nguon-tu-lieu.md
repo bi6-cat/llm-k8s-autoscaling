@@ -66,7 +66,7 @@ Số mục theo dàn ý ở Kế hoạch §11.1. Bản base do Trình viết; ng
 
 | Mục | Nguồn |
 |---|---|
-| 3.1 Yêu cầu và chỉ tiêu nghiệm thu | Thông số §3–§6 (§6: giá trị SLO); Bài toán §8–§10 (ma trận truy vết); bảng mã định danh: `quy-tac-viet.md` §4 |
+| 3.1 Yêu cầu và chỉ tiêu nghiệm thu | **Đã có bản base**: [`03-01-yeu-cau-chi-tieu.md`](03-01-yeu-cau-chi-tieu.md); Thông số §3–§6 (§6: giá trị SLO); Bài toán §8–§10 (ma trận truy vết); bảng mã định danh: `quy-tac-viet.md` §4 |
 | 3.2 Kiến trúc tổng thể | Kiến trúc §1–§5, §18; Vận hành §7–§9 (dựng lại, bảo mật, chi phí); Môi trường §1–§3 (hai tầng dùng chung manifest); Thông số §10; ADR-004 §7; ADR-006 C2, §3.1; Hình 2, 3, 6 |
 | 3.3 Thiết kế autoscaling | Kiến trúc §6, §9–§16; Thông số §8, §9; ADR-006 C7 (truy vấn A1); Hình 4, 14, 15 |
 | 3.4 Cold start và thay đổi an toàn | Kiến trúc §3, §7, §8; Vận hành §5; ADR-005; Hình 5, 12, 13, 16 |
