@@ -14,7 +14,7 @@ Chưa có khuôn của trường. Đến khi có, viết theo các thông lệ p
 
 | Mục | Thông lệ tạm dùng | Ghi chú |
 |---|---|---|
-| Độ dài | 55–65 trang thân bài; số trang từng chương ở Kế hoạch §11.1 | Không tính phụ lục. Ước tính khoảng 300 chữ văn xuôi mỗi trang, chưa hiệu chỉnh trên khuôn của trường |
+| Độ dài | 55–65 trang thân bài; số trang từng chương, và từng mục của chương 3 và 5, ở Kế hoạch §11.1 | Không tính phụ lục. Ngân sách tính theo **trang, gồm cả bảng và hình**. Dàn trang thử ngày 23/11 trên A4, Times New Roman, giãn 1,5 dòng, chữ trong bảng nhỏ hơn văn xuôi 1 pt; hai khuôn: cỡ 13 pt, lề trên/dưới/trái/phải 2/2/3/2 cm; cỡ 14 pt, lề 3,5/3/3,5/2 cm. Kết quả: văn xuôi khoảng 410–510 chữ mỗi trang; 17 bảng của các bản nháp chương 3 chiếm trung bình 0,5–0,75 trang mỗi bảng. Lập kế hoạch theo khoảng 450 chữ văn xuôi mỗi trang; đo lại khi có khuôn của trường |
 | Phông, cỡ, giãn dòng, lề | Áp theo khuôn của trường | Chờ khuôn |
 | Cấp tiêu đề | Tối đa 3 cấp số: `3.4.1.` | Cần chia nhỏ hơn thì dùng đoạn mở bằng cụm in đậm |
 | Trích dẫn | IEEE, đánh số `[1]` theo thứ tự xuất hiện | Pandoc tự đánh số qua `[@key]` |
@@ -87,13 +87,21 @@ Chỉ mô tả quy trình đã thật sự diễn ra. Ví dụ: không viết "h
 - **Quy tắc 20/80:** mỗi mục tập trung vào 1–3 thông điệp chính (§2), là điều người đọc phải nhớ sau khi đọc xong.
 - **Câu đầu đoạn là kết luận**, các câu sau là bằng chứng (số, lý do). Không dẫn dắt vòng trước khi vào ý.
 - **Một ý nói một lần.** Không kết đoạn hay kết mục bằng câu nhắc lại điều vừa nói.
-- **Cắt:** bối cảnh chung mà chương 2 đã có; diễn biến theo thời gian không đổi kết luận; số phụ; giới hạn nhỏ (gom vào mục Hạn chế).
+- **Thử từng câu:** bỏ câu đó thì người đọc mất gì cho một thông điệp, một yêu cầu F/N hay một quyết định thiết kế? Không mất gì thì bỏ.
+- **Cắt**, theo thứ tự này khi mục vượt ngân sách trang (§1):
+  1. bối cảnh chung mà chương 2 đã có;
+  2. chuyện của chương khác: cách cài, lệnh, sự cố để chương 4; số của từng lượt để chương 5 hoặc phụ lục E;
+  3. diễn biến theo thời gian không làm đổi kết luận;
+  4. chi tiết chỉ người làm cần (tham số phụ, tên file, danh sách đầy đủ): đưa phụ lục và dẫn chéo, giữ tham số chính kèm lý do;
+  5. số phụ, giới hạn nhỏ (gom vào mục Hạn chế).
+
+  Phương án bị loại: chỉ giữ phương án mà người đọc dễ hỏi "sao không làm thế", mỗi phương án một câu lý do.
 - **Mật độ gọn:** văn xuôi nêu khoảng giá trị kèm số lượt, ví dụ "79,7–81,5 s (3 lượt)"; số của từng lượt chỉ để trong bảng. Không lặp ở văn xuôi điều bảng đã nói; câu sau bảng nêu điều người đọc cần thấy.
 
 ### 3.2. Câu và đoạn
 
 - **Ngôi:** dùng ngôi thứ ba: "nhóm", "đồ án", "hệ thống". Chỉ lời cảm ơn được dùng "chúng em".
-- **Câu:** mỗi câu một ý, tối đa 35 chữ, trung bình khoảng 18–25 chữ; độ dài thay đổi tự nhiên. Không lồng định nghĩa vào câu ("…, tức …", hay "(*…*, viết tắt)" giữa một câu liệt kê). Liệt kê từ 3 vế trở lên mà vế nào cũng cần giải thích thì tách câu hoặc lập bảng.
+- **Câu:** mỗi câu một ý, tối đa 35 chữ, trung bình khoảng 18–25 chữ; độ dài thay đổi tự nhiên. Không lồng định nghĩa vào câu ("…, tức …", hay "(*…*, viết tắt)" giữa một câu liệt kê). Liệt kê từ 3 vế trở lên mà vế nào cũng cần giải thích thì tách câu, hoặc lập bảng nếu đủ điều kiện ở §6.
 - **Đoạn:** 3–7 câu. Thân bài là văn xuôi; danh sách chỉ dùng khi liệt kê từ 3 mục song song, ngắn, không lồng nhau. Chỉ mở đoạn bằng cụm in đậm khi tiểu mục có từ 3 khía cạnh song song (thay cho tiêu đề cấp 4, §1); không in đậm giữa câu.
 - **Chủ ngữ rõ:** "Nhóm chọn …", "A2 thêm replica …"; không viết câu cụt chủ ngữ kiểu "Được thiết kế để …". Giải thích lý do như khi trình bày cho thầy cô: "Nhóm không dùng GPU utilization vì …".
 - **Không dùng văn nói:** không viết "khá", "rất nhiều", "cực kỳ", "ổn", "ngon", "chạy ngon", "khủng". Thay bằng số: "nhanh hơn 4 lần" thay cho "nhanh hơn rất nhiều".
@@ -250,7 +258,7 @@ Những thứ này chỉ nằm trong comment nguồn. Ngoại lệ: mục phân 
   - Hình lấy từ tài liệu khác thì ghi "Nguồn: [@key]" cuối chú thích; hình nhóm tự vẽ thì không ghi.
   - Hình minh hoạ không phải số thật thì ghi "(minh hoạ)" trong chú thích.
 - **Ảnh chụp màn hình:** chỉ dùng cho dashboard, tin cảnh báo thật và giao diện. Chú thích ghi môi trường và thời điểm chụp. Không chụp terminal; cần thì chép output thành bảng hoặc đoạn mã.
-- **Bảng:** không quá khoảng 7 cột. Ô trống ghi "–" và giải thích nghĩa của "–" ở chú thích.
+- **Bảng:** không quá khoảng 7 cột. Ô trống ghi "–" và giải thích nghĩa của "–" ở chú thích. Ô ghi cụm từ ngắn, không viết câu: bảng mà ô nào cũng cần câu giải thích thì viết văn xuôi, hoặc đưa bảng đầy đủ vào phụ lục và giữ trong thân bài các cột người đọc cần. Bảng tốn chỗ (§1), nên chỉ lập bảng khi có từ 3 dòng và 3 cột trở lên, tính cả cột tên.
 - **Mã nguồn và cấu hình:**
   - Thân bài chỉ trích đoạn ngắn (khoảng 15 dòng trở xuống), có tiêu đề "**Đoạn mã 4.1.** …" đặt trên đoạn, đánh số theo chương như bảng.
   - Bỏ phần không liên quan, đánh dấu chỗ bỏ bằng `# …`.
@@ -274,11 +282,11 @@ Những thứ này chỉ nằm trong comment nguồn. Ngoại lệ: mục phân 
 
 - **Người viết:** từ 22/11/2026, Trình viết bản base toàn bộ luận văn (Kế hoạch §11.1), nên mỗi mục là một file, không tách phần `a`, `b` theo người viết. Khi base xong, Quang review, sửa và cập nhật số. Người sở hữu tính năng theo Kế hoạch §5.1 soát kỹ mục tương ứng.
 - **Quy trình cho mỗi chương:**
-  1. Chốt dàn ý của chương: tiểu mục, thông điệp của từng mục, ngân sách chữ.
+  1. Chốt dàn ý của chương: tiểu mục, thông điệp của từng mục, ngân sách trang (Kế hoạch §11.1).
   2. Viết nháp theo README, file này và mẫu văn.
   3. Soát: đối chiếu toàn bộ số với comment nguồn, soát văn phong theo §3.
   4. Người viết đọc lại ý và soát xác suất vài số, rồi mở một PR cho cả chương.
-- **Mẫu văn:** mục 3.5 viết theo file này và được duyệt trước khi viết các mục khác.
+- **Mẫu văn:** mục 3.5 viết theo file này và được duyệt trước khi viết các mục khác. Mẫu dùng cho văn phong; độ dài của mỗi mục theo ngân sách trang ở Kế hoạch §11.1, nên mẫu 3.5 cũng phải nằm trong 2 trang.
 - **Góp ý:** tới bước định dạng (W9), bản gốc là Markdown. Góp ý qua review PR hoặc comment trên file `.docx` ghép thử; người viết sửa ở Markdown rồi xuất lại.
 - **Ranh giới hay trùng nhau.** Viết đầy đủ ở mục ghi trong bảng, chỗ khác dẫn chéo:
 
@@ -315,6 +323,7 @@ Những thứ này chỉ nằm trong comment nguồn. Ngoại lệ: mục phân 
 - [ ] Dòng đầu là comment mục đích và người viết; có comment thông điệp (§2) và trạng thái soát (§9); tiêu đề và số mục khớp dàn ý (Kế hoạch §11.1).
 - [ ] Mục nói đúng phần việc của chương (§2), không lặp mục khác (bảng ranh giới ở §8); chỗ cần thì dẫn chéo.
 - [ ] Mọi số, mọi khẳng định kỹ thuật có comment nguồn; không có số "chưa đo" (`nguon-tu-lieu.md` §4).
+- [ ] Mục nằm trong ngân sách trang ở Kế hoạch §11.1 (§1: khoảng 450 chữ văn xuôi mỗi trang, mỗi bảng 0,5–0,75 trang); vượt thì cắt theo thứ tự ở §3.1.
 - [ ] Văn phong theo §3: câu đầu đoạn là kết luận; không có cụm sáo và dấu hiệu ở §3.4.
 - [ ] Thuật ngữ, tên sản phẩm, mã định danh theo §4; thuật ngữ mới đã giải thích ở lần đầu và đã vào danh mục chữ viết tắt.
 - [ ] Số và đơn vị theo README và §5; số không phải đo thật có nhãn nguồn gốc.
