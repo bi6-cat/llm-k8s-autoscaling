@@ -98,3 +98,32 @@
 - **Incidents:** lần dàn đầu, bảng không ngắt qua trang (để lại trang gần trống) và cột chia đều, nên số trang bị đội; lần sửa thứ hai đếm số cột từ file Markdown, lệch vì có bảng trong comment. Cuối cùng giữ số cột Pandoc sinh ra, chỉ đổi độ rộng sang `auto`, và soát bằng ảnh trang trước khi lấy số.
 - **Links:** `docs/luan-van/quy-tac-viet.md` (§1, §3.1, §6); `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§11.1).
 - **Thesis:** áp cho mọi mục; trước mắt là cắt 3.1, 3.3, 3.5, 3.6 về ngân sách, và viết 3.2, 3.4 theo ngân sách.
+
+## 2026-11-24 – Luận văn: cắt mục 3.6 về 2 trang
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Merge `origin/main` vào nhánh `docs/tr8-thesis-3-6-base` để có ngân sách trang (PR #65, D94).
+  2. Viết lại 3.6 theo thứ tự cắt của `quy-tac-viet.md` §3.1: bảy bảng còn một (Bảng 3.6a, ba kịch bản tải); ĐG, VH, LT, chỉ số, quy tắc so sánh, điều kiện hợp lệ và cách chấm cảnh báo viết thành văn xuôi ngắn, mỗi đoạn kèm comment nguồn.
+  3. Ghi vào dòng 3.6 của `nguon-tu-lieu.md` từng ý đã chuyển ra và nơi chứa nó (`docs/chi-tiet/`, mục 4.7, chương 5, Phụ lục E).
+  4. Chạy `/code-review high` trên diff, sửa 10/10 lỗi được báo, rồi cắt lại cho vừa 2 trang.
+- **Decision:**
+  - Bỏ bảng VH1–VH6 và LT1–LT8 khỏi thân bài: 3.6 chỉ cần nêu có phép thử nào và đạt khi nào; cách làm và kết quả từng VH, LT thuộc 5.2–5.5. Bảng ma trận 17 lượt, bảng chỉ số, bảng điều kiện hợp lệ cũng bỏ, vì dưới 3 cột thông tin riêng hoặc trùng văn xuôi (§6).
+  - Không định nghĩa lại C, B\* và threshold 0,8 B\*, vì mục 3.3 đã định nghĩa; 3.6 chỉ dẫn chéo.
+  - Giữ trong thân bài các định nghĩa mà 3.1 trỏ tới: KB, ĐG, VH, LT, page giả, pha ổn định của KB1 (D95).
+  - Theo review: nêu rõ seed theo kịch bản và lần lặp, mọi lượt ĐG2 ở mức ấm, "đỉnh 3,0 C cần vừa đủ 4 replica" là ước tính của 3.3, thời gian tới cảnh báo chấm ở S1 × KB3, page giả chỉ chấm ở A2 × KB1 và A2 × KB3.
+- **Results:** đo bằng dàn trang thử (khuôn A 13 pt, khuôn B 14 pt; đạt khi khuôn B ≤ 2 trang):
+
+  | Bản | Chữ văn xuôi | Bảng | Khuôn A | Khuôn B |
+  |---|---|---|---|---|
+  | Base 23/11 | 2.305 | 7 | 10 | 13 |
+  | Lần cắt 1 | khoảng 1.580 | 3 | 3,04 | 4,05 |
+  | Lần cắt 2 | khoảng 900 | 2 | 2,00 | 2,76 |
+  | Lần cắt 3 | khoảng 720 | 1 | 1,65 | 2,14 |
+  | Sau review, cắt lại | 670 | 1 | 1,63 | 1,99 |
+
+  `kiem_van.py`: 0 điểm cần xem (37 câu, trung bình 18,1 chữ/câu). `lychee --offline --include-fragments 'docs/luan-van/*.md'`: 0 lỗi.
+- **Incidents:** sau khi sửa theo review, bản tăng lên 2,14 trang và một đoạn có 5 mã (quá 4, §4). Đã bỏ mã L2 ở câu ĐG2 (thay bằng "mức ấm, mục 3.4"), bỏ câu "hai lượt chỉ khác nhau ở cấu hình" (câu seed ở 3.6.1 đã nói), và rút các dòng cuối đoạn chỉ có 1–2 chữ.
+- **Deviations:** ý "LT chạy được ở máy nhà và simulator" và ca đối chứng VH2 không còn trong 3.6; đã ghi nơi chứa ở `nguon-tu-lieu.md`. Chương 5.5 phải nhắc ca đối chứng khi trình bày VH2.
+- **Links:** PR #64; `docs/luan-van/03-06-thiet-ke-danh-gia.md`, `docs/luan-van/nguon-tu-lieu.md`.
+- **Thesis:** 3.6; dẫn chéo từ 3.1, 3.3; các ý chuyển ra đi vào 4.7, 5.1–5.5, Phụ lục E.
