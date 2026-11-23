@@ -4,10 +4,12 @@
 #            uv.lock (CONTRIBUTING §5).
 # Mục đích:  Gói `analysis`: đọc dữ liệu runner (runs/<phiên>/), tạo bảng và biểu đồ cho chương 5 (TR7).
 #            Phần tạo bảng chỉ dùng thư viện chuẩn của Python, để chạy được ngay trên VM thuê hay trong WSL
-#            mà không phải cài gì; riêng charts.py và lt_charts.py (vẽ hình) cần matplotlib. Mọi lệnh
-#            chạy từ GỐC REPO:
+#            mà không phải cài gì; riêng charts.py và lt_charts.py (vẽ hình) cần matplotlib. Gói cũng chứa
+#            kiem_van.py, bộ soát văn phong luận văn (quy-tac-viet.md §10), để dùng chung test và CI.
+#            Mọi lệnh chạy từ GỐC REPO:
 #              uv run --project analysis python -m analysis.build_tables runs/<phiên>
 #              uv run --project analysis python -m analysis.charts runs/<phiên>
+#              uv run --project analysis python -m analysis.kiem_van docs/luan-van/<file>.md
 #              uv run --project analysis pytest analysis
 #              uv run --project analysis ruff check analysis
 # Tham khảo: Môi trường §14.2, §15, §16; CONTRIBUTING §5

@@ -320,5 +320,6 @@ Những thứ này chỉ nằm trong comment nguồn. Ngoại lệ: mục phân 
 - [ ] Số và đơn vị theo README và §5; số không phải đo thật có nhãn nguồn gốc.
 - [ ] Hình, bảng có chú thích, được nhắc trong bài trước khi xuất hiện, có câu nhận xét đi sau.
 - [ ] Không có văn nói và không nhắc chuyện nội bộ (§3.5) trong thân bài.
+- [ ] `uv run --project analysis python -m analysis.kiem_van docs/luan-van/<file>.md` (bộ soát [`analysis/kiem_van.py`](../../analysis/kiem_van.py), đếm các luật đo được của §3–§5 và README) không còn điểm nào; điểm thuộc luật chỉ mang tính gợi ý (từ nối, dấu hai chấm, chữ "agent" của k3s) thì đọc lại rồi mới giữ.
 - [ ] `pandoc … --citeproc` chạy không lỗi, không cảnh báo trích dẫn (lệnh ở README).
 - [ ] Đã ghi nhật ký cá nhân (AGENTS.md).
