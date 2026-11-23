@@ -44,7 +44,7 @@
   3. Sửa 3 chỗ bắt sai của bản cũ: tách câu ngắt nhầm trước chữ thường có dấu (khoảng `À-Ỹ` của regex cũ gồm cả chữ thường như "ở"); đoạn dẫn và mục danh sách bị báo thiếu nguồn dù comment nguồn đặt sau cả danh sách; công thức riêng dòng `$$…$$` bị đếm như đoạn văn một câu. Luật nguồn cũng chặt hơn: comment nguồn phải đứng ngay sau khối (chỉ cách bởi dòng trống, comment khác hoặc danh sách đi liền), không còn được tính khi nằm sau đoạn kế tiếp trong cửa sổ 3 dòng.
   4. `analysis/tests/test_kiem_van.py`: 46 cặp ca vi phạm/viết đúng phủ mọi luật (một test kiểm mỗi luật, kể cả luật viết thẳng trong `check_text`, đều có ca), cùng test cho tách khối, tách câu, tìm nguồn, thống kê, giới hạn 5 điểm mỗi luật và mã thoát.
   5. Thêm dòng chạy `kiem_van` vào checklist `quy-tac-viet.md` §10; cập nhật cây thư mục ở CONTRIBUTING §1 và header `analysis/pyproject.toml`.
-  6. Việc làm trong lượt tự chạy 23/11; PR chờ Trình xem, chưa merge.
+  6. Việc làm trong lượt tự chạy 23/11. Nhánh `feat/tr8-style-checker` đã push; lệnh tạo PR bị chế độ quyền của lượt tự chạy chặn, nên PR chờ Trình mở.
 - **Decision:** (D91)
   - Đặt trong gói `analysis/` thay cho gói Python riêng: module chỉ dùng thư viện chuẩn, gói `analysis` đã phục vụ luận văn, và job `python` của CI đã chạy pytest, ruff cho gói này trên 3.11 và 3.15, nên không phải thêm `pyproject.toml`, `uv.lock` và bước CI mới. Bỏ phương án đặt cạnh `docs/diagrams/build_diagrams.py` vì chỗ đó không có test và lint.
   - CI chỉ chạy test của module, không chạy soát trên `docs/luan-van/`: vài luật chỉ là gợi ý cần người đọc lại (từ nối, dấu hai chấm, chữ "agent" của k3s), nên nếu chặn merge thì sẽ đỏ giả. Mã thoát 1 dành cho người viết và người soát trước khi mở PR.
