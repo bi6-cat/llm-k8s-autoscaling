@@ -83,3 +83,32 @@
 - **Incidents:** lần dàn đầu, bảng không ngắt qua trang (để lại trang gần trống) và cột chia đều, nên số trang bị đội; lần sửa thứ hai đếm số cột từ file Markdown, lệch vì có bảng trong comment. Cuối cùng giữ số cột Pandoc sinh ra, chỉ đổi độ rộng sang `auto`, và soát bằng ảnh trang trước khi lấy số.
 - **Links:** `docs/luan-van/quy-tac-viet.md` (§1, §3.1, §6); `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§11.1).
 - **Thesis:** áp cho mọi mục; trước mắt là cắt 3.1, 3.3, 3.5, 3.6 về ngân sách, và viết 3.2, 3.4 theo ngân sách.
+
+## 2026-11-24 – Luận văn: cắt mục 3.5 (mẫu văn) về 2 trang
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Merge `origin/main` vào nhánh `docs/tr8-thesis-3-5-sample` (PR #62) để có ngân sách trang và thứ tự cắt trong `quy-tac-viet.md`.
+  2. Cắt `03-05-giam-sat-slo-canh-bao.md` theo thứ tự §3.1: bảng SLI thành văn xuôi; gộp 3.5.3 và 3.5.4; bảng cảnh báo bỏ cột "Lý do", còn lại hai lý do không hiển nhiên ở văn xuôi; công thức thời gian báo đưa vào câu. Những ý đã bỏ được ghi ở comment đầu file, kèm nơi còn giữ chúng (`docs/chi-tiet/04-van-hanh.md` §2.1, §3.2, §3.5, §4; mục 3.3; mục 4.6; mục 6.2; chương 5).
+  3. Đo sau mỗi lượt cắt bằng dàn trang thử, rồi xem ảnh trang cuối để biết dòng nào bị tràn.
+  4. Chạy `/code-review high`: 10 điểm, sửa 8.
+- **Decision:**
+  - Bỏ cột "Lý do" thay vì cắt thêm văn xuôi. Đo riêng bảng: 5 cột chiếm 0,61 trang (khuôn B), 4 cột 0,33 trang.
+  - Định nghĩa page/ticket đặt trong chú thích Bảng 3.5a, vì dàn ý chương 2 ở Kế hoạch §11.1 chưa có hai thuật ngữ này.
+  - Hai điểm yếu đã biết chuyển sang mục 6.2 (Hạn chế): một đợt lỗi 503 ngắn vẫn gây page, và `Watchdog` chưa được nối ra ngoài. Mục 6.2 phải nhắc lại hai điểm này.
+  - Bỏ ý "mất metric nguồn thì kết quả là 0", vì mục 3.3 (PR #66) đã trình bày đúng cơ chế `or vector(0)`.
+- **Results:** văn xuôi giảm từ 1.523 xuống khoảng 700 chữ; số bảng từ 2 xuống 1. Đo được 1,62 trang (khuôn A, 13 pt) và 1,97 trang (khuôn B, 14 pt), trước khi cắt là 3,63 và 4,88. Phần trang lẻ = (y thấp nhất trên trang cuối − lề trên) ÷ chiều cao vùng in. Cách đo cho lại đúng số của 3.3 ở vòng trước: 1,90 và 2,52. `kiem_van.py` báo 0 điểm; lychee không báo lỗi ở `docs/luan-van/`.
+- **Incidents:**
+  - Code review ra 10 điểm, 8 điểm đã sửa:
+    - văn bản chưa nói TPOT vẫn được xét khi nghiệm thu;
+    - con số 12 phút xuất hiện trước khi nêu ngưỡng;
+    - lý do rút cửa sổ lệch với tài liệu nguồn (lượt đánh giá 12–24 phút);
+    - thiếu lưu ý về 20 s trễ scrape và tính rule;
+    - sau bảng không có câu nhận xét (quy-tac-viet §6);
+    - thiếu ánh xạ 7 quy tắc ↔ 6 cảnh báo;
+    - page/ticket chưa được định nghĩa;
+    - header dẫn mã quyết định riêng và nguồn tên dashboard sai.
+
+    Hai điểm còn lại không cần sửa: ý "mất metric thành 0" đã có ở 3.3; nhật ký được ghi ở mục này.
+- **Links:** PR #62; `docs/luan-van/03-05-giam-sat-slo-canh-bao.md`.
+- **Thesis:** §3.5. Mục 6.2 phải có hai điểm yếu nêu trên. Hình 7 (vòng vận hành, PR #60) mà chèn vào 3.5.3 thì phải bỏ bớt câu ở đoạn tự xử lý sự cố.
