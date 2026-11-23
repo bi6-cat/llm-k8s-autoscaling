@@ -85,16 +85,17 @@ PHRASES = [
     (r"\btiến hành\b|thực hiện việc|\bviệc\b[^.]{0,25}\bviệc\b", "động từ rỗng §3.4"),
     # "được … bởi …" trong cùng một vế câu (không qua dấu . , ;).
     (r"\bđược\b[^.,;]{1,40}\bbởi\b", "bị động dịch máy §3.4"),
-    # "ổn" đứng riêng là văn nói; "ổn định" thì không.
-    (r"\b(khá|rất|cực kỳ|vô cùng|hết sức|ngon|khủng)\b|\bổn\b(?! định)", "văn nói §3.2"),
+    # "ổn" đứng riêng là văn nói, "ổn định" thì không; "khủng" cũng vậy với "khủng hoảng".
+    (r"\b(khá|rất|cực kỳ|vô cùng|hết sức|ngon)\b|\bkhủng\b(?! hoảng)|\bổn\b(?! định)", "văn nói §3.2"),
     (r"\b(chứng minh|hoàn hảo|luôn luôn)\b", "phóng đại §3.3"),
     (r"\b(tôi|chúng tôi|chúng ta|bạn)\b|\bta (thấy|có)\b", "ngôi §3.2"),
-    # "agent" có thể là node agent của k3s: đọc lại, không tự sửa. (?-i:…): tên người và mã Dxx phân biệt hoa
+    # "agent" có thể là node agent của k3s: đọc lại, không tự sửa. Không có "prompt": đó là thuật ngữ của LLM
+    # (độ dài prompt, prefill). (?-i:…): tên người, mã việc Q1–Q8, TR1–TR8 và mã quyết định Dxx phân biệt hoa
     # thường, để "trình bày" không bị bắt nhầm là tên "Trình".
     (
-        r"\b(AI agent|subagent|agent|Claude|ChatGPT|Copilot|Gemini|prompt|phiên làm việc"
+        r"\b(AI agent|subagent|agent|Claude|ChatGPT|Copilot|Gemini|phiên làm việc"
         r"|nhật ký (làm việc|cá nhân))\b|\bPR ?#?\d+\b|\bcommit [0-9a-f]{7}\b"
-        r"|(?-i:\bD\d{2}\b|\bTrình\b|\bQuang\b)",
+        r"|(?-i:\bD\d{2}\b|\b(Q|TR)[1-8]\b|\bTrình\b|\bQuang\b)",
         "nội bộ / công cụ AI §3.5",
     ),
     # TĐ1–TĐ3, HG1–HG5 là nhãn của dàn ý; C1–C6 là tên nội bộ của biểu đồ (trong bài dùng số hình).
@@ -151,7 +152,7 @@ def blocks(lines: list[str]) -> list[Block]:
         if in_cmt:  # đang trong comment nhiều dòng: bỏ tới dòng có -->
             in_cmt = "-->" not in s
             continue
-        if s.startswith("```"):
+        if s.startswith(("```", "~~~")):  # hai kiểu rào khối code của Markdown
             in_code = not in_code
             flush(i - 1)
             continue
@@ -162,6 +163,8 @@ def blocks(lines: list[str]) -> list[Block]:
             flush(i - 1)
             continue
         s = re.sub(r"<!--.*?-->", "", s).strip()  # comment nằm giữa dòng
+        if "<!--" in s:  # comment mở ở cuối dòng và đóng ở dòng sau: giữ phần chữ trước nó
+            s, in_cmt = s[: s.index("<!--")].strip(), True
         k = "table" if s.startswith("|") else "para"
         if LIST_ITEM.match(s):  # mỗi mục danh sách là một khối, không dính vào đoạn dẫn
             flush(i - 1)
@@ -193,8 +196,11 @@ def has_source(lines: list[str], block: Block) -> bool:
 
     Giữa khối và comment nguồn chỉ được có dòng trống, comment khác (ví dụ trạng thái soát) và các mục danh
     sách đi liền: nguồn của một danh sách, và của đoạn dẫn vào danh sách, đặt một lần sau cả danh sách.
-    Gặp nội dung khác (đoạn sau, tiêu đề, bảng) trước khi thấy nguồn thì coi là thiếu.
+    Gặp nội dung khác (đoạn sau, tiêu đề, bảng) trước khi thấy nguồn thì coi là thiếu. Comment nguồn đặt
+    ngay cuối dòng của khối cũng được tính (blocks() đã cắt nó khỏi văn bản).
     """
+    if any("<!-- nguồn:" in ln for ln in lines[block.start - 1 : block.end]):
+        return True
     in_cmt = False
     for raw in lines[block.end :]:  # block.end đếm từ 1, nên đây là các dòng sau khối
         s = raw.strip()
@@ -214,8 +220,8 @@ def check_text(text: str) -> Report:
     """Soát nội dung một file Markdown; trả về các điểm cần xem và thống kê độ dài."""
     lines = text.split("\n")
     issues: list[Issue] = []
-    words = sents_n = 0
-    prev_connect = False
+    words = sents_n = prev_end = 0
+    prev_connect = False  # đoạn văn xuôi liền trước có mở bằng từ nối không
     all_blocks = blocks(lines)
 
     def add(blk: Block, rule: str, excerpt: str) -> None:
@@ -224,19 +230,24 @@ def check_text(text: str) -> Report:
     for blk in all_blocks:
         t = blk.text
         # Có số thì phải có nguồn. Trước khi tìm chữ số, bỏ: `code`, công thức $…$, số mục và số hình
-        # ("mục 5.5", "Hình 3.1", "5.5.4a": dấu chấm + 1–2 chữ số; số thập phân viết bằng dấu phẩy, phân
-        # nghìn có 3 chữ số), và mã định danh (VH4, N7…).
+        # ("mục 5.5", "Chương 5", "Hình 3.1", "§5", "5.5.4a": dấu chấm + 1–2 chữ số; số thập phân viết bằng
+        # dấu phẩy, phân nghìn có 3 chữ số), và mã định danh (VH4, N7…). (?i:…): "Mục", "mục" đều bỏ.
         bare = re.sub(
-            r"`[^`]*`|\$[^$]*\$|\b(mục|chương|Hình|Bảng|Phụ lục) [\d.]*\d[a-z]?|"
+            r"`[^`]*`|\$[^$]*\$|(?i:\b(mục|chương|hình|bảng|phụ lục)) [\d.]*\d[a-z]?|§ ?[\d.]*\d[a-z]?|"
             r"\b\d\.\d{1,2}(\.\d{1,2})?[a-z]?\b|" + CODES.pattern,
             "",
             t,
         )
         if not t.startswith(("**Bảng", "$$")) and re.search(r"\d", bare) and not has_source(lines, blk):
             add(blk, "thiếu nguồn README", t[:70])
-        # Bảng, chú thích bảng và công thức riêng dòng không phải văn xuôi: chỉ xét nguồn (ở trên).
+        # Bảng, chú thích bảng và công thức riêng dòng không phải văn xuôi: chỉ xét nguồn (ở trên). Chúng
+        # cũng ngắt chuỗi "hai đoạn liền", như tiêu đề (dòng "#" nằm giữa hai đoạn).
         if blk.kind == "table" or t.startswith(("**Bảng", "$$")):
+            prev_connect = False
             continue
+        if any(ln.lstrip().startswith("#") for ln in lines[prev_end : blk.start - 1]):
+            prev_connect = False
+        prev_end = blk.end
         plain = re.sub(r"`[^`]*`", "CODE", t)  # để luật cụm từ không bắt chữ trong tên metric, tên file
         words += len(t.split())
         ss = split_sentences(t)
@@ -255,8 +266,9 @@ def check_text(text: str) -> Report:
         for rx, rule in RAW_RULES:
             for m in re.finditer(rx, t):
                 add(blk, rule, f"«{m.group(0)}»")
-        # In đậm sau một chữ khác, tức nằm giữa câu; cụm in đậm mở đoạn hay mở mục danh sách thì được.
-        if re.search(r"\S\s?\*\*[^*]+\*\*", re.sub(r"^([-*]|\d+\.)\s+", "", t)):
+        # In đậm sau một chữ khác trong cùng câu, tức nằm giữa câu; cụm in đậm mở câu, mở đoạn hay mở mục danh
+        # sách thì được.
+        if any(re.search(r"\S\s?\*\*[^*]+\*\*", re.sub(r"^([-*]|\d+\.)\s+", "", x)) for x in ss):
             add(blk, "in đậm giữa câu §3.2", t[:60])
         for ch, rule in (("—", "gạch dài — §3.4"), ("→", "mũi tên trong văn xuôi §3.4")):
             if ch in plain:
@@ -274,7 +286,8 @@ def check_text(text: str) -> Report:
         # Dấu chấm thập phân chỉ bắt khi có đơn vị theo sau ("2.5 s"); "mục 2.5" là số mục.
         for m in re.finditer(r"(?<![\w.§/])\d+\.\d{1,2} ?(s|ms|%|GB|GiB|req/s|C|phút|giờ)(?!\w)", plain):
             add(blk, "dấu chấm thập phân README", m.group(0))
-        for m in re.finditer(r"\d(s|ms|GB|GiB|MB|phút|C)\b", plain):
+        # (?<!\w): số đứng riêng, không dính sau chữ cái, để "k3s", "K8s" không bị bắt.
+        for m in re.finditer(r"(?<!\w)\d+(s|ms|GB|GiB|MB|phút|C)\b", plain):
             add(blk, "số dính đơn vị README", plain[max(0, m.start() - 4) : m.end()])
     paras = [b for b in all_blocks if b.kind == "para"]
     bold_open = sum(1 for b in paras if b.text.startswith("**") and not b.text.startswith("**Bảng"))
@@ -308,8 +321,9 @@ def main(argv: list[str] | None = None) -> int:
     total = 0
     for f in files:
         try:
-            text = f.read_text(encoding="utf-8")
-        except OSError as e:
+            # utf-8-sig: bỏ BOM mà vài trình soạn thảo trên Windows thêm vào đầu file.
+            text = f.read_text(encoding="utf-8-sig")
+        except (OSError, UnicodeDecodeError) as e:
             print(f"Không đọc được {f}: {e}", file=sys.stderr)
             return 2
         rep = check_text(text)

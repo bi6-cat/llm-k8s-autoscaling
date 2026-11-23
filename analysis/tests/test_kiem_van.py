@@ -8,6 +8,9 @@ Mục đích: Giữ hành vi của bộ soát khi sửa regex: luật mới khô
 
 from __future__ import annotations
 
+import inspect
+import re
+
 import pytest
 
 from analysis import kiem_van as kv
@@ -72,6 +75,19 @@ CASES = [
     ("số dính đơn vị", "Cold start mất 180s.", "Cold start mất 180 s."),
     ("thiếu nguồn", "TTFT là 2,5 s.", "TTFT là 2,5 s." + SRC),
     ("thiếu nguồn", "| A2 | 2,5 s |", "| A2 | 2,5 s |\n" + SRC),
+    # Các ca dưới giữ những chỗ từng bắt nhầm (hoặc bỏ sót) khi soát lại module.
+    ("số dính đơn vị", "TTFT là 2,5s.", "Cụm k3s chạy Kubernetes (K8s) bản 1.36."),
+    ("nội bộ", "Mục này thuộc TR7 và Q6.", "Độ dài prompt ảnh hưởng tới TTFT."),
+    ("văn nói", "Kết quả khủng.", "Đợt khủng hoảng thiếu GPU."),
+    ("in đậm giữa câu", "Câu một có **A2** ở giữa.", "Câu một. **Kết quả** mở câu hai."),
+    ("thiếu nguồn", "Đoạn có 3 lượt.\n\nĐoạn sau." + SRC, "TTFT là 2,5 s. <!-- nguồn: x -->"),
+    (
+        "thiếu nguồn",
+        "Pha nền có 3 lượt.",
+        "Chương 5 trình bày kết quả, §5 nêu cách làm tròn, Mục 3 nêu yêu cầu.",
+    ),
+    ("2 đoạn liền", "Ngoài ra, A đo.\n\nNgoài ra, B đo.", "Ngoài ra, A đo.\n\n## 5.2\n\nNgoài ra, B đo."),
+    ("2 đoạn liền", "Ngoài ra, A đo.\n\nNgoài ra, B đo.", "Ngoài ra, A đo.\n\n| a |\n\nNgoài ra, B đo."),
 ]
 
 
@@ -82,10 +98,13 @@ def test_rule_catches_bad_and_passes_good(rule: str, bad: str, good: str):
 
 
 def test_every_rule_has_a_case():
-    """Mỗi luật khai báo trong module có ít nhất một ca trong CASES (luật đếm trong check_text kể cả)."""
-    declared = {r.split(" §")[0].split(" README")[0] for _, r in kv.PHRASES + kv.RAW_RULES}
+    """Mỗi luật có ít nhất một ca trong CASES: luật trong PHRASES, RAW_RULES, và luật viết thẳng trong
+    check_text (tên luật là chuỗi kết thúc bằng "§x.y" hoặc "README", lấy từ mã nguồn của hàm)."""
+    declared = {r for _, r in kv.PHRASES + kv.RAW_RULES}
+    declared |= set(re.findall(r'"([^"]+ (?:§[\d.]+|README))"', inspect.getsource(kv.check_text)))
+    assert len(declared) >= 25  # 13 luật khai báo trong bảng + 12 luật viết thẳng
     covered = {c[0] for c in CASES}
-    missing = [d for d in declared if not any(d.startswith(c) for c in covered)]
+    missing = sorted(d for d in declared if not any(d.startswith(c) for c in covered))
     assert not missing
 
 
@@ -168,3 +187,18 @@ def test_main_exit_codes(tmp_path, capsys):
     assert "03-02-ban.md:1 «Chúng tôi»" in out
     assert out.rstrip().endswith("Tổng: 1 điểm cần xem")
     assert kv.main([str(tmp_path / "khong-co.md")]) == 2
+    # BOM ở đầu file (trình soạn thảo Windows) không làm dòng tiêu đề thành văn xuôi; file không phải UTF-8
+    # thì trả 2 thay cho traceback.
+    bom = tmp_path / "03-03-bom.md"
+    bom.write_text(
+        "﻿# 3.3 Tiêu đề rất khá\n\nNhóm chọn A2. Nhóm đo lại. Kết quả giống nhau.\n", encoding="utf-8"
+    )
+    assert kv.main([str(bom)]) == 0
+    latin = tmp_path / "03-04-latin.md"
+    latin.write_bytes(b"Nh\xf3m ch\xf2n A2.")  # Latin-1: \xf3 rồi chữ thường không hợp lệ trong UTF-8
+    assert kv.main([str(latin)]) == 2
+
+
+def test_blocks_handle_tilde_fence_and_comment_opened_mid_line():
+    lines = ["Một câu. <!-- comment mở", "chúng tôi rất khá -->", "~~~", "Chúng tôi trong code", "~~~"]
+    assert [(b.kind, b.start, b.end, b.text) for b in kv.blocks(lines)] == [("para", 1, 2, "Một câu.")]

@@ -42,14 +42,26 @@
   1. Chuyển bộ soát văn phong (trước đó chỉ có trên máy của Trình) vào `analysis/kiem_van.py`: docstring theo CONTRIBUTING §2, type hint, tên mỗi luật kèm § của `quy-tac-viet.md` hoặc README; tách hàm thuần `check_text()` trả về danh sách điểm để test được; CLI bằng `argparse`, bỏ trống thì soát mọi file mục `docs/luan-van/CC-SS-*.md`, mã thoát 0 (sạch), 1 (còn điểm), 2 (không đọc được file) như ruff.
   2. Thêm 3 luật có sẵn trong `quy-tac-viet.md` mà bản cũ chưa đếm: đường dẫn `docs/` và link Markdown tương đối trong thân bài (§3.5); nhãn dàn ý TĐ/HG và mã biểu đồ C1–C6 (§4); cụm "với mục tiêu" (§3.4).
   3. Sửa 3 chỗ bắt sai của bản cũ: tách câu ngắt nhầm trước chữ thường có dấu (khoảng `À-Ỹ` của regex cũ gồm cả chữ thường như "ở"); đoạn dẫn và mục danh sách bị báo thiếu nguồn dù comment nguồn đặt sau cả danh sách; công thức riêng dòng `$$…$$` bị đếm như đoạn văn một câu. Luật nguồn cũng chặt hơn: comment nguồn phải đứng ngay sau khối (chỉ cách bởi dòng trống, comment khác hoặc danh sách đi liền), không còn được tính khi nằm sau đoạn kế tiếp trong cửa sổ 3 dòng.
-  4. `analysis/tests/test_kiem_van.py`: 38 cặp ca vi phạm/viết đúng phủ mọi luật (một test kiểm mỗi luật khai báo đều có ca), cùng test cho tách khối, tách câu, tìm nguồn, thống kê, giới hạn 5 điểm mỗi luật và mã thoát.
+  4. `analysis/tests/test_kiem_van.py`: 46 cặp ca vi phạm/viết đúng phủ mọi luật (một test kiểm mỗi luật, kể cả luật viết thẳng trong `check_text`, đều có ca), cùng test cho tách khối, tách câu, tìm nguồn, thống kê, giới hạn 5 điểm mỗi luật và mã thoát.
   5. Thêm dòng chạy `kiem_van` vào checklist `quy-tac-viet.md` §10; cập nhật cây thư mục ở CONTRIBUTING §1 và header `analysis/pyproject.toml`.
   6. Việc làm trong lượt tự chạy 23/11; PR chờ Trình xem, chưa merge.
 - **Decision:** (D91)
   - Đặt trong gói `analysis/` thay cho gói Python riêng: module chỉ dùng thư viện chuẩn, gói `analysis` đã phục vụ luận văn, và job `python` của CI đã chạy pytest, ruff cho gói này trên 3.11 và 3.15, nên không phải thêm `pyproject.toml`, `uv.lock` và bước CI mới. Bỏ phương án đặt cạnh `docs/diagrams/build_diagrams.py` vì chỗ đó không có test và lint.
   - CI chỉ chạy test của module, không chạy soát trên `docs/luan-van/`: vài luật chỉ là gợi ý cần người đọc lại (từ nối, dấu hai chấm, chữ "agent" của k3s), nên nếu chặn merge thì sẽ đỏ giả. Mã thoát 1 dành cho người viết và người soát trước khi mở PR.
 - **Results:**
-  - `uv run --project analysis --locked pytest analysis`: 198 passed (47 của `kiem_van`) trên Python 3.15; test `kiem_van` trên Python 3.11: 47 passed. `ruff check`, `ruff format --check`, `yamllint -s .`: đạt. lychee 0.24.2 (offline, kèm anchor, bỏ qua đường dẫn cũ như job `docs`): 0 lỗi.
+  - `uv run --project analysis --locked pytest analysis`: 207 passed (56 của `kiem_van`) trên Python 3.15; test `kiem_van` trên Python 3.11: 56 passed. `ruff check`, `ruff format --check`, `yamllint -s .`: đạt. lychee 0.24.2 (offline, kèm anchor, bỏ qua đường dẫn cũ như job `docs`): 0 lỗi.
   - So bản cũ với bản mới trên 4 file nháp (03-05, 05-03, 05-05b, 05-06): số điểm giống nhau ở mọi luật, trừ "đoạn ngoài 3–7 câu" của 03-05 (8 xuống 6, hai dòng công thức `$$`) và "thiếu nguồn" của 05-05b (4 xuống 2) và 05-06 (4 xuống 3), đều là đoạn dẫn hoặc mục danh sách có nguồn đặt sau cả danh sách. Tổng: 52 → 50, 29 → 29, 46 → 44, 13 → 12.
+  - `/code-review high` báo 10 điểm; đã thử lại từng điểm bằng đoạn mẫu và sửa cả 10, mỗi điểm thêm một ca test:
+    - "số dính đơn vị" bắt nhầm `k3s`, `K8s`;
+    - "prompt" bị coi là chuyện nội bộ, trong khi đó là thuật ngữ của LLM;
+    - mã việc Q1–Q8, TR1–TR8 (§3.5) chưa bị bắt;
+    - comment mở giữa dòng và đóng ở dòng sau bị đọc như văn xuôi;
+    - comment nguồn đặt cuối dòng của đoạn không được tính;
+    - "Chương 5", "Mục 3", "§5" bị đòi nguồn;
+    - tiêu đề hoặc bảng nằm giữa không ngắt luật "hai đoạn liền mở bằng từ nối";
+    - file có BOM làm dòng tiêu đề thành văn xuôi, file không phải UTF-8 gây traceback thay cho mã thoát 2;
+    - in đậm ở đầu câu thứ hai bị coi là in đậm giữa câu;
+    - test "mọi luật đều có ca" chưa xét luật viết thẳng trong `check_text`; kèm hai lỗi nhỏ cùng loại: rào code `~~~` và "khủng hoảng" bị bắt là văn nói.
+  - Sau khi sửa, số điểm trên 4 file nháp không đổi so với dòng trên.
 - **Links:** `analysis/kiem_van.py`, `analysis/tests/test_kiem_van.py`, `docs/luan-van/quy-tac-viet.md` §10, `CONTRIBUTING.md` §1, `analysis/pyproject.toml`.
 - **Thesis:** không vào thân bài; công cụ dùng ở bước soát mọi mục (quy-tac-viet.md §10).
