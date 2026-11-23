@@ -101,7 +101,7 @@ Việc gắn với máy: các bước cài đặt trên PC (driver, k3s server) 
 - [ ] Toàn bộ dữ liệu đã sao lưu, có checksum; instance đã huỷ; chi phí thực tế đã ghi.
 
 ### M4 (29/11): bản thảo
-- [ ] Đủ 6 chương ở lượt 1 (§11.1): mọi mục có mặt, khoảng 60% ngân sách chữ; mọi hình và bảng có chú thích và được dẫn trong bài.
+- [ ] Đủ 6 chương ở lượt 1 (§11.1): mọi mục có mặt, khoảng 60% ngân sách trang; mọi hình và bảng có chú thích và được dẫn trong bài.
 - [ ] Bảng nghiệm thu kèm số liệu cho mọi yêu cầu F1–F7, N1–N8; chỗ chưa có số ghi "chưa đo".
 - [ ] Có mục Hạn chế (5.7, 6.2).
 - [ ] Bản base đã gửi Quang review. Từ 22/11, Trình viết bản base và Quang review sau khi base xong, nên việc review toàn bộ chuyển sang M5.
@@ -480,7 +480,7 @@ Chương 2–5 kết bằng mục "Kết chương" (một đoạn).
 
 **Phần cuối:** Tài liệu tham khảo · Phụ lục A. Manifest chính (Deployment vLLM, ScaledObject A2) · B. Quy tắc cảnh báo và unit test · C. Runbook mẫu · D. Bảng phiên bản · E. Số liệu từng lượt (ĐG2, ĐG3, VH, kèm bảng chi tiết như thời gian từ vi phạm tới page) · F. Kế hoạch và phân công.
 
-**Cân đối.** Cộng các khoảng trang của sáu chương được 52–64 trang, nên muốn đạt tối thiểu 55 trang theo K12 thì phần lớn chương phải viết ở nửa trên của khoảng. Tính trên ba chương 3–5, chương 3 và 4 chiếm khoảng 70%, chương 5 khoảng 30%. Ngân sách chương 5 (khoảng 300 chữ văn xuôi mỗi trang, chưa hiệu chỉnh trên khuôn của trường): 5.1 ≈ 1,5 trang · 5.2 ≈ 1,5 · 5.3 ≈ 3 · 5.4 ≈ 1,5 · 5.5 ≈ 3 (mỗi VH khoảng nửa trang) · 5.6 ≈ 2 · 5.7 ≈ 1. Nếu vẫn vượt sau khi rút gọn thì nâng chương 5 lên 14–16 trang và rút chương 2 còn 7–8 trang.
+**Cân đối.** Cộng các khoảng trang của sáu chương được 52–64 trang, nên muốn đạt tối thiểu 55 trang theo K12 thì phần lớn chương phải viết ở nửa trên của khoảng. Tính trên ba chương 3–5, chương 3 và 4 chiếm khoảng 70%, chương 5 khoảng 30%. Ngân sách từng mục tính theo trang, gồm cả bảng và hình; lập kế hoạch theo khoảng 450 chữ văn xuôi mỗi trang ([quy tắc viết §1](../luan-van/quy-tac-viet.md#1-khuôn-trình-bày)). Chương 3 lấy mức trên, 12 trang: đoạn mở đầu và kết chương ≈ 0,5 trang · 3.1 ≈ 1,5 · 3.2 ≈ 2 (gồm hình kiến trúc) · 3.3 ≈ 2,5 · 3.4 ≈ 1,5 · 3.5 ≈ 2 (gồm Hình 7 của tài liệu thiết kế: SLO, cảnh báo, runbook) · 3.6 ≈ 2. Chương 5: 5.1 ≈ 1,5 trang · 5.2 ≈ 1,5 · 5.3 ≈ 3 · 5.4 ≈ 1,5 · 5.5 ≈ 3 (mỗi VH khoảng nửa trang) · 5.6 ≈ 2 · 5.7 ≈ 1. Nếu vẫn vượt sau khi rút gọn thì nâng chương 5 lên 14–16 trang và rút chương 2 còn 7–8 trang.
 
 **Truy vết yêu cầu → mục:**
 
@@ -505,7 +505,7 @@ Chương 2–5 kết bằng mục "Kết chương" (một đoạn).
 
 Ranh giới để không viết trùng một nội dung ở hai mục: [quy tắc viết §8](../luan-van/quy-tac-viet.md#8-phối-hợp-giữa-hai-người).
 
-**Người viết và lộ trình.** Từ 22/11/2026, Trình viết bản base toàn bộ luận văn; khi base xong, Quang review, sửa và cập nhật số. Người sở hữu tính năng soát kỹ mục tương ứng (bảng ở [§5.1](#51-phân-công)). Lượt 1 (tới mốc M4, 29/11) đưa mọi mục tới khoảng 60% ngân sách chữ, theo thứ tự chương 3 → 4 → 5 → 2 → 1 → 6 → tóm tắt; lượt 2 đào sâu theo góp ý. Tới bước định dạng (W9), bản gốc là Markdown trong `docs/luan-van/`; góp ý qua review PR hoặc comment trên file `.docx` ghép thử.
+**Người viết và lộ trình.** Từ 22/11/2026, Trình viết bản base toàn bộ luận văn; khi base xong, Quang review, sửa và cập nhật số. Người sở hữu tính năng soát kỹ mục tương ứng (bảng ở [§5.1](#51-phân-công)). Lượt 1 (tới mốc M4, 29/11) đưa mọi mục tới khoảng 60% ngân sách trang, theo thứ tự chương 3 → 4 → 5 → 2 → 1 → 6 → tóm tắt; lượt 2 đào sâu theo góp ý. Tới bước định dạng (W9), bản gốc là Markdown trong `docs/luan-van/`; góp ý qua review PR hoặc comment trên file `.docx` ghép thử.
 
 **Lý do các thay đổi chính so với dàn ý trước:**
 - Thêm xương sống TĐ1–TĐ3 và HG1–HG5 xuyên chương 3–6, để luận văn có một mạch thay vì một chuỗi thành phần rời rạc.
@@ -514,6 +514,7 @@ Ranh giới để không viết trùng một nội dung ở hai mục: [quy tắ
 - Chương 4 gom 11 mục còn 7, để mỗi mục đủ dày cho khung sáu bước (rủi ro R21, §9.3).
 - Chương 5 thêm 2 trang và mục 5.7; LT1–LT8 đặt ở mục có khẳng định tương ứng và được tổng hợp ở 5.6; giữ đủ các ca đối chứng (§8).
 - Chương 6 viết theo TĐ1–TĐ3; hướng phát triển chọn theo phát hiện, không theo thứ tự xếp hạng ở §12.1.
+- Ngân sách tính theo trang, gồm cả bảng và hình, thay cho ước tính 300 chữ mỗi trang (bổ sung 23/11). Dàn trang thử bốn bản nháp đầu tiên của chương 3 (3.1, 3.3, 3.5, 3.6): 6.609 chữ văn xuôi và 17 bảng chiếm 22–29 trang, gấp 2,75–3,6 lần ngân sách 8 trang của bốn mục này, và đã vượt 10–12 trang của cả sáu mục. Văn xuôi chiếm 13–16 trang, bảng chiếm 9–13 trang.
 
 **Danh mục hình đề xuất cho luận văn:** Hình 1–17 của bộ tài liệu này (thay bản minh hoạ bằng số liệu thật ở Hình 5 và 15), cộng các biểu đồ kết quả C1–C6, ảnh chụp dashboard và một tin nhắn cảnh báo thật.
 
