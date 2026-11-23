@@ -34,3 +34,41 @@
 - **Deviations:** phần "thay đổi so với dàn ý trước" ở Kế hoạch §11.1 chỉ giữ 6 ý chính, không chép đủ 8 ý của bản nháp bố cục.
 - **Links:** `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§3 M4, M5; §5.1; §11.1; §11.4); `docs/chi-tiet/01`, `03`, `04`, `05` (phần đầu; 05 dòng F4); `docs/luan-van/quy-tac-viet.md`, `nguon-tu-lieu.md`, `README.md`, `03-05-giam-sat-slo-canh-bao.md`.
 - **Thesis:** dàn ý toàn bộ; 1.4 (cách trình bày quy trình); Lời cam đoan (khai báo công cụ AI).
+
+## 2026-11-23 – TR8: bản base mục 3.6 (thiết kế đánh giá)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  - Trình (viết cùng agent, lượt tự chạy) viết bản base `docs/luan-van/03-06-thiet-ke-danh-gia.md` theo dàn ý ở Kế hoạch §11.1. Bản này có 7 tiểu mục và 7 bảng:
+    - ba lớp đánh giá;
+    - tải và kịch bản tải;
+    - ĐG1–ĐG3;
+    - chỉ số theo đề cương và quy tắc so sánh;
+    - điều kiện hợp lệ của một lượt;
+    - VH1–VH6 và cách chấm cảnh báo;
+    - LT1–LT8.
+  - Phần "Cách đo" của VH6 (mốc vi phạm, page giả, thời gian tới cảnh báo) được viết ở 3.6.6 theo dàn ý. Nhánh nháp chương 5 không bị sửa.
+  - Mọi đoạn và bảng có số đều kèm comment nguồn: § của `docs/chi-tiet/`, mã nguồn `analysis/` và `experiments/runner/`, nhật ký vận hành.
+- **Decision:**
+  - Không chèn Hình 8 và Hình 17, vì Hình 8 còn thời lượng cũ 20/25/25 phút và Hình 17 còn Argo CD trên VM thuê. Bảng 3.6b và 3.6c dùng thay. Hai hình phải vẽ lại trước khi chèn.
+  - Số bảng tạm là 3.6a–3.6g, vì mục 3.2–3.4 chưa viết.
+  - ĐG3 viết "khi thêm một replica" thay cho "scale 1 → 2" của thiết kế. Lý do: ở V2, mức L0 được đo 0 → 1 vì containerd không xoá được image đang dùng (`van-hanh.md` 19/11), và LT4 ở nhà cũng đo 0 → 1. Mục 5.4 sẽ ghi lệch này; comment nguồn của 3.6 đã nhắc.
+  - Phần LT không khẳng định mọi dự đoán đều tính trước khi đo. Theo `van-hanh.md`, dự đoán của LT4 được tính sau khi đã có số đo lần A, nên 3.6 ghi rằng chương 5 nêu rõ các ca như vậy.
+  - Không ghi công cụ cụ thể của ĐG1 ở V2, vì chưa đối chiếu được.
+- **Results:**
+  - `kiem_van.py`: 2.305 chữ văn xuôi, 31 đoạn, 111 câu, 0 điểm cần xem.
+  - lychee 0.24.2 (offline, kèm anchor): 0 lỗi. Pandoc ghép thử `docs/luan-van/[0-9]*.md` ra `.docx` được.
+  - `/code-review high` báo 10 điểm. Từng điểm được đối chiếu với mã nguồn, git log và nhật ký, và cả 10 đã được sửa:
+    - lý do bỏ S1 × KB1 ghi sai thành "autoscaling chạy 1 replica", trong khi A1 scale lên ở KB1 (đúng là A2);
+    - "không thể chỉnh theo kết quả" nói quá, vì `analysis/dg2_a2.py` và `vh6_window.py` được thêm ngày 21/11, sau V2; chỉ `metrics.py` (sửa lần cuối 16/11) được chốt trước;
+    - ĐG3 1 → 2 khác với cách đo L0 ở V2;
+    - định nghĩa thời gian hồi phục SLO chưa khớp `metrics.slo_recovery_s`;
+    - phân vị chỉ tính trên request thành công;
+    - VH6: độ kịp chỉ chấm ở S1 × KB3;
+    - lý do 10 phút của pha tăng đột ngột là cold start đo ngày 08/11, không phải flapping;
+    - TTFT/TPOT ánh xạ sai sang P95/P99 của đề cương;
+    - chỉ độ lệch lịch gửi, event loop và CPU được chấm theo từng tiến trình;
+    - kiểm thử chức năng chỉ chạy trong CI ở phần tự động hoá được.
+- **Deviations:** 2.305 chữ văn xuôi, vượt ngân sách chương 3 (10–12 trang cho 6 mục; 3.1 và 3.5 đã khoảng 2.650 chữ). Ba chỗ cắt được: đoạn quy ước tính (chuyển sang 5.1), chi tiết reset, làm ấm và cooldown (sang 4.7), đoạn ca đối chứng (sang 5.5).
+- **Links:** PR #64; `docs/luan-van/03-06-thiet-ke-danh-gia.md`.
+- **Thesis:** 3.6; dẫn chéo từ 3.1 (mục 3.6), 4.7 (runner kiểm tính hợp lệ), 5.1–5.5.
