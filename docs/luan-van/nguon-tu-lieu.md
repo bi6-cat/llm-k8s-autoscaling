@@ -59,7 +59,7 @@ Số mục theo dàn ý ở Kế hoạch §11.1. Bản base do Trình viết; ng
 | 2.2 Hàng đợi và năng lực phục vụ | Bài toán §3; LT5 trong `VH` (phần lý thuyết) |
 | 2.3 GPU trên Kubernetes | Kiến thức nền §4; LT6 trong `VH` (phần lý thuyết) |
 | 2.4 Autoscaling trên Kubernetes | Kiến thức nền §3; LT7 trong `VH` (phần lý thuyết) |
-| 2.5 Vận hành theo SLO và GitOps | Kiến thức nền §5; LT8 trong `VH` (phần lý thuyết) |
+| 2.5 Vận hành theo SLO và GitOps | Kiến thức nền §5; LT8 trong `VH` (phần lý thuyết). Khái niệm mà 3.5 dùng thẳng, phải giải thích ở đây: histogram và biên bucket, recording rule, `for` (pending, firing), định tuyến và gom nhóm của Alertmanager, page và ticket, runbook, vai trò hai cửa sổ của burn rate |
 | 2.6 Giải pháp liên quan | Kiến thức nền §6; `tai-lieu.bib` |
 
 ### Chương 3
@@ -68,7 +68,7 @@ Số mục theo dàn ý ở Kế hoạch §11.1. Bản base do Trình viết; ng
 |---|---|
 | 3.1 Yêu cầu và chỉ tiêu nghiệm thu | Thông số §3–§6 (§6: giá trị SLO); Bài toán §8–§10 (ma trận truy vết); bảng mã định danh: `quy-tac-viet.md` §4 |
 | 3.2 Kiến trúc tổng thể | Kiến trúc §1–§5, §18; Vận hành §7–§9 (dựng lại, bảo mật, chi phí); Môi trường §1–§3 (hai tầng dùng chung manifest); Thông số §10; ADR-004 §7; ADR-006 C2, §3.1; Hình 2, 3, 6 |
-| 3.3 Thiết kế autoscaling | Kiến trúc §6, §9–§16; Thông số §8, §9; ADR-006 C7 (truy vấn A1); Hình 4, 14, 15 |
+| 3.3 Thiết kế autoscaling | Kiến trúc §6, §9–§16; Thông số §8, §9; ADR-006 C7 (truy vấn A1); Hình 4, 14, 15; `common/autoscaling/a2/scaledobject-a2.yaml` (comment: vào fallback sau khoảng 20 s, so với giới hạn 30 s; 3.5 chỉ dẫn chéo) |
 | 3.4 Cold start và thay đổi an toàn | Kiến trúc §3, §7, §8; Vận hành §5; ADR-005; Hình 5, 12, 13, 16 |
 | 3.5 Giám sát, cảnh báo, xử lý sự cố | **Đã có bản mẫu văn**: [`03-05-giam-sat-slo-canh-bao.md`](03-05-giam-sat-slo-canh-bao.md) (viết theo bố cục mới: có phần xử lý sự cố và vai trò người trực; giá trị SLO đặt ở 3.1, ở đây chỉ dẫn chéo); Kiến trúc §17; Vận hành §1–§4, §6; Hình 7 |
 | 3.6 Thiết kế đánh giá | Môi trường §7–§17, §19; Thông số §7, §8; Bài toán §9 (chỉ số của đề cương); cách chấm cảnh báo và page giả: `analysis/vh6_window.py`, LT8 |
@@ -86,7 +86,7 @@ Số mục theo dàn ý ở Kế hoạch §11.1. Bản base do Trình viết; ng
 | 4.4 Rút ngắn cold start | `phien-2026-11-08-a4000.md` §6, §9; `VH` 08/11 và LT4 (16/11); `Q-07` (16/11: LT4 page cache nguội/ấm; 18–19/11: `dg3.sh`, L0/L2); mã: `envs/cloud/provision/dg3.sh`, `parse_vllm_log` (`T-05` 08/11) |
 | 4.5 Scale-down và cập nhật không rớt request | Graceful shutdown (`Q-05` 06/11, `VH` 06/11); ADR-005; Vận hành §5; `VH` 09/11 (VH2 trên kind), 16/11 (VH2a N = 2); `Q-07` (19/11: vh2a/b/c trên N = 4) |
 | 4.6 Giám sát và SLO | `T-05` (TR3: 3 dashboard); `common/observability/` |
-| 4.6 Cảnh báo và runbook | `T-03` (TR4: 7 quy tắc, promtool, runbook); `T-06` (Telegram, `KedaScalerErrors`); `docs/runbooks/` |
+| 4.6 Cảnh báo và runbook | `T-03` (TR4: 7 quy tắc, promtool, runbook); `T-06` (Telegram, `KedaScalerErrors`); `docs/runbooks/`. Phần chuyển ra từ bản nháp cũ của 3.5 (xem lịch sử Git của `03-05-giam-sat-slo-canh-bao.md`): bảng nguồn metric và chu kỳ scrape, retention, cảnh báo im lặng khi không có traffic (NaN, có unit test), chọn lại tín hiệu `KedaScalerErrors`, khuôn tin Telegram |
 | 4.6 Sự cố và tự phục hồi | Các mục sự cố trong `VH`; VH3 (`Q-07` 19/11); image vLLM bị GC (`Q-07` 16/11) |
 | 4.7 Công cụ đánh giá | `T-03`, `T-05` (TR5: loadgen, tiêu chí hợp lệ, `PodWatcher`); runner (`Q-05` 06/11, `Q-06` 09/11); `build_tables` (`T-06`, `T-07`) |
 | Kết chương 4 | Kế hoạch §9.3 (R21: cặp vấn đề → cách xử lý → số đo); Bài toán §5, §13 |
@@ -106,7 +106,7 @@ Số mục theo dàn ý ở Kế hoạch §11.1. Bản base do Trình viết; ng
 | 5.6 Tổng hợp | Bảng nghiệm thu: Bài toán (bảng yêu cầu → đánh giá → chỉ số), Thông số §4, số ở §3 dưới đây; bảng LT1–LT8: `VH`, Môi trường §19; khuyến nghị cấu hình: Kiến trúc §16 |
 | 5.7 Hạn chế của phép đo | §6 dưới đây |
 | 6.1 Kết luận | Ba thông điệp TĐ1–TĐ3 (Kế hoạch §11.1) |
-| 6.2 Hạn chế của hệ thống và phạm vi | §6 dưới đây; Bài toán §11, §12; ADR-006 §3.1 |
+| 6.2 Hạn chế của hệ thống và phạm vi | §6 dưới đây; Bài toán §11, §12; ADR-006 §3.1; hai hạn chế mà 3.5 dẫn chéo: `LLMErrorRateHigh` vẫn page vì một đợt lỗi 503 ngắn, chưa có dead man's switch cho Prometheus |
 | 6.3 Hướng phát triển | Kế hoạch §12 (E1–E13); `docs/bao-cao/de-xuat-v3/`; `Q-06` (13–15/11: các hướng nâng cấp) |
 | Phụ lục A–F | A: `common/serving/`, `common/autoscaling/`; B: `common/observability/alerts/` (kèm `tests/`); C: `docs/runbooks/`; D: `docs/phien-ban.md`; E: `analysis/figures/v2-dg2/`; F: Kế hoạch §1, §5.1 |
 | Slide, video | Kế hoạch §11.2, §11.3 |
