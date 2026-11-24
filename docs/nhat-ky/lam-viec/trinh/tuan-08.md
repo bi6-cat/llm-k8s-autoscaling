@@ -133,3 +133,20 @@
 - **Results:** `/code-review high` trên diff: 5 điểm nhỏ (§3.5 và §9 nói khác nhau về chỗ ghi việc dùng AI; quy tắc "kết quả cụ thể có số" của Tóm tắt chưa chuyển sang mục 1.3; §1 chưa ghi chỗ đặt đoạn khai báo nếu được yêu cầu; "khuôn T" ở §5.1 chưa có link; thiếu dòng Thesis), đã sửa cả 5.
 - **Links:** `docs/luan-van/quy-tac-viet.md` (§1, §3.5, §9); `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§5.1, §11.1).
 - **Thesis:** phần đầu quyển (không có Tóm tắt, không có Lời cam đoan); Mở đầu; mục 1.3 Đóng góp.
+
+## 2026-11-24 – N8: dựng lại kind + simulator từ đầu theo README
+
+- **Task:** TR8 (N8) · **Environment:** sim
+- **Done:**
+  1. `make sim-down` xoá cụm `llm-sim` cũ, rồi làm đúng theo `envs/sim/README.md`: `make sim-up`, kiểm trạng thái, `make sim-test`. Bấm giờ từng bước bằng dấu giờ trên từng dòng output.
+  2. Dựng với hai biến Telegram giả trong môi trường, để Alertmanager không gửi tin thật trong lúc thử (`.env` đã có bot thật từ 24/11).
+  3. Sửa README ở những chỗ người mới phải tìm ở tài liệu khác: thêm mục "Cần có" (máy, công cụ, mạng, Telegram tuỳ chọn, cách dựng mà không gửi tin), phần kiểm tra sau `make sim-up` (kết quả mong đợi, mở Grafana), mục "Trên Windows (WSL2)", và thời gian `make sim-up` theo số đo.
+- **Results:**
+  - `make sim-down`: 9,5 s. `make sim-up`: 343 s, mã thoát 0. Theo bước: tạo cluster kind 30 s; khai báo repo Helm 5 s; kube-prometheus-stack 206 s; rule và dashboard dưới 1 s; KEDA 81 s; simulator rollout 16 s; ScaledObject dưới 1 s.
+  - Sau `make sim-up`: 1 pod `vllm` 1/1 Running, `vllm-a2` READY=True, HPA `0/10 (avg)`; không pod nào ngoài Running/Completed. Ba node dùng 2,9 GB RAM (`docker stats`).
+  - `make sim-test`: 1.128 s, T1–T5 đều đạt. T2 desired=3 sau 3 s (tiêu chí ≤ 15 s); T3 giữ 3 replica 304 s rồi về 2, về 1 sau thêm 61 s; T4 fallback sau 18 s (tiêu chí ≤ 30 s); T5 giữ 1 replica khi A2 lên 25. Log: `runs/sim/20261124-222049-t1-t5.log`.
+  - Tổng từ `make sim-down` đến khi T1–T5 đạt: 1.481 s (khoảng 25 phút), dưới ngưỡng 1 giờ của N8.
+  - Log Alertmanager không có lần gửi nào trong lúc T1–T5, nên F6 phải tự kích một cảnh báo.
+- **Deviations:** chưa đúng "người thứ hai" như N8 viết: agent chạy trên máy của Trình, công cụ đã cài sẵn, và node image của kind (1,3 GB) đã có trong cache Docker. Image của chart và simulator thì tải lại. Thời gian cài công cụ theo W1 §4.2 chưa đo.
+- **Links:** `envs/sim/README.md`; `docs/nhat-ky/van-hanh.md`.
+- **Thesis:** §4 (tái lập môi trường), §5 bảng nghiệm thu N8.
