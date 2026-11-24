@@ -171,7 +171,8 @@ Ngày 20/11, lệnh `analysis.charts` trên đã chạy được, ra 6 hình: `c
 | A2 không đạt SLO dưới spike KB2: load balancing của Service không biết hàng đợi của từng pod | `Q-07` 19/11 |
 | Mỗi ô ma trận chỉ 1–3 lượt | `Q-07` 18/11 |
 | vh3-kill có lẽ chạy khi chỉ có 1 pod, nên lỗi cả cluster trong 67 s; chưa kiểm số pod lúc kill | `Q-07` 19/11 |
-| L0 đo 0 → 1 pod thay vì 1 → 2 (containerd không xoá được image đang dùng); 3 lượt L2 chạy sau L0 | `Q-07` 18/11, 19/11 |
+| L0 đo 0 → 1 pod thay vì 1 → 2 (containerd không xoá được image đang dùng); theo `trigger_unix`, 2 trong 3 lượt L2 chạy sau L0-2 (L2-2 chạy trước), không phải cả 3 như nhật ký ghi | `Q-07` 18/11, 19/11; `summary.txt` |
+| ĐG3 xoá page cache trước mọi lượt, nên L2 (75,7–80,8 s) chậm hơn pod mới của A2 × KB2 (65–66 s); chỉ khoảng 6,7 s của khoảng chênh được giải thích (nạp weights); chưa tách phần import trong pha khởi động tiến trình (52,7–56,8% cold start L2); không đo tốc độ đĩa của VM nên LT4 chưa kiểm được phần định lượng; L0 chỉ 2 lượt | `05-04-cold-start.md` (nguồn trong comment) |
 | Không sao lưu R2 trong phiên; runner chạy trong tmux với `--no-backup` | `Q-07` 18/11 |
 | `metadata.json` của ĐG2 ghi commit `10c0527` dù tree có hai file ma trận chưa commit; `vh.py` dùng bản PR #46 chưa merge | `Q-07` 18/11 |
 | vLLM không dừng khi nhận SIGTERM, pod giữ GPU đủ grace 180 s | `VH` 06/11 |

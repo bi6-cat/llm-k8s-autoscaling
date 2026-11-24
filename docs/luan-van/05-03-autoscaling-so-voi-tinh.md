@@ -3,7 +3,7 @@
 
 ## 5.3. Autoscaling so với cấu hình tĩnh
 
-Mục này so A2 với hai cấu hình tĩnh S1, S4 và với A1 trên ba kịch bản tải của mục 3.6. Ma trận gồm 17 lượt trên 11 ô, chạy trong phiên đo trên 4 × RTX 4060 Ti (mục 5.1). Cả 17 lượt hợp lệ, đều bắt đầu ở mức cold start ấm (mục 3.4), và các lượt cùng số thứ tự lặp dùng chung một lịch gửi request.
+Mục này so A2 với hai cấu hình tĩnh S1, S4 và với A1 trên ba kịch bản tải của mục 3.6. Ma trận gồm 17 lượt trên 11 ô, chạy trong phiên đo trên 4 × RTX 4060 Ti (mục 5.1). Cả 17 lượt hợp lệ, đều bắt đầu khi image, model và compile cache đã có sẵn trên node (mục 3.4), và các lượt cùng số thứ tự lặp dùng chung một lịch gửi request.
 
 <!-- nguồn: analysis/figures/v2-dg2/runs.csv (17 dòng, valid = True, capacity_rps 3,5 (mục 5.2), threshold 37, max_replicas 4); nhật ký Quang tuần 07 mục 18/11 (ĐG2 17/17 hợp lệ; C = 3,5, B\* = 46,3, threshold 37); Thông số §7 (KB1 0,5 C; đỉnh KB2, KB3 0,75 × N = 3,0 C), §8.1 (A1 target 70), §8.2 (ma trận 17 lượt, lịch gửi chung theo lần lặp, mọi lượt ở L2); runs.csv n_sent: A1-KB2-1 và A2-KB2-1 cùng 7.771 request, A1-KB1-2 và A2-KB1-2 cùng 1.326 -->
 
@@ -59,9 +59,9 @@ Hàng đợi rút chậm vì Service của Kubernetes chia request mới đều 
 
 ### 5.3.3. Scale-down và độ ổn định của số replica
 
-Khi tải giảm, autoscaling bớt replica từng bước mà không gây lỗi. Pod đầu tiên bị bớt sau 190–299 s và số replica về 1 sau 369–420 s. Nhịp này khớp cấu hình bớt tối đa 1 pod mỗi 60 s (mục 3.3). Bước đầu đến trước 300 s vì cửa sổ ổn định tính từ đề xuất cao gần nhất, không từ lúc tải giảm. Trong pha giảm, cả ba lượt có 0 request lỗi trên 1.147–1.245 request và SLO attainment 100%, nên phần scale-down của chỉ tiêu N4 đạt. Không lượt nào có flapping.
+Khi tải giảm, autoscaling bớt replica từng bước mà không gây lỗi. Pod đầu tiên bị bớt sau 190–299 s và số replica về 1 sau 369–420 s. Nhịp này khớp cấu hình bớt tối đa 1 pod mỗi 60 s (mục 3.3). Bước đầu đến trước 300 s, nhiều khả năng vì cửa sổ ổn định tính từ đề xuất cao gần nhất, không từ lúc tải giảm. Trong pha giảm, cả ba lượt có 0 request lỗi trên 1.147–1.245 request và SLO attainment 100%, nên phần scale-down của chỉ tiêu N4 đạt. Không lượt nào có flapping.
 
-<!-- nguồn: events.jsonl A2-KB2-1/2/3 (dg2_a2 phần 1): 4→3 lúc 1139; 1030; 1068 s, 3→2 lúc 1200; 1155; 1148 s, 2→1 lúc 1260; 1215; 1209 s; tải giảm lúc 840 s (Thông số §7); phases.csv pha drop: n_sent 1.147; 1.166; 1.245, n_error 0, slo_attainment 1,0; runs.csv scale_downs 3, flaps = 0 ở cả 17 lượt. Thông số §9.3 (stabilizationWindowSeconds 300, 1 pod mỗi 60 s), §4 (N4). Bước sớm ở lượt 2, 3: metrics.csv.gz (vllm_running + vllm_waiting cộng mọi pod), mẫu > 111 (3 × threshold 37) cuối ở 839; 749; 767 s (dg2_a2 phần 4) -->
+<!-- nguồn: events.jsonl A2-KB2-1/2/3 (dg2_a2 phần 1): 4→3 lúc 1139; 1030; 1068 s, 3→2 lúc 1200; 1155; 1148 s, 2→1 lúc 1260; 1215; 1209 s; tải giảm lúc 840 s (Thông số §7); phases.csv pha drop: n_sent 1.147; 1.166; 1.245, n_error 0, slo_attainment 1,0; runs.csv scale_downs 3, flaps = 0 ở cả 17 lượt. Thông số §9.3 (stabilizationWindowSeconds 300, 1 pod mỗi 60 s), §4 (N4). Bước sớm ở lượt 2, 3: metrics.csv.gz (vllm_running + vllm_waiting cộng mọi pod), mẫu > 111 (3 × threshold 37) cuối ở 839; 749; 767 s (dg2_a2 phần 4). Lượt 2 không khớp: 749 + 300 = 1.049 s > 1.030 s, nên metric ghi trong metrics.csv.gz chưa chắc là giá trị HPA nhận (chu kỳ lấy mẫu, truy vấn của KEDA); chưa kiểm, vì vậy câu trong bài ghi "nhiều khả năng" -->
 
 ### 5.3.4. Vì sao không dùng GPU utilization làm tín hiệu
 

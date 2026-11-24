@@ -130,3 +130,23 @@
 - **Results:** 4.503 → 512 chữ văn xuôi (đếm của `kiem_van.py`), 3 → 0 bảng; đo 0,96 trang khuôn A, 1,25 trang khuôn B (ngân sách 1,25); `kiem_van.py` 0 điểm; lychee đạt. Không đổi số liệu so với nguồn.
 - **Links:** nhánh `docs/tr8-thesis-ch5-drafts` (chưa PR); `docs/luan-van/nguon-tu-lieu.md` §6.
 - **Thesis:** §5.5 (VH4, VH6), §5.7, §6.2; Phụ lục E (bảng từng lượt, lấy từ commit `bc49ff6`). Việc đo và cắt ba nháp chương 5 đã xong.
+
+## 2026-11-24 – Luận văn: bản base mục 5.4 Cold start (ĐG3, LT4)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Viết `docs/luan-van/05-04-cold-start.md` từ 5 lượt hợp lệ của ĐG3 (`runs/v2-vm/dg3-v2-4060ti/{L0-1,L0-2,L2-1,L2-2,L2-3}`: `summary.txt`, `vllm_log.json`). Bảng 5.4a chia thời gian theo tám pha (mốc kubelet cho pha 1–4, mốc vLLM cho pha 4–8), ghi khoảng giá trị; số từng lượt để trong comment cho Phụ lục E. Câu mở mục ghi rõ L0 đo 0 → 1, L2 đo 1 → 2.
+  2. Đọc thêm log vLLM của 9 pod mới trong ba lượt A2 × KB2 bằng `parse_vllm_log` để giải thích vì sao cold start trong ĐG2 (65–66 s) ngắn hơn ĐG3 L2.
+  3. Soát độc lập (`/code-review high`): 10 điểm. Sửa 8 điểm ở 5.4: pha 4 tách được bằng mốc `container_started`, `api_server_start`, `engine_init_start`; dòng "nạp weights" của bảng đổi thành "khởi tạo model và nạp weights", thêm dòng con theo log vLLM; hạ mức chắc chắn của giải thích page cache; chỉ dùng tên L0/L2; câu định nghĩa cold start; tổng tính chính xác tới 0,1 s; sửa ghi chú thứ tự lượt; đổi GiB/GB. Hai điểm ngoài 5.4 cũng sửa: câu bước scale-down đầu ở 5.3 thêm "nhiều khả năng" (lượt 2 không khớp với cửa sổ 300 s), Kế hoạch §11.1 "14–16 trang" thành "tối đa 16 trang". Thêm hai dòng hạn chế vào `nguon-tu-lieu.md` §6.
+- **Decision:** D97: tổng cold start lấy `ready_seen_unix − trigger_unix` (chính xác tới 0,1 s) thay cho `trigger_to_ready_s` nguyên giây, để bảng cộng đúng từng pha. N5 vì vậy đổi từ 25,4% thành 25,3% ở 5.4 và 5.6; số nguyên giây vẫn ghi trong comment nguồn. Phương án bỏ: giữ số nguyên giây, khi đó tỷ lệ và tổng các pha lệch nhau tới 0,7 s.
+- **Results:**
+  - Từ lệnh scale tới Ready: L2 75,7–80,8 s (3 lượt), L0 301–311 s (2 lượt). L2 bằng 25,3% L0 theo trung bình, 26,9% ở cặp lượt bất lợi nhất, nên N5 đạt.
+  - L0: kéo image 9,04 GB mất 154–156 s (khoảng một nửa), tải model 54,2–56,8 s, torch.compile 18,0–20,2 s (L2: 1,2–1,3 s nhờ compile cache).
+  - L2: pha khởi động tiến trình 42,6–43,0 s, chiếm 52,7–56,8%. Trong đó 28,3–28,7 s trôi qua trước dòng log đầu của vLLM. Tài liệu thiết kế ước tính 5–15 s cho pha này.
+  - LT4: vLLM báo nạp 5,75 GiB weights mất 7,7–7,8 s ở L2 (khoảng 0,8 GB/s) và 0,99–1,14 s ở L0. Tốc độ đĩa của VM chưa đo, nên chưa kiểm được phần định lượng. Nạp weights chiếm không quá 10,3% cold start.
+  - ĐG2 A2 × KB2: 9 pod mới nạp weights 1,01–1,04 s, phù hợp với page cache ấm; phần này giải thích khoảng 6,7 s trong khoảng chênh 10–16 s so với ĐG3.
+  - Đo trang: 1,21 trang khuôn A, 1,49 trang khuôn B (ngân sách 1,5); 472 chữ văn xuôi; `kiem_van.py` 0 điểm; lychee `docs/luan-van/` đạt. 5.3 sau khi sửa: 3,99 trang B (ngân sách 4).
+- **Incidents:** lần đo trang đầu chạy `run.sh` với biến thư mục rỗng, nên `cat` tạo file `all.md` rỗng ở gốc repo. File đã được xoá trước khi commit. Theo `trigger_unix`, thứ tự đo là L2-2 → L0-2 → L2-1 → L2-3 → L0-1, tức chỉ 2 trong 3 lượt L2 chạy sau L0-2; nhật ký Quang 19/11 ghi "ba lượt".
+- **Deviations:** phép so với cluster nhà (LT4 16/11, model 0,5B) bỏ khỏi thân bài để giữ ngân sách. Ý này ghi trong comment đầu file, để dùng cho bảng LT1–LT8 (5.6) hoặc Phụ lục E.
+- **Links:** nhánh `docs/tr8-thesis-ch5-drafts` (chưa PR); `docs/luan-van/05-04-cold-start.md`; `nguon-tu-lieu.md` §6.
+- **Thesis:** §5.4, §5.6 (N5, LT4), §5.7 (hạn chế ĐG3); Phụ lục E (số từng lượt trong comment đầu 5.4).

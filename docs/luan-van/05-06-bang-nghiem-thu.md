@@ -24,7 +24,7 @@ Mục này đối chiếu kết quả của các mục 5.2–5.5 với các yêu
 | N2b. Hồi phục | Should | 409–430 s | Báo cáo |
 | N3. Hiệu quả GPU | Should | 25% GPU-giờ của S4; SLO chênh 0 điểm | Đạt |
 | N4. An toàn khi thay đổi | Must | 0 lỗi, kể cả lúc 1 replica | Đạt |
-| N5. Cold start | Should | L2 bằng 25,4% L0 (≤ 50%) | Đạt |
+| N5. Cold start | Should | L2 bằng 25,3% L0 (≤ 50%) | Đạt |
 | N6. Tự phục hồi | Must | Thay pod 67,4 s; fallback 16,8 s; dựng lại như F4 | Đạt |
 | N7. Quan sát được | Should | 104,5 s (≤ 5 phút); 0 page giả | Đạt |
 | N8. Tái lập, chi phí | Should | Thiếu người thứ hai, chi phí | Chưa đo |
@@ -38,7 +38,7 @@ Mục này đối chiếu kết quả của các mục 5.2–5.5 với các yêu
 <!-- nguồn: F7: envs/cloud/provision/install-platform.sh (openssl rand -hex 24); common/serving/deployment.yaml (VLLM_API_KEY); 00-thong-so.md §3 F7 (sửa 12/11); nguon-tu-lieu.md §4 (checklist bảo mật chưa làm) -->
 <!-- nguồn: N1–N3: analysis/figures/v2-dg2/runs.csv (slo_attainment, scored_phases, detect_s, create_to_ready_s, react_s, recovery_s, gpu_h, gpu_vs_baseline, slo_delta_vs_baseline_pp); nhật ký Quang tuần 07 mục 18/11 (bảng 11 ô), 19/11 (nguyên nhân A2 × KB2: hàng đợi 416–428 request ở pod có sẵn) -->
 <!-- nguồn: N4: analysis/figures/v2-dg2/phases.csv (pha drop của A2-KB2-1/2/3: n_error = 0, replicas_ready_mean 2,8; 2,5; 2,6), runs.csv (scale_downs = 3 mỗi lượt; n_error toàn lượt = số lỗi của pha spike); runs/v2-vm/ops-vh2a-*/summary.json (replicas_before 1, rollout_s 141,4), ops-vh2b-*/summary.json (rollout_s 371,6); VH 16/11 ("Chưa làm: VH1–VH4 trên GPU nhà") -->
-<!-- nguồn: N5: runs/v2-vm/dg3-v2-4060ti/{L2-1,L2-2,L2-3,L0-1,L0-2}/summary.txt (trigger_to_ready_s); nhật ký Quang tuần 07 mục 18/11 (lý do L0 đo 0 → 1) -->
+<!-- nguồn: N5: runs/v2-vm/dg3-v2-4060ti/{L2-1,L2-2,L2-3,L0-1,L0-2}/summary.txt (ready_seen_unix − trigger_unix, trung bình 77,4 / 305,7 s; theo trigger_to_ready_s nguyên giây là 25,4%; 05-04-cold-start.md); nhật ký Quang tuần 07 mục 18/11 (lý do L0 đo 0 → 1) -->
 <!-- nguồn: N6: runs/v2-vm/ops-vh3-delete-*/summary.json (replace_s 67,38, ready_before 2), ops-vh3-kill-*/summary.json (recover_s 67,45, 129 lỗi / 1.041 request), ops-vh4-*/summary.json (fallback_s 16,80, replicas_before 1, max_replicas 4); nhật ký Quang tuần 07 mục 18/11 (8 phút 22 giây từ đầu bootstrap tới vLLM Ready, bấm tay) -->
 <!-- nguồn: N7: analysis/figures/v2-dg2/runs.csv (time_to_alert_s, false_pages), alerts.csv (client_bad_ratio 0,272 và 0,378 ở A2-KB3; đợt kêu ở −176 s của A2-KB3-2 có firing_at_start = True, còn từ lượt trước, không tính) -->
 <!-- nguồn: N8: runs/v2-vm/dg3-v2-4060ti/*/summary.txt (vllm/vllm-openai:v0.31.0@sha256:c1c9…); ansible/inventory/group_vars/all.yaml (k3s v1.36.5+k3s1); envs/cloud/provision/install-platform.sh (nvidia-device-plugin 0.20.1, kube-prometheus-stack 92.1.1, KEDA 2.21.0); nguon-tu-lieu.md §4 (chi phí thực tế chưa có) -->
