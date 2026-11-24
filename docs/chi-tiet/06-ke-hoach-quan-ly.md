@@ -202,14 +202,14 @@ Nếu một người chậm, người kia nhận việc theo thứ tự ưu tiê
 
 | Chương | Quang | Trình |
 |---|---|---|
-| Mở đầu | Toàn phần; đoạn khai báo dùng công cụ AI do cả hai chốt ([quy tắc viết §9](../luan-van/quy-tac-viet.md#9-dùng-ai-agent-khi-viết)) | – |
+| Mở đầu | Cùng soát (tóm lược mọi chương) | Cùng soát |
 | 1. Giới thiệu | Toàn chương | – |
 | 2. Cơ sở lý thuyết | 2.1, 2.3 | 2.2, 2.4–2.6 |
 | 3. Yêu cầu và thiết kế | 3.2, 3.4, 3.6 (ĐG1, ĐG3, VH1–VH3, VH5) | 3.1, 3.3, 3.5, 3.6 (ĐG2, VH4, VH6, tính hợp lệ) |
 | 4. Triển khai và vận hành | 4.1 (hạ tầng, dựng lại), 4.2, 4.4, 4.5, 4.7 (runner) | 4.1 (GitOps, CI, bí mật, bảo mật), 4.3, 4.6, 4.7 (máy tạo tải, phân tích) |
 | 5. Đánh giá | 5.1, 5.2, 5.4, 5.5 (VH1–VH3, VH5, graceful shutdown), 5.7 | 5.3, 5.5 (VH4, VH6), 5.6, 5.7 |
 | 6. Kết luận | – | Toàn chương |
-| Ghép và định dạng | Slide, video demo | Luận văn (khuôn trường, hình, tài liệu tham khảo) |
+| Ghép và định dạng | Slide, video demo | Luận văn (khuôn T ở [quy tắc viết §1](../luan-van/quy-tac-viet.md#1-khuôn-trình-bày), hình, tài liệu tham khảo) |
 
 ---
 
@@ -468,7 +468,7 @@ Bố cục chốt ngày 23/11/2026, thay dàn ý trước đó; đề mục và 
 
 | Chương | Mục | Trang |
 |---|---|---|
-| Mở đầu (không đánh số) | Dẫn dắt vào vấn đề và việc đề tài làm, ở mức người không chuyên; mô tả ngắn từng chương, thay cho mục "Cấu trúc luận văn" của chương 1; đoạn cuối khai báo việc dùng công cụ AI ([quy tắc viết §9](../luan-van/quy-tac-viet.md#9-dùng-ai-agent-khi-viết), [§1](../luan-van/quy-tac-viet.md#1-khuôn-trình-bày)) | 1,5–2 |
+| Mở đầu (không đánh số) | Dẫn dắt vào vấn đề và việc đề tài làm, ở mức người không chuyên; mô tả ngắn từng chương, thay cho mục "Cấu trúc luận văn" của chương 1 ([quy tắc viết §1](../luan-van/quy-tac-viet.md#1-khuôn-trình-bày)) | 1,5–2 |
 | 1. Giới thiệu | 1.1 Bối cảnh và bài toán (vì sao vận hành LLM trên GPU khó, các điểm chính ở [Bài toán §5](01-bai-toan-yeu-cau.md#5-vì-sao-vận-hành-llm-trên-gpu-khó); ba yêu cầu kéo nhau, Hình 1) · 1.2 Mục tiêu, phạm vi và phương pháp (bảng bảy mục tiêu đề cương → F/N → mục, theo [Bài toán §9](01-bai-toan-yeu-cau.md#9-đối-chiếu-với-bảy-mục-tiêu-của-đề-cương); giả định G1 "chi phí ≈ GPU-giờ"; phương pháp và tổ chức thực hiện) · 1.3 Đóng góp chính (TĐ1–TĐ3, 2–3 số chính, dẫn chéo tới chương 5) | 3–4 |
 | 2. Cơ sở lý thuyết và giải pháp liên quan | 2.1 Phục vụ LLM và vLLM: 2.1.1 Sinh token và bộ nhớ GPU (prefill, decode, KV cache, giới hạn băng thông bộ nhớ) · 2.1.2 vLLM: continuous batching và các chỉ số TTFT, TPOT, metric của vLLM · 2.2 Hàng đợi và năng lực phục vụ (định luật Little, vì sao không chạy GPU sát 100%) · 2.3 GPU trên Kubernetes (device plugin, time-slicing, vì sao GPU utilization bão hoà) · 2.4 Autoscaling trên Kubernetes: 2.4.1 HPA · 2.4.2 KEDA và fallback · 2.5 Vận hành theo SLO và GitOps: 2.5.1 SLO, error budget và burn rate · 2.5.2 Prometheus và Alertmanager · 2.5.3 GitOps với Argo CD, rolling update · 2.6 Giải pháp liên quan và vị trí của đồ án | 10–13 |
 | 3. Yêu cầu và thiết kế | 3.1 Yêu cầu và chỉ tiêu nghiệm thu (F1–F7, N1–N8; giá trị SLO: TTFT ≤ 2,5 s cho 95% request; truy vết bài toán → yêu cầu; bảng mã định danh) · 3.2 Kiến trúc tổng thể: 3.2.1 Thành phần và ba luồng (luồng request, luồng autoscaling, luồng thay đổi qua Git; bảo vệ tối thiểu) · 3.2.2 Hai môi trường dùng chung manifest · 3.3 Thiết kế autoscaling (HG1): 3.3.1 Chọn tín hiệu scale · 3.3.2 Threshold từ năng lực một replica (tham số KEDA và HPA; các cấu hình S1, S4, A1, A2) · 3.3.3 Fallback khi mất tín hiệu · 3.4 Thiết kế cold start và thay đổi an toàn (HG2, HG3): 3.4.1 Rút ngắn cold start (mức L0, L2) · 3.4.2 Tắt pod và cập nhật không rớt request (graceful shutdown cho streaming; rolling update khi hết GPU) · 3.5 Thiết kế giám sát và cảnh báo (HG4): 3.5.1 SLI và cảnh báo theo burn rate (gồm dashboard) · 3.5.2 Định tuyến cảnh báo, runbook và người trực · 3.6 Thiết kế đánh giá: 3.6.1 Tải và kịch bản tải (KB1–KB3) · 3.6.2 Phép đo, chỉ số và quy tắc so sánh (ĐG1–ĐG3; chỉ số theo đề cương: P95, P99, TTFT, TPOT, throughput, GPU-giờ, token/GPU-giờ, GPU utilization; điều kiện hợp lệ của lượt đo và lý do) · 3.6.3 Kịch bản vận hành và cách chấm cảnh báo (VH1–VH6; định nghĩa page giả; LT1–LT8) | 13–15 |
@@ -478,7 +478,7 @@ Bố cục chốt ngày 23/11/2026, thay dàn ý trước đó; đề mục và 
 
 Chương 2–5 kết bằng mục "Kết chương" (một đoạn). Tiểu mục cấp 3 trong bảng là dự kiến: chỉ giữ khi mục cấp 2 đạt khoảng 2 trang (khoảng 1.000 chữ) và mỗi tiểu mục đạt khoảng 1 trang (khoảng 500 chữ) ([quy tắc viết §2](../luan-van/quy-tac-viet.md#2-mỗi-chương-nói-gì)); không đạt thì viết thành đoạn.
 
-**Phần đầu** (theo hai đồ án mẫu của khoa, chỗ khác mẫu và lý do ở [quy tắc viết §1](../luan-van/quy-tac-viet.md#1-khuôn-trình-bày)): bìa chính, bìa phụ · Lời cảm ơn · hai trang nhận xét, đánh giá, cho điểm (người hướng dẫn, giảng viên phản biện) · Tóm tắt 1 trang tiếng Việt (viết sau cùng, có 2–3 kết quả kèm số) · Mục lục · Danh mục thuật ngữ, chữ viết tắt và mã định danh (lấy từ [Kiến thức nền §7](02-kien-thuc-nen.md#7-bảng-thuật-ngữ)) · Danh mục hình vẽ, bảng biểu.
+**Phần đầu** (theo hai đồ án mẫu của khoa, chỗ khác mẫu và lý do ở [quy tắc viết §1](../luan-van/quy-tac-viet.md#1-khuôn-trình-bày)): bìa chính, bìa phụ · Lời cảm ơn · hai trang nhận xét, đánh giá, cho điểm (người hướng dẫn, giảng viên phản biện) · Mục lục · Danh mục thuật ngữ, chữ viết tắt và mã định danh (lấy từ [Kiến thức nền §7](02-kien-thuc-nen.md#7-bảng-thuật-ngữ)) · Danh mục hình vẽ, bảng biểu.
 
 **Phần cuối:** Tài liệu tham khảo · Phụ lục A. Manifest chính (Deployment vLLM, ScaledObject A2) · B. Quy tắc cảnh báo và unit test · C. Runbook mẫu · D. Bảng phiên bản · E. Số liệu từng lượt (ĐG2, ĐG3, VH, kèm bảng chi tiết như thời gian từ vi phạm tới page) · F. Kế hoạch và phân công.
 
@@ -507,7 +507,7 @@ Chương 2–5 kết bằng mục "Kết chương" (một đoạn). Tiểu mục
 
 Ranh giới để không viết trùng một nội dung ở hai mục: [quy tắc viết §8](../luan-van/quy-tac-viet.md#8-phối-hợp-giữa-hai-người).
 
-**Người viết và lộ trình.** Từ 22/11/2026, Trình viết bản base toàn bộ luận văn; khi base xong, Quang review, sửa và cập nhật số. Người sở hữu tính năng soát kỹ mục tương ứng (bảng ở [§5.1](#51-phân-công)). Lượt 1 (tới mốc M4, 29/11) đưa mọi mục của dàn ý tới bản base, theo thứ tự chương 3 → 4 → 5 → 2 → 1 → 6 → Mở đầu → tóm tắt, trong đó chương 2 viết song song với chương 4. Phần lõi đã cắt khỏi chương 3, 5 trước ngày 24/11 được khôi phục theo đề mục mới, tới trước hạn nộp. Lượt 2 đào sâu theo góp ý. Mỗi chương ghép thành một PR để người đọc đọc trọn chương. Tới bước định dạng (W9), bản gốc là Markdown trong `docs/luan-van/`; góp ý qua review PR hoặc comment trên file `.docx` ghép thử.
+**Người viết và lộ trình.** Từ 22/11/2026, Trình viết bản base toàn bộ luận văn; khi base xong, Quang review, sửa và cập nhật số. Người sở hữu tính năng soát kỹ mục tương ứng (bảng ở [§5.1](#51-phân-công)). Lượt 1 (tới mốc M4, 29/11) đưa mọi mục của dàn ý tới bản base, theo thứ tự chương 3 → 4 → 5 → 2 → 1 → 6 → Mở đầu, trong đó chương 2 viết song song với chương 4. Phần lõi đã cắt khỏi chương 3, 5 trước ngày 24/11 được khôi phục theo đề mục mới, tới trước hạn nộp. Lượt 2 đào sâu theo góp ý. Mỗi chương ghép thành một PR để người đọc đọc trọn chương. Tới bước định dạng (W9), bản gốc là Markdown trong `docs/luan-van/`; góp ý qua review PR hoặc comment trên file `.docx` ghép thử.
 
 **Lý do các thay đổi chính so với dàn ý trước:**
 - Thêm xương sống TĐ1–TĐ3 và HG1–HG5 xuyên chương 3–6, để luận văn có một mạch thay vì một chuỗi thành phần rời rạc.
@@ -518,8 +518,8 @@ Ranh giới để không viết trùng một nội dung ở hai mục: [quy tắ
 - Chương 6 viết theo TĐ1–TĐ3; hướng phát triển chọn theo phát hiện, không theo thứ tự xếp hạng ở §12.1.
 - Ngân sách tính theo trang, gồm cả bảng và hình, thay cho ước tính 300 chữ mỗi trang (bổ sung 23/11). Dàn trang thử bốn bản nháp đầu tiên của chương 3 (3.1, 3.3, 3.5, 3.6): 6.609 chữ văn xuôi và 17 bảng chiếm 22–29 trang, gấp 2,75–3,6 lần ngân sách 8 trang của bốn mục này, và đã vượt 10–12 trang của cả sáu mục. Văn xuôi chiếm 13–16 trang, bảng chiếm 9–13 trang.
 - Bổ sung 24/11: bỏ ngân sách trang của từng mục, thay bằng khoảng định hướng theo chương (đoạn **Độ dài**). Đo các bản base viết theo ngân sách cũ: phần lớn tiểu mục cấp 3 chỉ có 55–300 chữ (⅛–⅔ trang), vì mỗi mục 2 trang bị chia ba tiểu mục; thông điệp TĐ1 ở chương 5 chỉ còn 110 chữ, ở tiểu mục cuối của 5.3; nhiều phần lý do và giải thích bị cắt (5.3 từ 3.500 còn 830 chữ). Đề mục theo quy tắc mới ở [quy tắc viết §2](../luan-van/quy-tac-viet.md#2-mỗi-chương-nói-gì): chương 1 gộp 6 mục còn 4 (còn 3 sau khi mục 1.4 chuyển sang Mở đầu, ý cuối của danh sách này); chương 4 bỏ tiêu đề theo bước của khung; 5.3 đưa TĐ1 lên đầu; 5.5 gom 7 tiểu mục theo mã VH thành 3 tiểu mục theo chỉ tiêu N4, N6, N7, và scale-down chuyển từ 5.3 sang 5.5.1.
-- Bổ sung 24/11 (khuôn T): GVHD gửi hai đồ án tốt nghiệp mẫu của khoa. Nhóm chọn khuôn T từ hai mẫu ([quy tắc viết §1](../luan-van/quy-tac-viet.md#1-khuôn-trình-bày)) và đo lại bằng Word: cùng nội dung, khuôn T bằng khoảng 0,85 trang khuôn B cũ, nên cột "Trang" và đoạn **Độ dài** đổi sang khuôn T; phần đầu quyển theo hai mẫu, giữ Lời cam đoan và Tóm tắt (hai mẫu không có), bỏ *Abstract* và nhiệm vụ đồ án. Lời cam đoan bị bỏ sau đó (ý ngay dưới).
-- Bổ sung 24/11 (Mở đầu): thêm phần Mở đầu không đánh số, theo mẫu tiếng Việt, để dẫn dắt người đọc trước chương 1 và mô tả nhanh từng chương. Mục "Cấu trúc luận văn" chuyển từ chương 1 sang Mở đầu nên nội dung không lặp; chương 1 còn 3–4 trang. Bỏ trang Lời cam đoan như hai mẫu; khai báo dùng công cụ AI chuyển thành đoạn cuối của Mở đầu.
+- Bổ sung 24/11 (khuôn T): GVHD gửi hai đồ án tốt nghiệp mẫu của khoa. Nhóm chọn khuôn T từ hai mẫu ([quy tắc viết §1](../luan-van/quy-tac-viet.md#1-khuôn-trình-bày)) và đo lại bằng Word: cùng nội dung, khuôn T bằng khoảng 0,85 trang khuôn B cũ, nên cột "Trang" và đoạn **Độ dài** đổi sang khuôn T; phần đầu quyển theo hai mẫu, giữ Lời cam đoan và Tóm tắt (hai mẫu không có), bỏ *Abstract* và nhiệm vụ đồ án. Lời cam đoan và Tóm tắt bị bỏ sau đó (ý ngay dưới).
+- Bổ sung 24/11 (Mở đầu): thêm phần Mở đầu không đánh số, theo mẫu tiếng Việt, để dẫn dắt người đọc trước chương 1 và mô tả nhanh từng chương. Mục "Cấu trúc luận văn" chuyển từ chương 1 sang Mở đầu nên nội dung không lặp; chương 1 còn 3–4 trang. Bỏ trang Lời cam đoan và trang Tóm tắt như hai mẫu: Mở đầu đã dẫn dắt, còn kết quả chính kèm số nằm ở mục 1.3. Luận văn không có đoạn khai báo dùng công cụ AI, trừ khi GVHD hoặc khoa yêu cầu ([quy tắc viết §9](../luan-van/quy-tac-viet.md#9-dùng-ai-agent-khi-viết)).
 
 **Danh mục hình đề xuất cho luận văn:** Hình 1–17 của bộ tài liệu này (thay bản minh hoạ bằng số liệu thật ở Hình 5 và 15), cộng các biểu đồ kết quả C1–C6, ảnh chụp dashboard và một tin nhắn cảnh báo thật.
 
