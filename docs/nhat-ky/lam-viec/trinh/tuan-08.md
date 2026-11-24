@@ -133,3 +133,16 @@
 - **Results:** `/code-review high` trên diff: 5 điểm nhỏ (§3.5 và §9 nói khác nhau về chỗ ghi việc dùng AI; quy tắc "kết quả cụ thể có số" của Tóm tắt chưa chuyển sang mục 1.3; §1 chưa ghi chỗ đặt đoạn khai báo nếu được yêu cầu; "khuôn T" ở §5.1 chưa có link; thiếu dòng Thesis), đã sửa cả 5.
 - **Links:** `docs/luan-van/quy-tac-viet.md` (§1, §3.5, §9); `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§5.1, §11.1).
 - **Thesis:** phần đầu quyển (không có Tóm tắt, không có Lời cam đoan); Mở đầu; mục 1.3 Đóng góp.
+
+## 2026-11-24 – Nghiệm thu: soát các việc Must còn phụ thuộc cluster nhà
+
+- **Task:** TR8, chung · **Environment:** none
+- **Done:** Đối chiếu danh sách Must ([Thông số §5](../../../chi-tiet/00-thong-so.md#5-mức-độ-thành-công)) với bảng nghiệm thu ngày 21/11 ([Môi trường §16](../../../chi-tiet/05-moi-truong-danh-gia.md)) và dữ liệu `runs/ops-vh2a-*`, nhật ký vận hành 19/11. Ước lượng: 10/16 mục Must đạt, 4 đạt một phần (F3, F5, F6, N4), 2 chưa chạy (VH1, VH2 ở nhà). Với từng việc còn lại, xét việc đó có thật sự cần cluster nhà hay không.
+- **Decision:**
+  - VH1 không chạy lại ở nhà. Bằng chứng scale-down an toàn lấy từ pha `drop` của 3 lượt A2 × KB2 trên V2 (N = 4, 0 lỗi): cùng cơ chế preStop và graceful shutdown, đo trên nhiều GPU hơn KB2-mini ở nhà.
+  - VH2 chạy trên kind + simulator có cài Argo CD. Phần F3 còn thiếu chỉ là vòng Git → Argo CD sync → `git revert`, không phụ thuộc GPU. Các ràng buộc GPU của VH2 (ca 1 replica, `maxSurge: 0`, ca kẹt Pending) đã đo trên V2 với 0 lỗi. Application trên kind theo dõi một nhánh riêng, nên không đổi `main` hay cluster nhà.
+  - F6 (tin cảnh báo tới Telegram thật) và N8 (người thứ hai dựng lại theo README) làm trên kind + simulator; định nghĩa VH5 ở Môi trường §13 đã cho phép cách này.
+  - Ảnh chụp dashboard trên GPU thật (F5) làm trên cluster nhà; nếu không có trước 28/11 thì dùng ảnh trên simulator cộng Hình C3 (GPU từ dữ liệu V2) và ghi vào Hạn chế. Tổng chi phí thuê lấy từ trang thanh toán của Vast.
+  - Không sửa `vh3_kill` (thiếu bước bảo đảm ≥ 2 pod), vì dữ liệu đã đóng băng 22/11; nêu ở mục 5.5 và 5.7.
+- **Deviations:** Must ở Thông số §5 ghi "VH1, VH2 ở nhà"; nay VH1 dùng kết quả trên GPU thuê và VH2 chạy trên kind. Sửa Thông số §5 và Môi trường §13 trong PR này.
+- **Thesis:** 5.5 (VH1, VH2), 5.6 (bảng nghiệm thu), 5.7 (Hạn chế).
