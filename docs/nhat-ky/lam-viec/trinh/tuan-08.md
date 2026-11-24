@@ -196,3 +196,19 @@
 - **Incidents:** review phát hiện bản base viết sai cơ chế mất metric: văn cũ nói "giữ mặc định ignoreNullValues", nhưng truy vấn của A1 và A2 kết thúc bằng `or vector(0)` nên không bao giờ rỗng; sửa theo manifest. Các điểm khác đã sửa: thời gian phát hiện 10–25 s (Kiến trúc §6, bảng thứ hai, gồm chờ vượt tolerance) thay cho "tối đa 10 s"; lý do loại TTFT p95 theo Kiến trúc §10.5 (prefill, cửa sổ `rate()` 1 phút) thay cho "giảm ngay sau scale-up", vốn mâu thuẫn với đoạn hàng đợi ở pod cũ; KV cache ghi là dự đoán, chưa kiểm chứng; A1 cộng mọi GPU của node chứ không cộng theo pod; `--max-num-seqs` 64 ghi rõ là máy cloud (nhà 16); fallback ghi "khoảng 20 s theo thiết kế", số đo V2 16,8 s để chương 5; công thức trần đổi sang `$…$` theo README.
 - **Links:** `docs/luan-van/03-03-thiet-ke-autoscaling.md`; nhánh `docs/tr8-thesis-3-3-base`.
 - **Thesis:** §3.3; Hình 4 (vòng lặp autoscaling) còn ghi model 7–8B và sync 15 s, vẽ lại trước khi chèn.
+## 2026-11-24 – Luận văn: bản base mục 3.4 (Cold start và thay đổi an toàn)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Đọc Kiến trúc §3.1, §7, §8; Vận hành §5; Thông số §9.2–§9.3; ADR-005 T1, T2; ADR-006 C8; quy tắc viết §2–§6.
+  2. Viết `docs/luan-van/03-04-cold-start-thay-doi-an-toan.md`, ba tiểu mục: rút ngắn cold start (L0, L2), graceful shutdown cho request streaming, rolling update khi mọi GPU đều có pod. Mỗi đoạn có comment nguồn kèm §.
+  3. Đối chiếu hai khẳng định với upstream ở phiên bản ghim: trang Pod Lifecycle của Kubernetes (nhánh `release-1.36`, khớp k3s v1.36.5) cho việc gỡ khỏi EndpointSlice chạy song song với preStop, grace period gồm cả preStop; `VllmConfig.shutdown_timeout` trong vLLM v0.31.0 (`vllm/config/vllm.py`, mặc định 0) cho mô tả của cờ `--shutdown-timeout`. Thêm hai mục vào `tai-lieu.bib`.
+  4. Đo trang, cắt ba lần về ngân sách; `kiem_van.py`, lychee; `/code-review high`.
+- **Decision:**
+  - Bỏ bảng L0/L2 ba dòng, viết thành hai câu: bảng chiếm khoảng 0,3 trang, văn xuôi nói cùng ý trong khoảng 40 chữ.
+  - Không chèn hình (Hình 12, 13, 16 của tài liệu thiết kế) để giữ ngân sách 1,5 trang. Hình 13 còn vẽ pha "drain" mà vLLM v0.31.0 không làm, phải sửa trước khi dùng ở 4.5.
+  - Điểm lệch của `--shutdown-timeout` chỉ nêu một câu kèm dẫn chéo tới 4.5, vì người đọc thiết kế cần biết grace period mới là thứ giữ request; số đo để 4.5 và 5.5.
+  - Bỏ khỏi thân bài, ghi trong comment nơi nên đặt: mức L1, `--enforce-eager`, startup probe 10 phút, sync window, `kubectl rollout undo`.
+- **Results:** dàn thử 24/11: 1,15 trang (khuôn A), 1,49 trang (khuôn B), ngân sách 1,5; khoảng 550 chữ văn xuôi, không bảng, không hình. Lần viết đầu 2,31 trang (B). `kiem_van.py` 0 điểm; lychee 0 lỗi. `/code-review high` báo 10 điểm, sửa 9: đếm pha sai (KV cache và CUDA graph cùng pha 7 với compile), thiếu bước nạp weights, rollback phải giữ `minReplicaCount` 2, pod giữ GPU đủ 180 s chứ không phải "tới 180 s", thiếu trích dẫn, số replica tối thiểu khác nhau theo môi trường, thuật ngữ warm pool, ngoặc `{}` trong bib, thiếu nhật ký. Không sửa điểm "đoạn mở mục 3 câu": quy tắc viết §2 cho 1–2 câu, nhưng §3.2 và `kiem_van.py` đòi đoạn 3–7 câu; giữ 3 câu như mục 3.2.
+- **Links:** `docs/luan-van/03-04-cold-start-thay-doi-an-toan.md`, `docs/luan-van/tai-lieu.bib`.
+- **Thesis:** §3.4. Việc kéo theo: chương 2 định nghĩa probe, EndpointSlice, preStop, SIGTERM/SIGKILL, grace period, torch.compile, CUDA graph, maxSurge/maxUnavailable; 4.5 nhận chi tiết điểm lệch của `--shutdown-timeout`; 5.3 tính phần GPU-giờ do grace 180 s.
