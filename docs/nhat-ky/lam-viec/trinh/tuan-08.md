@@ -327,3 +327,14 @@
 - **Deviations:** ý "LT chạy được ở máy nhà và simulator" và ca đối chứng VH2 không còn trong 3.6; đã ghi nơi chứa ở `nguon-tu-lieu.md`. Chương 5.5 phải nhắc ca đối chứng khi trình bày VH2.
 - **Links:** PR #64; `docs/luan-van/03-06-thiet-ke-danh-gia.md`, `docs/luan-van/nguon-tu-lieu.md`.
 - **Thesis:** 3.6; dẫn chéo từ 3.1, 3.3; các ý chuyển ra đi vào 4.7, 5.1–5.5, Phụ lục E.
+
+## 2026-11-25 – Luận văn: gom chương 3 vào một nhánh, đổi đề mục theo dàn ý mới (bước 1)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** tạo nhánh `docs/tr8-thesis-ch3` từ `origin/main`; merge 6 nhánh mục (#63 3.1, #67 3.2, #66 3.3, #68 3.4, #62 3.5, #64 3.6), giữ lịch sử và các mục nhật ký 23–24/11 vốn chỉ nằm trên các nhánh đó. Đổi đề mục theo Kế hoạch §11.1: 3.2.3 "Bảo vệ tối thiểu" thành đoạn cuối của 3.2.1 "Thành phần và ba luồng"; 3.4.3 gộp vào 3.4.2 "Tắt pod và cập nhật không rớt request"; 3.5.2 gộp vào 3.5.1 "SLI và cảnh báo theo burn rate", 3.5.3 thành 3.5.2 "Định tuyến cảnh báo, runbook và người trực"; 3.6.2, 3.6.3 đổi tên. Khôi phục phần lõi đã cắt ngày 24/11 ở 3.3 (ba câu hỏi thiết kế, bảng tín hiệu không chọn, điểm yếu của tín hiệu A2, lý do hệ số 0,8, dòng max = N, lý do timeout 1 s, dẫn chéo `KedaScalerErrors`, lấy từ bản base 28be408) và 3.4 (bảng L0/L2 ba dòng, lý do không đo L1, không dùng `--enforce-eager`, startup probe 10 phút, không dùng sync window). Thêm `03-00-yeu-cau-thiet-ke.md`: tiêu đề chương và đoạn mở nêu các lựa chọn thiết kế chính (quy tắc viết §2).
+- **Decision:** D118. Gom bằng merge thay vì chép file, để giữ nhật ký của từng PR mục. Xung đột Kế hoạch §11.1 lấy bản main (dàn ý mới); `tai-lieu.bib` giữ cả hai mục; `nguon-tu-lieu.md` giữ dòng mới của cả hai phía, dòng 4.6.x theo đề mục của main. Khôi phục có chọn lọc: chỉ lý do thiết kế và phương án bỏ, không khôi phục phần đã có chỗ ở chương 4, 5 hay phụ lục. Câu "triển khai qua Git chỉ được kiểm ở cluster nhà" ở 3.2 chưa sửa, chờ PR #75 và #78 được duyệt (ghi comment trong file).
+- **Results:** văn xuôi theo `kiem_van.py`: 03-00 153 chữ, 3.2 522, 3.3 998 (trước 24/11 cắt còn ≈ 830), 3.4 668, 3.5 681, 3.6 670; 0 điểm cần xem ở cả 6 file đã sửa. `lychee --offline --include-fragments 'docs/luan-van/*.md'`: 0 lỗi. Chưa đo trang khuôn T.
+- **Incidents:** khi chèn comment "Chờ PR #75" vào giữa đoạn cuối 3.2.2, phần sau comment bị tách khỏi đoạn; đã đưa comment xuống sau đoạn.
+- **Deviations:** 3.2 (522 chữ) và 3.4 (668 chữ) dưới mức 1.000 chữ mà quy tắc viết §2 đặt cho việc chia cấp 3; vẫn giữ hai tiểu mục theo dàn ý §11.1, xem lại khi đo khuôn T ở bước 2.
+- **Links:** nhánh `docs/tr8-thesis-ch3` (chưa PR); `docs/luan-van/03-00-yeu-cau-thiet-ke.md`, `03-02`…`03-06`.
+- **Thesis:** chương 3. Còn lại cho bước 2: khôi phục phần lõi 3.1, 3.5, 3.6; kết chương; đánh lại số bảng; đo khuôn T (13–15 tr); `/code-review high`; PR; đóng #62–#64, #66–#68.
