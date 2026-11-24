@@ -24,7 +24,7 @@ Ba kịch bản tải theo đề cương tái hiện ban đêm, đầu giờ sá
 | KB3. Cao, kéo dài | 0,5 → 3,0 C trong 5 phút; giữ tới phút 17 | Tăng dần (0–5), duy trì (5–17) |
 <!-- nguồn: docs/chi-tiet/00-thong-so.md §7 (bảng KB: KB1 0,5, 12 phút, steady [2, 12]; KB2 0,5 khi t < 4, lên 3,0 trong [4; 4,5], giữ tới 14, về 0,5 trong [14; 14,5], giữ tới 24, pre [2, 4], spike [4, 14], drop [14, 24]; KB3 tăng 0,5 → 3,0 trong [0, 5], giữ tới 17, ramp [0, 5], sustain [5, 17]; cột "Kiểm chứng chủ yếu"), §4 (N7: page giả chấm ở A2 × KB1, A2 × KB3; độ kịp ở S1 × KB3); docs/luan-van/quy-tac-viet.md §4 (tên pha tiếng Việt; mã N chỉ dùng ở 1.3, 3.1, chương 5) -->
 
-### 3.6.2. Ba phép đo và quy tắc so sánh
+### 3.6.2. Phép đo, chỉ số và quy tắc so sánh
 
 Phép đo năng lực ĐG1 cố định 1 replica và quét λ tăng dần. Năng lực C là mức λ lớn nhất còn ít nhất 95% request đạt SLO. Tại C, nhóm đọc B\* để đặt threshold của A2 (mục 3.3).
 <!-- nguồn: docs/chi-tiet/05-moi-truong-danh-gia.md §8 (cố định 1 replica S1; quét λ tăng dần, dày quanh điểm vi phạm; C = mức lớn nhất còn đạt SLO, đọc B\* tại C; kiểm bằng định luật Little, lệch hơn 15% thì xem lại cách đo); docs/chi-tiet/00-thong-so.md §8.3 (1 phút làm ấm + 4 phút đo mỗi mức, bước 0,25 quanh điểm vi phạm), §8.1 (B\*); experiments/runner/capacity.py (ATTAINMENT = 0.95) -->
@@ -42,7 +42,7 @@ Hai cấu hình chỉ được coi là khác nhau khi mọi lượt cùng chiề
 Lượt chỉ hợp lệ khi máy tạo tải và đường thu số liệu không là nút thắt (mục 4.7). Lệch lịch gửi phải có p99 dưới 50 ms để tải bám đúng lịch open-loop. Với A1 và A2, tín hiệu scale không được hụt quá 15 s, vì KEDA coi truy vấn rỗng là 0 mà không báo lỗi. Lượt không đạt được chạy lại.
 <!-- nguồn: docs/chi-tiet/05-moi-truong-danh-gia.md §17 (bảng điều kiện hợp lệ: lệch gửi p99 < 50 ms ở từng tiến trình; CPU < 70% một lõi, cửa sổ 5 s; throttle < 0,1%; event loop p99 < 50 ms, không lần nào quá 500 ms; chạy hết lịch; khoảng trống scrape ≤ 15 s; tín hiệu scale không mất quá 15 s, KEDA coi truy vấn rỗng là 0; trạng thái đầu đúng; lượt invalid chạy lại cuối phiên, dữ liệu giữ lại), §9 (chấm riêng từng tiến trình, lấy tiến trình tệ nhất); docs/chi-tiet/06-ke-hoach-quan-ly.md §11.1 (3.6 nói tiêu chí và lý do, 4.7 nói runner kiểm thế nào) -->
 
-### 3.6.3. Vận hành, cảnh báo và kiểm chứng lý thuyết
+### 3.6.3. Kịch bản vận hành và cách chấm cảnh báo
 
 Sáu kịch bản vận hành VH1–VH6 lần lượt kiểm scale-down, cập nhật qua Git, sự cố pod và node, mất nguồn metric, dựng lại từ máy trắng, và cảnh báo. Tiêu chí đạt là ngưỡng ở Bảng 3.1. Phần cần GPU thật được lặp lại trên VM thuê.
 <!-- nguồn: docs/chi-tiet/05-moi-truong-danh-gia.md §13 (bảng VH1–VH6: VH1 nhà KB2-mini, GPU thuê pha drop của KB2; VH2 qua PR → Argo CD, (a) nâng minReplicaCount lên 2, (b) maxSurge: 0, (c) phương án kiểu web bị kẹt và LLMPodPending kêu, rollback bằng git revert; VH3 xoá pod, kill vLLM, drain ở nhà 2 node hoặc simulator; VH4 NetworkPolicy chặn KEDA → Prometheus 5 phút; VH5 make bootstrap trên VM trắng, người thứ hai theo README; VH6 mọi lượt ĐG2); docs/chi-tiet/00-thong-so.md §4 (N4, N6–N8: tiêu chí đạt); docs/chi-tiet/06-ke-hoach-quan-ly.md §8 (không cắt ca đối chứng) -->
