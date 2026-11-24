@@ -26,14 +26,13 @@ Nhóm chưa nhận được văn bản quy định trình bày của trường. 
 
 Thứ tự các phần của quyển (tên file dự kiến ở khung luận văn, chưa dựng), theo hai mẫu trừ các chỗ ghi rõ:
 1. Bìa chính và bìa phụ, theo mẫu của khoa.
-2. Lời cam đoan, có khai báo dùng công cụ AI (§9). Hai mẫu không có trang này; nhóm thêm vì cần một chỗ khai báo, và bỏ nếu GVHD hoặc khoa quy định chỗ khai báo khác.
-3. Lời cảm ơn.
-4. Hai trang "Nhận xét, đánh giá, cho điểm" để trống theo mẫu: của người hướng dẫn và của giảng viên phản biện.
-5. Tóm tắt: 1 trang tiếng Việt. Hai mẫu không có; nhóm giữ để hội đồng nắm bài toán và kết quả chính trong một trang. Không viết *Abstract*.
-6. Mục lục; danh mục thuật ngữ, chữ viết tắt và mã định danh; danh mục hình vẽ; danh mục bảng biểu.
-7. Mở đầu: không đánh số, khoảng 1,5–2 trang, theo mẫu tiếng Việt. Phần này dẫn dắt vào vấn đề và việc đề tài làm, ở mức người không chuyên, rồi mô tả ngắn từng chương, mỗi chương 2–3 câu. Mở đầu thay cho mục "Cấu trúc luận văn" của chương 1, và không nêu số đo hay chi tiết kỹ thuật: mục tiêu, phạm vi và đóng góp kèm số nằm ở chương 1, để mỗi ý chỉ trình bày đầy đủ ở một chỗ (§2).
-8. Chương 1–6.
-9. Tài liệu tham khảo, phụ lục.
+2. Lời cảm ơn.
+3. Hai trang "Nhận xét, đánh giá, cho điểm" để trống theo mẫu: của người hướng dẫn và của giảng viên phản biện.
+4. Tóm tắt: 1 trang tiếng Việt. Hai mẫu không có; nhóm giữ để hội đồng nắm bài toán và kết quả chính trong một trang. Không viết *Abstract*.
+5. Mục lục; danh mục thuật ngữ, chữ viết tắt và mã định danh; danh mục hình vẽ; danh mục bảng biểu.
+6. Mở đầu: không đánh số, khoảng 1,5–2 trang, theo mẫu tiếng Việt. Phần này dẫn dắt vào vấn đề và việc đề tài làm, ở mức người không chuyên, rồi mô tả ngắn từng chương, mỗi chương 2–3 câu. Mở đầu thay cho mục "Cấu trúc luận văn" của chương 1, và không nêu số đo hay chi tiết kỹ thuật: mục tiêu, phạm vi và đóng góp kèm số nằm ở chương 1, để mỗi ý chỉ trình bày đầy đủ ở một chỗ (§2). Đoạn cuối của Mở đầu khai báo việc dùng công cụ AI (§9). Hai mẫu không có trang Lời cam đoan, nên nhóm không thêm trang này.
+7. Chương 1–6.
+8. Tài liệu tham khảo, phụ lục.
 
 Nếu GVHD hoặc khoa yêu cầu phần "Kết luận" không đánh số thay cho chương 6 thì chỉ đổi tên, giữ nguyên nội dung.
 
@@ -174,7 +173,7 @@ Chỉ mô tả quy trình đã thật sự diễn ra. Ví dụ: không viết "h
 
 - mã việc (Q6, TR7), số PR, commit, mã quyết định (D68);
 - tên người, nhật ký cá nhân, "phiên làm việc", "phiên Claude";
-- AI agent và tên công cụ AI (chỉ khai báo một lần ở Lời cam đoan, §9);
+- AI agent và tên công cụ AI (chỉ khai báo một lần, ở đoạn cuối phần Mở đầu, §9);
 - đường dẫn `docs/`.
 
 Những thứ này chỉ nằm trong comment nguồn. Ngoại lệ: mục phân công ở slide và Phụ lục F.
@@ -330,8 +329,8 @@ Những thứ này chỉ nằm trong comment nguồn. Ngoại lệ: mục phân 
 - Bước soát ở §8 do một agent khác với agent viết nháp làm; người viết vẫn đọc lại và đối chiếu số. **Người viết và người review chịu trách nhiệm về nội dung**, không phải agent.
 - Ghi vào nhật ký cá nhân mục nào do agent viết nháp, mục nào đã soát.
 - **Thân bài (chương 1–6) không nhắc** AI agent hay tên công cụ AI (§3.5). Đồ án nói về phục vụ LLM, nên không dùng chữ "AI" chung chung: "model", "LLM" là đối tượng mà hệ thống phục vụ.
-- **Khai báo một lần, ở Lời cam đoan,** theo quy định của trường (cần hỏi GVHD hoặc khoa), và đúng mức dùng thật. Dự án dùng công cụ AI cho cả viết mã, phân tích số liệu, soạn và rà soát văn bản, nên không viết nhẹ hơn thực tế. Câu mẫu (hai người chốt câu cuối cùng): "Trong quá trình thực hiện, nhóm dùng công cụ AI để hỗ trợ viết mã, phân tích số liệu, soạn thảo và rà soát văn bản. Nhóm đã kiểm tra lại các kết quả đó và chịu trách nhiệm hoàn toàn về nội dung đồ án. Mọi số liệu trong báo cáo đều truy được về dữ liệu đo lưu trong kho mã của đồ án."
-- **Comment trong file luận văn** (repo công khai) chỉ ghi nguồn và trạng thái soát, theo dạng trung tính: `<!-- Soát số: <ngày> · Soát văn phong: <ngày> · Người viết đọc lại: <ngày> -->`. Việc dùng AI ghi ở nhật ký cá nhân và Lời cam đoan.
+- **Khai báo một lần, ở đoạn cuối phần Mở đầu**, đúng mức dùng thật. Hai đồ án mẫu của khoa không có trang Lời cam đoan, nên nhóm không thêm trang này; nếu GVHD hoặc khoa quy định chỗ khai báo khác (cần hỏi) thì chuyển sang đó. Dự án dùng công cụ AI cho cả viết mã, phân tích số liệu, soạn và rà soát văn bản, nên không viết nhẹ hơn thực tế. Câu mẫu (hai người chốt câu cuối cùng): "Trong quá trình thực hiện, nhóm dùng công cụ AI để hỗ trợ viết mã, phân tích số liệu, soạn thảo và rà soát văn bản. Nhóm đã kiểm tra lại các kết quả đó và chịu trách nhiệm hoàn toàn về nội dung đồ án. Mọi số liệu trong báo cáo đều truy được về dữ liệu đo lưu trong kho mã của đồ án."
+- **Comment trong file luận văn** (repo công khai) chỉ ghi nguồn và trạng thái soát, theo dạng trung tính: `<!-- Soát số: <ngày> · Soát văn phong: <ngày> · Người viết đọc lại: <ngày> -->`. Việc dùng AI ghi ở nhật ký cá nhân và ở đoạn khai báo của Mở đầu.
 
 ## 10. Checklist cho từng mục, trước khi mở PR của chương
 
