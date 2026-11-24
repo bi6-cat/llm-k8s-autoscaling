@@ -5,10 +5,11 @@
 # Mục đích:  Chỉ dùng cho VH2 trên kind (D113, ADR-007): giao simulator (envs/sim/serving) và A2 bản sim
 #            (envs/sim/autoscaling) cho Git, để cập nhật và rollback bằng commit, `git revert` như ở nhà.
 #            Bình thường kind KHÔNG dùng Argo CD (make sim-up cài thẳng bằng kubectl).
-#            Tên app trùng với nhà (`serving`, `autoscaling`), nên guard_argocd của runner và
-#            make home-eval-begin (tắt auto-sync của `autoscaling`) có cùng ý nghĩa trên kind.
-# Dùng:      make sim-argocd REV=<nhánh>. Makefile thay `targetRevision: main` bằng nhánh đó lúc áp, để
-#            commit thử và `git revert` nằm trên nhánh riêng, không đụng `main` hay cluster nhà.
+#            Tên app trùng với nhà (`serving`, `autoscaling`), nên guard_argocd của runner chặn runner
+#            trên kind như ở nhà. Chạy runner trên kind thì gỡ Argo CD (make sim-argocd-down). Đừng dùng
+#            make home-eval-begin: target đó mặc định nhắm cluster nhà (context llm-home).
+# Dùng:      make sim-argocd ARGOCD_REV=<nhánh>. Makefile thay `targetRevision: main` bằng nhánh đó lúc áp,
+#            để commit thử và `git revert` nằm trên nhánh riêng, không đụng `main` hay cluster nhà.
 # Lưu ý:     Không có root App-of-Apps như nhà: chỉ 2 app, áp thẳng. Không có finalizer, nên xoá
 #            Application thì Argo CD bỏ quản lý nhưng giữ nguyên Deployment, ScaledObject đang chạy.
 # Tham khảo: envs/home/argocd/apps/serving.yaml, autoscaling.yaml (cùng syncPolicy); Vận hành §5.3, §5.4

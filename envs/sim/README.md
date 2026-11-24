@@ -62,20 +62,13 @@ VH2 cần vòng "commit → Argo CD sync → rolling update → `git revert`" nh
 
 ```bash
 make sim-up                          # nếu cluster chưa có
-make sim-argocd REV=<nhánh>          # Argo CD core + app serving, autoscaling theo nhánh đó (~2,5 phút)
+make sim-argocd ARGOCD_REV=<nhánh>   # Argo CD core + app serving, autoscaling theo nhánh đó (lần thử đầu: 142 s)
 ```
 
-`make sim-argocd` chờ tới khi cả hai app `Synced Healthy`. Argo CD nhận lại Deployment và ScaledObject đang chạy, không tạo pod mới. Sau đó:
+`make sim-argocd` chờ tới khi cả hai app `Synced Healthy` (tối đa 300 s; hết hạn thì in condition, ví dụ nhánh chưa push). Nếu ScaledObject đang tạm dừng do runner để lại, target báo lệnh gỡ annotation. Argo CD nhận lại Deployment và ScaledObject đang chạy, không tạo pod mới. Sau đó:
 
-- Commit và push lên nhánh `REV` là cập nhật; Argo CD đọc Git mỗi 2 phút cộng ngẫu nhiên tối đa 1 phút (log `appResyncPeriod=2m0s, appResyncJitter=1m0s` của `argocd-application-controller`). `git revert` rồi push là rollback.
+- Commit và push lên nhánh `ARGOCD_REV` là cập nhật; Argo CD đọc Git mỗi 2 phút cộng ngẫu nhiên tối đa 1 phút (log `appResyncPeriod=2m0s, appResyncJitter=1m0s` của `argocd-application-controller`). `git revert` rồi push là rollback.
 - Self-heal bật: sửa tay ScaledObject hay Deployment thì Argo CD đưa về đúng Git sau vài giây. Muốn đổi thứ gì thì đổi trong Git.
-- Runner (`experiments.runner`, `make ops-tests`) dừng ngay khi app `autoscaling` còn auto-sync (`guard_argocd`), giống ở nhà. Chạy runner thì gỡ Argo CD trước.
+- Runner (`experiments.runner`, `make ops-tests`) dừng ngay khi app `autoscaling` còn auto-sync (`guard_argocd`), giống ở nhà. Chạy runner thì gỡ Argo CD trước (`make sim-argocd-down`). Không dùng `make home-eval-begin`: target đó mặc định nhắm cluster nhà.
 
-Gỡ Argo CD, giữ nguyên simulator và A2 (Application không có finalizer, nên xoá Application không xoá tài nguyên của nó):
-
-```bash
-kubectl --context kind-llm-sim -n argocd delete application serving autoscaling
-kubectl --context kind-llm-sim delete -n argocd --ignore-not-found \
-  -f https://raw.githubusercontent.com/argoproj/argo-cd/v3.5.4/manifests/core-install.yaml
-kubectl --context kind-llm-sim delete namespace argocd
-```
+Gỡ Argo CD, giữ nguyên simulator và A2 (Application không có finalizer, nên xoá Application không xoá tài nguyên của nó): `make sim-argocd-down`.

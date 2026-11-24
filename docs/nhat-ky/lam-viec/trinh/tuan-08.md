@@ -139,16 +139,18 @@
 - **Task:** TR8 (F3, VH2 theo D113) · **Environment:** sim
 - **Done:**
   1. Thêm `envs/sim/argocd/apps.yaml`: hai Application `serving` (path `envs/sim/serving`) và `autoscaling` (path `envs/sim/autoscaling`), cùng syncPolicy với nhà (automated, prune, selfHeal, retry).
-  2. Thêm `make sim-argocd REV=<nhánh>`: cài Argo CD core `v3.5.4` (server-side apply như role `argocd-bootstrap`), áp AppProject `default` của nhà, áp hai app với `targetRevision` đổi sang `REV` bằng `sed`, rồi chờ cả hai `Synced Healthy`. `ARGOCD_VERSION` ghim trong Makefile, thêm vào `docs/phien-ban.md`.
-  3. Thêm mục "VH2 qua Git" vào `envs/sim/README.md`: cách cài, chu kỳ đọc Git, self-heal, runner bị `guard_argocd` chặn, ba lệnh gỡ Argo CD.
+  2. Thêm `make sim-argocd ARGOCD_REV=<nhánh>`: cài Argo CD core `v3.5.4` (server-side apply như role `argocd-bootstrap`), áp AppProject `default` của nhà, áp hai app với `targetRevision` đổi sang `ARGOCD_REV` bằng `sed`, rồi chờ cả hai `Synced Healthy`; thêm `make sim-argocd-down` để gỡ. `ARGOCD_VERSION` ghim trong Makefile, thêm vào `docs/phien-ban.md`.
+  3. Thêm mục "VH2 qua Git" vào `envs/sim/README.md`: cách cài, chu kỳ đọc Git, self-heal, runner bị `guard_argocd` chặn, cách gỡ.
   4. Chạy thử trên cụm `llm-sim` với `REV=main`, kiểm self-heal, rồi gỡ đúng theo README.
-- **Decision:** Tên app trùng nhà (`serving`, `autoscaling`), để `guard_argocd` của runner và cách tắt auto-sync có cùng ý nghĩa trên kind. Không dựng root App-of-Apps như nhà: VH2 chỉ cần hai app. Nhánh truyền qua `REV` lúc áp, file trong Git giữ `targetRevision: main`, vì quên `REV` thì app chỉ theo `main` (an toàn), còn ghi cứng nhánh thử vào Git thì nhánh đó bị xoá là app lỗi.
+- **Decision:** Tên app trùng nhà (`serving`, `autoscaling`), để `guard_argocd` của runner và cách tắt auto-sync có cùng ý nghĩa trên kind. Không dựng root App-of-Apps như nhà: VH2 chỉ cần hai app. Nhánh truyền qua `ARGOCD_REV` lúc áp, file trong Git giữ `targetRevision: main`, vì quên biến thì app chỉ theo `main` (an toàn), còn ghi cứng nhánh thử vào Git thì nhánh đó bị xoá là app lỗi.
 - **Results:**
-  - `make sim-argocd` (REV=main): 142 s tới khi cả hai app `Synced Healthy`, revision `7787de0` (= `origin/main`). Pod simulator giữ nguyên (cùng tên, restarts 0): Argo CD nhận lại tài nguyên `make sim-up` đã tạo, không tạo lại.
+  - `make sim-argocd` (nhánh `main`): 142 s tới khi cả hai app `Synced Healthy`, revision `7787de0` (= `origin/main`). Pod simulator giữ nguyên (cùng tên, restarts 0): Argo CD nhận lại tài nguyên `make sim-up` đã tạo, không tạo lại.
   - Log controller: `appResyncPeriod=2m0s, appResyncJitter=1m0s`, tức Argo CD đọc Git mỗi 2–3 phút.
   - Self-heal: patch tay threshold ScaledObject 10 → 11, Argo CD đưa về 10 sau 2 s.
-  - Gỡ theo README: 13 s, còn 0 CRD `argoproj.io`; pod simulator và ScaledObject (max 3, threshold 10) giữ nguyên.
-  - Kiểm cục bộ: `yamllint -s` đạt; `kubeconform -strict` 2/2 Application hợp lệ (schema CRDs-catalog ở commit ghim của CI); `make -n sim-argocd REV=x` thay đúng nhánh; lychee đạt.
+  - Gỡ bằng ba lệnh (nay là `make sim-argocd-down`): 13 s, còn 0 CRD `argoproj.io`; pod simulator và ScaledObject (max 3, threshold 10) giữ nguyên.
+  - `/code-review high`: 9 điểm. Đã sửa: (1) runner để ScaledObject tạm dừng thì app `autoscaling` là `Suspended`, vòng chờ không bao giờ thấy `Healthy`: nay nhận `Suspended` và in lệnh gỡ annotation; (2) header gợi ý `make home-eval-begin`, mà target đó mặc định nhắm cluster nhà: bỏ, ghi rõ không dùng; (3) hết hạn thì in condition của app (ví dụ nhánh chưa push); (4, 5) ba lệnh gỡ thành `make sim-argocd-down`, dùng chung `ARGOCD_VERSION`; (6) kiểm dạng tên nhánh trước `sed`; (7) đổi `REV` thành `ARGOCD_REV` để biến `REV` có sẵn trong shell không đổi nhánh; (9) hạn chờ tính bằng `$SECONDS`. Điểm (8), dùng chung AppProject của nhà, giữ nguyên và ghi chú trong Makefile.
+  - Chạy lại sau sửa: đặt `paused-replicas=1` rồi `make sim-argocd` → báo "Synced ở main, nhưng ScaledObject vllm-a2 đang tạm dừng" kèm lệnh gỡ; gỡ annotation → `Synced Healthy` trong ≤ 20 s; `make sim-argocd-down` 12 s, còn 0 CRD, pod simulator giữ nguyên; `ARGOCD_REV='a|b'` bị từ chối trước khi cài gì.
+  - Kiểm cục bộ: `yamllint -s` đạt; `kubeconform -strict` 2/2 Application hợp lệ (schema CRDs-catalog ở commit ghim của CI); `make -n sim-argocd` thay đúng nhánh; lychee đạt.
 - **Incidents:** Việc F6 (cảnh báo thật qua bot Telegram trên kind) dừng ở bước đầu: trong lượt tự chạy, lệnh nạp Secret bot thật từ `.env` vào kind bị chặn. F6 chờ Trình nạp Secret, nên vòng này chuyển sang VH2.
 - **Links:** `envs/sim/argocd/apps.yaml`, `Makefile` (`sim-argocd`), `envs/sim/README.md`, `docs/phien-ban.md`.
 - **Thesis:** 4.5 (triển khai qua Git); 5.5.1 (VH2 qua Git trên kind, số đo ở bước 2).

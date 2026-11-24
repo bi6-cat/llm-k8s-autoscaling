@@ -35,7 +35,7 @@ YQ ?= yq
 AMTOOL ?= amtool
 
 # .PHONY: các target này không phải tên file, make luôn chạy chúng (kể cả khi có file trùng tên)
-.PHONY: help home-up alertmanager-secret home-eval-begin home-eval-end sim-up sim-down sim-argocd sim-test-load sim-test sim-lt7 sim-lt8 find rent attach probe bootstrap prefetch cloud-platform run backup backup-check ops-tests vh5 release lint alerts-test alerts-coverage alertmanager-check dashboards-check
+.PHONY: help home-up alertmanager-secret home-eval-begin home-eval-end sim-up sim-down sim-argocd sim-argocd-down sim-test-load sim-test sim-lt7 sim-lt8 find rent attach probe bootstrap prefetch cloud-platform run backup backup-check ops-tests vh5 release lint alerts-test alerts-coverage alertmanager-check dashboards-check
 
 # In danh sách lệnh, chia nhóm theo môi trường. Hai loại dòng được in:
 #   `##@ <tiêu đề>`        = đầu một nhóm (in thành dòng tiêu đề);
@@ -137,13 +137,18 @@ sim-down: ## Xoá cluster simulator
 	kind delete cluster --name $(KIND_CLUSTER)
 
 # Chỉ cho VH2 trên kind (D113): cài Argo CD bản core (không UI, không API server) rồi giao serving và A2 của
-# sim cho Git, ở nhánh REV. Sau đó commit lên nhánh REV là cập nhật, `git revert` là rollback (Vận hành §5.3,
-# §5.4). Chạy sau make sim-up: Argo CD nhận lại Deployment và ScaledObject đang chạy, không tạo lại pod.
+# sim cho Git, ở nhánh ARGOCD_REV. Sau đó commit lên nhánh đó là cập nhật, `git revert` là rollback (Vận hành
+# §5.3, §5.4). Chạy sau make sim-up: Argo CD nhận lại Deployment và ScaledObject đang chạy, không tạo lại pod.
 # --server-side: CRD của Argo CD quá lớn cho apply thường (giới hạn 256 KB của annotation last-applied);
-# --force-conflicts: chạy lại vẫn được. Gỡ Argo CD (giữ nguyên simulator): envs/sim/README.md, mục VH2.
-# Gọi: make sim-argocd REV=<nhánh>. REV mặc định là main.
-REV ?= main
-sim-argocd: ## Cài Argo CD lên kind và giao simulator + A2 cho nhánh Git REV (VH2): make sim-argocd REV=<nhánh>
+# --force-conflicts: chạy lại vẫn được. AppProject dùng chung file của nhà (không giới hạn repo, namespace):
+# siết project ở nhà thì kiểm lại target này. Gỡ: make sim-argocd-down.
+# Gọi: make sim-argocd ARGOCD_REV=<nhánh>. Mặc định main. Tên biến riêng (không phải REV) để một biến REV
+# có sẵn trong shell không âm thầm đổi nhánh.
+ARGOCD_REV ?= main
+sim-argocd: ## Cài Argo CD lên kind, giao simulator + A2 cho nhánh Git (VH2): make sim-argocd ARGOCD_REV=<nhánh>
+#	Tên nhánh đi vào lệnh sed bên dưới, nên chỉ nhận ký tự an toàn (ký tự như | hay & làm hỏng sed)
+	@[[ "$(ARGOCD_REV)" =~ ^[A-Za-z0-9._/-]+$$ ]] || \
+	  { echo "sim-argocd: ARGOCD_REV '$(ARGOCD_REV)' chỉ được có chữ, số và . _ / -" >&2; exit 1; }
 	kubectl $(SIM) create namespace argocd --dry-run=client -o yaml | kubectl $(SIM) apply -f -
 	kubectl $(SIM) apply -n argocd --server-side --force-conflicts \
 	  -f https://raw.githubusercontent.com/argoproj/argo-cd/$(ARGOCD_VERSION)/manifests/core-install.yaml >/dev/null
@@ -151,15 +156,37 @@ sim-argocd: ## Cài Argo CD lên kind và giao simulator + A2 cho nhánh Git REV
 	kubectl $(SIM) -n argocd wait --for=condition=Available deploy --all --timeout=5m
 	kubectl $(SIM) -n argocd rollout status statefulset/argocd-application-controller --timeout=5m
 	kubectl $(SIM) apply -f envs/home/argocd/project-default.yaml
-#	Đổi nhánh lúc áp, không sửa file: `targetRevision: main` trong Git là giá trị an toàn khi quên REV
-	sed 's|targetRevision: main|targetRevision: $(REV)|' envs/sim/argocd/apps.yaml | kubectl $(SIM) apply -f -
-#	Chờ cả hai app Synced + Healthy (tối đa 5 phút). jsonpath in "Synced Healthy" cho mỗi app.
-	@for i in $$(seq 1 30); do \
-	  st=$$(kubectl $(SIM) -n argocd get application serving autoscaling \
-	    -o jsonpath='{range .items[*]}{.status.sync.status} {.status.health.status};{end}'); \
-	  [ "$$st" = "Synced Healthy;Synced Healthy;" ] && { echo "sim-argocd: serving, autoscaling Synced Healthy ở $(REV)"; exit 0; }; \
+#	Đổi nhánh lúc áp, không sửa file: `targetRevision: main` trong Git là giá trị an toàn khi quên ARGOCD_REV
+	sed 's|targetRevision: main|targetRevision: $(ARGOCD_REV)|' envs/sim/argocd/apps.yaml | kubectl $(SIM) apply -f -
+#	Chờ cả hai app Synced + Healthy, hạn 300 s tính bằng $$SECONDS (đồng hồ của bash, gồm cả thời gian gọi
+#	kubectl). Riêng `autoscaling` có thể là Suspended: runner để ScaledObject ở trạng thái tạm dừng sau mỗi
+#	phiên (annotation paused-replicas), annotation không có trong Git nên self-heal không gỡ. Khi đó báo
+#	cách gỡ, vì VH2 dưới tải cần A2 chạy. Hết hạn thì in condition (ví dụ nhánh chưa push: ComparisonError).
+	@end=$$((SECONDS + 300)); \
+	while :; do \
+	  s=$$(kubectl $(SIM) -n argocd get application serving -o jsonpath='{.status.sync.status} {.status.health.status}'); \
+	  a=$$(kubectl $(SIM) -n argocd get application autoscaling -o jsonpath='{.status.sync.status} {.status.health.status}'); \
+	  if [ "$$s" = "Synced Healthy" ]; then \
+	    [ "$$a" = "Synced Healthy" ] && { echo "sim-argocd: serving, autoscaling Synced Healthy ở $(ARGOCD_REV)"; exit 0; }; \
+	    [ "$$a" = "Synced Suspended" ] && { echo "sim-argocd: Synced ở $(ARGOCD_REV), nhưng ScaledObject vllm-a2" \
+	      "đang tạm dừng. Bật lại trước VH2: kubectl $(SIM) -n llm-serving annotate scaledobject vllm-a2" \
+	      "autoscaling.keda.sh/paused-replicas-" >&2; exit 0; }; \
+	  fi; \
+	  (( SECONDS < end )) || break; \
 	  sleep 10; \
-	done; echo "sim-argocd: sau 5 phút vẫn chưa Synced Healthy: $$st" >&2; exit 1
+	done; \
+	echo "sim-argocd: sau 300 s: serving '$$s', autoscaling '$$a'. Condition:" >&2; \
+	kubectl $(SIM) -n argocd get application serving autoscaling \
+	  -o jsonpath='{range .items[*]}{.metadata.name}: {.status.conditions}{"\n"}{end}' >&2; \
+	exit 1
+
+# Gỡ Argo CD khỏi kind, giữ nguyên simulator và A2: Application không có finalizer, nên xoá Application chỉ
+# bỏ quản lý, không xoá Deployment hay ScaledObject. Xoá Application trước, để controller không sync gì thêm.
+sim-argocd-down: ## Gỡ Argo CD khỏi kind, giữ nguyên simulator và A2
+	kubectl $(SIM) -n argocd delete application serving autoscaling --ignore-not-found
+	kubectl $(SIM) delete -n argocd --ignore-not-found \
+	  -f https://raw.githubusercontent.com/argoproj/argo-cd/$(ARGOCD_VERSION)/manifests/core-install.yaml >/dev/null
+	kubectl $(SIM) delete namespace argocd --ignore-not-found
 
 # Bơm tải cho bài T2: `hey` giữ C request đồng thời trong DUR giây (envs/sim/tests/load-sim.sh, cùng file
 # make sim-test dùng). Tự mở port-forward riêng ở cổng ngẫu nhiên tới đúng cluster, xong thì tự tắt.
