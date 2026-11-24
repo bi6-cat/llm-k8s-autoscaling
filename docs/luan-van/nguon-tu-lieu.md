@@ -51,9 +51,10 @@ Số mục theo dàn ý ở Kế hoạch §11.1. Bản base do Trình viết; ng
 
 | Mục | Nguồn |
 |---|---|
+| Mở đầu | Bài toán §1, §5, §6 (vấn đề và ba yêu cầu kéo nhau, kể ở mức người không chuyên); bảng dàn ý ở Kế hoạch §11.1 (mỗi chương trả lời câu hỏi gì) |
 | 1.1 Bối cảnh và bài toán | Bài toán §1–§7 (§4: Hình 1; §5: vì sao vận hành LLM trên GPU khó; §6: ba yêu cầu kéo nhau); mô tả tổng |
 | 1.2 Mục tiêu, phạm vi và phương pháp | Mục tiêu, phạm vi, giả định: Bài toán §9 (bảy mục tiêu của đề cương), §11, §12 (phạm vi, giả định G1–G7); mô tả tổng; ADR-002, ADR-004. Phương pháp và tổ chức thực hiện: Kế hoạch §1, §2 (lịch, mốc, kế hoạch tuần), §5.1 (phân công), §7 (quy trình làm việc); CONTRIBUTING §7 (PR, CI); `docs/adr/`; nhật ký họp; cách trình bày: `quy-tac-viet.md` §2.2 |
-| 1.3 Đóng góp chính, 1.4 Cấu trúc luận văn | Ba thông điệp TĐ1–TĐ3 (Kế hoạch §11.1); số ở §3 dưới đây |
+| 1.3 Đóng góp chính | Ba thông điệp TĐ1–TĐ3 (Kế hoạch §11.1); số ở §3 dưới đây |
 | 2.1 Phục vụ LLM và vLLM | Kiến thức nền §1, §2; LT1–LT3 trong `VH` (phần lý thuyết) |
 | 2.2 Hàng đợi và năng lực phục vụ | Bài toán §3; LT5 trong `VH` (phần lý thuyết) |
 | 2.3 GPU trên Kubernetes | Kiến thức nền §4; LT6 trong `VH` (phần lý thuyết) |

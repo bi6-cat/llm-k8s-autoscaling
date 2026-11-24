@@ -31,10 +31,11 @@ Thứ tự các phần của quyển (tên file dự kiến ở khung luận vă
 4. Hai trang "Nhận xét, đánh giá, cho điểm" để trống theo mẫu: của người hướng dẫn và của giảng viên phản biện.
 5. Tóm tắt: 1 trang tiếng Việt. Hai mẫu không có; nhóm giữ để hội đồng nắm bài toán và kết quả chính trong một trang. Không viết *Abstract*.
 6. Mục lục; danh mục thuật ngữ, chữ viết tắt và mã định danh; danh mục hình vẽ; danh mục bảng biểu.
-7. Chương 1–6. Không có phần "Mở đầu" riêng: mẫu tiếng Việt có phần này nhưng nội dung lặp với chương 1, còn chương 1 của nhóm đã có bối cảnh, mục tiêu và mục "Cấu trúc luận văn".
-8. Tài liệu tham khảo, phụ lục.
+7. Mở đầu: không đánh số, khoảng 1,5–2 trang, theo mẫu tiếng Việt. Phần này dẫn dắt vào vấn đề và việc đề tài làm, ở mức người không chuyên, rồi mô tả ngắn từng chương, mỗi chương 2–3 câu. Mở đầu thay cho mục "Cấu trúc luận văn" của chương 1, và không nêu số đo hay chi tiết kỹ thuật: mục tiêu, phạm vi và đóng góp kèm số nằm ở chương 1, để mỗi ý chỉ trình bày đầy đủ ở một chỗ (§2).
+8. Chương 1–6.
+9. Tài liệu tham khảo, phụ lục.
 
-Nếu GVHD hoặc khoa yêu cầu phần "Mở đầu" và "Kết luận" không đánh số thay cho chương 1 và 6 thì chỉ đổi tên, giữ nguyên nội dung.
+Nếu GVHD hoặc khoa yêu cầu phần "Kết luận" không đánh số thay cho chương 6 thì chỉ đổi tên, giữ nguyên nội dung.
 
 Tóm tắt viết **sau cùng**. Tóm tắt phải nêu bài toán, cách làm, môi trường đo, và **2–3 kết quả chính có số** (ví dụ GPU-giờ của A2 so với S4). Không viết chung chung kiểu "đã xây dựng thành công hệ thống".
 
@@ -46,6 +47,7 @@ Mỗi sự kiện chỉ được trình bày **đầy đủ ở một chỗ**; �
 
 | Chương | Trả lời câu hỏi | Không đặt ở đây |
 |---|---|---|
+| Mở đầu | Đề tài giải quyết vấn đề gì và vì sao, ở mức người không chuyên; luận văn gồm những chương nào, mỗi chương trả lời câu hỏi gì | Số đo, trích dẫn chi tiết, thuật ngữ chưa giải thích; mục tiêu và phạm vi chi tiết (chương 1) |
 | 1 | Vì sao bài toán đáng làm; mục tiêu, phạm vi và giả định; phương pháp thực hiện; đóng góp | Chi tiết kỹ thuật. Số đo chỉ có 2–3 số chính ở mục Đóng góp, kèm dẫn chéo tới chương 5 |
 | 2 | Kiến thức chung mà người đọc cần để hiểu các chương sau (LLM inference, vLLM, autoscaling, SLO, GitOps), và giải pháp liên quan | Bất cứ gì về hệ thống của nhóm |
 | 3 | Hệ thống **cần** gì và **được thiết kế** thế nào, vì sao chọn phương án đó | "Đã cài", lệnh, sự cố |
@@ -59,7 +61,7 @@ Mỗi sự kiện chỉ được trình bày **đầy đủ ở một chỗ**; �
 - **Mục cuối "Kết chương":** 1 đoạn, nói chương rút ra điều gì và dẫn sang chương sau.
 
 Cách chia tiểu mục:
-- **Một tiêu đề phải đáng có:** nội dung dưới nó dài từ khoảng 1 trang (§1: khoảng 500 chữ văn xuôi, ít hơn khi có bảng hoặc hình), và trả lời một câu hỏi mà người đọc sẽ tra trong mục lục. Miễn cho các tiêu đề mà khung bắt buộc và vốn ngắn: "Kết chương", "Cấu trúc luận văn". Ngắn hơn thì không đặt tiêu đề: viết thành đoạn có câu chủ đề rõ (§3.1), hoặc mở đoạn bằng cụm in đậm khi có từ 3 khía cạnh song song (§3.2).
+- **Một tiêu đề phải đáng có:** nội dung dưới nó dài từ khoảng 1 trang (§1: khoảng 500 chữ văn xuôi, ít hơn khi có bảng hoặc hình), và trả lời một câu hỏi mà người đọc sẽ tra trong mục lục. Miễn cho tiêu đề mà khung bắt buộc và vốn ngắn: "Kết chương". Ngắn hơn thì không đặt tiêu đề: viết thành đoạn có câu chủ đề rõ (§3.1), hoặc mở đoạn bằng cụm in đậm khi có từ 3 khía cạnh song song (§3.2).
 - Mục cấp 2 dài dưới khoảng 2 trang (khoảng 1.000 chữ văn xuôi) thì không chia cấp 3.
 - **Tiêu đề nói nội dung hoặc kết luận**, không nói bước của khung ("Cách làm", "Kiểm chứng") hay mã kịch bản ("VH2"). Mã định danh nằm trong câu.
 - Các tiểu mục ngang hàng có độ nặng tương đương, mỗi nhóm 2–4 tiểu mục. Số tiêu đề tỷ lệ với giá trị: mục mang thông điệp TĐ1–TĐ3 nhiều nội dung nên có tiểu mục, mục ngoại vi thường không.
