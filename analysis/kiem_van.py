@@ -5,7 +5,7 @@ Khái niệm:
     tách câu, rồi đối chiếu từng khối với các luật đo được bằng máy. Script chỉ báo cáo, không sửa file. Mỗi
     điểm in ra dạng `file:dòng [luật] trích đoạn`; tên luật kèm § của docs/luan-van/quy-tac-viet.md (hoặc
     README) để tra lý do và cách viết thay:
-      - câu > 35 chữ, đoạn ngoài 3–7 câu, in đậm giữa câu, văn nói, ngôi (§3.2);
+      - in đậm giữa câu, văn nói, ngôi (§3.2);
       - phóng đại (§3.3);
       - cụm sáo rỗng, câu đệm, động từ rỗng, bị động dịch máy, gạch dài, mũi tên, nhiều dấu ":" hoặc ";",
         hai đoạn liền mở bằng từ nối (§3.4);
@@ -14,6 +14,10 @@ Khái niệm:
       - ngày tháng trong thân bài (§5);
       - dấu chấm thập phân, số dính đơn vị (README "Quy ước viết");
       - đoạn hoặc bảng có số mà không có comment nguồn ngay sau (README "Nguồn của mọi sự kiện và số liệu").
+    Riêng độ dài và nhịp văn chỉ là gợi ý đọc lại, in ở phần riêng và không tính vào mã thoát, vì quy tắc viết
+    không đặt trần cứng cho câu và đoạn (§3.2): câu > 45 chữ, đoạn > 8 câu, 3 đoạn ≤ 2 câu liền nhau (§3.2),
+    ", nên" hơn một lần trong một đoạn (§3.4). Nếu tính vào mã thoát, người viết sẽ sửa cho về 0 và văn lại
+    dài đều nhau.
     Comment HTML, tiêu đề, hình và khối code không được xét. Bảng, chú thích bảng ("**Bảng …**") và công thức
     riêng dòng ($$…$$) không bị xét như văn xuôi; chú thích và công thức cũng không bị đòi nguồn, vì nguồn
     đặt sau bảng hoặc sau đoạn giải thích công thức.
@@ -27,7 +31,7 @@ Chạy (từ gốc repo):
     uv run --project analysis python -m analysis.kiem_van docs/luan-van/05-03-*.md
     uv run --project analysis python -m analysis.kiem_van          # mọi file mục docs/luan-van/CC-SS-*.md
 Mặc định in tối đa 5 điểm mỗi luật; thêm --all để in hết. Mã thoát (như ruff): 0 khi không còn điểm nào,
-1 khi còn điểm, 2 khi không đọc được file.
+1 khi còn điểm, 2 khi không đọc được file; gợi ý đọc lại không làm đổi mã thoát.
 """
 
 from __future__ import annotations
@@ -129,6 +133,7 @@ class Issue:
 @dataclass
 class Report:
     issues: list[Issue]
+    hints: list[Issue]  # gợi ý đọc lại về độ dài và nhịp văn: in riêng, không tính vào mã thoát
     words: int  # số chữ văn xuôi (không tính bảng, chú thích bảng)
     paras: int
     sentences: int
@@ -220,12 +225,13 @@ def check_text(text: str) -> Report:
     """Soát nội dung một file Markdown; trả về các điểm cần xem và thống kê độ dài."""
     lines = text.split("\n")
     issues: list[Issue] = []
-    words = sents_n = prev_end = 0
+    hints: list[Issue] = []
+    words = sents_n = prev_end = short_run = 0
     prev_connect = False  # đoạn văn xuôi liền trước có mở bằng từ nối không
     all_blocks = blocks(lines)
 
-    def add(blk: Block, rule: str, excerpt: str) -> None:
-        issues.append(Issue(blk.start, rule, excerpt))
+    def add(blk: Block, rule: str, excerpt: str, hint: bool = False) -> None:
+        (hints if hint else issues).append(Issue(blk.start, rule, excerpt))
 
     for blk in all_blocks:
         t = blk.text
@@ -242,21 +248,34 @@ def check_text(text: str) -> Report:
             add(blk, "thiếu nguồn README", t[:70])
         # Bảng, chú thích bảng và công thức riêng dòng không phải văn xuôi: chỉ xét nguồn (ở trên). Chúng
         # cũng ngắt chuỗi "hai đoạn liền", như tiêu đề (dòng "#" nằm giữa hai đoạn).
+        # short_run (số đoạn ≤ 2 câu liền nhau) cũng ngắt ở đây và ở mục danh sách: đoạn dẫn ngắn trước bảng,
+        # danh sách hay tiểu mục là cách viết đúng (§3.2).
         if blk.kind == "table" or t.startswith(("**Bảng", "$$")):
             prev_connect = False
+            short_run = 0
             continue
         if any(ln.lstrip().startswith("#") for ln in lines[prev_end : blk.start - 1]):
             prev_connect = False
+            short_run = 0
         prev_end = blk.end
         plain = re.sub(r"`[^`]*`", "CODE", t)  # để luật cụm từ không bắt chữ trong tên metric, tên file
         words += len(t.split())
         ss = split_sentences(t)
         sents_n += len(ss)
         for x in ss:
-            if len(x.split()) > 35:
-                add(blk, "câu > 35 chữ §3.2", f"{len(x.split())} chữ: {x[:60]}")
-        if not LIST_ITEM.match(t) and not 3 <= len(ss) <= 7:
-            add(blk, "đoạn ngoài 3–7 câu §3.2", f"{len(ss)} câu: {t[:50]}")
+            if len(x.split()) > 45:
+                add(blk, "câu > 45 chữ §3.2", f"{len(x.split())} chữ: {x[:60]}", hint=True)
+        if LIST_ITEM.match(t):
+            short_run = 0
+        else:
+            if len(ss) > 8:
+                add(blk, "đoạn > 8 câu §3.2", f"{len(ss)} câu: {t[:50]}", hint=True)
+            short_run = short_run + 1 if len(ss) <= 2 else 0
+            if short_run == 3:  # báo một lần cho mỗi chuỗi, ở đoạn thứ ba
+                add(blk, "3 đoạn ≤ 2 câu liền nhau §3.2", t[:50], hint=True)
+        n_nen = len(re.findall(r", nên(?!\w)", plain))
+        if n_nen > 1:
+            add(blk, "lặp «, nên» trong đoạn §3.4", f"{n_nen} lần: {t[:50]}", hint=True)
         n_codes = len(CODES.findall(t))
         if n_codes > 4:
             add(blk, "> 4 mã/đoạn §4", f"{n_codes} mã: {t[:50]}")
@@ -291,21 +310,32 @@ def check_text(text: str) -> Report:
             add(blk, "số dính đơn vị README", plain[max(0, m.start() - 4) : m.end()])
     paras = [b for b in all_blocks if b.kind == "para"]
     bold_open = sum(1 for b in paras if b.text.startswith("**") and not b.text.startswith("**Bảng"))
-    return Report(issues, words, len(paras), sents_n, bold_open)
+    return Report(issues, hints, words, len(paras), sents_n, bold_open)
 
 
 def format_report(name: str, rep: Report, show_all: bool) -> str:
-    """Dòng thống kê, rồi mỗi luật: số điểm và tối đa 5 điểm đầu (hoặc hết, nếu show_all)."""
+    """Dòng thống kê, rồi mỗi luật: số điểm và tối đa 5 điểm đầu (hoặc hết, nếu show_all). Gợi ý đọc lại in
+    sau cùng, dưới một dòng tiêu đề riêng."""
     out = [
         f"== {name}: {rep.words} chữ văn xuôi, {rep.paras} đoạn, {rep.sentences} câu, "
         f"TB {rep.words / max(rep.sentences, 1):.1f} chữ/câu, {rep.bold_open} đoạn mở bằng in đậm"
     ]
-    by_rule: dict[str, list[Issue]] = defaultdict(list)
-    for it in rep.issues:
-        by_rule[it.rule].append(it)
-    for rule, items in by_rule.items():
-        out.append(f"  [{rule}] {len(items)}")
-        out += [f"    {Path(name).name}:{it.line} {it.excerpt}" for it in (items if show_all else items[:5])]
+
+    def group(found: list[Issue], indent: str) -> None:
+        by_rule: dict[str, list[Issue]] = defaultdict(list)
+        for it in found:
+            by_rule[it.rule].append(it)
+        for rule, items in by_rule.items():
+            out.append(f"{indent}[{rule}] {len(items)}")
+            out.extend(
+                f"{indent}  {Path(name).name}:{it.line} {it.excerpt}"
+                for it in (items if show_all else items[:5])
+            )
+
+    group(rep.issues, "  ")
+    if rep.hints:
+        out.append("  Gợi ý đọc lại (không tính vào mã thoát):")
+        group(rep.hints, "    ")
     return "\n".join(out)
 
 
@@ -318,7 +348,7 @@ def main(argv: list[str] | None = None) -> int:
     if not files:
         print(f"Không có file nào để soát ({SECTION_GLOB})", file=sys.stderr)
         return 2
-    total = 0
+    total = n_hints = 0
     for f in files:
         try:
             # utf-8-sig: bỏ BOM mà vài trình soạn thảo trên Windows thêm vào đầu file.
@@ -329,7 +359,8 @@ def main(argv: list[str] | None = None) -> int:
         rep = check_text(text)
         print(format_report(str(f), rep, args.all))
         total += len(rep.issues)
-    print(f"Tổng: {total} điểm cần xem")
+        n_hints += len(rep.hints)
+    print(f"Tổng: {total} điểm cần xem" + (f"; {n_hints} gợi ý đọc lại" if n_hints else ""))
     return 1 if total else 0
 
 

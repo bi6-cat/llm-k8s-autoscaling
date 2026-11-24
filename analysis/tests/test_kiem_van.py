@@ -29,9 +29,6 @@ SRC = "\n<!-- nguồn: x -->"
 
 # (luật, đoạn vi phạm, đoạn viết đúng)
 CASES = [
-    ("câu > 35 chữ", " ".join(["chữ"] * 36) + ".", " ".join(["chữ"] * 35) + "."),
-    ("đoạn ngoài 3–7 câu", "Câu một. Câu hai.", "Câu một. Câu hai. Câu ba."),
-    ("đoạn ngoài 3–7 câu", " ".join(["Câu."] * 8), " ".join(["Câu."] * 7)),
     ("in đậm giữa câu", "Nhóm chọn **A2** làm cấu hình chính.", "**Cấu hình chính.** Nhóm chọn A2."),
     ("văn nói", "A2 chạy khá nhanh.", "A2 nhanh hơn S1."),
     ("văn nói", "Kết quả ổn.", "Kết quả ổn định."),
@@ -97,13 +94,43 @@ def test_rule_catches_bad_and_passes_good(rule: str, bad: str, good: str):
     assert not caught(good, rule), f"{rule} bắt nhầm: {good!r} -> {rules(good)}"
 
 
+# Luật gợi ý đọc lại (§3.2, §3.4): (luật, đoạn bị gợi ý, đoạn không bị gợi ý). Đoạn ngắn đứng sau tiêu đề,
+# bảng hay mục danh sách là đoạn dẫn, nên không nối chuỗi với các đoạn ngắn phía trước.
+HINT_CASES = [
+    ("câu > 45 chữ", " ".join(["chữ"] * 46) + ".", " ".join(["chữ"] * 45) + "."),
+    ("đoạn > 8 câu", " ".join(["Câu."] * 9), " ".join(["Câu."] * 8)),
+    ("3 đoạn ≤ 2 câu liền nhau", "Một.\n\nHai.\n\nBa. Bốn.", "Một.\n\nHai.\n\nBa. Bốn. Năm."),
+    ("3 đoạn ≤ 2 câu liền nhau", "Một.\n\nHai.\n\nBa.", "Một.\n\nHai.\n\n## 3.2. Tiêu đề\n\nBa."),
+    ("3 đoạn ≤ 2 câu liền nhau", "Một.\n\nHai.\n\nBa.", "Một.\n\nHai.\n\n- mục một\n\nBa."),
+    ("lặp «, nên»", "A2 chậm, nên trễ. B nhanh, nên kịp.", "A2 chậm, nên trễ. Vì B nhanh, B kịp."),
+]
+
+
+def hinted(text: str, rule: str) -> bool:
+    return any(h.rule.startswith(rule) for h in kv.check_text(text).hints)
+
+
+@pytest.mark.parametrize(
+    ("rule", "bad", "good"), HINT_CASES, ids=[f"{c[0]}-{i}" for i, c in enumerate(HINT_CASES)]
+)
+def test_hint_rules_are_hints_not_issues(rule: str, bad: str, good: str):
+    assert hinted(bad, rule), f"{rule} không gợi ý: {bad!r}"
+    assert not hinted(good, rule), f"{rule} gợi ý nhầm: {good!r}"
+    assert not caught(bad, rule)  # gợi ý không vào danh sách điểm, nên không đổi mã thoát
+
+
+def test_short_paragraph_run_is_reported_once():
+    hints = kv.check_text("\n\n".join(["Một."] * 5)).hints
+    assert [h.line for h in hints if h.rule.startswith("3 đoạn")] == [5]
+
+
 def test_every_rule_has_a_case():
     """Mỗi luật có ít nhất một ca trong CASES: luật trong PHRASES, RAW_RULES, và luật viết thẳng trong
     check_text (tên luật là chuỗi kết thúc bằng "§x.y" hoặc "README", lấy từ mã nguồn của hàm)."""
     declared = {r for _, r in kv.PHRASES + kv.RAW_RULES}
     declared |= set(re.findall(r'"([^"]+ (?:§[\d.]+|README))"', inspect.getsource(kv.check_text)))
-    assert len(declared) >= 25  # 13 luật khai báo trong bảng + 12 luật viết thẳng
-    covered = {c[0] for c in CASES}
+    assert len(declared) >= 27  # 13 luật khai báo trong bảng + 14 luật viết thẳng (4 luật gợi ý)
+    covered = {c[0] for c in CASES + HINT_CASES}
     missing = sorted(d for d in declared if not any(d.startswith(c) for c in covered))
     assert not missing
 
@@ -169,11 +196,18 @@ def test_stats_count_prose_only():
 
 
 def test_format_report_limits_to_five_per_rule_unless_all():
-    rep = kv.check_text("\n\n".join(["Câu một."] * 7))
+    rep = kv.check_text("\n\n".join(["Chúng tôi đo. Nhóm đo. Kết quả giống."] * 7))
     short = kv.format_report("docs/luan-van/x.md", rep, show_all=False)
-    assert "[đoạn ngoài 3–7 câu §3.2] 7" in short
+    assert "[ngôi §3.2] 7" in short
     assert short.count("\n    x.md:") == 5  # dòng tiêu đề "== docs/luan-van/x.md:" không tính
     assert kv.format_report("x.md", rep, show_all=True).count("\n    x.md:") == 7
+
+
+def test_format_report_prints_hints_after_issues():
+    out = kv.format_report("x.md", kv.check_text("Chúng tôi đo.\n\nHai.\n\nBa."), show_all=False)
+    head, _, tail = out.partition("Gợi ý đọc lại")
+    assert "[ngôi §3.2] 1" in head
+    assert "[3 đoạn ≤ 2 câu liền nhau §3.2] 1" in tail
 
 
 def test_main_exit_codes(tmp_path, capsys):
@@ -186,6 +220,11 @@ def test_main_exit_codes(tmp_path, capsys):
     out = capsys.readouterr().out
     assert "03-02-ban.md:1 «Chúng tôi»" in out
     assert out.rstrip().endswith("Tổng: 1 điểm cần xem")
+    # Gợi ý đọc lại không đổi mã thoát.
+    short = tmp_path / "03-05-ngan.md"
+    short.write_text("Nhóm chọn A2.\n\nNhóm đo lại.\n\nKết quả giống nhau.\n", encoding="utf-8")
+    assert kv.main([str(short)]) == 0
+    assert capsys.readouterr().out.rstrip().endswith("Tổng: 0 điểm cần xem; 1 gợi ý đọc lại")
     assert kv.main([str(tmp_path / "khong-co.md")]) == 2
     # BOM ở đầu file (trình soạn thảo Windows) không làm dòng tiêu đề thành văn xuôi; file không phải UTF-8
     # thì trả 2 thay cho traceback.
