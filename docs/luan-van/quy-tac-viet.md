@@ -22,19 +22,19 @@ Nhóm chưa nhận được văn bản quy định trình bày của trường. 
 | Trích dẫn | IEEE, đánh số `[1]` theo thứ tự xuất hiện | Cả hai mẫu dùng kiểu này. Pandoc tự đánh số qua `[@key]` |
 | Độ dài | Theo nội dung lõi; định hướng 60–75 trang thân bài theo khuôn T, trần 85; khoảng trang của từng chương ở cột "Trang" của bảng dàn ý, Kế hoạch §11.1 | Cách đo ở đoạn ngay dưới bảng |
 
-Độ dài không tính phụ lục. Không có ngân sách trang cho từng mục: mục dài hay ngắn theo phần nội dung 20/80 của nó (§3.1). Độ dài đo bằng Word theo khuôn T, **gồm cả bảng và hình**; một trang khuôn T chứa khoảng 500 chữ văn xuôi (mẫu tiếng Việt: trung vị 521 chữ trên các trang chỉ có chữ). Bảng tốn chỗ hơn văn xuôi: 17 bảng của các bản nháp chương 3 chiếm trung bình 0,5–0,75 trang khuôn B mỗi bảng khi đo bằng Typst, và Word dàn bảng to hơn Typst (mục 3.1, nhiều bảng nhất, dài hơn 62%), nên ở khuôn T tính khoảng 0,5–0,8 trang mỗi bảng. Trước ngày 24/11/2026, độ dài đo theo khuôn B (14 pt, giãn 1,5 dòng, lề 3,5/3/3,5/2 cm) bằng Typst, định hướng 70–90 trang, trần 100. Đo cùng bản ghép ngày 24/11 bằng Word thì khuôn B dài gấp 1,49 lần khuôn T, còn Typst cho số trang khuôn B ít hơn Word khoảng 20%. Vì vậy một trang khuôn B cũ bằng khoảng 0,85 trang khuôn T, và mốc cũ đổi thành 60–75 trang, trần 85, với cùng nội dung. Hai đồ án mẫu dài 74 và 113 trang thân bài, nhưng chương phân tích và thiết kế của chúng chiếm 42 và 65 trang, phần lớn là sơ đồ use case, đặc tả use case và bảng cơ sở dữ liệu. Đề tài của nhóm không có phần này, nên không cần dài bằng mẫu.
+Thân bài gồm chương 1–6; độ dài thân bài không tính Mở đầu và phụ lục. Không có ngân sách trang cho từng mục: mục dài hay ngắn theo phần nội dung 20/80 của nó (§3.1). Độ dài đo bằng Word theo khuôn T, **gồm cả bảng và hình**; một trang khuôn T chứa khoảng 500 chữ văn xuôi (mẫu tiếng Việt: trung vị 521 chữ trên các trang chỉ có chữ). Bảng tốn chỗ hơn văn xuôi: 17 bảng của các bản nháp chương 3 chiếm trung bình 0,5–0,75 trang khuôn B mỗi bảng khi đo bằng Typst, và Word dàn bảng to hơn Typst (mục 3.1, nhiều bảng nhất, dài hơn 62%), nên ở khuôn T tính khoảng 0,5–0,8 trang mỗi bảng. Trước ngày 24/11/2026, độ dài đo theo khuôn B (14 pt, giãn 1,5 dòng, lề 3,5/3/3,5/2 cm) bằng Typst, định hướng 70–90 trang, trần 100. Đo cùng bản ghép ngày 24/11 bằng Word thì khuôn B dài gấp 1,49 lần khuôn T, còn Typst cho số trang khuôn B ít hơn Word khoảng 20%. Vì vậy một trang khuôn B cũ bằng khoảng 0,85 trang khuôn T, và mốc cũ đổi thành 60–75 trang, trần 85, với cùng nội dung. Hai đồ án mẫu dài 74 và 113 trang thân bài, nhưng chương phân tích và thiết kế của chúng chiếm 42 và 65 trang, phần lớn là sơ đồ use case, đặc tả use case và bảng cơ sở dữ liệu. Đề tài của nhóm không có phần này, nên không cần dài bằng mẫu.
 
 Thứ tự các phần của quyển (tên file dự kiến ở khung luận văn, chưa dựng), theo hai mẫu trừ các chỗ ghi rõ:
 1. Bìa chính và bìa phụ, theo mẫu của khoa.
-2. Lời cam đoan, có khai báo dùng công cụ AI (§9). Hai mẫu không có trang này; nhóm thêm vì cần một chỗ khai báo, và bỏ nếu GVHD hoặc khoa quy định chỗ khai báo khác.
-3. Lời cảm ơn.
-4. Hai trang "Nhận xét, đánh giá, cho điểm" để trống theo mẫu: của người hướng dẫn và của giảng viên phản biện.
-5. Tóm tắt: 1 trang tiếng Việt. Hai mẫu không có; nhóm giữ để hội đồng nắm bài toán và kết quả chính trong một trang. Không viết *Abstract*.
-6. Mục lục; danh mục thuật ngữ, chữ viết tắt và mã định danh; danh mục hình vẽ; danh mục bảng biểu.
-7. Chương 1–6. Không có phần "Mở đầu" riêng: mẫu tiếng Việt có phần này nhưng nội dung lặp với chương 1, còn chương 1 của nhóm đã có bối cảnh, mục tiêu và mục "Cấu trúc luận văn".
+2. Lời cảm ơn.
+3. Hai trang "Nhận xét, đánh giá, cho điểm" để trống theo mẫu: của người hướng dẫn và của giảng viên phản biện.
+4. Tóm tắt: 1 trang tiếng Việt. Hai mẫu không có; nhóm giữ để hội đồng nắm bài toán và kết quả chính trong một trang. Không viết *Abstract*.
+5. Mục lục; danh mục thuật ngữ, chữ viết tắt và mã định danh; danh mục hình vẽ; danh mục bảng biểu.
+6. Mở đầu: không đánh số, khoảng 1,5–2 trang, theo mẫu tiếng Việt. Phần này dẫn dắt vào vấn đề và việc đề tài làm, ở mức người không chuyên, rồi mô tả ngắn từng chương, mỗi chương 2–3 câu. Mở đầu thay cho mục "Cấu trúc luận văn" của chương 1, và không nêu số đo hay chi tiết kỹ thuật: mục tiêu, phạm vi và đóng góp kèm số nằm ở chương 1, để mỗi ý chỉ trình bày đầy đủ ở một chỗ (§2). Đoạn cuối của Mở đầu khai báo việc dùng công cụ AI (§9). Hai mẫu không có trang Lời cam đoan, nên nhóm không thêm trang này.
+7. Chương 1–6.
 8. Tài liệu tham khảo, phụ lục.
 
-Nếu GVHD hoặc khoa yêu cầu phần "Mở đầu" và "Kết luận" không đánh số thay cho chương 1 và 6 thì chỉ đổi tên, giữ nguyên nội dung.
+Nếu GVHD hoặc khoa yêu cầu phần "Kết luận" không đánh số thay cho chương 6 thì chỉ đổi tên, giữ nguyên nội dung.
 
 Tóm tắt viết **sau cùng**. Tóm tắt phải nêu bài toán, cách làm, môi trường đo, và **2–3 kết quả chính có số** (ví dụ GPU-giờ của A2 so với S4). Không viết chung chung kiểu "đã xây dựng thành công hệ thống".
 
@@ -46,6 +46,7 @@ Mỗi sự kiện chỉ được trình bày **đầy đủ ở một chỗ**; �
 
 | Chương | Trả lời câu hỏi | Không đặt ở đây |
 |---|---|---|
+| Mở đầu | Đề tài giải quyết vấn đề gì và vì sao, ở mức người không chuyên; luận văn gồm những chương nào, mỗi chương trả lời câu hỏi gì | Số đo, trích dẫn chi tiết, thuật ngữ chưa giải thích; mục tiêu và phạm vi chi tiết (chương 1) |
 | 1 | Vì sao bài toán đáng làm; mục tiêu, phạm vi và giả định; phương pháp thực hiện; đóng góp | Chi tiết kỹ thuật. Số đo chỉ có 2–3 số chính ở mục Đóng góp, kèm dẫn chéo tới chương 5 |
 | 2 | Kiến thức chung mà người đọc cần để hiểu các chương sau (LLM inference, vLLM, autoscaling, SLO, GitOps), và giải pháp liên quan | Bất cứ gì về hệ thống của nhóm |
 | 3 | Hệ thống **cần** gì và **được thiết kế** thế nào, vì sao chọn phương án đó | "Đã cài", lệnh, sự cố |
@@ -59,7 +60,7 @@ Mỗi sự kiện chỉ được trình bày **đầy đủ ở một chỗ**; �
 - **Mục cuối "Kết chương":** 1 đoạn, nói chương rút ra điều gì và dẫn sang chương sau.
 
 Cách chia tiểu mục:
-- **Một tiêu đề phải đáng có:** nội dung dưới nó dài từ khoảng 1 trang (§1: khoảng 500 chữ văn xuôi, ít hơn khi có bảng hoặc hình), và trả lời một câu hỏi mà người đọc sẽ tra trong mục lục. Miễn cho các tiêu đề mà khung bắt buộc và vốn ngắn: "Kết chương", "Cấu trúc luận văn". Ngắn hơn thì không đặt tiêu đề: viết thành đoạn có câu chủ đề rõ (§3.1), hoặc mở đoạn bằng cụm in đậm khi có từ 3 khía cạnh song song (§3.2).
+- **Một tiêu đề phải đáng có:** nội dung dưới nó dài từ khoảng 1 trang (§1: khoảng 500 chữ văn xuôi, ít hơn khi có bảng hoặc hình), và trả lời một câu hỏi mà người đọc sẽ tra trong mục lục. Miễn cho tiêu đề mà khung bắt buộc và vốn ngắn: "Kết chương". Ngắn hơn thì không đặt tiêu đề: viết thành đoạn có câu chủ đề rõ (§3.1), hoặc mở đoạn bằng cụm in đậm khi có từ 3 khía cạnh song song (§3.2).
 - Mục cấp 2 dài dưới khoảng 2 trang (khoảng 1.000 chữ văn xuôi) thì không chia cấp 3.
 - **Tiêu đề nói nội dung hoặc kết luận**, không nói bước của khung ("Cách làm", "Kiểm chứng") hay mã kịch bản ("VH2"). Mã định danh nằm trong câu.
 - Các tiểu mục ngang hàng có độ nặng tương đương, mỗi nhóm 2–4 tiểu mục. Số tiêu đề tỷ lệ với giá trị: mục mang thông điệp TĐ1–TĐ3 nhiều nội dung nên có tiểu mục, mục ngoại vi thường không.
@@ -172,10 +173,10 @@ Chỉ mô tả quy trình đã thật sự diễn ra. Ví dụ: không viết "h
 
 - mã việc (Q6, TR7), số PR, commit, mã quyết định (D68);
 - tên người, nhật ký cá nhân, "phiên làm việc", "phiên Claude";
-- AI agent và tên công cụ AI (chỉ khai báo một lần ở Lời cam đoan, §9);
+- AI agent và tên công cụ AI (chỉ khai báo một lần, ở đoạn cuối phần Mở đầu, §9);
 - đường dẫn `docs/`.
 
-Những thứ này chỉ nằm trong comment nguồn. Ngoại lệ: mục phân công ở slide và Phụ lục F.
+Những thứ này chỉ nằm trong comment nguồn. Ngoại lệ: mục phân công ở slide và Phụ lục F, và đoạn khai báo dùng công cụ AI ở cuối Mở đầu (§9).
 
 ## 4. Thuật ngữ và tên gọi thống nhất
 
@@ -328,8 +329,8 @@ Những thứ này chỉ nằm trong comment nguồn. Ngoại lệ: mục phân 
 - Bước soát ở §8 do một agent khác với agent viết nháp làm; người viết vẫn đọc lại và đối chiếu số. **Người viết và người review chịu trách nhiệm về nội dung**, không phải agent.
 - Ghi vào nhật ký cá nhân mục nào do agent viết nháp, mục nào đã soát.
 - **Thân bài (chương 1–6) không nhắc** AI agent hay tên công cụ AI (§3.5). Đồ án nói về phục vụ LLM, nên không dùng chữ "AI" chung chung: "model", "LLM" là đối tượng mà hệ thống phục vụ.
-- **Khai báo một lần, ở Lời cam đoan,** theo quy định của trường (cần hỏi GVHD hoặc khoa), và đúng mức dùng thật. Dự án dùng công cụ AI cho cả viết mã, phân tích số liệu, soạn và rà soát văn bản, nên không viết nhẹ hơn thực tế. Câu mẫu (hai người chốt câu cuối cùng): "Trong quá trình thực hiện, nhóm dùng công cụ AI để hỗ trợ viết mã, phân tích số liệu, soạn thảo và rà soát văn bản. Nhóm đã kiểm tra lại các kết quả đó và chịu trách nhiệm hoàn toàn về nội dung đồ án. Mọi số liệu trong báo cáo đều truy được về dữ liệu đo lưu trong kho mã của đồ án."
-- **Comment trong file luận văn** (repo công khai) chỉ ghi nguồn và trạng thái soát, theo dạng trung tính: `<!-- Soát số: <ngày> · Soát văn phong: <ngày> · Người viết đọc lại: <ngày> -->`. Việc dùng AI ghi ở nhật ký cá nhân và Lời cam đoan.
+- **Khai báo một lần, ở đoạn cuối phần Mở đầu**, đúng mức dùng thật. Hai đồ án mẫu của khoa không có trang Lời cam đoan, nên nhóm không thêm trang này; nếu GVHD hoặc khoa quy định chỗ khai báo khác (cần hỏi) thì chuyển sang đó. Dự án dùng công cụ AI cho cả viết mã, phân tích số liệu, soạn và rà soát văn bản, nên không viết nhẹ hơn thực tế. Câu mẫu (hai người chốt câu cuối cùng): "Trong quá trình thực hiện, nhóm dùng công cụ AI để hỗ trợ viết mã, phân tích số liệu, soạn thảo và rà soát văn bản. Nhóm đã kiểm tra lại các kết quả đó và chịu trách nhiệm hoàn toàn về nội dung đồ án. Mọi số liệu trong báo cáo đều truy được về dữ liệu đo lưu trong kho mã của đồ án."
+- **Comment trong file luận văn** (repo công khai) chỉ ghi nguồn và trạng thái soát, theo dạng trung tính: `<!-- Soát số: <ngày> · Soát văn phong: <ngày> · Người viết đọc lại: <ngày> -->`. Việc dùng AI ghi ở nhật ký cá nhân và ở đoạn khai báo của Mở đầu.
 
 ## 10. Checklist cho từng mục, trước khi mở PR của chương
 

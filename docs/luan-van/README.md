@@ -15,6 +15,7 @@ Thư mục này chứa **nội dung** luận văn, viết bằng Markdown, mỗi
 |---|---|
 | `CC-SS-<ten>.md` | Chương `CC`, mục `SS`. Hai chữ số để thứ tự khi ghép đúng với thứ tự mục, ví dụ `03-05-<ten>.md` đứng trước `04-01-<ten>.md` |
 | `CC-00-<ten>.md` | Tiêu đề chương (`# Chương CC. …`) và đoạn mở đầu chương |
+| `00-00-mo-dau.md` | Phần Mở đầu, không đánh số: tiêu đề `# Mở đầu {.unnumbered}`. Tên bắt đầu bằng `00` để đứng trước chương 1 và khớp mẫu `[0-9]*.md` của lệnh ghép ([quy tắc viết §1](quy-tac-viet.md#1-khuôn-trình-bày)) |
 | `tai-lieu.bib` | Danh mục tài liệu tham khảo dùng chung (BibTeX) |
 | [`quy-tac-viet.md`](quy-tac-viet.md) | Quy tắc viết chung cho hai người: chương nào nói gì, văn phong, thuật ngữ thống nhất, trình bày kết quả, review, checklist trước PR. Không ghép vào `.docx` |
 | [`nguon-tu-lieu.md`](nguon-tu-lieu.md) | Mục nào lấy tư liệu ở đâu, số liệu đã chốt, những gì chưa có số, cách lấy dữ liệu V2. Không ghép vào `.docx` |
