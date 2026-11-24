@@ -94,3 +94,16 @@
 - **Incidents:** lần dàn đầu, bảng không ngắt qua trang (để lại trang gần trống) và cột chia đều, nên số trang bị đội; lần sửa thứ hai đếm số cột từ file Markdown, lệch vì có bảng trong comment. Cuối cùng giữ số cột Pandoc sinh ra, chỉ đổi độ rộng sang `auto`, và soát bằng ảnh trang trước khi lấy số.
 - **Links:** `docs/luan-van/quy-tac-viet.md` (§1, §3.1, §6); `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§11.1).
 - **Thesis:** áp cho mọi mục; trước mắt là cắt 3.1, 3.3, 3.5, 3.6 về ngân sách, và viết 3.2, 3.4 theo ngân sách.
+
+## 2026-11-24 – Luận văn: đo ba nháp chương 5, chốt ngân sách chương 5, cắt 5.3
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Đo ba nháp chương 5 bằng dàn trang thử (`.work/tools/do_trang/run.sh`, khuôn B: 14 pt, lề 3,5/3/3,5/2 cm): 5.3 = 8 trang, 5.5b (VH4, VH6) = 8, 5.6 = 8; tổng ba nháp gấp khoảng 4 lần phần ngân sách tương ứng.
+  2. Chốt ngân sách chương 5 theo trang và ghi vào Kế hoạch §11.1 (đoạn Cân đối).
+  3. Cắt 5.3 (`docs/luan-van/05-03-autoscaling-so-voi-tinh.md`) từ 3.500 xuống khoảng 830 chữ văn xuôi: bảng 11 ô ghi khoảng thấp nhất–cao nhất thay cho số từng lượt; bỏ đoạn mô tả lại kịch bản KB2 (đã có ở 3.6), tốc độ xử lý của pod cũ, chi tiết pha tăng dần và pha duy trì của KB3, thời điểm A1 bớt pod; viết lại theo quy-tac-viet §4 (tối đa 4 mã mỗi đoạn, tên pha tiếng Việt). Các ý đã cắt ghi trong comment đầu file kèm nguồn (`analysis/dg2_a2.py` phần 1–4).
+- **Decision:** ngân sách chương 5 = 14 trang (mức trên của 12–14): 5.1 ≈ 1 · 5.2 ≈ 1,5 · 5.3 ≈ 4 · 5.4 ≈ 1,5 · 5.5 ≈ 3 (VH4 và VH6 khoảng 1,25) · 5.6 ≈ 2 · 5.7 ≈ 1. 5.3 tăng từ 3 lên 4 trang vì trả lời câu hỏi chính và hình diễn biến KB2 (518 × 619 pt) chiếm gần trọn một trang; hình SLO attainment theo GPU-giờ chuyển sang Phụ lục E. Phương án bỏ: giữ 5.3 = 3 trang (phải bỏ phân tích hàng đợi, là kết quả chính của mục); đo với hình trôi (lệch với cách đo của chương 3).
+- **Results:** 5.3 sau khi cắt: 3,61 trang khuôn A, 3,96 trang khuôn B (ngân sách 4); `kiem_van.py` 0 điểm; lychee 59/59 OK. Không đổi số liệu so với nguồn; hai chỗ diễn đạt lại có tính từ nguồn: A1 × KB2 tiết kiệm 4,6–4,9% GPU-giờ (1 − 0,9537 và 1 − 0,9514), A1 lên 4 replica sau 166–181 s.
+- **Deviations:** Kế hoạch §11.1 đổi ngân sách mục của chương 5 (5.1 1,5 → 1; 5.3 3 → 4); tổng chương 5 vẫn trong khoảng 12–14 trang.
+- **Links:** nhánh `docs/tr8-thesis-ch5-drafts` (chưa PR); `docs/chi-tiet/06-ke-hoach-quan-ly.md` §11.1.
+- **Thesis:** §5.3; chương 2 (mục 2.4) phải định nghĩa flapping, vì 5.3 dùng thẳng thuật ngữ này. Còn cắt: 5.6 (8 → 2 trang), 5.5b (8 → 1,25 trang).
