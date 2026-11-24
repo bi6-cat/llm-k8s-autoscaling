@@ -107,3 +107,15 @@
 - **Deviations:** Kế hoạch §11.1 đổi ngân sách mục của chương 5 (5.1 1,5 → 1; 5.3 3 → 4); tổng chương 5 vẫn trong khoảng 12–14 trang.
 - **Links:** nhánh `docs/tr8-thesis-ch5-drafts` (chưa PR); `docs/chi-tiet/06-ke-hoach-quan-ly.md` §11.1.
 - **Thesis:** §5.3; chương 2 (mục 2.4) phải định nghĩa flapping, vì 5.3 dùng thẳng thuật ngữ này. Còn cắt: 5.6 (8 → 2 trang), 5.5b (8 → 1,25 trang).
+
+## 2026-11-24 – Luận văn: cắt nháp 5.6 về 2 trang
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Cắt `docs/luan-van/05-06-bang-nghiem-thu.md` từ 8 trang (khuôn B) về ngân sách 2 trang: gộp hai bảng F1–F7 và N1–N8 thành một Bảng 5.6a 4 cột (yêu cầu/chỉ tiêu, mức, kết quả hoặc phần còn thiếu, kết luận); ngưỡng dẫn chéo sang Bảng 3.1, bảng đầy đủ kèm số từng lượt dành cho Phụ lục E; bỏ đoạn điều kiện đo (đã ở 5.1) và danh sách năm mức kết luận (đưa vào chú thích bảng).
+  2. Viết lại văn xuôi theo quy-tac-viet §3–§5: khoảng giá trị kèm số lượt, tối đa 4 mã mỗi đoạn, mỗi đoạn có comment nguồn ngay sau. Ý đã cắt ghi trong comment đầu file kèm nguồn.
+  3. Soát độc lập (`/code-review high`): 10 điểm, sửa cả 10 (phạm vi KB1, KB3 của N1; N2b không có ngưỡng ở Bảng 3.1 nên bỏ "dự kiến 5 phút"; thêm bằng chứng phần đã đạt của F1, F5, F7; đủ hai điều kiện của N3 và ba phần của N6; giải thích page ở A2 × KB3 không phải page giả; ghi số lượt; gọi mốc so sánh nhất quán là cấu hình tĩnh; sửa comment số cột và dẫn chéo sang file có trong repo).
+- **Results:** 2.463 → 463 chữ văn xuôi, 2 → 1 bảng; đo 1,55 trang khuôn A, 1,95 trang khuôn B (ngân sách 2); `kiem_van.py` còn 1 điểm (đoạn mở mục 2 câu, mâu thuẫn §2 với §3.2 đã biết); lychee đạt. Không đổi số liệu so với nguồn; A2 × KB1 = 0,25 GPU-giờ của S4 đối chiếu lại `analysis/figures/v2-dg2/runs.csv`.
+- **Deviations:** mục 5.6 chưa có bảng kiểm chứng LT1–LT8 như Kế hoạch §11.1; 5.6 đã dùng gần hết 2 trang, nên khi thêm bảng LT phải đưa bảng vào Phụ lục E hoặc lấy chỗ từ mục khác của chương 5.
+- **Links:** nhánh `docs/tr8-thesis-ch5-drafts` (chưa PR).
+- **Thesis:** §5.6. Còn cắt: 5.5b (8 → 1,25 trang).
