@@ -65,3 +65,11 @@
   - Sau khi sửa, số điểm trên 4 file nháp không đổi so với dòng trên.
 - **Links:** `analysis/kiem_van.py`, `analysis/tests/test_kiem_van.py`, `docs/luan-van/quy-tac-viet.md` §10, `CONTRIBUTING.md` §1, `analysis/pyproject.toml`.
 - **Thesis:** không vào thân bài; công cụ dùng ở bước soát mọi mục (quy-tac-viet.md §10).
+
+## 2026-11-24 – kiem_van: độ dài câu và đoạn thành gợi ý đọc lại
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** bỏ hai luật "câu > 35 chữ" và "đoạn ngoài 3–7 câu" khỏi `analysis/kiem_van.py`. Thêm bốn luật gợi ý đọc lại, in ở phần riêng sau các điểm và không tính vào mã thoát: câu > 45 chữ, đoạn > 8 câu, 3 đoạn ≤ 2 câu liền nhau (chuỗi ngắt ở tiêu đề, bảng, công thức và mục danh sách; báo một lần mỗi chuỗi), ", nên" hơn một lần trong đoạn. Dòng tổng in thêm số gợi ý. Test thêm ca cho bốn luật gợi ý, ca chuỗi đoạn ngắn, ca in gợi ý sau điểm, và ca mã thoát 0 khi chỉ có gợi ý. Dòng kiem_van ở `quy-tac-viet.md` §10 ghi rõ phần gợi ý không cần về 0.
+- **Decision:** theo việc bỏ trần cứng câu và đoạn ở quy tắc viết (PR quy tắc viết theo luận văn ngoài, nhánh `docs/tr8-style-external-theses`). Lý do: khi luật trả mã thoát 1, người viết sửa cho về 0 và văn bị dài đều nhau. Ngưỡng gợi ý (45 chữ, 8 câu) đặt cao hơn ngưỡng cũ, để chỉ báo chỗ thật sự nên đọc lại.
+- **Results:** `uv run --project analysis --locked pytest analysis`: 212 passed (Python 3.15); test `kiem_van` trên Python 3.11: 61 passed; `ruff check`, `ruff format --check` đạt. Chạy trên nháp 5.7 (nhánh `docs/tr8-thesis-ch5-drafts`): 0 điểm, 1 gợi ý (đoạn đầu có 3 lần ", nên"), mã thoát 0.
+- **Links:** `analysis/kiem_van.py`, `analysis/tests/test_kiem_van.py`, `docs/luan-van/quy-tac-viet.md` §10; PR #61.
