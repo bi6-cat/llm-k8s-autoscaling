@@ -139,7 +139,7 @@
 - **Task:** TR8 (phần Q2 của Quang, D115 mục 1) · **Environment:** none
 - **Done:**
   1. Grep 37 dòng nhắc A4000 trong `docs/chi-tiet/`, đọc từng chỗ, chia hai nhóm: chỗ nói phiên V0+V1 ngày 08/11 hoặc kế hoạch, lựa chọn của ADR-006 C2 (giữ nguyên), và chỗ nói phiên V2 đã chạy (sửa).
-  2. Sửa 30 chỗ ở 6 file: Thông số §1, §9.1, §10.2 (thêm đoạn "Máy V2 thực tế"), §11; Bài toán §1.2, §1.3, G2, hạn chế 1; Kiến thức nền §1.3, bảng băng thông, đoạn decode 3B; Kiến trúc A1′; Môi trường tóm tắt, §2, §3.1 (thêm dòng RTX 4060 Ti), §6.1 (dòng V2: ngày và máy thật), bảng lớp đánh giá, câu hỏi "vì sao dùng A4000"; Kế hoạch M2, phụ thuộc, rủi ro R2.
+  2. Sửa 30 chỗ ở 6 file: Thông số §1, §9.1, §10.2 (thêm đoạn "Máy V2 thực tế"), §11; Bài toán §1.2, §1.3, G2, hạn chế 1; Kiến thức nền §1.3, bảng băng thông, đoạn decode 3B; Kiến trúc A1′; Môi trường tóm tắt, §2, §3.1 (thêm dòng RTX 4060 Ti), §6.1 (dòng V2: ngày và máy thật), bảng lớp đánh giá, câu hỏi "vì sao dùng A4000"; Kế hoạch M1 (checklist), §4 phụ thuộc, bảng rủi ro và R2.
 - **Decision:**
   - Trình giữ nguyên các câu về A4000 của V0+V1 và về lựa chọn ADR-006 C2, chỉ thêm câu "thực tế V2 chạy trên 4 × RTX 4060 Ti": các số 08/11 (TPOT 17,2 ms, KV-cache 211.936 token, tải model 27 s) đúng là đo trên A4000. ADR-006 không sửa, vì ADR ghi quyết định tại thời điểm đó.
   - Thêm số KV-cache của V2 (211.584–224.336 token, đọc từ log vLLM trong `runs/dg1-v2-4060ti/` và `runs/v2-vm/dg3-v2-4060ti/`) để chứng minh phân bổ VRAM của §1.2 vẫn đúng trên máy V2. Không thêm TPOT ở 1 request cho V2, vì V2 không đo; bước decode tối thiểu 21,4 ms chỉ là tính từ băng thông 288 GB/s.
