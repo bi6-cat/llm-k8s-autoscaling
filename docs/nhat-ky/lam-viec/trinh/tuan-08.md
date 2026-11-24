@@ -338,3 +338,13 @@
 - **Deviations:** 3.2 (522 chữ) và 3.4 (668 chữ) dưới mức 1.000 chữ mà quy tắc viết §2 đặt cho việc chia cấp 3; vẫn giữ hai tiểu mục theo dàn ý §11.1, xem lại khi đo khuôn T ở bước 2.
 - **Links:** nhánh `docs/tr8-thesis-ch3` (chưa PR); `docs/luan-van/03-00-yeu-cau-thiet-ke.md`, `03-02`…`03-06`.
 - **Thesis:** chương 3. Còn lại cho bước 2: khôi phục phần lõi 3.1, 3.5, 3.6; kết chương; đánh lại số bảng; đo khuôn T (13–15 tr); `/code-review high`; PR; đóng #62–#64, #66–#68.
+
+## 2026-11-25 – Luận văn: khôi phục phần lõi của 3.1, 3.5, 3.6 (chương 3, bước 1b)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** trên nhánh `docs/tr8-thesis-ch3`, so từng mục với bản base trước lượt cắt 24/11 (3.1: `fbe651b`, 3.5: `d14e6e5`, 3.6: `6e63ad5`) và đưa lại phần lý do. 3.1: ba yêu cầu kéo nhau được nêu tên; sáu việc nền tảng phải làm thành danh sách và cột "Việc" của Bảng 3.1; lý do TPOT 100 ms; lý do giữ một ngưỡng TTFT 2,5 s cho cả cảnh báo và nghiệm thu; lý do không áp 95% cho KB2 và chỉ tính pha duy trì của KB3. 3.5: burn rate 14,4 của SRE Workbook và lý do rút cửa sổ; mốc 20% trùng định nghĩa page giả nhưng khác nguồn; định nghĩa page và ticket; cột "Lý do của điều kiện" của Bảng 3.5a; định tuyến của Alertmanager (page nhắc mỗi giờ, warning/info của chart không gửi); khung runbook; chỉ sửa cấu hình qua Git. 3.6: hai câu hỏi của đánh giá; lý do số đo hiệu năng chỉ lấy từ VM thuê; lý do không dùng closed-loop; độ dài prompt; lý do đỉnh 0,75 × N × C; lý do thời lượng từng pha; hai lượt chỉ khác cấu hình; cách báo chỉ số đề cương; GPU-giờ không thổi phồng mức tiết kiệm; lý do chấm cảnh báo độc lập; lý do LT chạy ở máy nhà và simulator. Cập nhật dòng 3.1, 3.5, 3.6 của `nguon-tu-lieu.md`.
+- **Decision:** D119. Không khôi phục bảng truy vết 5 cột và bảng mã định danh của bản base: bảng truy vết đầy đủ đã ở Kế hoạch §11.1, danh mục mã ở phần đầu quyển; cột "Việc" giữ phần truy vết mà dàn ý §11.1 nêu. Không khôi phục các phần đã ghi nơi chứa ở chương 4, 5 và phụ lục (ma trận 17 lượt, bảng chỉ số, bảng VH, bảng LT, chi tiết ĐG3, ví dụ runbook, Watchdog).
+- **Results:** văn xuôi theo `kiem_van.py`: 3.1 tăng từ 314 lên 666 chữ, 3.5 từ 681 lên 942, 3.6 từ 670 lên 1.207; 0 điểm cần xem ở cả ba file. `lychee --offline --include-fragments 'docs/luan-van/*.md'`: 0 lỗi. Chưa đo trang khuôn T.
+- **Deviations:** dàn ý §11.1 ghi "bảng mã định danh" ở 3.1; bảng này nằm ở danh mục đầu quyển (D119).
+- **Links:** nhánh `docs/tr8-thesis-ch3` (chưa PR); `docs/luan-van/03-01-yeu-cau-chi-tieu.md`, `03-05-giam-sat-slo-canh-bao.md`, `03-06-thiet-ke-danh-gia.md`, `nguon-tu-lieu.md`.
+- **Thesis:** chương 3. Còn lại cho bước 2: kết chương, đánh lại số bảng, đo khuôn T (13–15 tr), `/code-review high`, PR, đóng #62–#64, #66–#68.
