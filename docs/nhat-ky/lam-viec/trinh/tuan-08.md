@@ -169,3 +169,21 @@
 - **Deviations:** băng thông 288 và 448 GB/s là thông số của NVIDIA, chưa có mục trong `tai-lieu.bib`; ghi trong comment nguồn, thêm khi ghép chương. Các file 5.3–5.6 trên nhánh vẫn dùng dạng comment cũ (nêu tên công cụ soát, thiếu comment thông điệp).
 - **Links:** nhánh `docs/tr8-thesis-ch5-drafts` (chưa PR); `docs/luan-van/05-01-moi-truong-dieu-kien-do.md`, `docs/luan-van/05-02-nang-luc-mot-replica.md`.
 - **Thesis:** §5.1, §5.2, §5.6 (bảng LT), §5.7 (C thô do bước 0,5; V2 không đo TPOT 1 request; giả thuyết LT1 chưa kiểm).
+
+## 2026-11-24 – Luận văn: bản base đầy đủ mục 5.5 Kịch bản vận hành (VH1–VH6, graceful shutdown)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Gộp `05-05b-vh4-vh6.md` vào `05-05-kich-ban-van-hanh.md` (`git mv`), giữ nguyên chữ phần VH4, VH6, thêm đoạn mở mục, VH1 (dẫn chéo 5.3), VH2 kèm ca đối chứng VH2c, VH3, VH5 và tiểu mục 5.5.7 graceful shutdown kèm ca đối chứng grace 5 s. Số tiểu mục theo mã kịch bản (5.5.k = VHk).
+  2. Số lấy từ `runs/v2-vm/ops-vh*/summary.json` và `timeline.json`, `experiments/ops/vh.py`, nhật ký Quang tuần 07 (16/11, 18/11, 19/11), `van-hanh.md` (06/11, 09/11, 16/11). Bản nháp do agent soạn; một lượt soát độc lập đối chiếu từng số với nguồn.
+  3. Đo trang, cắt về ngân sách, soát văn bằng `kiem_van.py`, soát độc lập rồi sửa, đo lại.
+- **Decision:** bỏ bảng kết quả VH2/VH3 (5 dòng) khỏi thân bài, vì với bảng mục 5.5 đo 3,93 trang khuôn B so với ngân sách 3 (D96). Số của bảng đã có trong văn xuôi hoặc comment nguồn, nên bảng chuyển sang Phụ lục E. Số request của VH2, VH3 là của cả lượt tải (1.200–2.400 s), không phải của khoảng rolling update, nên không đặt cạnh thời gian rollout. Kết quả drain trên simulator (22,1 s) bỏ khỏi thân bài vì chỉ kiểm logic script.
+- **Results:**
+  - VH2 (V2, 1,75 req/s): ca 1 replica rolling update 141 s, ca 4/4 GPU `maxSurge: 0` 372 s, ca đối chứng `maxSurge: 1` kẹt sau 300 s với 1 pod Pending; cả ba 0 lỗi (2.077 / 4.229 / 2.077 request cả lượt).
+  - VH3: xoá pod khi có 2 pod, thay thế Ready sau 67,4 s, 0 lỗi / 1.351; kill tiến trình con: Ready lại sau 67,4 s nhưng 129 lỗi / 1.041 (117 lỗi kết nối).
+  - VH5: 8 phút 22 giây từ VM trắng (bấm tay, 1 lần). Graceful shutdown ở nhà: 144/144 stream, ca grace 5 s cắt 48/48.
+  - Đo trang: 2,41 trang khuôn A, 2,93 trang khuôn B (ngân sách 3); 1.171 chữ văn xuôi, không bảng. `kiem_van.py` 0 điểm; lychee `docs/luan-van/` 0 lỗi.
+- **Incidents:** soát độc lập báo 10 điểm, đều đã sửa. Nặng nhất: 5.5.7 khẳng định mỗi lần tắt pod giữ GPU tới 3 phút, trong khi VH2b trên V2 thay 4 pod (`maxSurge: 0`, pod mới phải chờ GPU của pod cũ) trong 371,6 s, khoảng 93 s mỗi pod, gần bằng cold start L2. Như vậy pod cũ trên V2 có lẽ đã thoát sau khoảng 15–20 s, khác với ở nhà. Câu đó giờ chỉ nói về máy nhà và nêu quan sát trên V2 như một suy luận chưa kiểm bằng log. Các điểm khác: rollout được kích hoạt bằng annotation trong pod template, không phải annotation của Deployment; làm tròn thời gian ≥ 100 s về số nguyên (sửa cả 104,5 → 104 s ở 5.6); câu lồng ", tức"; trộn số đo với suy luận trong một câu; đoạn mở mục dạng "Mục này…"; VH4 lặp điều kiện tải của đoạn mở; nhãn simulator cho drain; "mọi tiến trình" sửa thành tiến trình con.
+- **Deviations:** SLO trong lúc rolling update (tiêu chí VH2 ở Môi trường §13) chưa tính: chưa có script tính SLO theo mốc của VH2 (`vh4_windows.py` chỉ nhận mốc của VH4). Cảnh báo trong các lượt VH2–VH4 không được lưu, nên vế "có cảnh báo" của VH2c và VH3 chưa kiểm được.
+- **Links:** nhánh `docs/tr8-thesis-ch5-drafts` (chưa PR); `docs/luan-van/05-05-kich-ban-van-hanh.md`, `docs/luan-van/05-06-bang-nghiem-thu.md`, `docs/luan-van/nguon-tu-lieu.md`.
+- **Thesis:** §5.5; §5.7 (vh3-kill có lẽ chỉ 1 pod; hành vi SIGTERM của vLLM trên V2 khác ở nhà, chưa kiểm bằng log; không lưu cảnh báo trong VH2–VH4); §4.5 (VH2 trên VM kích hoạt qua annotation, không qua Git).

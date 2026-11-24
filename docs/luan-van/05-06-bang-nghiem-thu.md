@@ -26,7 +26,7 @@ Mục này đối chiếu kết quả của các mục 5.2–5.5 với các yêu
 | N4. An toàn khi thay đổi | Must | 0 lỗi, kể cả lúc 1 replica | Đạt |
 | N5. Cold start | Should | L2 bằng 25,3% L0 (≤ 50%) | Đạt |
 | N6. Tự phục hồi | Must | Thay pod 67,4 s; fallback 16,8 s; dựng lại như F4 | Đạt |
-| N7. Quan sát được | Should | 104,5 s (≤ 5 phút); 0 page giả | Đạt |
+| N7. Quan sát được | Should | 104 s (≤ 5 phút); 0 page giả | Đạt |
 | N8. Tái lập, chi phí | Should | Thiếu người thứ hai, chi phí | Chưa đo |
 
 <!-- nguồn: F1: envs/cloud/serving/patch-vllm.yaml (--model=Qwen/Qwen2.5-3B-Instruct); loadgen/sender.py (CHAT_PATH); nhật ký Quang tuần 07 mục 18/11 (ĐG1 5 lượt hợp lệ; ĐG2 17/17), 19/11 (ĐG3) -->
