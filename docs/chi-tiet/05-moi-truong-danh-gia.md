@@ -5,7 +5,7 @@
 **Tóm tắt nhanh**
 - **Tầng 1 (máy nhà và simulator):** PC RTX 5060 chia thành 2 GPU replica (time-slicing) để chạy 2 pod vLLM model 0,5B, dựng k3s có GPU; máy không GPU dùng `llm-d-inference-sim`. Đây là **môi trường chức năng**: phát triển, kiểm thử, kịch bản vận hành; không dùng số liệu hiệu năng.
 - **Tầng 2 (GPU thuê):** **Vast.ai chế độ VM, thuê trọn máy 4 GPU.** Chốt 4 × RTX A4000 16 GB ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md); bản 08/10 chọn 4 × RTX 4090 nhưng không có máy VM verified vừa giá); thực tế **V2 chạy trên 4 × RTX 4060 Ti 16 GB** vì hôm đó không có máy A4000 ([Thông số §10.2](00-thong-so.md#102-gpu-thuê)). Toàn bộ ĐG1–ĐG3 đo trong **một lần thuê liền** (kế hoạch 14–15/11, dời từ 07–08/11; thực tế 18–19/11), runner chạy qua đêm. Dự phòng: máy Vast khác (4 × 4090, hoặc 2 GPU với N = 2); GCP không dùng được.
-- **Chi phí:** V0+V1 đã tốn ≈ 1,5 USD (08/11); V2 dự toán 13–15 USD trên A4000, tối đa ≈ 60 USD nếu phải dùng 4 × 4090, dưới trần 150 USD. Máy 4060 Ti của V2 giá 1,5 USD/giờ cả máy; chi phí thực: chưa có số.
+- **Chi phí:** V0+V1 đã tốn ≈ 1,5 USD (08/11); V2 dự toán 13–15 USD trên A4000, tối đa ≈ 60 USD nếu phải dùng 4 × 4090, dưới trần 150 USD. Máy 4060 Ti của V2 giá 1,5 USD/giờ cả máy (Quang báo theo trang Vast); chi phí thực: chưa có số.
 - **Đánh giá để nghiệm thu**, không phải nghiên cứu thống kê. Ba lớp: kiểm thử chức năng, **kịch bản vận hành VH1–VH6**, và **ĐG1–ĐG3** trên GPU thuê. ĐG2 so sánh S1, S4, A1, A2 dưới **3 kịch bản tải của đề cương**, tổng **17 lượt**.
 - **Kiểm chứng lý thuyết LT1–LT8** (§19): dự đoán bằng công thức có sẵn rồi đo ở nhà hoặc trên simulator, để phần xây dựng có chiều sâu phân tích mà không tốn máy thuê.
 - Số liệu báo cáo dạng **trung bình kèm min–max**, có vẽ từng lượt. Sản phẩm cuối cùng là **bảng nghiệm thu**.
@@ -139,7 +139,7 @@ Thành viên ở xa truy cập cluster nhà (có GPU thật) qua Tailscale khi c
 | GPU | VRAM | Băng thông | Decode tối đa với 7B BF16 | Nhận xét |
 |---|---|---|---|---|
 | **RTX A4000** | 16 GB | ~448 GB/s | (7B không vừa; 3B: đo 57 token/s ở batch 1, 08/11) | **Lựa chọn đã chốt** (ADR-006 C2), dùng cho V0+V1: card workstation Ampere, máy 4 GPU VM verified ~0,6 USD/giờ cả máy; chạy model 3B |
-| **RTX 4060 Ti** | 16 GB | ~288 GB/s | (7B không vừa; 3B: C = 3,5 req/s ở ĐG1 V2) | **Máy V2 thực tế** (18–19/11): card GeForce Ada Lovelace, máy 4 GPU VM 1,5 USD/giờ cả máy; thay A4000 vì hôm đó không có máy A4000 |
+| **RTX 4060 Ti** | 16 GB | ~288 GB/s | (7B không vừa; 3B: ≤ ~47 token/s lý thuyết ở batch 1, chưa đo) | **Máy V2 thực tế** (18–19/11): card GeForce Ada Lovelace, máy 4 GPU VM 1,5 USD/giờ cả máy (Quang báo theo trang Vast); thay A4000 vì hôm đó không có máy A4000; ĐG1 cho C = 3,5 req/s |
 | RTX 4090 | 24 GB | ~1.008 GB/s | ~66 token/s | Lựa chọn ban đầu (ADR-004): tới 06/11 không có máy 4 × 4090 VM verified ≤ 2 USD/giờ cả máy; nay là dự phòng (2,4–2,7 USD/giờ) |
 | RTX 3090 | 24 GB | ~936 GB/s | ~61 token/s | Dự phòng rẻ hơn; Ampere, có BF16 |
 | RTX A5000 | 24 GB | ~768 GB/s | ~50 token/s | Dự phòng; card workstation, nhiệt độ và xung nhịp ổn định hơn |
@@ -314,6 +314,8 @@ Trên Vast.ai, giá hiển thị cho mỗi máy thường đã gồm CPU và RAM
 Cột giờ và USD là dự toán ngày 08/10 cho 4 × 4090 ở 0,30–0,50 USD/GPU-giờ. Thực tế: máy 4 × A4000 ngày 08/11 giá **0,611 USD/giờ cả máy** (GPU 0,587 + ổ 0,025), V0+V1 ≈ 1,5 USD; V2 22 giờ trên máy cùng giá ≈ 13–15 USD, hoặc ≈ 55–60 USD nếu phải dùng 4 × 4090 (2,4–2,7 USD/giờ). Thực tế V2 chạy trên 4 × RTX 4060 Ti, 1,5 USD/giờ cả máy theo trang Vast; ĐG1 cộng ma trận ước 9–10 giờ ≈ 14–15 USD (ước 18/11); chi phí thực: chưa có số. Tổng dự kiến **15–65 USD** ([Thông số §11](00-thong-so.md#11-ngân-sách)).
 
 ### 6.2. Tiến trình phiên V2 theo giờ
+
+Đây là lịch dự kiến cho 14–15/11. Thực tế V2 chạy 18–19/11 trên 4 × RTX 4060 Ti; tiến trình thật ghi ở [nhật ký vận hành](../nhat-ky/van-hanh.md) từ ngày 18/11.
 
 ```text
 Thứ Bảy 14/11
@@ -659,7 +661,7 @@ Có, với năm biện pháp:
 5. Xáo trộn thứ tự các lượt, và chạy lại nhanh một mức tải giữa phiên để chắc năng lực không bị trôi ([Bài toán §12.5](01-bai-toan-yeu-cau.md#125-điều-kiện-để-so-sánh-công-bằng)).
 
 **Vì sao dùng GPU 16 GB (RTX A4000, rồi RTX 4060 Ti) và model 3B mà không dùng GPU datacenter và model 7B?**
-Vì ngân sách và vì có máy. Máy 4 × 4090 chế độ VM verified gần như không có trên Vast vào tháng 11/2026 (≥ 2,4 USD/giờ), còn máy 4 × A4000 có ở 0,6 USD/giờ và đã dựng trọn ở V0+V1. A4000 16 GB vừa model 3B với KV-cache ~7 GB. Ngày V2 (18/11) không có máy A4000 và máy 4090 không lên SSH, nên nhóm dùng 4 × RTX 4060 Ti 16 GB: cùng VRAM, băng thông thấp hơn (288 so với 448 GB/s), nên C giảm từ 4,5 (ĐG1 thử, A4000) xuống 3,5 req/s. Các cơ chế mà đồ án xử lý (metric bão hoà, cold start, scale-down, cập nhật khi hết GPU) không phụ thuộc dòng GPU hay cỡ model, vì mọi kịch bản tính theo C. Kết luận định lượng gắn với RTX 4060 Ti và 3B được ghi vào phần hạn chế ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md)).
+Vì ngân sách và vì có máy. Máy 4 × 4090 chế độ VM verified gần như không có trên Vast vào tháng 11/2026 (≥ 2,4 USD/giờ), còn máy 4 × A4000 có ở 0,6 USD/giờ và đã dựng trọn ở V0+V1. A4000 16 GB vừa model 3B với KV-cache ~7 GB. Ngày V2 (18/11) không có máy A4000 và máy 4090 không lên SSH, nên nhóm dùng 4 × RTX 4060 Ti 16 GB: cùng VRAM, băng thông thấp hơn (288 so với 448 GB/s). C giảm từ 4,5 (ĐG1 thử, A4000) xuống 3,5 req/s, vẫn cao hơn mức 2,9 req/s mà tỉ lệ băng thông thuần dự đoán. Các cơ chế mà đồ án xử lý (metric bão hoà, cold start, scale-down, cập nhật khi hết GPU) không phụ thuộc dòng GPU hay cỡ model, vì mọi kịch bản tính theo C. Kết luận định lượng gắn với RTX 4060 Ti và 3B được ghi vào phần hạn chế ([Bài toán §12.3](01-bai-toan-yeu-cau.md#123-hạn-chế-sẽ-ghi-trong-luận-văn); lựa chọn ban đầu ở [ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md)).
 
 **Hết ngân sách hoặc không thuê được máy thì sao?**
 Dự toán dưới một nửa trần ngân sách; dự phòng là máy Vast khác (4 × 4090 đắt hơn nhưng vẫn trong trần, hoặc máy 2 GPU với N = 2). Nếu vẫn không được thì dùng kế hoạch Z (§5) và cắt giảm theo thứ tự Must/Should/Could ([Thông số §5](00-thong-so.md#5-mức-độ-thành-công)).

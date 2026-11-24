@@ -294,7 +294,7 @@ KEDA gồm *operator*, đọc `ScaledObject` và tạo HPA tương ứng, và *m
 
 DCGM exporter có thể mặc định thu metric **30 s một lần** (tham số collect interval). Cần chỉnh về 5 s để so sánh công bằng với metric của vLLM.
 
-Trên GPU GeForce (RTX 4090, 5060, 4050), DCGM có thể không chạy đầy đủ và **không có** metric `DCGM_FI_PROF_*`. Khi đó dùng `nvidia_gpu_exporter` (đọc qua `nvidia-smi`, metric kiểu `nvidia_smi_utilization_gpu_ratio`). Exporter này **không gắn label pod hay namespace**, nên truy vấn phải cộng trên cả node. Đồ án dùng exporter này cả ở nhà lẫn trên VM RTX A4000 (card workstation, không phải GeForce): DCGM chưa được thử trên A4000 nên không biết `DCGM_FI_PROF_*` có dùng được không.
+Trên GPU GeForce (RTX 4090, 4060 Ti của V2, 5060, 4050), DCGM có thể không chạy đầy đủ và **không có** metric `DCGM_FI_PROF_*`. Khi đó dùng `nvidia_gpu_exporter` (đọc qua `nvidia-smi`, metric kiểu `nvidia_smi_utilization_gpu_ratio`). Exporter này **không gắn label pod hay namespace**, nên truy vấn phải cộng trên cả node. Đồ án dùng exporter này cả ở nhà lẫn trên VM RTX A4000 (card workstation, không phải GeForce): DCGM chưa được thử trên A4000 nên không biết `DCGM_FI_PROF_*` có dùng được không.
 
 ### 4.4. Vì sao GPU_UTIL bão hoà
 

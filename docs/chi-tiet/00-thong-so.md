@@ -243,12 +243,12 @@ Máy nhà là **môi trường chức năng**: không dùng số liệu hiệu n
 
 ### 10.2. GPU thuê
 
-**Vast.ai chế độ VM, 4 × RTX A4000 16 GB, thuê trọn máy** ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C2; bản mô tả 3.0 chọn 4 × RTX 4090, nhưng tới 06/11 không có máy 4 × 4090 VM verified ≤ 2 USD/giờ cả máy, còn A4000 đã chạy trọn V0+V1 ngày 08/11). Tiêu chí lọc máy, cũng là mặc định của `make find MODE=v2` (`envs/cloud/provision/vast.sh`):
+**Vast.ai chế độ VM, 4 × RTX A4000 16 GB, thuê trọn máy** ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C2; bản mô tả 3.0 chọn 4 × RTX 4090, nhưng tới 06/11 không có máy 4 × 4090 VM verified ≤ 2 USD/giờ cả máy, còn A4000 đã chạy trọn V0+V1 ngày 08/11; V2 thực tế chạy trên 4 × RTX 4060 Ti, xem đoạn "Máy V2 thực tế" dưới bảng). Tiêu chí lọc máy, cũng là mặc định của `make find MODE=v2` (`envs/cloud/provision/vast.sh`):
 
 | Tiêu chí | Ngưỡng |
 |---|---|
 | Chế độ | VM (`vms_enabled=true`), on-demand, **verified** (không `is_vm_deverified`), ngoài Trung Quốc |
-| GPU | Máy có **đúng 4** RTX A4000, thuê cả 4 |
+| GPU | Máy có **đúng 4** RTX A4000, thuê cả 4 (V2 thực tế: 4 × RTX 4060 Ti) |
 | Độ tin cậy | ≥ 0,98 |
 | CPU / RAM | ≥ 8 + 3N = **20 vCPU** (4 pod vLLM × 3 lõi + máy tạo tải 3 lõi + hệ thống; máy V1 15 vCPU không đủ) / ≥ 24 GB mỗi GPU |
 | Ổ đĩa | ≥ 130 GB (image 9 GB + model 6 GB + TSDB), đọc tuần tự ≥ 500 MB/s, đo bằng `make probe` |
@@ -257,7 +257,7 @@ Máy nhà là **môi trường chức năng**: không dùng số liệu hiệu n
 
 **Dự phòng** (không còn GCP: quota bị từ chối 05/11): (a) 4 × RTX 4090 VM, khoảng 2,4–2,7 USD/giờ cả máy, vẫn dưới trần ngân sách; (b) máy 2 GPU (2 × A4000 hoặc 2 × 5060 Ti) với N = 2 và N3 viết lại theo N ở ADR-003. Kế hoạch Z (không thuê được gì): [Môi trường §5](05-moi-truong-danh-gia.md#5-dự-phòng-và-kế-hoạch-z).
 
-**Máy V2 thực tế (18–19/11):** VM **4 × RTX 4060 Ti 16 GB** ở Canada, thay cho A4000 vì hôm đó không có máy A4000 và máy 4 × 4090 thuê trước không lên SSH ([nhật ký của Quang](../nhat-ky/lam-viec/quang/tuan-07.md), 18/11). `make probe`: 61 vCPU (EPYC 7713), RAM 197 GB, ổ còn trống 120 GB, ghi tuần tự 972 MB/s, tải Hugging Face 222,3 MB/s; giá 1,5 USD/giờ cả máy theo trang Vast. Băng thông bộ nhớ của 4060 Ti khoảng 288 GB/s, thấp hơn 448 GB/s của A4000, nên ĐG1 trên máy này cho C = 3,5 req/s, thay cho 4,5 req/s của ĐG1 thử trên A4000. Mọi số đo V2 gắn với máy này.
+**Máy V2 thực tế (18–19/11):** VM **4 × RTX 4060 Ti 16 GB** ở Canada, thay cho A4000 vì hôm đó không có máy A4000 và máy 4 × 4090 thuê trước không lên SSH ([nhật ký của Quang](../nhat-ky/lam-viec/quang/tuan-07.md), 18/11). `make probe`: 61 vCPU (EPYC 7713), RAM 197 GB, ổ còn trống 120 GB, ghi tuần tự 972 MB/s, tải Hugging Face 222,3 MB/s; giá 1,5 USD/giờ cả máy theo trang Vast. ĐG1 trên máy này cho C = 3,5 req/s, thấp hơn 4,5 req/s của ĐG1 thử trên A4000. Băng thông bộ nhớ của 4060 Ti (khoảng 288 GB/s, so với 448 GB/s) chỉ giải thích một phần: tỉ lệ băng thông thuần dự đoán 4,5 × 288/448 ≈ 2,9 req/s, còn số đo cao hơn. Mọi số đo V2 gắn với máy này.
 
 ---
 

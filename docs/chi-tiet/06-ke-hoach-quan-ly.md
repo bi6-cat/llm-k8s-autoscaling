@@ -4,9 +4,9 @@
 
 **Tóm tắt nhanh**
 - Kế hoạch **9 tuần** từ 08/10 đến hạn nộp khoảng **08/12/2026**. Mỗi tuần có việc chính, sản phẩm kiểm chứng được và **điểm dừng** khi chậm.
-- W1–W4 dành cho xây dựng và vận hành thử ở nhà và trên simulator, xen hai phiên thuê nhỏ (V0, V1). **Toàn bộ đánh giá trên GPU thuê dồn vào một lần thuê liền 14–15/11** (V2, dời từ 07–08/11 ngày 04/11, xem [§1.1](#11-điều-chỉnh-ngày-04112026)). **Đóng băng dữ liệu muộn nhất 22/11**; sau đó chỉ viết.
+- W1–W4 dành cho xây dựng và vận hành thử ở nhà và trên simulator, xen hai phiên thuê nhỏ (V0, V1). **Toàn bộ đánh giá trên GPU thuê dồn vào một lần thuê liền 14–15/11** (V2, dời từ 07–08/11 ngày 04/11, xem [§1.1](#11-điều-chỉnh-ngày-04112026); thực tế chạy 18–19/11 trên 4 × RTX 4060 Ti). **Đóng băng dữ liệu muộn nhất 22/11**; sau đó chỉ viết.
 - Khối lượng phạm vi rút gọn khoảng **169–251 người-giờ**, vừa quỹ giờ khi mỗi người làm khoảng 12–15 giờ/tuần. Phân công theo tính năng dọc: Quang "chạy được trên GPU", Trình "tự scale và đo được" ([§5.1](#51-phân-công)).
-- Sổ rủi ro gồm **28 rủi ro**; rủi ro lớn nhất là **thiếu thời gian viết**, **không có máy VM 4 GPU đạt tiêu chí vào đúng cuối tuần 14–15/11**, và **đồ án bị xem là thiên về cài đặt** (R21).
+- Sổ rủi ro gồm **28 rủi ro**; rủi ro lớn nhất là **thiếu thời gian viết**, **không có máy VM 4 GPU đạt tiêu chí vào đúng cuối tuần 14–15/11** (đã xảy ra: V2 chạy 18–19/11 trên máy khác loại), và **đồ án bị xem là thiên về cài đặt** (R21).
 - 7 sản phẩm bàn giao kèm tiêu chí nghiệm thu; luận văn khoảng 60–75 trang thân bài theo khuôn T (định hướng, trần 85), chương 4 "Triển khai và vận hành" dài nhất; 13 hướng mở rộng.
 
 ---
@@ -19,7 +19,7 @@
 
 | Tuần | Ngày | Tuần | Ngày |
 |---|---|---|---|
-| W1 | 08/10 – 11/10 | W6 | 09/11 – 15/11 (V0+V1 gộp; **V2 14–15/11**) |
+| W1 | 08/10 – 11/10 | W6 | 09/11 – 15/11 (V0+V1 gộp; **V2 14–15/11**, thực tế 18–19/11 ở W7) |
 | W2 (M1) | 12/10 – 18/10 (~~V0~~) | W7 | 16/11 – 22/11 (**đóng băng dữ liệu 22/11**) |
 | W3 | 19/10 – 25/10 | W8 (M4) | 23/11 – 29/11 |
 | W4 (M2) | 26/10 – 01/11 (~~V1~~) | W9 | 30/11 – 06/12 |
@@ -41,7 +41,7 @@ Cả nhóm đã đồng ý dời V2. Lý do: tới 04/11, M1 mới đạt 2/7 m�
 |---|---|---|
 | Xây dựng và vận hành thử | xong 01/11 | **làm local trước** (kind + simulator, rồi cluster nhà), xong trước 13/11 |
 | V0, V1 | 17–18/10, 31/10–01/11 (không diễn ra) | gộp thành một phiên ngắn trước V2, dự kiến 11–12/11 |
-| V2 | 07–08/11 | **14–15/11** |
+| V2 | 07–08/11 | **14–15/11** (thực tế 18–19/11) |
 | V3 dự phòng | 14–15/11 | **mất**: V2 hỏng thì áp dụng các dòng còn lại của §8 |
 | Đóng băng dữ liệu (M3) | 15/11, muộn nhất 22/11 | **22/11**, không lùi thêm |
 | Chọn cloud (ADR-004 K6) | 18/10 | chưa chốt, để sau phần local, nhưng phải xong trước phiên V0+V1 |
@@ -118,7 +118,7 @@ Việc gắn với máy: các bước cài đặt trên PC (driver, k3s server) 
 
 ```text
 Thử vLLM trên 5060 (W1) ─► k3s + Argo CD + giám sát ở nhà (W2) ─► A1/A2, graceful shutdown, cảnh báo (W3)
-      ─► rolling update, runbook, runner (W4) ─► V2: toàn bộ đánh giá (14–15/11, dời từ 07–08/11) ─► phân tích (W6) ─► chương 5 (W7)
+      ─► rolling update, runbook, runner (W4) ─► V2: toàn bộ đánh giá (14–15/11, dời từ 07–08/11; thực tế 18–19/11) ─► phân tích (W6) ─► chương 5 (W7)
 Simulator: A2, dashboard, cảnh báo, runner (W1–W4, song song) ──────────────────────┘
 Tìm offer Vast (W1–W2) ─► V0 (17–18/10) ─► chốt cloud (18/10) ─► V1 (31/10–01/11) ─┘
 Viết chương 2–4 (W5–W7) ─► bản thảo (29/11) ─► bản cuối (06/12)
