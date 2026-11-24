@@ -133,3 +133,16 @@
 - **Results:** `/code-review high` trên diff: 5 điểm nhỏ (§3.5 và §9 nói khác nhau về chỗ ghi việc dùng AI; quy tắc "kết quả cụ thể có số" của Tóm tắt chưa chuyển sang mục 1.3; §1 chưa ghi chỗ đặt đoạn khai báo nếu được yêu cầu; "khuôn T" ở §5.1 chưa có link; thiếu dòng Thesis), đã sửa cả 5.
 - **Links:** `docs/luan-van/quy-tac-viet.md` (§1, §3.5, §9); `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§5.1, §11.1).
 - **Thesis:** phần đầu quyển (không có Tóm tắt, không có Lời cam đoan); Mở đầu; mục 1.3 Đóng góp.
+
+## 2026-11-24 – Luận văn: soát cách trình bày theo luận văn ngoài cùng đề tài
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** Trình đề nghị tìm đồ án được đánh giá cao, cùng chủ đề, để học cách trình bày. Tìm 18 lượt trên web, cả tiếng Anh và tiếng Việt. Tải ba luận văn thạc sĩ công khai, đọc tóm tắt, chương mở đầu, chương đánh giá và kết luận: Henschel (Aalto 2021, autoscaling trên Kubernetes theo hiệu năng và chi phí), Mitra (ĐH Groningen 2021, scale GPU inference theo GPU utilization so với in-flight request), Lim (Aalto 2025, LLM inference qua RabbitMQ và KEDA). Đối chiếu với `docs/luan-van/quy-tac-viet.md` và bản nháp chương 3, 5.
+- **Decision:**
+  - Chỉ nhận dấu hiệu chất lượng kiểm được (giải thưởng, điểm công khai), vì điểm luận văn gần như không được công bố. Bài duy nhất thoả là van der Wiel (VU Amsterdam 2022, HPA và năng lượng trên Kubernetes), giải nhất VERSEN Best MSc Thesis in Software Engineering 2023. Ba bài đã đọc được chọn vì đề tài gần, không có bằng chứng về điểm.
+  - Quy tắc văn phong hiện có đã chặt hơn cả ba bài: cả ba viết kết luận không kèm số, một bài dùng nhiều cụm sáo ở mở bài. Nhóm nhận năm điểm trình bày: đưa hình đánh đổi GPU-giờ và SLO attainment (C4) trở lại thân bài 5.3; đoạn mở chương 3–5 nêu luôn câu trả lời; chỉ số tự định nghĩa kèm một ví dụ số; khuyến nghị viết theo điều kiện, lựa chọn và căn cứ; hạn chế nêu kết luận bị ảnh hưởng và hướng lệch. Thêm một điểm: kết luận chương 6 kèm số.
+  - Không lấy khung câu hỏi nghiên cứu (Q1–Q3) của Mitra. Bố cục giữ yêu cầu F/N, bảng nghiệm thu và ba thông điệp TĐ1–TĐ3.
+  - Để sau M4, không bắt buộc: tính chỉ số elasticity của SPEC Research Group (θU, θO, τU, τO; Herbst và cộng sự, 2016) từ dữ liệu V2 đã có.
+- **Incidents:** bản PDF của van der Wiel trên `research.vu.nl` trả về trang kiểm tra của Cloudflare khi tải bằng `curl`, và lỗi 403 khi tải bằng công cụ fetch; chưa đọc được. Không tìm thấy đồ án tiếng Việt cùng chủ đề nào có công bố điểm hay giải.
+- **Links:** [Henschel](https://aaltodoc.aalto.fi/items/6d0f685e-be6f-4bd4-80ea-e2b678651261) · [Mitra](https://fse.studenttheses.ub.rug.nl/26121) · [Lim](https://aaltodoc.aalto.fi/items/bd6736dd-0acb-47ec-b825-2d20db21cb35) · [van der Wiel](https://research.vu.nl/en/publications/the-impact-of-scalability-on-energy-consumption-in-the-cloud/) · [tin giải VERSEN](https://vu.nl/en/news/2023/r-van-der-wiel-receives-the-best-master-thesis-award-in-software-engineering).
+- **Thesis:** quy tắc viết §2, §5; mục 3.6 (ví dụ số cho chỉ số), 5.3 (Hình C4), 5.6 (khuyến nghị), 5.7 và 6.2 (hạn chế), chương 6.
