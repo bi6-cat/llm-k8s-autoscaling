@@ -150,3 +150,22 @@
 - **Deviations:** phép so với cluster nhà (LT4 16/11, model 0,5B) bỏ khỏi thân bài để giữ ngân sách. Ý này ghi trong comment đầu file, để dùng cho bảng LT1–LT8 (5.6) hoặc Phụ lục E.
 - **Links:** nhánh `docs/tr8-thesis-ch5-drafts` (chưa PR); `docs/luan-van/05-04-cold-start.md`; `nguon-tu-lieu.md` §6.
 - **Thesis:** §5.4, §5.6 (N5, LT4), §5.7 (hạn chế ĐG3); Phụ lục E (số từng lượt trong comment đầu 5.4).
+
+## 2026-11-24 – Luận văn: bản base mục 5.1 và 5.2 (môi trường đo, năng lực một replica)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** viết `05-01-moi-truong-dieu-kien-do.md` (phiên V2: phần cứng, phần mềm, tham số request, lý do đổi máy, thứ tự đo, điều kiện hợp lệ, chi phí) và `05-02-nang-luc-mot-replica.md` (ĐG1, Bảng 5.2a, LT1–LT3). Nguồn: `capacity.json`, `matrix-dg1-v2.yaml`, nhật ký Quang tuần 06–07, `van-hanh.md` LT1–LT3, log vLLM và `checks.json` của 22 lượt. Soát số độc lập trên cả hai file, sửa 10 điểm, rồi cắt lại về ngân sách.
+- **Decision:** 5.1 chỉ nêu giá trị xấu nhất của các điều kiện hợp lệ, không lập bảng, vì bảng ngưỡng đã có ở 3.6. Chi phí thực tế V2 ghi là chưa có (chưa đối chiếu hoá đơn), so sánh chi phí dùng GPU-giờ theo giả định G1. Giả thuyết "C bám TPOT ở batch lớn" chỉ ghi ở mức "có thể": C ở hai máy chỉ biết với bước 0,5 req/s, nên tỷ lệ C thật nằm trong 1,13–1,43, và phiên A4000 chạy vLLM với 2 lõi CPU.
+- **Results:**
+  - ĐG1 (RTX 4060 Ti, model 3B): C = 3,5 req/s, B* = 46,3, threshold A2 = 37. Ở λ = 4: SLO attainment 28,5%, đang chờ TB 12,4.
+  - LT1: TPOT với 1 request chậm hơn cận dưới weights ÷ băng thông khoảng một phần tư (nhà 8,68 so với 6,9 ms; A4000 17,2 so với 13,8 ms). V2 đo C cao hơn tỷ lệ băng thông thuần (2,893 req/s) 21,0%.
+  - LT2: dự đoán 36.864 B/token, V2 đo 36.843 B/token (7,26 GiB cho 211.584 token), lệch 0,06%.
+  - LT3: điểm gãy giữa λ = 3,5 và 4, lúc số request đang chạy chạm 64 (63,5 ở λ = 4). Throughput bão hoà suy ra từ TPOT p50 62,6 ms khoảng 4,0 req/s. TPOT p50 tăng 53,6% khi B tăng từ 16 lên 46.
+  - Điều kiện hợp lệ, giá trị xấu nhất trên 22 lượt: send lag p99 5,98 ms, CPU máy tạo tải 43,6%, khoảng trống scrape 5,0 s.
+  - Đo trang (khuôn B, ngân sách D96): 5.1 0,99 trang (1), 5.2 1,49 trang (1,5). `kiem_van.py`: 5.2 0 điểm; 5.1 1 điểm ngày tháng ở đoạn đầu, chủ ý theo quy-tac-viet §5. lychee hai file đạt.
+- **Incidents:**
+  - Soát số tìm ra: LT1 ghi "chậm khoảng 20%" trong khi số trong câu cho 25–26%; 5.1 viết `--max-num-seqs` như giới hạn request nhận vào, trong khi đó là giới hạn batch; LT2 viết "lệch dưới 0,1% như ở nhà", nhưng ở nhà vLLM làm tròn tới 0,1 GiB; comment đầu file nêu tên công cụ soát, trái quy-tac-viet §9; thiếu comment thông điệp (§2). Đã sửa cả năm điểm.
+  - Hai lần lệnh Bash bị treo vì một lệnh `cat >` thừa chờ stdin. Đã dừng tác vụ và chạy lại.
+- **Deviations:** băng thông 288 và 448 GB/s là thông số của NVIDIA, chưa có mục trong `tai-lieu.bib`; ghi trong comment nguồn, thêm khi ghép chương. Các file 5.3–5.6 trên nhánh vẫn dùng dạng comment cũ (nêu tên công cụ soát, thiếu comment thông điệp).
+- **Links:** nhánh `docs/tr8-thesis-ch5-drafts` (chưa PR); `docs/luan-van/05-01-moi-truong-dieu-kien-do.md`, `docs/luan-van/05-02-nang-luc-mot-replica.md`.
+- **Thesis:** §5.1, §5.2, §5.6 (bảng LT), §5.7 (C thô do bước 0,5; V2 không đo TPOT 1 request; giả thuyết LT1 chưa kiểm).
