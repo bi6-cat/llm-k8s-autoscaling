@@ -1,10 +1,12 @@
-<!-- Mục đích: mục 5.6, bảng nghiệm thu F1–F7, N1–N8 và khuyến nghị cấu hình. Người viết: Trình. Nháp do agent soạn ngày 21/11/2026 từ gói dữ liệu V2 (runs/v2-vm/), nhật ký và docs/chi-tiet/00-thong-so.md; một agent khác đối chiếu từng số; 24/11 cắt về ngân sách 2 trang (D96): gộp hai bảng F, N thành một bảng 4 cột (F và N chung một bảng như Bảng 3.1 của mục 3.1, D95), bỏ cột Ngưỡng, Ghi chú và danh sách định nghĩa mức kết luận; Trình chưa đọc lại. -->
+<!-- Mục đích: mục 5.6, bảng nghiệm thu F1–F7, N1–N8 và khuyến nghị cấu hình. Người viết: Trình. Nháp ngày 21/11/2026 từ gói dữ liệu V2 (runs/v2-vm/), nhật ký và docs/chi-tiet/00-thong-so.md; 24/11 cắt về ngân sách 2 trang (D96): gộp hai bảng F, N thành một bảng 4 cột (F và N chung một bảng như Bảng 3.1 của mục 3.1, D95), bỏ cột Ngưỡng, Ghi chú và danh sách định nghĩa mức kết luận; Trình chưa đọc lại. Quy ước: docs/luan-van/README.md, docs/luan-van/quy-tac-viet.md -->
+<!-- Thông điệp: (1) mọi yêu cầu và chỉ tiêu mức Must đạt hoặc đạt một phần trong phiên đo V2, điểm yếu nhất là tải tăng đột ngột; (2) phần còn thiếu nằm ở khâu kiểm chứng (rollback qua Git, dashboard trên GPU thật, Telegram thật, N8), không nằm ở chức năng; (3) khuyến nghị A2 làm cấu hình mặc định, đánh đổi là SLO attainment khi tải tăng đột ngột. -->
+<!-- Soát số: 24/11 · Soát văn phong: 24/11 · Người viết đọc lại: chưa -->
 <!-- Số bảng tạm theo mục (Bảng 5.6a) vì các mục 5.1–5.5 chưa có; đánh lại khi ghép chương. Bảng đầy đủ kèm cột Ghi chú và số từng lượt (bản nháp trước khi cắt, commit bb14810) dùng cho Phụ lục E. Ý đã cắt khi rút gọn 24/11: KB2 chỉ báo cáo SLO 79,4–80,7% (3 lượt); N2a gồm phát hiện 14,7–16,4 s và tạo pod tới Ready 65–66 s; N3 ở KB2: 71,8–75,2% GPU-giờ của S4, kém 19,3–20,6 điểm phần trăm, ở KB3: 91,7–92,3%, chênh 0 điểm; N4: 1.147–1.245 request trong pha giảm, rolling update 2.077 và 4.229 request; N6: xoá pod 0 lỗi / 1.351 request, fallback 0 lỗi / 1.263 request; N7: lúc A2 × KB3 page, tỷ lệ request xấu theo log client là 27% và 38%; F5: số panel 20, 9, 16; giá thuê V2 1,5 USD/giờ (ước tính); mọi số đo mới có trên VM thuê, các kịch bản vận hành ở máy nhà chưa chạy (đưa vào 5.7). -->
 <!-- Còn thiếu so với Kế hoạch §11.1 và nguon-tu-lieu.md §2 (dòng 5.6): bảng kiểm chứng LT1–LT8 (dự đoán, số đo, độ lệch, giải thích). Mục hiện đo 1,95 trang khuôn B (ngân sách 2), nên khi thêm bảng LT thì hoặc đưa bảng vào Phụ lục E kèm một câu tóm tắt ở đây, hoặc lấy khoảng 0,5 trang từ mục khác của chương 5. -->
 
 ## 5.6. Bảng nghiệm thu và khuyến nghị cấu hình
 
-Mục này đối chiếu kết quả của các mục 5.2–5.5 với các yêu cầu và chỉ tiêu đặt ra ở mục 3.1, rồi rút ra khuyến nghị chọn cấu hình autoscaling. Mọi số đo lấy từ phiên đo V2 (mục 5.1).
+Bảng nghiệm thu đối chiếu kết quả của các mục 5.2–5.5 với các yêu cầu và chỉ tiêu đặt ra ở mục 3.1; từ đó rút ra khuyến nghị chọn cấu hình autoscaling. Mọi số đo lấy từ phiên đo V2 (mục 5.1).
 
 ### 5.6.1. Nghiệm thu yêu cầu và chỉ tiêu
 

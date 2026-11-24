@@ -201,3 +201,10 @@
 - **Incidents:** bản đầu dài 703 chữ (2 trang); cắt ba lần. Soát độc lập báo 10 điểm, đều đã sửa. Các điểm chính: bỏ sót giới hạn VH4, VH6 mà 05-05 hẹn đưa vào 5.7; kết chương chỉ nêu Service chia đều là nguyên nhân KB2, bỏ cold start mà 5.3 nêu ngang hàng; "cảnh báo kêu ở mọi lượt vi phạm" thiếu phạm vi "17 lượt so sánh cấu hình"; giải thích sai nguyên nhân C thô (do bước 0,5, không do mỗi mức 1 lượt); "LT1 chưa kiểm" mâu thuẫn 5.2 (đã kiểm ở nhà và A4000); câu mở "mọi số đo từ một phiên" sai vì chương có số ở nhà và simulator; "khâu gửi tin chưa kiểm" mâu thuẫn 5.5.6 (đã kiểm trên simulator).
 - **Links:** nhánh `docs/tr8-thesis-ch5-drafts` (chưa PR); `docs/luan-van/05-07-han-che-phep-do.md`.
 - **Thesis:** §5.7, kết chương 5; §6.2 nhận phần hạn chế của hệ thống (ghi trong comment đầu file).
+
+## 2026-11-24 – Luận văn: chuẩn hoá comment đầu các file chương 5, kết thúc lượt tự chạy 4 giờ
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** Lượt tự chạy 08:33 xong 7 vòng: cắt 5.3, 5.5b, 5.6 về ngân sách D96; viết base 5.1, 5.2, 5.4, 5.5, 5.7. Vòng 8 hết quota giữa lúc chuẩn hoá comment đầu file 5.3–5.7, để lại phần sửa chưa commit; script thoát mà không ghi dòng dừng. Phiên sau soát và commit phần đó: bỏ tên công cụ soát, thêm `<!-- Thông điệp -->` (5.3, 5.4, 5.6), đưa dòng soát về dạng `Soát số · Soát văn phong · Người viết đọc lại`, đổi câu mở 5.3 và 5.6 khỏi dạng "Mục này…" (quy-tac-viet §2).
+- **Results:** đo lại khuôn B: 5.3 = 3,99 trang (bản trước khi sửa cũng 3,99; ngân sách 4), 5.6 = 1,95 trang (ngân sách 2). kiem_van còn 1 điểm ở đoạn mở 5.6 (2 câu), có từ trước, do mâu thuẫn quy-tac-viet §2 (đoạn mở 1–2 câu) với §3.2 (đoạn 3–7 câu), chưa sửa.
+- **Links:** `docs/luan-van/05-03-…`, `05-04-…`, `05-06-…`, `05-07-…`; tổng kết lượt `.work/auto/runs/20261124-0833/` (cục bộ).
