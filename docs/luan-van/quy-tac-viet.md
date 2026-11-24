@@ -14,9 +14,9 @@ Chưa có khuôn của trường. Đến khi có, viết theo các thông lệ p
 
 | Mục | Thông lệ tạm dùng | Ghi chú |
 |---|---|---|
-| Độ dài | 55–65 trang thân bài; số trang từng chương, và từng mục của chương 3 và 5, ở Kế hoạch §11.1 | Không tính phụ lục. Ngân sách tính theo **trang, gồm cả bảng và hình**. Dàn trang thử ngày 23/11 trên A4, Times New Roman, giãn 1,5 dòng, chữ trong bảng nhỏ hơn văn xuôi 1 pt; hai khuôn: cỡ 13 pt, lề trên/dưới/trái/phải 2/2/3/2 cm; cỡ 14 pt, lề 3,5/3/3,5/2 cm. Kết quả: văn xuôi khoảng 410–510 chữ mỗi trang; 17 bảng của các bản nháp chương 3 chiếm trung bình 0,5–0,75 trang mỗi bảng. Lập kế hoạch theo khoảng 450 chữ văn xuôi mỗi trang; đo lại khi có khuôn của trường |
+| Độ dài | Theo nội dung lõi; định hướng 70–90 trang thân bài, trần 100; khoảng trang của từng chương ở cột "Trang" của bảng dàn ý, Kế hoạch §11.1 | Không tính phụ lục. Không có ngân sách trang cho từng mục: mục dài hay ngắn theo phần nội dung 20/80 của nó (§3.1). Độ dài đo theo **trang, gồm cả bảng và hình**. Dàn trang thử ngày 23/11 trên A4, Times New Roman, giãn 1,5 dòng, chữ trong bảng nhỏ hơn văn xuôi 1 pt; hai khuôn: khuôn A cỡ 13 pt, lề trên/dưới/trái/phải 2/2/3/2 cm; khuôn B cỡ 14 pt, lề 3,5/3/3,5/2 cm. Kết quả: văn xuôi khoảng 410–510 chữ mỗi trang; 17 bảng của các bản nháp chương 3 chiếm trung bình 0,5–0,75 trang mỗi bảng. Lập kế hoạch theo khoảng 450 chữ văn xuôi mỗi trang; đo lại khi có khuôn của trường |
 | Phông, cỡ, giãn dòng, lề | Áp theo khuôn của trường | Chờ khuôn |
-| Cấp tiêu đề | Tối đa 3 cấp số: `3.4.1.` | Cần chia nhỏ hơn thì dùng đoạn mở bằng cụm in đậm |
+| Cấp tiêu đề | Tối đa 3 cấp số: `3.4.1.` | Khi nào đặt tiêu đề: §2. Cần chia nhỏ hơn thì dùng đoạn mở bằng cụm in đậm |
 | Trích dẫn | IEEE, đánh số `[1]` theo thứ tự xuất hiện | Pandoc tự đánh số qua `[@key]` |
 
 Thứ tự các phần của quyển (tên file dự kiến ở khung luận văn, chưa dựng):
@@ -52,6 +52,10 @@ Mỗi sự kiện chỉ được trình bày **đầy đủ ở một chỗ**; �
 - **Mục cuối "Kết chương":** 1 đoạn, nói chương rút ra điều gì và dẫn sang chương sau.
 
 Cách chia tiểu mục:
+- **Một tiêu đề phải đáng có:** nội dung dưới nó dài từ khoảng 1 trang (§1: khoảng 450 chữ văn xuôi, ít hơn khi có bảng hoặc hình), và trả lời một câu hỏi mà người đọc sẽ tra trong mục lục. Miễn cho các tiêu đề mà khung bắt buộc và vốn ngắn: "Kết chương", "Cấu trúc luận văn". Ngắn hơn thì không đặt tiêu đề: viết thành đoạn có câu chủ đề rõ (§3.1), hoặc mở đoạn bằng cụm in đậm khi có từ 3 khía cạnh song song (§3.2).
+- Mục cấp 2 dài dưới khoảng 2,5 trang thì không chia cấp 3.
+- **Tiêu đề nói nội dung hoặc kết luận**, không nói bước của khung ("Cách làm", "Kiểm chứng") hay mã kịch bản ("VH2"). Mã định danh nằm trong câu.
+- Các tiểu mục ngang hàng có độ nặng tương đương, mỗi nhóm 2–4 tiểu mục. Số tiêu đề tỷ lệ với giá trị: mục mang thông điệp TĐ1–TĐ3 nhiều nội dung nên có tiểu mục, mục ngoại vi thường không.
 - Không để một mục chỉ có một tiểu mục: đã có 3.4.1 thì phải có 3.4.2.
 - Không đặt hai tiêu đề liền nhau mà không có đoạn văn ở giữa.
 - Không kết thúc một mục bằng hình hay bảng; sau hình hoặc bảng phải có ít nhất một câu nhận xét.
@@ -67,11 +71,13 @@ Rủi ro R21 của kế hoạch là hội đồng xem đồ án thiên về cài
 5. **Sự cố và điểm lệch:** triệu chứng → nguyên nhân → cách sửa. Đây là phần cho thấy năng lực vận hành, nên đừng cắt.
 6. **Bài học hoặc khuyến nghị:** 1–2 câu.
 
+Sáu bước là **thứ tự các đoạn** trong mục, không đặt thành tiêu đề; tiêu đề của chương 4 theo cách chia tiểu mục ở §2. Sự cố viết thành đoạn ngay trong mục của thành phần gặp sự cố, rồi được gom ở bảng kết chương.
+
 ### 2.2. Trình bày quy trình làm việc và con người
 
 Chỉ mô tả quy trình đã thật sự diễn ra. Ví dụ: không viết "hai thành viên review chéo mọi thay đổi" khi thực tế không như vậy; viết đúng điều đã làm, như "mọi thay đổi đi qua PR và được CI kiểm tự động trước khi merge".
 
-- **Mục 1.4 Phương pháp và tổ chức thực hiện** (khoảng 300 chữ): làm theo vòng (thiết kế; dựng và thử trên simulator; kiểm trên máy nhà; đo trên máy thuê); kế hoạch theo tuần có mốc; phân công theo hai mảng; quản lý thay đổi bằng Git (PR, CI tự kiểm); ghi quyết định kiến trúc (ADR) và nhật ký vận hành.
+- **Phần phương pháp và tổ chức thực hiện ở mục 1.2** (khoảng 300 chữ): làm theo vòng (thiết kế; dựng và thử trên simulator; kiểm trên máy nhà; đo trên máy thuê); kế hoạch theo tuần có mốc; phân công theo hai mảng; quản lý thay đổi bằng Git (PR, CI tự kiểm); ghi quyết định kiến trúc (ADR) và nhật ký vận hành.
 - **Con người trong vòng vận hành** (mục 3.5, 4.5, 4.6): hệ thống tự xử lý việc lặp lại (scale, thay pod hỏng, fallback). Người trực vào cuộc khi có page, làm theo runbook, và quyết định những việc cần phán đoán (rollback, thêm GPU).
 - **Quyết định** viết theo kiểu ADR: "Nhóm cân nhắc A và B; chọn A vì …; đánh đổi là …".
 - **Phụ lục F** có bảng kế hoạch và phân công, kèm tên thành viên (theo mẫu của trường).
@@ -88,7 +94,7 @@ Chỉ mô tả quy trình đã thật sự diễn ra. Ví dụ: không viết "h
 - **Câu đầu đoạn là kết luận**, các câu sau là bằng chứng (số, lý do). Không dẫn dắt vòng trước khi vào ý.
 - **Một ý nói một lần.** Không kết đoạn hay kết mục bằng câu nhắc lại điều vừa nói.
 - **Thử từng câu:** bỏ câu đó thì người đọc mất gì cho một thông điệp, một yêu cầu F/N hay một quyết định thiết kế? Không mất gì thì bỏ.
-- **Cắt**, theo thứ tự này khi mục vượt ngân sách trang (§1):
+- **Cắt**, theo thứ tự này, khi một đoạn không qua phép thử ở trên, hoặc khi tổng độ dài vượt trần ở §1:
   1. bối cảnh chung mà chương 2 đã có;
   2. chuyện của chương khác: cách cài, lệnh, sự cố để chương 4; số của từng lượt để chương 5 hoặc phụ lục E;
   3. diễn biến theo thời gian không làm đổi kết luận;
@@ -222,7 +228,7 @@ Những thứ này chỉ nằm trong comment nguồn. Ngoại lệ: mục phân 
 
 - Ô ma trận viết "A2 × KB2".
 - Tối đa 4 mã trong một đoạn. Câu chủ đề viết bằng lời, không mở bằng mã.
-- Mã yêu cầu và chỉ tiêu (F1–F7, N1–N8) chỉ dùng ở bảng ánh xạ mục tiêu của mục 1.3 (kèm tên ngắn, vì mã được định nghĩa ở 3.1), ở mục 3.1, ở câu so với chỉ tiêu của chương 5 (§5) và ở bảng nghiệm thu 5.6. Chỗ khác nói bằng lời kèm số, ví dụ "thời gian phản ứng không quá 2 phút".
+- Mã yêu cầu và chỉ tiêu (F1–F7, N1–N8) chỉ dùng ở bảng ánh xạ mục tiêu của mục 1.2 (kèm tên ngắn, vì mã được định nghĩa ở 3.1), ở mục 3.1, ở câu so với chỉ tiêu của chương 5 (§5) và ở bảng nghiệm thu 5.6. Chỗ khác nói bằng lời kèm số, ví dụ "thời gian phản ứng không quá 2 phút".
 - TĐ1–TĐ3 (ba thông điệp) và HG1–HG5 (năm hướng giải) là nhãn của dàn ý (Kế hoạch §11.1), không dùng trong thân bài; trong bài nói bằng lời.
 - Tên pha viết tiếng Việt, không để trong `code`: pha nền (`pre`), pha tăng đột ngột (`spike`), pha giảm (`drop`), pha ổn định (`steady`), pha tăng dần (`ramp`), pha duy trì (`sustain`).
 - `code` chỉ dành cho tên người đọc có thể tra hoặc gõ lại: metric, tham số cấu hình, tên file, tên cảnh báo.
@@ -282,11 +288,11 @@ Những thứ này chỉ nằm trong comment nguồn. Ngoại lệ: mục phân 
 
 - **Người viết:** từ 22/11/2026, Trình viết bản base toàn bộ luận văn (Kế hoạch §11.1), nên mỗi mục là một file, không tách phần `a`, `b` theo người viết. Khi base xong, Quang review, sửa và cập nhật số. Người sở hữu tính năng theo Kế hoạch §5.1 soát kỹ mục tương ứng.
 - **Quy trình cho mỗi chương:**
-  1. Chốt dàn ý của chương: tiểu mục, thông điệp của từng mục, ngân sách trang (Kế hoạch §11.1).
+  1. Chốt dàn ý của chương: tiểu mục, thông điệp của từng mục, khoảng trang định hướng (Kế hoạch §11.1).
   2. Viết nháp theo README, file này và mẫu văn.
   3. Soát: đối chiếu toàn bộ số với comment nguồn, soát văn phong theo §3.
   4. Người viết đọc lại ý và soát xác suất vài số, rồi mở một PR cho cả chương.
-- **Mẫu văn:** mục 3.5 viết theo file này và được duyệt trước khi viết các mục khác. Mẫu dùng cho văn phong; độ dài của mỗi mục theo ngân sách trang ở Kế hoạch §11.1, nên mẫu 3.5 cũng phải nằm trong 2 trang.
+- **Mẫu văn:** mục 3.5 viết theo file này và được duyệt trước khi viết các mục khác. Mẫu dùng cho văn phong; độ dài của mỗi mục theo nội dung lõi của nó (§1).
 - **Góp ý:** tới bước định dạng (W9), bản gốc là Markdown. Góp ý qua review PR hoặc comment trên file `.docx` ghép thử; người viết sửa ở Markdown rồi xuất lại.
 - **Ranh giới hay trùng nhau.** Viết đầy đủ ở mục ghi trong bảng, chỗ khác dẫn chéo:
 
@@ -296,7 +302,7 @@ Những thứ này chỉ nằm trong comment nguồn. Ngoại lệ: mục phân 
   | Lý do chọn tín hiệu A2 | 3.3 | 5.3 chỉ đối chiếu với số đo |
   | Cold start: thiết kế, cách làm, số đo | 3.4, 4.4, 5.4 | Mỗi chỗ một vai trò, theo §2 |
   | Tính hợp lệ của lượt đo | 3.6 (tiêu chí, lý do), 4.7 (runner kiểm thế nào), 5.1 (kết quả) | |
-  | Scale-down không rớt request | 5.3 | 5.5 chỉ dẫn chéo |
+  | Scale-down không rớt request | 5.5.1 (số đo lấy từ pha giảm tải của KB2) | 5.3 chỉ dẫn chéo |
   | Kịch bản vận hành VH | 3.6 (thiết kế phép thử), 4.1, 4.5, 4.6 (cách làm), 5.5 (kết quả) | |
   | Cách chấm cảnh báo, định nghĩa page giả | 3.6 | 5.5 chỉ báo kết quả |
   | Hạn chế | 5.7 (phép đo), 6.2 (hệ thống, phạm vi) | |
@@ -318,12 +324,12 @@ Những thứ này chỉ nằm trong comment nguồn. Ngoại lệ: mục phân 
 - **Khai báo một lần, ở Lời cam đoan,** theo quy định của trường (cần hỏi GVHD hoặc khoa), và đúng mức dùng thật. Dự án dùng công cụ AI cho cả viết mã, phân tích số liệu, soạn và rà soát văn bản, nên không viết nhẹ hơn thực tế. Câu mẫu (hai người chốt câu cuối cùng): "Trong quá trình thực hiện, nhóm dùng công cụ AI để hỗ trợ viết mã, phân tích số liệu, soạn thảo và rà soát văn bản. Nhóm đã kiểm tra lại các kết quả đó và chịu trách nhiệm hoàn toàn về nội dung đồ án. Mọi số liệu trong báo cáo đều truy được về dữ liệu đo lưu trong kho mã của đồ án."
 - **Comment trong file luận văn** (repo công khai) chỉ ghi nguồn và trạng thái soát, theo dạng trung tính: `<!-- Soát số: <ngày> · Soát văn phong: <ngày> · Người viết đọc lại: <ngày> -->`. Việc dùng AI ghi ở nhật ký cá nhân và Lời cam đoan.
 
-## 10. Checklist trước khi mở PR một mục
+## 10. Checklist cho từng mục, trước khi mở PR của chương
 
 - [ ] Dòng đầu là comment mục đích và người viết; có comment thông điệp (§2) và trạng thái soát (§9); tiêu đề và số mục khớp dàn ý (Kế hoạch §11.1).
 - [ ] Mục nói đúng phần việc của chương (§2), không lặp mục khác (bảng ranh giới ở §8); chỗ cần thì dẫn chéo.
 - [ ] Mọi số, mọi khẳng định kỹ thuật có comment nguồn; không có số "chưa đo" (`nguon-tu-lieu.md` §4).
-- [ ] Mục nằm trong ngân sách trang ở Kế hoạch §11.1 (§1: khoảng 450 chữ văn xuôi mỗi trang, mỗi bảng 0,5–0,75 trang); vượt thì cắt theo thứ tự ở §3.1.
+- [ ] Độ dài theo nội dung lõi (§1, §3.1): không có đoạn ngoại vi chiếm chỗ của phần lõi. Đề mục theo §2: mỗi tiêu đề (trừ các tiêu đề được miễn) có từ khoảng 1 trang nội dung và nói nội dung, không nói bước của khung.
 - [ ] Văn phong theo §3: câu đầu đoạn là kết luận; không có cụm sáo và dấu hiệu ở §3.4.
 - [ ] Thuật ngữ, tên sản phẩm, mã định danh theo §4; thuật ngữ mới đã giải thích ở lần đầu và đã vào danh mục chữ viết tắt.
 - [ ] Số và đơn vị theo README và §5; số không phải đo thật có nhãn nguồn gốc.

@@ -61,3 +61,25 @@
 - **Incidents:** lần dàn đầu, bảng không ngắt qua trang (để lại trang gần trống) và cột chia đều, nên số trang bị đội; lần sửa thứ hai đếm số cột từ file Markdown, lệch vì có bảng trong comment. Cuối cùng giữ số cột Pandoc sinh ra, chỉ đổi độ rộng sang `auto`, và soát bằng ảnh trang trước khi lấy số.
 - **Links:** `docs/luan-van/quy-tac-viet.md` (§1, §3.1, §6); `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§11.1).
 - **Thesis:** áp cho mọi mục; trước mắt là cắt 3.1, 3.3, 3.5, 3.6 về ngân sách, và viết 3.2, 3.4 theo ngân sách.
+
+## 2026-11-24 – Luận văn: bỏ ngân sách trang từng mục, sửa dàn ý và quy tắc đề mục
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Ghép một bản đọc liền mạch (cục bộ, không commit) từ `main` và 8 nhánh luận văn chưa merge, có khung cho các mục chưa viết, rồi đo số trang từng mục theo khuôn B: đã có 28,4 trang base (chương 3: 11,5; 4.3: 3,05; chương 5: 13,8).
+  2. Trình đọc bản ghép và nêu hai vấn đề: (a) độ dài không nên ép theo ngân sách, miễn nội dung có giá trị; (b) đề mục con nhiều mà mỗi mục ngắn, nhìn rời rạc, thiếu chuyên nghiệp.
+  3. Đo độ dài từng đề mục của bản base và tìm quy định độ dài của các trường khác; so với một luận văn thạc sĩ cùng chủ đề.
+  4. Sửa dàn ý ở Kế hoạch §11.1 (bảng đề mục, đoạn **Độ dài** thay đoạn "Cân đối", lộ trình, lý do), quy tắc viết §1, §2, §2.1, §3.1, §8, §10, nguồn tư liệu §2, ADR-004 K12 và §7.
+- **Decision:** Trình đồng ý cả bốn điểm của đề xuất:
+  - Độ dài theo nội dung lõi; định hướng 70–90 trang thân bài theo khuôn B, trần 100; bỏ ngân sách trang từng mục. Khoảng theo chương: 1: 5–6 · 2: 12–15 · 3: 15–18 · 4: 22–26 · 5: 16–20 · 6: 3–4. Không chọn giữ 55–65 trang, vì đó là con số nhóm tự đặt ở ADR-004 khi rút gọn phạm vi, không phải quy định của trường, và bản base viết theo ngân sách đó đã mất phần lý do.
+  - Quy tắc đề mục: chỉ đặt tiêu đề khi nội dung dài từ khoảng 1 trang; mục dưới 2,5 trang không chia cấp 3; tiêu đề nói nội dung, không nói bước của khung hay mã kịch bản. Chương 1 gộp 6 mục còn 4; 5.3 đưa TĐ1 lên tiểu mục đầu; 5.5 gom 7 tiểu mục theo mã VH thành 3 theo chỉ tiêu N4, N6, N7; scale-down chuyển từ 5.3 sang 5.5.1.
+  - Mỗi chương một PR, thay cho các PR từng mục (#62–#64, #66–#69); mốc M4 (29/11) là đủ mục theo dàn ý mới; phần lõi đã cắt ở chương 3, 5 được khôi phục tới trước hạn nộp.
+- **Results:**
+  - Bản base viết theo ngân sách cũ: phần lớn tiểu mục cấp 3 chỉ có 55–300 chữ (⅛–⅔ trang), ví dụ 3.2.3: 72 chữ, 5.5.1: 55, 5.5.5: 54; tiểu mục TĐ1 ở chương 5 (5.3.4) chỉ 110 chữ. Trước khi cắt, 5.3 có 3.500 chữ, sau khi cắt còn 830.
+  - Quy định của các trường khác: ĐH KHTN TP.HCM 50–100 trang; một trường CNTT và Truyền thông 60–80 trang không kể phụ lục, mỗi nhóm tiểu mục ít nhất hai tiểu mục; Khoa CNTT ĐH Kinh tế Quốc dân tối thiểu 50 trang. Chưa tìm thấy quy định công khai của PTIT. Luận văn thạc sĩ Aalto về autoscaling Kubernetes: 54 trang thân bài, mục cấp 2 trung bình 2,5–3 trang.
+  - Khuôn ảnh hưởng tới số trang: cả chương 5 (bản base ngày 24/11) đo 11,61 trang khuôn A (13 pt) và 13,68 trang khuôn B (14 pt), B dài hơn khoảng 18%.
+  - `lychee --offline --include-fragments` trên `docs/**/*.md` và `*.md`: 719 link, 0 lỗi.
+  - `/code-review high` trên diff: 9 điểm (2 quan trọng: tên 4.3.2 trái quy tắc mới; quy tắc 1 trang chưa miễn cho "Kết chương", "Cấu trúc luận văn"), đã sửa cả 9.
+- **Deviations:** dàn ý ngày 23/11 (PR #59) và ngân sách trang ngày 23/11 (PR #65) được thay sau một ngày; các bản base 3.1–3.6, 4.3 và chương 5 sẽ phải sửa đề mục.
+- **Links:** `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§3 M4, §11.1); `docs/luan-van/quy-tac-viet.md`; `docs/luan-van/nguon-tu-lieu.md`; `docs/luan-van/README.md`; `docs/adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md`.
+- **Thesis:** áp cho toàn bộ luận văn; căn cứ về độ dài có thể nêu ngắn khi trả lời hội đồng.
