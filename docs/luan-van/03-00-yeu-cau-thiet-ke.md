@@ -1,5 +1,5 @@
 <!-- Mục đích: tiêu đề và đoạn mở đầu chương 3 của luận văn (Yêu cầu và thiết kế). Người viết: Trình. Quy ước: docs/luan-van/README.md (file CC-00), docs/luan-van/quy-tac-viet.md §2 (đoạn mở chương 3 nêu các lựa chọn thiết kế chính trong 1–2 câu) -->
-<!-- Thông điệp: chương 3 trả lời hệ thống cần gì và được thiết kế thế nào; lựa chọn chính: A2 scale theo tải đồng thời của vLLM với threshold từ năng lực đo được (không theo GPU utilization), fallback lên tối đa; L2 chuẩn bị sẵn trên node; grace period 180 s và rolling update xoá trước tạo sau; cảnh báo theo burn rate. Kết chương viết ở bước 2 của PR chương 3 (file 03-kc) -->
+<!-- Thông điệp: chương 3 trả lời hệ thống cần gì và được thiết kế thế nào; lựa chọn chính: A2 scale theo tải đồng thời của vLLM với threshold từ năng lực đo được (không theo GPU utilization), fallback lên tối đa; L2 chuẩn bị sẵn trên node; grace period 180 s và rolling update xoá trước tạo sau; cảnh báo theo burn rate. Kết chương nằm ở cuối file 03-06 -->
 <!-- Soát số: chưa · Soát văn phong: kiem_van 25/11 · Người viết đọc lại: chưa -->
 # Chương 3. Yêu cầu và thiết kế
 
