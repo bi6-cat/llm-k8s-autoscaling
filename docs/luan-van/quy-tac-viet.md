@@ -14,7 +14,7 @@ Chưa có khuôn của trường. Đến khi có, viết theo các thông lệ p
 
 | Mục | Thông lệ tạm dùng | Ghi chú |
 |---|---|---|
-| Độ dài | Theo nội dung lõi; định hướng 70–90 trang thân bài, trần 100; khoảng trang của từng chương ở Kế hoạch §11.1 (đoạn **Độ dài**) | Không tính phụ lục. Không có ngân sách trang cho từng mục: mục dài hay ngắn theo phần nội dung 20/80 của nó (§3.1). Độ dài đo theo **trang, gồm cả bảng và hình**. Dàn trang thử ngày 23/11 trên A4, Times New Roman, giãn 1,5 dòng, chữ trong bảng nhỏ hơn văn xuôi 1 pt; hai khuôn: cỡ 13 pt, lề trên/dưới/trái/phải 2/2/3/2 cm; cỡ 14 pt, lề 3,5/3/3,5/2 cm. Kết quả: văn xuôi khoảng 410–510 chữ mỗi trang; 17 bảng của các bản nháp chương 3 chiếm trung bình 0,5–0,75 trang mỗi bảng. Lập kế hoạch theo khoảng 450 chữ văn xuôi mỗi trang; đo lại khi có khuôn của trường |
+| Độ dài | Theo nội dung lõi; định hướng 70–90 trang thân bài, trần 100; khoảng trang của từng chương ở cột "Trang" của bảng dàn ý, Kế hoạch §11.1 | Không tính phụ lục. Không có ngân sách trang cho từng mục: mục dài hay ngắn theo phần nội dung 20/80 của nó (§3.1). Độ dài đo theo **trang, gồm cả bảng và hình**. Dàn trang thử ngày 23/11 trên A4, Times New Roman, giãn 1,5 dòng, chữ trong bảng nhỏ hơn văn xuôi 1 pt; hai khuôn: khuôn A cỡ 13 pt, lề trên/dưới/trái/phải 2/2/3/2 cm; khuôn B cỡ 14 pt, lề 3,5/3/3,5/2 cm. Kết quả: văn xuôi khoảng 410–510 chữ mỗi trang; 17 bảng của các bản nháp chương 3 chiếm trung bình 0,5–0,75 trang mỗi bảng. Lập kế hoạch theo khoảng 450 chữ văn xuôi mỗi trang; đo lại khi có khuôn của trường |
 | Phông, cỡ, giãn dòng, lề | Áp theo khuôn của trường | Chờ khuôn |
 | Cấp tiêu đề | Tối đa 3 cấp số: `3.4.1.` | Khi nào đặt tiêu đề: §2. Cần chia nhỏ hơn thì dùng đoạn mở bằng cụm in đậm |
 | Trích dẫn | IEEE, đánh số `[1]` theo thứ tự xuất hiện | Pandoc tự đánh số qua `[@key]` |
@@ -52,7 +52,7 @@ Mỗi sự kiện chỉ được trình bày **đầy đủ ở một chỗ**; �
 - **Mục cuối "Kết chương":** 1 đoạn, nói chương rút ra điều gì và dẫn sang chương sau.
 
 Cách chia tiểu mục:
-- **Một tiêu đề phải đáng có:** nội dung dưới nó dài từ khoảng 1 trang (khoảng 400 chữ, tính cả bảng và hình), và trả lời một câu hỏi mà người đọc sẽ tra trong mục lục. Ngắn hơn thì không đặt tiêu đề: viết thành đoạn có câu chủ đề rõ (§3.1), hoặc mở đoạn bằng cụm in đậm khi có từ 3 khía cạnh song song (§3.2).
+- **Một tiêu đề phải đáng có:** nội dung dưới nó dài từ khoảng 1 trang (§1: khoảng 450 chữ văn xuôi, ít hơn khi có bảng hoặc hình), và trả lời một câu hỏi mà người đọc sẽ tra trong mục lục. Miễn cho các tiêu đề mà khung bắt buộc và vốn ngắn: "Kết chương", "Cấu trúc luận văn". Ngắn hơn thì không đặt tiêu đề: viết thành đoạn có câu chủ đề rõ (§3.1), hoặc mở đoạn bằng cụm in đậm khi có từ 3 khía cạnh song song (§3.2).
 - Mục cấp 2 dài dưới khoảng 2,5 trang thì không chia cấp 3.
 - **Tiêu đề nói nội dung hoặc kết luận**, không nói bước của khung ("Cách làm", "Kiểm chứng") hay mã kịch bản ("VH2"). Mã định danh nằm trong câu.
 - Các tiểu mục ngang hàng có độ nặng tương đương, mỗi nhóm 2–4 tiểu mục. Số tiêu đề tỷ lệ với giá trị: mục mang thông điệp TĐ1–TĐ3 nhiều nội dung nên có tiểu mục, mục ngoại vi thường không.
@@ -324,12 +324,12 @@ Những thứ này chỉ nằm trong comment nguồn. Ngoại lệ: mục phân 
 - **Khai báo một lần, ở Lời cam đoan,** theo quy định của trường (cần hỏi GVHD hoặc khoa), và đúng mức dùng thật. Dự án dùng công cụ AI cho cả viết mã, phân tích số liệu, soạn và rà soát văn bản, nên không viết nhẹ hơn thực tế. Câu mẫu (hai người chốt câu cuối cùng): "Trong quá trình thực hiện, nhóm dùng công cụ AI để hỗ trợ viết mã, phân tích số liệu, soạn thảo và rà soát văn bản. Nhóm đã kiểm tra lại các kết quả đó và chịu trách nhiệm hoàn toàn về nội dung đồ án. Mọi số liệu trong báo cáo đều truy được về dữ liệu đo lưu trong kho mã của đồ án."
 - **Comment trong file luận văn** (repo công khai) chỉ ghi nguồn và trạng thái soát, theo dạng trung tính: `<!-- Soát số: <ngày> · Soát văn phong: <ngày> · Người viết đọc lại: <ngày> -->`. Việc dùng AI ghi ở nhật ký cá nhân và Lời cam đoan.
 
-## 10. Checklist trước khi mở PR một mục
+## 10. Checklist cho từng mục, trước khi mở PR của chương
 
 - [ ] Dòng đầu là comment mục đích và người viết; có comment thông điệp (§2) và trạng thái soát (§9); tiêu đề và số mục khớp dàn ý (Kế hoạch §11.1).
 - [ ] Mục nói đúng phần việc của chương (§2), không lặp mục khác (bảng ranh giới ở §8); chỗ cần thì dẫn chéo.
 - [ ] Mọi số, mọi khẳng định kỹ thuật có comment nguồn; không có số "chưa đo" (`nguon-tu-lieu.md` §4).
-- [ ] Độ dài theo nội dung lõi (§1, §3.1): không có đoạn ngoại vi chiếm chỗ của phần lõi. Đề mục theo §2: mỗi tiêu đề có từ khoảng 1 trang nội dung và nói nội dung, không nói bước của khung.
+- [ ] Độ dài theo nội dung lõi (§1, §3.1): không có đoạn ngoại vi chiếm chỗ của phần lõi. Đề mục theo §2: mỗi tiêu đề (trừ các tiêu đề được miễn) có từ khoảng 1 trang nội dung và nói nội dung, không nói bước của khung.
 - [ ] Văn phong theo §3: câu đầu đoạn là kết luận; không có cụm sáo và dấu hiệu ở §3.4.
 - [ ] Thuật ngữ, tên sản phẩm, mã định danh theo §4; thuật ngữ mới đã giải thích ở lần đầu và đã vào danh mục chữ viết tắt.
 - [ ] Số và đơn vị theo README và §5; số không phải đo thật có nhãn nguồn gốc.
