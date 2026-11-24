@@ -101,7 +101,7 @@ Số mục theo dàn ý ở Kế hoạch §11.1. Bản base do Trình viết; ng
 | 5.3 Autoscaling so với tĩnh (C1–C4) | `Q-07` (18/11: bảng 11 ô; 19/11: nguyên nhân lỗi A2 × KB2, pha giảm tải); [`analysis/figures/v2-dg2/`](../../analysis/figures/v2-dg2/) (`runs.csv`, `cells.csv`, `phases.csv`, hình C1–C4); `analysis/dg2_a2.py`; LT5 (phần V2 lấy số ĐG1, `Q-07` 18/11), LT6, LT7 |
 | 5.4 Cold start (C5) | `Q-07` (19/11: ĐG3); `runs/v2-vm/dg3-v2-4060ti/*/summary.txt`, `vllm_log.json` (đủ 8 mốc pha) |
 | 5.5 VH1–VH3, VH5 | `Q-07` (19/11); `runs/v2-vm/ops-vh*/summary.json`; VH1 trên máy thuê là pha giảm tải của KB2 (dẫn chéo 5.3); VH3 drain chỉ có trên kind (`VH` 09/11) |
-| 5.5 VH4, VH6 | VH4: `Q-07` (19/11: fallback 16,8 s), `analysis/vh4_windows.py`; VH6: `analysis/figures/v2-dg2/alerts.csv`, `analysis/vh6_window.py`, LT8 |
+| 5.5 VH4, VH6 | VH4: `Q-07` (19/11: fallback 16,8 s), `analysis/vh4_windows.py`; VH6: `analysis/figures/v2-dg2/alerts.csv`, `analysis/vh6_window.py`, LT8; bảng từng lượt và ý đã cắt ngày 24/11: comment đầu file `05-05b-vh4-vh6.md`, bản đầy đủ ở commit `bc49ff6` |
 | 5.5 Graceful shutdown | `VH` 06/11 (144/144 stream; ca đối chứng grace 5 s) |
 | 5.6 Tổng hợp | Bảng nghiệm thu: Bài toán (bảng yêu cầu → đánh giá → chỉ số), Thông số §4, số ở §3 dưới đây; bảng LT1–LT8: `VH`, Môi trường §19; khuyến nghị cấu hình: Kiến trúc §16 |
 | 5.7 Hạn chế của phép đo | §6 dưới đây |
@@ -177,4 +177,7 @@ Ngày 20/11, lệnh `analysis.charts` trên đã chạy được, ra 6 hình: `c
 | vLLM không dừng khi nhận SIGTERM, pod giữ GPU đủ grace 180 s | `VH` 06/11 |
 | Cluster nhà một node; drain node (VH3) chỉ thử trên kind | Kế hoạch §5.1, `VH` 09/11 |
 | `LLMErrorRateHigh` nhạy với đợt lỗi ngắn ở tải thấp; chưa có dead man's switch | `T-07` 18/11 |
+| VH4 chính thức chỉ một lượt, ở 0,5 C: chưa thử mất tín hiệu lúc tải cao; NetworkPolicy chỉ mô phỏng gói tin bị bỏ; Prometheus vẫn trả lời mà mất metric vLLM thì không có fallback, không có cảnh báo từ KEDA; fallback giữ đủ 4 GPU suốt lúc mất tín hiệu, và theo cấu hình thêm ít nhất 300 s chờ scale-down (tính từ `stabilizationWindowSeconds`, chưa đo vì tải dừng 305 s sau gỡ chặn); chưa chạy ở nhà | `runs/v2-vm/ops-vh4-*/summary.json`; Kiến trúc §13.4; `scaledobject-a2.yaml` |
+| VH6 chỉ chấm được `LLMSLOBurnFast`: cảnh báo về pod chỉ có unit test (`KedaScalerErrors` thêm một lần chặn trên simulator 15/11); `LLMErrorRateHigh` không kiểm được vì máy tạo tải không qua Traefik; thời gian tới page dựa trên một lượt S1 × KB3, cả 7 page đều ở tỷ lệ xấu cao, vùng 20–23% chưa đo (LT8: x ≳ 0,23 mới chắc dưới 5 phút); chưa chạy ở nhà | `runs.csv`, `alerts.csv`; `VH` mục LT8 |
+| Cảnh báo lỗi gửi tin đi qua chính đường đang hỏng: `AlertmanagerFailedToSendAlerts` ở mức warning nên không gửi, bản critical gửi tới Telegram; chưa có bước gửi tin thử hay dừng bước dựng khi thiếu Secret (cho 6.2) | `alerts.csv`; `alertmanager-secret.sh`; nhật ký Quang tuần 07 mục 18/11 |
 | Lược Sealed Secrets, NetworkPolicy, rate limit, Argo CD trên VM | ADR-006 §3.1 |

@@ -119,3 +119,14 @@
 - **Deviations:** mục 5.6 chưa có bảng kiểm chứng LT1–LT8 như Kế hoạch §11.1; 5.6 đã dùng gần hết 2 trang, nên khi thêm bảng LT phải đưa bảng vào Phụ lục E hoặc lấy chỗ từ mục khác của chương 5.
 - **Links:** nhánh `docs/tr8-thesis-ch5-drafts` (chưa PR).
 - **Thesis:** §5.6. Còn cắt: 5.5b (8 → 1,25 trang).
+
+## 2026-11-24 – Luận văn: cắt nháp 5.5b (VH4, VH6) về 1,25 trang
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Cắt `docs/luan-van/05-05b-vh4-vh6.md` từ 8 trang (khuôn B) về ngân sách 1,25 trang (D96): bỏ cả ba bảng (thời gian fallback ba lượt, SLO theo ba khoảng, mốc của 7 page), số từng lượt dành cho Phụ lục E; bỏ phần cách đo của VH6 (đã ở 3.6, PR #64), hai cấu hình quyết định fallback (để 4.3), chuỗi cảnh báo `KedaScalerErrors` trên simulator, danh sách cảnh báo khác và hai đoạn giới hạn.
+  2. Viết lại văn xuôi theo quy-tac-viet §3–§4: câu đầu đoạn là kết luận, tối đa 4 mã mỗi đoạn, mã N chỉ ở câu so với chỉ tiêu, tên pha tiếng Việt. Ý đã cắt ghi trong comment đầu file kèm nguồn; giới hạn của VH4, VH6 và lỗ hổng "cảnh báo lỗi gửi tin đi qua chính đường đang hỏng" chuyển sang `nguon-tu-lieu.md` §6 cho mục 5.7 và 6.2.
+  3. Soát độc lập (`/code-review high`): 10 điểm, sửa cả 10 (bỏ khẳng định "không tin nào tới Telegram", chỉ giữ "không có bằng chứng"; thêm số TPOT so sánh vì 5.3 không còn TPOT; "có cửa sổ 1 phút vi phạm SLO" để không mâu thuẫn với SLO attainment 100% của A2 × KB3; nêu đợt kêu sót từ lượt trước không chấm; mốc bắt đầu của thời gian fallback; "ở tải thấp" trong câu chủ đề; sửa dẫn chéo §3.5.5 và mục 4.3; ghi chi tiết cách chấm VH6 cho 3.6 hoặc Phụ lục E; ghi 300 s chờ scale-down là số tính từ cấu hình, chưa đo).
+- **Results:** 4.503 → 512 chữ văn xuôi (đếm của `kiem_van.py`), 3 → 0 bảng; đo 0,96 trang khuôn A, 1,25 trang khuôn B (ngân sách 1,25); `kiem_van.py` 0 điểm; lychee đạt. Không đổi số liệu so với nguồn.
+- **Links:** nhánh `docs/tr8-thesis-ch5-drafts` (chưa PR); `docs/luan-van/nguon-tu-lieu.md` §6.
+- **Thesis:** §5.5 (VH4, VH6), §5.7, §6.2; Phụ lục E (bảng từng lượt, lấy từ commit `bc49ff6`). Việc đo và cắt ba nháp chương 5 đã xong.
