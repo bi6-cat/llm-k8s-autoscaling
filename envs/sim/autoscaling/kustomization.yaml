@@ -17,9 +17,6 @@ patches:
   - target: {kind: ScaledObject, name: vllm-a2}
     patch: |
       - op: replace
-        path: /spec/minReplicaCount
-        value: 2
-      - op: replace
         path: /spec/maxReplicaCount
         value: 3
       - op: replace
