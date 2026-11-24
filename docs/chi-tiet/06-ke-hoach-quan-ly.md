@@ -209,7 +209,7 @@ Nếu một người chậm, người kia nhận việc theo thứ tự ưu tiê
 | 4. Triển khai và vận hành | 4.1 (hạ tầng, dựng lại), 4.2, 4.4, 4.5, 4.7 (runner) | 4.1 (GitOps, CI, bí mật, bảo mật), 4.3, 4.6, 4.7 (máy tạo tải, phân tích) |
 | 5. Đánh giá | 5.1, 5.2, 5.4, 5.5 (VH1–VH3, VH5, graceful shutdown), 5.7 | 5.3, 5.5 (VH4, VH6), 5.6, 5.7 |
 | 6. Kết luận | – | Toàn chương |
-| Ghép và định dạng | Slide, video demo | Luận văn (khuôn T, hình, tài liệu tham khảo) |
+| Ghép và định dạng | Slide, video demo | Luận văn (khuôn T ở [quy tắc viết §1](../luan-van/quy-tac-viet.md#1-khuôn-trình-bày), hình, tài liệu tham khảo) |
 
 ---
 

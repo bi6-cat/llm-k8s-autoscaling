@@ -130,4 +130,6 @@
   - Trình chọn bỏ trang Tóm tắt vì hai mẫu không có. Khi đã có Mở đầu, Tóm tắt thành phần tóm lược thứ ba cùng với Mở đầu và mục 1.3; 2–3 kết quả chính kèm số vẫn nằm ở mục 1.3.
   - Trình chọn không đưa đoạn khai báo dùng công cụ AI vào luận văn: hai mẫu không có, và nhóm chưa thấy quy định nào của trường. Câu mẫu giữ ở quy tắc viết §9, để thêm vào cuối Mở đầu nếu GVHD hoặc khoa yêu cầu.
   - Bảng §5.1 ghi người sở hữu tính năng để soát nội dung, còn bản base của mọi phần do Trình viết (từ 22/11). Dòng Mở đầu ghi ở PR #72 là "Quang, toàn phần", nay sửa thành cả hai cùng soát, vì Mở đầu tóm lược mọi chương.
+- **Results:** `/code-review high` trên diff: 5 điểm nhỏ (§3.5 và §9 nói khác nhau về chỗ ghi việc dùng AI; quy tắc "kết quả cụ thể có số" của Tóm tắt chưa chuyển sang mục 1.3; §1 chưa ghi chỗ đặt đoạn khai báo nếu được yêu cầu; "khuôn T" ở §5.1 chưa có link; thiếu dòng Thesis), đã sửa cả 5.
 - **Links:** `docs/luan-van/quy-tac-viet.md` (§1, §3.5, §9); `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§5.1, §11.1).
+- **Thesis:** phần đầu quyển (không có Tóm tắt, không có Lời cam đoan); Mở đầu; mục 1.3 Đóng góp.

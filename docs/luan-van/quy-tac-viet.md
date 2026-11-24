@@ -29,11 +29,11 @@ Thứ tự các phần của quyển (tên file dự kiến ở khung luận vă
 2. Lời cảm ơn.
 3. Hai trang "Nhận xét, đánh giá, cho điểm" để trống theo mẫu: của người hướng dẫn và của giảng viên phản biện.
 4. Mục lục; danh mục thuật ngữ, chữ viết tắt và mã định danh; danh mục hình vẽ; danh mục bảng biểu.
-5. Mở đầu: không đánh số, khoảng 1,5–2 trang, theo mẫu tiếng Việt. Phần này dẫn dắt vào vấn đề và việc đề tài làm, ở mức người không chuyên, rồi mô tả ngắn từng chương, mỗi chương 2–3 câu. Mở đầu thay cho mục "Cấu trúc luận văn" của chương 1, và không nêu số đo hay chi tiết kỹ thuật: mục tiêu, phạm vi và đóng góp kèm số nằm ở chương 1, để mỗi ý chỉ trình bày đầy đủ ở một chỗ (§2).
+5. Mở đầu: không đánh số, khoảng 1,5–2 trang, theo mẫu tiếng Việt. Phần này dẫn dắt vào vấn đề và việc đề tài làm, ở mức người không chuyên, rồi mô tả ngắn từng chương, mỗi chương 2–3 câu. Mở đầu thay cho mục "Cấu trúc luận văn" của chương 1, và không nêu số đo hay chi tiết kỹ thuật: mục tiêu, phạm vi và đóng góp kèm số nằm ở chương 1, để mỗi ý chỉ trình bày đầy đủ ở một chỗ (§2). Nếu GVHD hoặc khoa yêu cầu khai báo dùng công cụ AI thì đoạn khai báo đặt ở cuối Mở đầu (§9).
 6. Chương 1–6.
 7. Tài liệu tham khảo, phụ lục.
 
-Hai mẫu không có trang Lời cam đoan và trang Tóm tắt, nên nhóm cũng không thêm: Mở đầu đã dẫn dắt người đọc, còn 2–3 kết quả chính kèm số nằm ở mục 1.3 (§2).
+Hai mẫu không có trang Lời cam đoan và trang Tóm tắt, nên nhóm cũng không thêm: Mở đầu đã dẫn dắt người đọc, còn 2–3 kết quả chính kèm số nằm ở mục 1.3 (§2). Mục 1.3 viết sau chương 5, nêu kết quả cụ thể có số (ví dụ GPU-giờ của A2 so với S4), không viết chung chung kiểu "đã xây dựng thành công hệ thống".
 
 Nếu GVHD hoặc khoa yêu cầu phần "Kết luận" không đánh số thay cho chương 6 thì chỉ đổi tên, giữ nguyên nội dung.
 
@@ -172,10 +172,10 @@ Chỉ mô tả quy trình đã thật sự diễn ra. Ví dụ: không viết "h
 
 - mã việc (Q6, TR7), số PR, commit, mã quyết định (D68);
 - tên người, nhật ký cá nhân, "phiên làm việc", "phiên Claude";
-- AI agent và tên công cụ AI (§9);
+- AI agent và tên công cụ AI: không ghi cả trong comment nguồn, chỉ ghi ở nhật ký cá nhân (§9);
 - đường dẫn `docs/`.
 
-Những thứ này chỉ nằm trong comment nguồn. Ngoại lệ: mục phân công ở slide và Phụ lục F.
+Những thứ này chỉ nằm trong comment nguồn. Ngoại lệ: mục phân công ở slide và Phụ lục F; đoạn khai báo dùng công cụ AI ở cuối Mở đầu, chỉ khi GVHD hoặc khoa yêu cầu (§9).
 
 ## 4. Thuật ngữ và tên gọi thống nhất
 
