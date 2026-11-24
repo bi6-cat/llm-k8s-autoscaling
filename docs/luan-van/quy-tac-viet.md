@@ -22,7 +22,7 @@ Nhóm chưa nhận được văn bản quy định trình bày của trường. 
 | Trích dẫn | IEEE, đánh số `[1]` theo thứ tự xuất hiện | Cả hai mẫu dùng kiểu này. Pandoc tự đánh số qua `[@key]` |
 | Độ dài | Theo nội dung lõi; định hướng 60–75 trang thân bài theo khuôn T, trần 85; khoảng trang của từng chương ở cột "Trang" của bảng dàn ý, Kế hoạch §11.1 | Cách đo ở đoạn ngay dưới bảng |
 
-Độ dài không tính phụ lục. Không có ngân sách trang cho từng mục: mục dài hay ngắn theo phần nội dung 20/80 của nó (§3.1). Độ dài đo bằng Word theo khuôn T, **gồm cả bảng và hình**; một trang khuôn T chứa khoảng 500 chữ văn xuôi (mẫu tiếng Việt: trung vị 521 chữ trên các trang chỉ có chữ). Bảng tốn chỗ hơn văn xuôi: 17 bảng của các bản nháp chương 3 chiếm trung bình 0,5–0,75 trang khuôn B mỗi bảng khi đo bằng Typst, và Word dàn bảng to hơn Typst (mục 3.1, nhiều bảng nhất, dài hơn 62%), nên ở khuôn T tính khoảng 0,5–0,8 trang mỗi bảng. Trước ngày 24/11/2026, độ dài đo theo khuôn B (14 pt, giãn 1,5 dòng, lề 3,5/3/3,5/2 cm) bằng Typst, định hướng 70–90 trang, trần 100. Đo cùng bản ghép ngày 24/11 bằng Word thì khuôn B dài gấp 1,49 lần khuôn T, còn Typst cho số trang khuôn B ít hơn Word khoảng 20%. Vì vậy một trang khuôn B cũ bằng khoảng 0,85 trang khuôn T, và mốc cũ đổi thành 60–75 trang, trần 85, với cùng nội dung. Hai đồ án mẫu dài 74 và 113 trang thân bài, nhưng chương phân tích và thiết kế của chúng chiếm 42 và 65 trang, phần lớn là sơ đồ use case, đặc tả use case và bảng cơ sở dữ liệu. Đề tài của nhóm không có phần này, nên không cần dài bằng mẫu.
+Thân bài gồm chương 1–6; độ dài thân bài không tính Mở đầu và phụ lục. Không có ngân sách trang cho từng mục: mục dài hay ngắn theo phần nội dung 20/80 của nó (§3.1). Độ dài đo bằng Word theo khuôn T, **gồm cả bảng và hình**; một trang khuôn T chứa khoảng 500 chữ văn xuôi (mẫu tiếng Việt: trung vị 521 chữ trên các trang chỉ có chữ). Bảng tốn chỗ hơn văn xuôi: 17 bảng của các bản nháp chương 3 chiếm trung bình 0,5–0,75 trang khuôn B mỗi bảng khi đo bằng Typst, và Word dàn bảng to hơn Typst (mục 3.1, nhiều bảng nhất, dài hơn 62%), nên ở khuôn T tính khoảng 0,5–0,8 trang mỗi bảng. Trước ngày 24/11/2026, độ dài đo theo khuôn B (14 pt, giãn 1,5 dòng, lề 3,5/3/3,5/2 cm) bằng Typst, định hướng 70–90 trang, trần 100. Đo cùng bản ghép ngày 24/11 bằng Word thì khuôn B dài gấp 1,49 lần khuôn T, còn Typst cho số trang khuôn B ít hơn Word khoảng 20%. Vì vậy một trang khuôn B cũ bằng khoảng 0,85 trang khuôn T, và mốc cũ đổi thành 60–75 trang, trần 85, với cùng nội dung. Hai đồ án mẫu dài 74 và 113 trang thân bài, nhưng chương phân tích và thiết kế của chúng chiếm 42 và 65 trang, phần lớn là sơ đồ use case, đặc tả use case và bảng cơ sở dữ liệu. Đề tài của nhóm không có phần này, nên không cần dài bằng mẫu.
 
 Thứ tự các phần của quyển (tên file dự kiến ở khung luận văn, chưa dựng), theo hai mẫu trừ các chỗ ghi rõ:
 1. Bìa chính và bìa phụ, theo mẫu của khoa.
@@ -176,7 +176,7 @@ Chỉ mô tả quy trình đã thật sự diễn ra. Ví dụ: không viết "h
 - AI agent và tên công cụ AI (chỉ khai báo một lần, ở đoạn cuối phần Mở đầu, §9);
 - đường dẫn `docs/`.
 
-Những thứ này chỉ nằm trong comment nguồn. Ngoại lệ: mục phân công ở slide và Phụ lục F.
+Những thứ này chỉ nằm trong comment nguồn. Ngoại lệ: mục phân công ở slide và Phụ lục F, và đoạn khai báo dùng công cụ AI ở cuối Mở đầu (§9).
 
 ## 4. Thuật ngữ và tên gọi thống nhất
 
