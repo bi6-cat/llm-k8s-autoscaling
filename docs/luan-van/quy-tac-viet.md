@@ -4,30 +4,37 @@
 File này bổ sung cho [README.md](README.md). README quy định phần kỹ thuật: tổ chức file, định dạng số, cách đánh số hình và bảng, trích dẫn, comment nguồn. File này quy định **viết thế nào** để hai người viết thống nhất: chương nào nói gì, văn phong, thuật ngữ, cách trình bày kết quả, cách review. Nguồn tư liệu cho từng mục ở [nguon-tu-lieu.md](nguon-tu-lieu.md).
 
 Thứ tự ưu tiên khi hai quy định khác nhau:
-1. Khuôn và quy định trình bày của trường. **Chưa có**; khi nhận được thì ghi vào §1 và sửa file này.
+1. Quy định trình bày của trường. Nhóm chưa nhận được văn bản quy định, nên §1 chọn khuôn T dựa trên hai đồ án mẫu của khoa; khi có văn bản thì sửa §1 theo văn bản.
 2. README.
 3. File này.
 
 ## 1. Khuôn trình bày
 
-Chưa có khuôn của trường. Đến khi có, viết theo các thông lệ phổ biến của đồ án tốt nghiệp kỹ thuật dưới đây. Phần định dạng (phông, lề, giãn dòng) áp ở bước ghép bằng `--reference-doc`, nên **không định dạng tay trong Markdown**.
+Nhóm chưa nhận được văn bản quy định trình bày của trường. Ngày 24/11/2026, GVHD gửi hai đồ án tốt nghiệp năm 2025 của Khoa Công nghệ Thông tin 1 làm mẫu: một đồ án hệ chính quy viết tiếng Việt và một đồ án chương trình tiên tiến viết tiếng Anh. Hai mẫu là căn cứ tham khảo, không phải khuôn bắt buộc. Nhóm theo mẫu ở phần là quy ước chung của khoa: các trang phần đầu, phông, cỡ chữ, lề. Chương và mục theo nội dung của đề tài. Chỗ hai mẫu khác nhau hoặc chưa theo thông lệ thì nhóm chọn theo thông lệ. Khuôn chốt dưới đây gọi là **khuôn T**. Định dạng áp ở bước ghép bằng `--reference-doc`, nên **không định dạng tay trong Markdown**.
 
-| Mục | Thông lệ tạm dùng | Ghi chú |
+| Mục | Khuôn T | Căn cứ, ghi chú |
 |---|---|---|
-| Độ dài | Theo nội dung lõi; định hướng 70–90 trang thân bài, trần 100; khoảng trang của từng chương ở cột "Trang" của bảng dàn ý, Kế hoạch §11.1 | Không tính phụ lục. Không có ngân sách trang cho từng mục: mục dài hay ngắn theo phần nội dung 20/80 của nó (§3.1). Độ dài đo theo **trang, gồm cả bảng và hình**. Dàn trang thử ngày 23/11 trên A4, Times New Roman, giãn 1,5 dòng, chữ trong bảng nhỏ hơn văn xuôi 1 pt; hai khuôn: khuôn A cỡ 13 pt, lề trên/dưới/trái/phải 2/2/3/2 cm; khuôn B cỡ 14 pt, lề 3,5/3/3,5/2 cm. Kết quả: văn xuôi khoảng 410–510 chữ mỗi trang; 17 bảng của các bản nháp chương 3 chiếm trung bình 0,5–0,75 trang mỗi bảng. Lập kế hoạch theo khoảng 450 chữ văn xuôi mỗi trang; đo lại khi có khuôn của trường |
-| Phông, cỡ, giãn dòng, lề | Áp theo khuôn của trường | Chờ khuôn |
-| Cấp tiêu đề | Tối đa 3 cấp số: `3.4.1.` | Khi nào đặt tiêu đề: §2. Cần chia nhỏ hơn thì dùng đoạn mở bằng cụm in đậm |
-| Trích dẫn | IEEE, đánh số `[1]` theo thứ tự xuất hiện | Pandoc tự đánh số qua `[@key]` |
+| Khổ giấy, lề | A4; lề trên 2,5 cm, dưới 2,5 cm, trái 3 cm, phải 2 cm | Mẫu tiếng Việt: lề trái 3 cm, phải 2 cm, trên và dưới khoảng 2,5–3 cm, nhưng khổ Letter, có lẽ do mặc định của Word. Mẫu tiếng Anh: A4 |
+| Phông, cỡ, giãn dòng | Times New Roman 13 pt; giãn dòng 1,15; cách sau đoạn 6 pt; thụt đầu dòng 1,27 cm; căn đều hai bên | Đo trên PDF mẫu tiếng Việt: cỡ 13 pt, khoảng dòng 17,5 pt (khoảng 1,17 lần dòng đơn), khoảng 7,5 pt giữa hai đoạn, thụt đầu dòng 1,27 cm. Mẫu tiếng Anh: 13 pt, dòng đơn, cách 6 pt trước và sau đoạn |
+| Tiêu đề | Chương: 16 pt, đậm, căn giữa, sang trang mới. Cấp 2 (`3.4.`): 13 pt, đậm. Cấp 3 (`3.4.1.`): 13 pt, đậm nghiêng. Tối đa 3 cấp số | Chương và cấp 2 theo mẫu tiếng Việt. Khi nào đặt tiêu đề: §2. Cần chia nhỏ hơn thì dùng đoạn mở bằng cụm in đậm |
+| Hình, bảng | Chú thích 13 pt, nghiêng, căn giữa. "Hình 3.1." đặt dưới hình, "Bảng 3.1." đặt trên bảng. Chữ trong bảng 12 pt | Hai mẫu đặt tên bảng dưới bảng. Nhóm giữ tên bảng ở trên như README, theo IEEE và thông lệ trình bày tiếng Việt, để bảng dài qua trang vẫn có tên ở đầu. Cách đánh số giữ như README, vì hai mẫu không thống nhất với nhau ("Hình 1-1:" và "Figure 2.1.") |
+| Đầu trang, chân trang | Đầu trang: "Đồ án tốt nghiệp Đại học". Chân trang: tên hai sinh viên bên trái, số trang bên phải. Số trang kiểu Ả Rập, đánh liên tục từ bìa | Theo mẫu tiếng Việt |
+| Trích dẫn | IEEE, đánh số `[1]` theo thứ tự xuất hiện | Cả hai mẫu dùng kiểu này. Pandoc tự đánh số qua `[@key]` |
+| Độ dài | Theo nội dung lõi; định hướng 60–75 trang thân bài theo khuôn T, trần 85; khoảng trang của từng chương ở cột "Trang" của bảng dàn ý, Kế hoạch §11.1 | Cách đo ở đoạn ngay dưới bảng |
 
-Thứ tự các phần của quyển (tên file dự kiến ở khung luận văn, chưa dựng):
-1. Bìa, nhiệm vụ đồ án: theo mẫu của trường.
-2. Lời cam đoan (có khai báo dùng công cụ AI, §9), lời cảm ơn.
-3. Tóm tắt tiếng Việt và *Abstract*: mỗi bản khoảng 1 trang.
-4. Mục lục, danh mục hình, danh mục bảng, danh mục chữ viết tắt, mã định danh và thuật ngữ.
-5. Chương 1–6.
-6. Tài liệu tham khảo, phụ lục.
+Độ dài không tính phụ lục. Không có ngân sách trang cho từng mục: mục dài hay ngắn theo phần nội dung 20/80 của nó (§3.1). Độ dài đo bằng Word theo khuôn T, **gồm cả bảng và hình**; một trang khuôn T chứa khoảng 500 chữ văn xuôi (mẫu tiếng Việt: trung vị 521 chữ trên các trang chỉ có chữ). Trước ngày 24/11/2026, độ dài đo theo khuôn B (14 pt, giãn 1,5 dòng, lề 3,5/3/3,5/2 cm) bằng Typst, định hướng 70–90 trang, trần 100. Đo cùng bản ghép ngày 24/11 bằng Word thì khuôn B dài gấp 1,49 lần khuôn T, còn Typst cho số trang khuôn B ít hơn Word khoảng 20%. Vì vậy một trang khuôn B cũ bằng khoảng 0,85 trang khuôn T, và mốc cũ đổi thành 60–75 trang, trần 85, với cùng nội dung. Hai đồ án mẫu dài 74 và 113 trang thân bài, nhưng chương phân tích và thiết kế của chúng chiếm 42 và 65 trang, phần lớn là sơ đồ use case, đặc tả use case và bảng cơ sở dữ liệu. Đề tài của nhóm không có phần này, nên không cần dài bằng mẫu.
 
-Nếu khuôn của trường đòi phần "Mở đầu" và "Kết luận" không đánh số thay cho chương 1 và 6 thì chỉ đổi tên, giữ nguyên nội dung.
+Thứ tự các phần của quyển (tên file dự kiến ở khung luận văn, chưa dựng), theo hai mẫu trừ các chỗ ghi rõ:
+1. Bìa chính và bìa phụ, theo mẫu của khoa.
+2. Lời cam đoan, có khai báo dùng công cụ AI (§9). Hai mẫu không có trang này; nhóm thêm vì cần một chỗ khai báo, và bỏ nếu GVHD hoặc khoa quy định chỗ khai báo khác.
+3. Lời cảm ơn.
+4. Hai trang "Nhận xét, đánh giá, cho điểm" để trống theo mẫu: của người hướng dẫn và của giảng viên phản biện.
+5. Tóm tắt: 1 trang tiếng Việt. Hai mẫu không có; nhóm giữ để hội đồng nắm bài toán và kết quả chính trong một trang. Không viết *Abstract*.
+6. Mục lục; danh mục thuật ngữ, chữ viết tắt và mã định danh; danh mục hình vẽ; danh mục bảng biểu.
+7. Chương 1–6. Không có phần "Mở đầu" riêng: mẫu tiếng Việt có phần này nhưng nội dung lặp với chương 1, còn chương 1 của nhóm đã có bối cảnh, mục tiêu và mục "Cấu trúc luận văn".
+8. Tài liệu tham khảo, phụ lục.
+
+Nếu GVHD hoặc khoa yêu cầu phần "Mở đầu" và "Kết luận" không đánh số thay cho chương 1 và 6 thì chỉ đổi tên, giữ nguyên nội dung.
 
 Tóm tắt viết **sau cùng**. Tóm tắt phải nêu bài toán, cách làm, môi trường đo, và **2–3 kết quả chính có số** (ví dụ GPU-giờ của A2 so với S4). Không viết chung chung kiểu "đã xây dựng thành công hệ thống".
 
@@ -53,7 +60,7 @@ Mỗi sự kiện chỉ được trình bày **đầy đủ ở một chỗ**; �
 
 Cách chia tiểu mục:
 - **Một tiêu đề phải đáng có:** nội dung dưới nó dài từ khoảng 1 trang (§1: khoảng 450 chữ văn xuôi, ít hơn khi có bảng hoặc hình), và trả lời một câu hỏi mà người đọc sẽ tra trong mục lục. Miễn cho các tiêu đề mà khung bắt buộc và vốn ngắn: "Kết chương", "Cấu trúc luận văn". Ngắn hơn thì không đặt tiêu đề: viết thành đoạn có câu chủ đề rõ (§3.1), hoặc mở đoạn bằng cụm in đậm khi có từ 3 khía cạnh song song (§3.2).
-- Mục cấp 2 dài dưới khoảng 2,5 trang thì không chia cấp 3.
+- Mục cấp 2 dài dưới khoảng 2 trang (khoảng 1.000 chữ văn xuôi) thì không chia cấp 3.
 - **Tiêu đề nói nội dung hoặc kết luận**, không nói bước của khung ("Cách làm", "Kiểm chứng") hay mã kịch bản ("VH2"). Mã định danh nằm trong câu.
 - Các tiểu mục ngang hàng có độ nặng tương đương, mỗi nhóm 2–4 tiểu mục. Số tiêu đề tỷ lệ với giá trị: mục mang thông điệp TĐ1–TĐ3 nhiều nội dung nên có tiểu mục, mục ngoại vi thường không.
 - Không để một mục chỉ có một tiểu mục: đã có 3.4.1 thì phải có 3.4.2.

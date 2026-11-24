@@ -60,4 +60,4 @@ pandoc docs/luan-van/[0-9]*.md \
 
 - `--resource-path`: đường dẫn hình trong file viết tương đối với thư mục này (`../images/png/…`), nên pandoc cần biết gốc để tìm hình.
 - `--citeproc`: thay `[@key]` bằng trích dẫn và tạo danh mục tài liệu ở cuối.
-- Bước định dạng sẽ thêm `--reference-doc=<khuôn của trường>.docx` (lề, phông, kiểu tiêu đề) và `--csl=<kiểu trích dẫn>.csl`.
+- Bước định dạng sẽ thêm `--reference-doc=<khuôn T>.docx` ([quy tắc viết §1](quy-tac-viet.md#1-khuôn-trình-bày)) (lề, phông, kiểu tiêu đề) và `--csl=<kiểu trích dẫn>.csl`.
