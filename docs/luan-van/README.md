@@ -3,7 +3,7 @@
 
 Thư mục này chứa **nội dung** luận văn, viết bằng Markdown, mỗi mục một file. Ở bước định dạng (W9), pandoc ghép các file thành một file `.docx` theo khuôn của trường.
 
-- Dàn ý và số trang: [Kế hoạch §11.1](../chi-tiet/06-ke-hoach-quan-ly.md#111-dàn-ý-luận-văn-5565-trang).
+- Dàn ý và độ dài: [Kế hoạch §11.1](../chi-tiet/06-ke-hoach-quan-ly.md#111-dàn-ý-luận-văn).
 - Người viết: từ 22/11/2026, Trình viết bản base toàn bộ luận văn; Quang review, sửa và cập nhật số. Người sở hữu tính năng theo [Kế hoạch §5.1](../chi-tiet/06-ke-hoach-quan-ly.md#51-phân-công) soát kỹ mục tương ứng. Ghép và định dạng: Trình.
 - Nguồn sự kiện: nhật ký làm việc ([AGENTS.md](../../AGENTS.md)), thiết kế ở `docs/chi-tiet/`, mã nguồn, và số liệu trong `analysis/`.
 
