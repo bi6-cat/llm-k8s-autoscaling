@@ -3,7 +3,7 @@
 <!-- Soát số: chưa · Soát văn phong: chưa · Người viết đọc lại: chưa -->
 ## 3.1. Yêu cầu và chỉ tiêu nghiệm thu
 
-Bài toán ở mục 1.2 gồm ba yêu cầu kéo nhau: chất lượng phục vụ, hiệu quả GPU và vận hành được hằng ngày. Phát biểu đó chưa đo được trực tiếp. Nhóm tách nó thành bảy yêu cầu chức năng và tám chỉ tiêu nghiệm thu (Bảng 3.1), mỗi cái có một phép thử định trước và một mức ưu tiên. Phần lớn chỉ tiêu có ngưỡng đặt từ trước, nhờ đó chương 5 nghiệm thu bằng cách đối chiếu số đo với ngưỡng.
+Bài toán ở mục 1.1 gồm ba yêu cầu kéo nhau: chất lượng phục vụ, hiệu quả GPU và vận hành được hằng ngày. Phát biểu đó chưa đo được trực tiếp. Nhóm tách nó thành bảy yêu cầu chức năng và tám chỉ tiêu nghiệm thu (Bảng 3.1), mỗi cái có một phép thử định trước và một mức ưu tiên. Phần lớn chỉ tiêu có ngưỡng đặt từ trước, nhờ đó chương 5 nghiệm thu bằng cách đối chiếu số đo với ngưỡng.
 
 Để giải bài toán, nền tảng phải làm được sáu việc. Cột "Việc" của Bảng 3.1 ghi mỗi yêu cầu phục vụ việc nào:
 

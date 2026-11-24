@@ -13,6 +13,8 @@ Hệ thống gồm một Deployment vLLM trên Kubernetes, mỗi pod giữ một
 ![Hình 3.1. Kiến trúc tổng thể. Request đi qua Service tới các pod vLLM, mỗi pod giữ một GPU. KEDA chuyển kết quả truy vấn Prometheus thành external metric, HPA đặt số replica. Argo CD đồng bộ cluster nhà theo Git](../images/png/02-kien-truc-tong-the.png)
 <!-- Hình tạm: xem comment thứ hai ở đầu file; chú thích viết theo hình sẽ vẽ lại -->
 
+Mục 3.2.1 đi qua các thành phần và ba luồng trên hình, mục 3.2.2 nói cách cùng các thành phần đó chạy ở ba môi trường.
+
 ### 3.2.1. Thành phần và ba luồng
 
 **Luồng request.** Client gửi request tới API tương thích OpenAI, có streaming. Service chọn một pod đang Ready, vLLM kiểm khoá API rồi xử lý và trả từng phần câu trả lời. Service chia request gần như đều giữa các pod mà không biết pod nào đang có hàng đợi dài. Nhóm giữ cách chia này cho mọi cấu hình để so sánh công bằng, và mục 5.3 phân tích hệ quả của nó. Máy tạo tải gọi thẳng Service trong cluster, không qua Traefik Ingress.
@@ -29,7 +31,7 @@ Hệ thống gồm một Deployment vLLM trên Kubernetes, mỗi pod giữ một
 
 ### 3.2.2. Hai tầng môi trường dùng chung manifest
 
-GPU thuê tính tiền theo giờ, nên môi trường chia hai tầng (Bảng 3.2). Tầng 2 trên VM thuê chỉ dùng để đo, còn tầng 1 gồm simulator và máy nhà dùng để phát triển và vận hành thử. Manifest chung nằm ở một base Kustomize, mỗi môi trường chỉ có một overlay ghi đè giá trị riêng như model và threshold. Nhờ vậy cả ba nơi dùng cùng một Deployment, Service và ScaledObject gốc, và lỗi ở phần dùng chung tìm thấy trên simulator cũng có trong cấu hình được đo. Số liệu hiệu năng ở chương 5 chỉ lấy từ VM thuê.
+GPU thuê tính tiền theo giờ, nên môi trường chia hai tầng (Bảng 3.2). Tầng 2 trên VM thuê dùng để đo và để lặp lại những kịch bản vận hành cần GPU thật, còn tầng 1 gồm simulator và máy nhà dùng để phát triển và vận hành thử. Manifest chung nằm ở một base Kustomize, mỗi môi trường chỉ có một overlay ghi đè giá trị riêng như model và threshold. Nhờ vậy cả ba nơi dùng cùng một Deployment, Service và ScaledObject gốc, và lỗi ở phần dùng chung tìm thấy trên simulator cũng có trong cấu hình được đo. Số liệu hiệu năng ở chương 5 chỉ lấy từ VM thuê.
 <!-- nguồn: docs/chi-tiet/05-moi-truong-danh-gia.md §1 (hai tầng cùng một bộ manifest, chỉ khác overlay; chi phí ≈ 0 ở nhà, theo giờ ở cloud; số liệu nhà chỉ dùng đạt/không đạt), §2.7 (llm-d-inference-sim giả lập API và metric của vLLM; T1–T7, scale 1 → 3); docs/chi-tiet/03-kien-truc-autoscaling.md §4 (common/serving base; envs/home, envs/cloud, envs/sim overlay; overlay sim dùng đúng Deployment, Service, ScaledObject; home và cloud chỉ khác giá trị ở Thông số §9.1–§9.2); docs/chi-tiet/00-thong-so.md §10.1 ("môi trường chức năng: không dùng số liệu hiệu năng của nó") -->
 
 **Bảng 3.2.** Hai tầng môi trường, triển khai từ cùng một Git repository
