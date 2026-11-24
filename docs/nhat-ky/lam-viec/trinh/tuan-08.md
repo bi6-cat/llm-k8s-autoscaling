@@ -146,3 +146,12 @@
   - Không sửa `vh3_kill` (thiếu bước bảo đảm ≥ 2 pod), vì dữ liệu đã đóng băng 22/11; nêu ở mục 5.5 và 5.7.
 - **Deviations:** Must ở Thông số §5 ghi "VH1, VH2 ở nhà"; nay VH1 dùng kết quả trên GPU thuê và VH2 chạy trên kind. Sửa Thông số §5 và Môi trường §13 trong PR này.
 - **Thesis:** 5.5 (VH1, VH2), 5.6 (bảng nghiệm thu), 5.7 (Hạn chế).
+
+## 2026-11-24 – Nghiệm thu: ghi phạm vi Must mới vào ADR-007 và tài liệu thiết kế
+
+- **Task:** TR8, chung · **Environment:** none
+- **Done:** Viết [ADR-007](../../../adr/007-doi-vh1-vh2-f6-n8-khoi-cluster-nha.md) cho các quyết định ở mục trước (VH1, VH2, F6, N8 không còn chờ cluster nhà). Sửa theo ADR: Thông số §3 (cách kiểm chứng F3, F6), §5 (dòng Must và Should); Môi trường §13 (cột "Ở đâu" của VH1, VH2, VH6) và ghi chú của N4, N8, F3, F6 trong bảng nghiệm thu §16; ghi chú ngày 24/11 ở mốc M2, mục học chéo và rủi ro R7 của Kế hoạch; bảng ADR.
+- **Decision:** Ghi thành ADR mới thay vì thêm mục vào ADR-006, vì README của `docs/adr/` quy định không sửa nội dung ADR cũ. Bảng nghiệm thu chỉ đổi cột ghi chú; cột "Đạt?" giữ nguyên cho tới khi có kết quả trên kind.
+- **Deviations:** Must ở Thông số §5 trước đây ghi "VH1, VH2 ở nhà".
+- **Links:** `docs/adr/007-doi-vh1-vh2-f6-n8-khoi-cluster-nha.md`, `docs/chi-tiet/00-thong-so.md`, `docs/chi-tiet/05-moi-truong-danh-gia.md`, `docs/chi-tiet/06-ke-hoach-quan-ly.md`.
+- **Thesis:** 5.5 (VH1, VH2), 5.6 (bảng nghiệm thu), 5.7 (Hạn chế: chưa có vòng Git trọn vẹn trên GPU thật).
