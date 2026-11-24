@@ -488,3 +488,9 @@ Chạy bằng `experiments.ops.vh`, tải CONST 2,5 req/s, A2 threshold 39, Qwen
 - **VH (1,75 req/s):** vh2a, vh2b (371,6 s), vh2c (kẹt có pod Pending), vh3-delete (67,4 s, 0 lỗi), vh4 (fallback 16,8 s) đạt, 0 lỗi. vh3-kill: restart 67,4 s nhưng 129 lỗi, khả năng cao do chỉ có 1 pod lúc kill.
 - **Trả máy:** VM `poweroff` 02:05 ngày 19/11 sau khi kiểm sha256 mọi file; Quang xoá instance trên Vast ngày 19/11. Chi phí thực tế: chưa có.
 - Chi tiết ở [nhật ký Quang tuần 07](lam-viec/quang/tuan-07.md).
+
+## 2026-11-24 – kind `llm-sim`: thêm rồi gỡ Argo CD (chuẩn bị VH2 qua Git)
+
+- **Môi trường:** kind `llm-sim` trên laptop của Trình (WSL2), không đụng cluster nhà hay máy thuê.
+- **Thao tác:** `make sim-argocd` (Argo CD core `v3.5.4`, app `serving`, `autoscaling` theo `main`) 142 s tới `Synced Healthy`; self-heal đưa sửa tay về Git sau 2 s; gỡ theo `envs/sim/README.md` 13 s. Simulator và A2 chạy suốt, không tạo lại pod.
+- **Trạng thái sau:** không còn Argo CD trên kind. VH2 (commit, sync, `git revert` dưới tải) làm ở bước sau. Chi tiết ở [nhật ký Trình tuần 08](lam-viec/trinh/tuan-08.md).

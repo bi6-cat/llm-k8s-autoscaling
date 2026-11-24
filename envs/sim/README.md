@@ -7,7 +7,7 @@ Kiểm thử vòng autoscaling **không cần GPU**: cluster kind trên laptop, 
 | Cluster | kind `llm-sim` (context `kind-llm-sim`), 1 control-plane + 2 worker (`kind-config.yaml`; 2 worker để thử drain node) |
 | "vLLM" | Simulator: cùng Deployment và Service với vLLM thật (overlay `serving/` chỉ đổi image và tham số) |
 | Autoscaling | A2 thật (`common/autoscaling/a2`), threshold và max replica hợp với simulator (`autoscaling/`) |
-| Cài đặt | helm và kubectl trực tiếp, **không** qua Argo CD (cluster dựng đi dựng lại liên tục) |
+| Cài đặt | helm và kubectl trực tiếp, **không** qua Argo CD (cluster dựng đi dựng lại liên tục). Riêng VH2 thì thêm Argo CD (mục cuối) |
 | Số đo | Chỉ kiểm logic (đạt/trượt, thời gian phản ứng của KEDA). **Không** phải số đo hiệu năng |
 
 ## Trong thư mục này
@@ -21,6 +21,7 @@ Kiểm thử vòng autoscaling **không cần GPU**: cluster kind trên laptop, 
 | `tests/run-t1-t5.sh` | Bài kiểm thử T1–T5, chấm đạt/trượt (cần `hey`) |
 | `tests/load-sim.sh` | Bơm tải đồng thời bằng `hey` qua port-forward |
 | `experiments/matrix.yaml` | Ma trận chạy thử runner trên kind |
+| `argocd/apps.yaml` | Application `serving`, `autoscaling` cho VH2 (chỉ khi chạy `make sim-argocd`) |
 
 ## Chạy
 
@@ -54,3 +55,27 @@ make sim-down                  # xoá cluster
 | T5 | Tạm dừng autoscaling: số replica đứng yên dù tải đổi |
 
 Ngưỡng đạt/trượt của từng bài nằm trong `tests/run-t1-t5.sh` (theo bảng ở [w2.md §9.3](../../docs/huong-dan/w2.md)); kết quả các lần chạy ở nhật ký của Trình.
+
+## VH2 qua Git: thêm Argo CD vào kind
+
+VH2 cần vòng "commit → Argo CD sync → rolling update → `git revert`" như ở nhà ([Vận hành §5.3, §5.4](../../docs/chi-tiet/04-van-hanh.md#53-quy-trình-cập-nhật-qua-gitops)). Trên kind, vòng này chạy với một nhánh riêng, để commit thử không đụng `main` hay cluster nhà.
+
+```bash
+make sim-up                          # nếu cluster chưa có
+make sim-argocd REV=<nhánh>          # Argo CD core + app serving, autoscaling theo nhánh đó (~2,5 phút)
+```
+
+`make sim-argocd` chờ tới khi cả hai app `Synced Healthy`. Argo CD nhận lại Deployment và ScaledObject đang chạy, không tạo pod mới. Sau đó:
+
+- Commit và push lên nhánh `REV` là cập nhật; Argo CD đọc Git mỗi 2 phút cộng ngẫu nhiên tối đa 1 phút (log `appResyncPeriod=2m0s, appResyncJitter=1m0s` của `argocd-application-controller`). `git revert` rồi push là rollback.
+- Self-heal bật: sửa tay ScaledObject hay Deployment thì Argo CD đưa về đúng Git sau vài giây. Muốn đổi thứ gì thì đổi trong Git.
+- Runner (`experiments.runner`, `make ops-tests`) dừng ngay khi app `autoscaling` còn auto-sync (`guard_argocd`), giống ở nhà. Chạy runner thì gỡ Argo CD trước.
+
+Gỡ Argo CD, giữ nguyên simulator và A2 (Application không có finalizer, nên xoá Application không xoá tài nguyên của nó):
+
+```bash
+kubectl --context kind-llm-sim -n argocd delete application serving autoscaling
+kubectl --context kind-llm-sim delete -n argocd --ignore-not-found \
+  -f https://raw.githubusercontent.com/argoproj/argo-cd/v3.5.4/manifests/core-install.yaml
+kubectl --context kind-llm-sim delete namespace argocd
+```

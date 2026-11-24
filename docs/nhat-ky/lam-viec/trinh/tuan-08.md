@@ -133,3 +133,22 @@
 - **Results:** `/code-review high` trên diff: 5 điểm nhỏ (§3.5 và §9 nói khác nhau về chỗ ghi việc dùng AI; quy tắc "kết quả cụ thể có số" của Tóm tắt chưa chuyển sang mục 1.3; §1 chưa ghi chỗ đặt đoạn khai báo nếu được yêu cầu; "khuôn T" ở §5.1 chưa có link; thiếu dòng Thesis), đã sửa cả 5.
 - **Links:** `docs/luan-van/quy-tac-viet.md` (§1, §3.5, §9); `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§5.1, §11.1).
 - **Thesis:** phần đầu quyển (không có Tóm tắt, không có Lời cam đoan); Mở đầu; mục 1.3 Đóng góp.
+
+## 2026-11-24 – VH2 trên kind, bước 1: thêm Argo CD vào simulator
+
+- **Task:** TR8 (F3, VH2 theo D113) · **Environment:** sim
+- **Done:**
+  1. Thêm `envs/sim/argocd/apps.yaml`: hai Application `serving` (path `envs/sim/serving`) và `autoscaling` (path `envs/sim/autoscaling`), cùng syncPolicy với nhà (automated, prune, selfHeal, retry).
+  2. Thêm `make sim-argocd REV=<nhánh>`: cài Argo CD core `v3.5.4` (server-side apply như role `argocd-bootstrap`), áp AppProject `default` của nhà, áp hai app với `targetRevision` đổi sang `REV` bằng `sed`, rồi chờ cả hai `Synced Healthy`. `ARGOCD_VERSION` ghim trong Makefile, thêm vào `docs/phien-ban.md`.
+  3. Thêm mục "VH2 qua Git" vào `envs/sim/README.md`: cách cài, chu kỳ đọc Git, self-heal, runner bị `guard_argocd` chặn, ba lệnh gỡ Argo CD.
+  4. Chạy thử trên cụm `llm-sim` với `REV=main`, kiểm self-heal, rồi gỡ đúng theo README.
+- **Decision:** Tên app trùng nhà (`serving`, `autoscaling`), để `guard_argocd` của runner và cách tắt auto-sync có cùng ý nghĩa trên kind. Không dựng root App-of-Apps như nhà: VH2 chỉ cần hai app. Nhánh truyền qua `REV` lúc áp, file trong Git giữ `targetRevision: main`, vì quên `REV` thì app chỉ theo `main` (an toàn), còn ghi cứng nhánh thử vào Git thì nhánh đó bị xoá là app lỗi.
+- **Results:**
+  - `make sim-argocd` (REV=main): 142 s tới khi cả hai app `Synced Healthy`, revision `7787de0` (= `origin/main`). Pod simulator giữ nguyên (cùng tên, restarts 0): Argo CD nhận lại tài nguyên `make sim-up` đã tạo, không tạo lại.
+  - Log controller: `appResyncPeriod=2m0s, appResyncJitter=1m0s`, tức Argo CD đọc Git mỗi 2–3 phút.
+  - Self-heal: patch tay threshold ScaledObject 10 → 11, Argo CD đưa về 10 sau 2 s.
+  - Gỡ theo README: 13 s, còn 0 CRD `argoproj.io`; pod simulator và ScaledObject (max 3, threshold 10) giữ nguyên.
+  - Kiểm cục bộ: `yamllint -s` đạt; `kubeconform -strict` 2/2 Application hợp lệ (schema CRDs-catalog ở commit ghim của CI); `make -n sim-argocd REV=x` thay đúng nhánh; lychee đạt.
+- **Incidents:** Việc F6 (cảnh báo thật qua bot Telegram trên kind) dừng ở bước đầu: trong lượt tự chạy, lệnh nạp Secret bot thật từ `.env` vào kind bị chặn. F6 chờ Trình nạp Secret, nên vòng này chuyển sang VH2.
+- **Links:** `envs/sim/argocd/apps.yaml`, `Makefile` (`sim-argocd`), `envs/sim/README.md`, `docs/phien-ban.md`.
+- **Thesis:** 4.5 (triển khai qua Git); 5.5.1 (VH2 qua Git trên kind, số đo ở bước 2).
