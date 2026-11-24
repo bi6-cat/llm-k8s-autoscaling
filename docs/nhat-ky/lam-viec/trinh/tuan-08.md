@@ -348,3 +348,15 @@
 - **Deviations:** dàn ý §11.1 ghi "bảng mã định danh" ở 3.1; bảng này nằm ở danh mục đầu quyển (D119).
 - **Links:** nhánh `docs/tr8-thesis-ch3` (chưa PR); `docs/luan-van/03-01-yeu-cau-chi-tieu.md`, `03-05-giam-sat-slo-canh-bao.md`, `03-06-thiet-ke-danh-gia.md`, `nguon-tu-lieu.md`.
 - **Thesis:** chương 3. Còn lại cho bước 2: kết chương, đánh lại số bảng, đo khuôn T (13–15 tr), `/code-review high`, PR, đóng #62–#64, #66–#68.
+
+## 2026-11-25 – Luận văn: kết chương 3, đánh lại số bảng, soát và mở PR chương 3 (bước 2)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** viết mục "Kết chương" (một đoạn) ở cuối `03-06-thiet-ke-danh-gia.md`; đánh lại số hình, bảng theo thứ tự xuất hiện (Hình 3.2a → Hình 3.1; Bảng 3.2a, 3.3a–3.3c, 3.4a, 3.5a, 3.6a → Bảng 3.2–3.8) và sửa các comment "Số tạm"; chạy `/code-review high` trên diff chương 3 so với `origin/main`, sửa cả 10 điểm; mở PR chương 3 và đóng các PR mục #62–#64, #66–#68 với ghi chú superseded.
+- **Decision:** D120. "Kết chương" đặt ở cuối file mục cuối (3.6), như nhánh nháp chương 5, thay cho file riêng `03-kc`: không cần thêm dòng vào bảng tổ chức file của README; `gop.py` nhận cả hai cách.
+- **Results:** văn xuôi theo `kiem_van.py`: 03-00 155 chữ, 3.1 666, 3.2 559, 3.3 1.002, 3.4 668, 3.5 949, 3.6 kèm kết chương 1.474; tổng 5.473 chữ, 8 bảng, 1 hình. Ước tính theo quy ước D103 (khoảng 500 chữ/tr, bảng 0,5–0,8 tr): khoảng 15–18 tr, trên định hướng 13–15 tr; chưa đo khuôn T bằng Word. `kiem_van.py`: 0 điểm cần xem ở cả 7 file. `lychee --offline --include-fragments docs/luan-van/`: 0 lỗi.
+- **Incidents:** lệnh đo khuôn T (`powershell.exe -ExecutionPolicy Bypass -File .work/tools/gop_luan_van/do_trang_word_T.ps1`) bị auto mode từ chối trong lượt tự chạy; không thử cách khác, để Trình chạy tay.
+  Review phát hiện các lỗi nội dung đã có từ bước 1, 1b, gồm: đoạn mở chương ghi "lên tối đa khi mất tín hiệu" trong khi 3.3.3 nói mất metric nguồn làm số replica về 1; 3.6 nhắc cold start "hơn 6 phút" mà không nói đó là L2 đo trên máy khác (2 × RTX 5060 Ti, 08/11), mâu thuẫn với mức 0,5–1,5 phút dùng để đặt N2a ở 3.1; dẫn sai mục 1.1, 1.2; câu 12 phút của cửa sổ 1 giờ đứng trước ngưỡng burn rate 4 mà nó dựa vào; mục tiêu 99% không 5xx xuất hiện ở Bảng 3.7 mà chưa được định nghĩa; "máy cloud" (từ cấm ở quy tắc viết §4); hình 3.1 và Bảng 3.8 đứng ngay trước tiêu đề.
+- **Deviations:** chương 3 có thể vượt định hướng 13–15 tr (ước tính); chưa cắt, chờ số đo khuôn T.
+- **Links:** nhánh `docs/tr8-thesis-ch3`; PR chương 3; các PR mục đã đóng #62, #63, #64, #66, #67, #68.
+- **Thesis:** chương 3 đủ các mục theo dàn ý §11.1. Còn lại: đo khuôn T; vẽ lại Hình 3.1 (Hình 2 cũ) trước khi chèn; sửa câu Argo CD ở 3.2.2 khi #75, #78 merge.
