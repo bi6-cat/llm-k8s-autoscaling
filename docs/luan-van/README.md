@@ -1,7 +1,7 @@
 <!-- Mục đích: quy ước viết bản nguồn luận văn (Markdown, mỗi mục một file) và cách ghép thành .docx. -->
 # Luận văn: bản nguồn
 
-Thư mục này chứa **nội dung** luận văn, viết bằng Markdown, mỗi mục một file. Ở bước định dạng (W9), pandoc ghép các file thành một file `.docx` theo khuôn của trường.
+Thư mục này chứa **nội dung** luận văn, viết bằng Markdown, mỗi mục một file. Ở bước định dạng (W9), pandoc ghép các file thành một file `.docx` theo khuôn T ([quy tắc viết §1](quy-tac-viet.md#1-khuôn-trình-bày)).
 
 - Dàn ý và độ dài: [Kế hoạch §11.1](../chi-tiet/06-ke-hoach-quan-ly.md#111-dàn-ý-luận-văn).
 - Người viết: từ 22/11/2026, Trình viết bản base toàn bộ luận văn; Quang review, sửa và cập nhật số. Người sở hữu tính năng theo [Kế hoạch §5.1](../chi-tiet/06-ke-hoach-quan-ly.md#51-phân-công) soát kỹ mục tương ứng. Ghép và định dạng: Trình.
@@ -60,4 +60,4 @@ pandoc docs/luan-van/[0-9]*.md \
 
 - `--resource-path`: đường dẫn hình trong file viết tương đối với thư mục này (`../images/png/…`), nên pandoc cần biết gốc để tìm hình.
 - `--citeproc`: thay `[@key]` bằng trích dẫn và tạo danh mục tài liệu ở cuối.
-- Bước định dạng sẽ thêm `--reference-doc=<khuôn của trường>.docx` (lề, phông, kiểu tiêu đề) và `--csl=<kiểu trích dẫn>.csl`.
+- Bước định dạng sẽ thêm `--reference-doc=<khuôn T>.docx` ([quy tắc viết §1](quy-tac-viet.md#1-khuôn-trình-bày)) (lề, phông, kiểu tiêu đề) và `--csl=<kiểu trích dẫn>.csl`.
