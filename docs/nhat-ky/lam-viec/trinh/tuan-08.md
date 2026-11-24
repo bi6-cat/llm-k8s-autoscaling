@@ -154,3 +154,31 @@
 - **Incidents:** Việc F6 (cảnh báo thật qua bot Telegram trên kind) dừng ở bước đầu: trong lượt tự chạy, lệnh nạp Secret bot thật từ `.env` vào kind bị chặn. F6 chờ Trình nạp Secret, nên vòng này chuyển sang VH2.
 - **Links:** `envs/sim/argocd/apps.yaml`, `Makefile` (`sim-argocd`), `envs/sim/README.md`, `docs/phien-ban.md`.
 - **Thesis:** 4.5 (triển khai qua Git); 5.5.1 (VH2 qua Git trên kind, số đo ở bước 2).
+
+## 2026-11-25 – VH2 trên kind, bước 2: cập nhật và `git revert` qua Argo CD dưới tải
+
+- **Task:** TR8 (F3, N4, VH2 theo D113 / ADR-007 D2) · **Environment:** sim
+- **Done:**
+  1. Thêm kịch bản `vh2-git` vào `experiments/ops/vh.py`, theo đúng Vận hành §5.3, §5.4. Kịch bản push 4 commit lên nhánh thử `feat/tr8-vh2-git-target` từ một git worktree riêng: nâng `minReplicaCount` lên 2; đổi `--time-to-first-token` của simulator 200 → 300 ms; `git revert` commit đổi tham số; `git revert` commit nâng min. Mỗi bước, script chờ Argo CD tự sync đúng commit đó (`operationState.syncResult.revision`), không bấm refresh. Tải do loadgen tạo trong cluster và gọi Service, như các kịch bản VH khác.
+  2. Script kiểm trước khi chạy: không chạy trên `main`; worktree sạch và trùng `origin/<nhánh>`; hai Application đọc đúng repo và nhánh, auto-sync bật; ScaledObject không tạm dừng. Một bước lỗi thì revert các commit đã push. Chấm đạt khi có 0 lỗi, bắt đầu từ 1 replica, Argo CD sync cả 4 commit, thấy tham số mới sau cập nhật và đúng tham số cũ sau rollback, và kịch bản xong khi tải còn chạy.
+  3. `make sim-argocd ARGOCD_REV=feat/tr8-vh2-git-target` (33 s tới `Synced Healthy`), chạy 2 lượt, rồi `make sim-argocd-down` (13 s).
+  4. Ghi cách chạy và số đo vào `envs/sim/README.md`.
+- **Decision:** D117. Đo bằng kịch bản trong runner thay vì làm tay theo runbook, để có timeline, `requests.csv` và lặp lại được. Không dùng `hey` qua port-forward, vì port-forward dồn mọi request vào một pod (đo 04/11) nên không thấy được rolling update. Tham số đổi là TTFT giả của simulator, vì nó hiện ra trên TTFT đo được: đó là bằng chứng bản mới thật sự chạy, rồi bản cũ thật sự quay lại. Từ WSL, script gọi `git.exe` của Windows để push bằng credential sẵn có. Bảng nghiệm thu F3 (Môi trường §16) để PR sau, vì PR #75 đang sửa đúng dòng đó.
+- **Results:**
+  - Lượt chính `runs/ops-vh2-git-20261124-171557` (0,3 req/s, 2.100 s): **đạt**, 615 request, **0 lỗi**, trước đó 1 replica.
+
+    | Bước | Push → Argo CD sync xong | Cả bước |
+    |---|---|---|
+    | Nâng min lên 2 | 138 s | 146 s (2 pod Ready) |
+    | Đổi TTFT 200 → 300 ms | 247 s | 261 s (rollout xong) |
+    | `git revert` đổi TTFT | 231 s | 244 s (rollout xong) |
+    | `git revert` nâng min | 242 s | 244 s |
+
+    TTFT p50 của request gửi trong từng khoảng: 206 ms trước cập nhật, 306 ms từ lúc rollout tới lúc sync rollback, 206 ms sau rollback (397 request). A2 hạ 2 → 1 replica vài phút sau khi Argo CD sync commit cuối (cửa sổ scale-down 300 s), lúc tải vẫn chạy, không có lỗi.
+  - Lượt thử `runs/ops-vh2-git-20261124-164415` (0,5 req/s, 1.800 s): 886 request, 0 lỗi, TTFT 207 → 305 → 206 ms. Script chấm **không đạt**, và chấm đúng: A2 đã tự lên 2 replica lúc 16:45:54, trước commit nâng min lúc 16:46:18, nên lượt này không phải ca 1 replica. Push → sync: 114 / 367 / 115 / 315 s.
+  - Push → sync có thể tới khoảng 6 phút. Argo CD so lại với Git mỗi 2–3 phút (`appResyncPeriod=2m0s`, jitter 1 phút), còn repo-server giữ commit của nhánh trong cache 3 phút (`argocd-repo-server --help`: `--revision-cache-expiration` mặc định `3m0s`). Log controller của bước 367 s: lần so lúc 16:50:20 (2 phút sau push) vẫn `Synced` với commit cũ; tới lần so lúc 16:54:24 mới `Initiated automated sync`.
+  - Nhánh thử còn trên origin làm bằng chứng: `ae7f31f`, `a100eee`, `b018e12`, `310e172` (lượt thử), rồi `f3e0a44`, `0dd739a`, `34651bf`, `9bc66d0` (lượt chính).
+  - Kiểm cục bộ: `ruff check`, `ruff format --check` đạt; `pytest experiments` 168 đạt, 4 hỏng ở `test_backup_notify.py`. 4 test này hỏng cả trước thay đổi, vì `rclone` giả là shell script, không chạy được trên Windows; CI Linux xanh. `/code-review high`: 9 điểm, đã sửa 8 điểm trong code: revert khi lỗi giữa chừng; kiểm worktree trùng origin; bắt lỗi không có lệnh git; chấm không đạt khi kịch bản xong sau lúc tải ngừng; nhận cả annotation `paused`; so đúng giá trị TTFT cũ; kiểm repoURL; ghi rõ `sync_s` tính từ lúc push xong. Điểm thứ 9 (thiếu nhật ký) xử lý bằng mục này. Lượt chính chạy bằng code đã sửa, lượt thử chạy bằng code trước khi sửa.
+- **Deviations:** Kịch bản chỉ đổi tham số của simulator; không có GPU, cold start, cache model. Rollout 2 pod xong 10–11 s sau sync, trong khi vLLM thật mất vài phút (ADR-007 §4). Môi trường §13 ghi VH2 "qua PR"; ở đây commit được push thẳng lên nhánh thử, coi như PR đã merge, và không qua CI.
+- **Links:** `experiments/ops/vh.py` (`vh2_git`, `GitTarget`, `argocd_problem`), `experiments/tests/test_ops_vh.py`, `envs/sim/README.md`; nhánh `feat/tr8-vh2-git-target`; PR xếp chồng trên #77.
+- **Thesis:** 5.5.1 (VH2 qua Git: bảng 4 bước, TTFT 206 → 306 → 206 ms, 0 lỗi); 4.5 (triển khai qua Git: độ trễ push → sync gồm chu kỳ so và cache của repo-server); 5.7 (simulator không có cold start thật; commit không qua PR, CI). Hình C6 có thể vẽ từ `timeline.json` + `requests.csv` của lượt chính.

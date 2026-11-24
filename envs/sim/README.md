@@ -69,6 +69,23 @@ make sim-argocd ARGOCD_REV=<nhánh>   # Argo CD core + app serving, autoscaling 
 
 - Commit và push lên nhánh `ARGOCD_REV` là cập nhật; Argo CD đọc Git mỗi 2 phút cộng ngẫu nhiên tối đa 1 phút (log `appResyncPeriod=2m0s, appResyncJitter=1m0s` của `argocd-application-controller`). `git revert` rồi push là rollback.
 - Self-heal bật: sửa tay ScaledObject hay Deployment thì Argo CD đưa về đúng Git sau vài giây. Muốn đổi thứ gì thì đổi trong Git.
-- Runner (`experiments.runner`, `make ops-tests`) dừng ngay khi app `autoscaling` còn auto-sync (`guard_argocd`), giống ở nhà. Chạy runner thì gỡ Argo CD trước (`make sim-argocd-down`). Không dùng `make home-eval-begin`: target đó mặc định nhắm cluster nhà.
+- Runner (`experiments.runner`, `make ops-tests`) dừng ngay khi app `autoscaling` còn auto-sync (`guard_argocd`), giống ở nhà. Chạy runner thì gỡ Argo CD trước (`make sim-argocd-down`). Không dùng `make home-eval-begin`: target đó mặc định nhắm cluster nhà. Ngoại lệ duy nhất là kịch bản `vh2-git` bên dưới: kịch bản này đòi Argo CD đang tự sync.
+
+### Đo VH2 dưới tải: kịch bản `vh2-git`
+
+`experiments/ops/vh.py vh2-git` làm đúng quy trình Vận hành §5.3, §5.4, mỗi bước là một commit push lên nhánh `ARGOCD_REV`: nâng `minReplicaCount` lên 2, đổi `--time-to-first-token` của simulator 200 → 300 ms, `git revert` commit đó, `git revert` commit nâng min. Script không bấm refresh, nên thời gian đo gồm cả chu kỳ đọc Git của Argo CD. Máy tạo tải chạy trong cluster và gọi Service, như các kịch bản VH khác. Nếu một bước lỗi, script revert các commit đã push để nhánh về như trước lượt.
+
+```bash
+# Worktree riêng ở nhánh thử, sạch và trùng origin (commit thử không lẫn vào nhánh đang làm việc)
+git worktree add -b <nhánh> <thư mục> origin/main && git -C <thư mục> push -u origin <nhánh>
+make sim-argocd ARGOCD_REV=<nhánh>
+# Trong WSL: python3 của Ubuntu có pyyaml; --git-cmd git.exe để push bằng credential của Windows
+python3 -m experiments.ops.vh vh2-git --matrix envs/sim/experiments/matrix.yaml --rate 0.5 \
+  --context kind-llm-sim --git-worktree <thư mục> --git-branch <nhánh> --git-cmd git.exe
+```
+
+Dùng `--rate 0.3` (khoảng 4 request đồng thời). Ở `--rate 0.5` (trung bình 6–7, nhưng tải Poisson có lúc vượt threshold 10) A2 tự lên 2 replica trước bước nâng min, nên lượt đó không còn là ca 1 replica và script chấm không đạt. Kết quả ở `runs/ops-vh2-git-<thời điểm>/`; `summary.json` có `sync_s` (push xong → Argo CD sync xong) và `total_s` của từng bước.
+
+Đo 25/11 ở `--rate 0.3`, `--duration 2100`: đạt, 615 request, 0 lỗi. Push → sync mất 138–247 s mỗi bước. Rollout 2 pod xong 10–11 s sau sync. TTFT p50 là 206 ms trước cập nhật, 306 ms sau cập nhật và 206 ms sau `git revert`. Push → sync có thể tới khoảng 6 phút: Argo CD so lại với Git mỗi 2–3 phút, còn repo-server giữ commit của nhánh trong cache 3 phút (`--revision-cache-expiration`, mặc định `3m0s`). Lượt thử ở 0,5 req/s có một bước mất 367 s: lần so lúc 2 phút sau push vẫn thấy commit cũ.
 
 Gỡ Argo CD, giữ nguyên simulator và A2 (Application không có finalizer, nên xoá Application không xoá tài nguyên của nó): `make sim-argocd-down`.
