@@ -75,7 +75,7 @@ Danh sách 6 cảnh báo nằm ở [Vận hành §3.2](04-van-hanh.md#32-danh-s�
 | Mức | Nội dung | Ý nghĩa |
 |---|---|---|
 | **Must** | F1–F6 (F3–F6 ở bản rút gọn); N1, N2a, N4, N6; ĐG1; ĐG2 17 lượt; VH1 (pha `drop` của KB2 trên GPU thuê); VH2 gồm vòng Git trên kind + simulator và ca 1 replica trên GPU thuê; VH4, VH5. **Sửa 24/11** (trước đó: "VH1, VH2 ở nhà"), [ADR-007](../adr/007-doi-vh1-vh2-f6-n8-khoi-cluster-nha.md) | Đủ điều kiện bảo vệ |
-| **Should** | F7; N2b, N3, N5, N7, N8; ĐG3; VH2 ca mọi GPU có pod (GPU thuê), VH3, VH6; dashboard chi phí | Đồ án tốt |
+| **Should** | F7; N2b, N3, N5, N7, N8; ĐG3; VH2 ca mọi GPU có pod và ca kiểu web (GPU thuê), VH3, VH6; dashboard chi phí | Đồ án tốt |
 | **Could** | A3 (KV-cache); A4 (flapping) trên simulator; cảnh báo phụ (`LLMSLOBurnSlow`, `LLMPreemptions`, `GPUTemperatureHigh`, `GPUXidError`); `gitleaks`; trigger theo TTFT (E6); `pod-deletion-cost` (E11); warm pool | Đồ án xuất sắc |
 
 Nếu chậm tiến độ thì cắt từ dưới lên theo thứ tự trên ([Kế hoạch §8](06-ke-hoach-quan-ly.md#8-dự-phòng-và-cắt-giảm-phạm-vi)).
