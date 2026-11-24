@@ -61,3 +61,12 @@
 - **Incidents:** lần dàn đầu, bảng không ngắt qua trang (để lại trang gần trống) và cột chia đều, nên số trang bị đội; lần sửa thứ hai đếm số cột từ file Markdown, lệch vì có bảng trong comment. Cuối cùng giữ số cột Pandoc sinh ra, chỉ đổi độ rộng sang `auto`, và soát bằng ảnh trang trước khi lấy số.
 - **Links:** `docs/luan-van/quy-tac-viet.md` (§1, §3.1, §6); `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§11.1).
 - **Thesis:** áp cho mọi mục; trước mắt là cắt 3.1, 3.3, 3.5, 3.6 về ngân sách, và viết 3.2, 3.4 theo ngân sách.
+
+## 2026-11-24 – Luận văn: ngân sách chương 4 và bản base mục 4.3 Autoscaling
+
+- **Task:** TR8 (nội dung của TR2) · **Environment:** none
+- **Done:** chốt ngân sách trang chương 4 và ghi vào dòng bảng chương 4 của Kế hoạch §11.1; viết `docs/luan-van/04-03-autoscaling.md` theo khung sáu bước (quy-tac-viet §2.1) từ nhật ký TR2 tuần 04–06, nhật ký Quang 04/11 và 09/11, Kiến trúc §13–§15 và mã `common/autoscaling/`, `envs/*/autoscaling/`; đo trang, cắt từ 3,49 về 3,00 trang khuôn B.
+- **Decision:** (D99) chương 4 = 20 trang: mở/kết 1,5 · 4.1 3,5 · 4.2 2,5 · 4.3 3 · 4.4 2 · 4.5 2 · 4.6 3 · 4.7 2,5, suy từ tỷ lệ 70/30 của chương 3–4 so với chương 5 trong Kế hoạch §11.1. Trình đổi bước tiếp từ 6.2 sang chương 4, theo thứ tự viết 3 → 4 → 5 → 2 → 1 → 6. Sự cố `port-forward` chuyển sang 4.7, vì cách sửa nằm ở máy tạo tải.
+- **Results:** 4.3 có 1.021 chữ văn xuôi, 1 bảng (T1–T5); dàn trang thử 2,33 trang (khuôn A), 3,00 trang (khuôn B); kiem_van 0 điểm; lychee 0 lỗi.
+- **Links:** nhánh `docs/tr8-thesis-4-3-base`; `docs/luan-van/04-03-autoscaling.md`, `docs/chi-tiet/06-ke-hoach-quan-ly.md`.
+- **Thesis:** §4.3; cần thêm hình số replica theo thời gian của T2–T3 nếu còn chỗ (chưa vẽ).
