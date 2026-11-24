@@ -54,7 +54,7 @@ Mỗi sự kiện chỉ được trình bày **đầy đủ ở một chỗ**; �
 | 6 | Kết luận theo ba thông điệp, mỗi kết luận kèm một số chính, điều kiện đo và dẫn chéo tới mục của chương 5; hạn chế của hệ thống và phạm vi; hướng phát triển | Kết quả mới chưa nêu ở chương 5; kết luận không có số ("hệ thống tiết kiệm đáng kể") |
 
 **Khung của một chương:**
-- **Đoạn mở đầu chương:** một đoạn ngắn, nói chương trả lời câu hỏi gì và gồm các mục nào. Ở chương 3–5, đoạn này nêu luôn câu trả lời trong 1–2 câu, để người đọc biết trước điều chương sẽ chứng minh; chương 5 kèm số chính, ví dụ mức GPU-giờ của A2 so với S4. Đoạn này nằm ở file `CC-00-<ten>.md`.
+- **Đoạn mở đầu chương:** một đoạn ngắn, nói chương trả lời câu hỏi gì và gồm các mục nào. Ở chương 3–5, đoạn này nêu luôn câu trả lời trong 1–2 câu, để người đọc biết trước điều chương sẽ chứng minh. Chương 3 nêu các lựa chọn thiết kế chính. Chương 4 nêu hệ thống đã dựng và kiểm được tới đâu, và các điểm lệch thiết kế chính, không nêu kết quả đánh giá. Chương 5 kèm số chính, ví dụ mức GPU-giờ của A2 so với S4. Đoạn này nằm ở file `CC-00-<ten>.md`.
 - **Mỗi mục cấp 2:** mở bằng 1–2 câu nói mục giải quyết việc gì (không viết "Mục này trình bày…"). Trước khi viết, ghi 1–3 thông điệp chính của mục vào comment đầu file: `<!-- Thông điệp: … -->`. Đoạn nào không phục vụ một thông điệp thì bỏ hoặc chuyển xuống phụ lục.
 - **Mục cuối "Kết chương":** 1 đoạn, nói chương rút ra điều gì và dẫn sang chương sau.
 
@@ -114,7 +114,7 @@ Chỉ mô tả quy trình đã thật sự diễn ra. Ví dụ: không viết "h
 ### 3.2. Câu và đoạn
 
 - **Ngôi:** dùng ngôi thứ ba: "nhóm", "đồ án", "hệ thống". Chỉ lời cảm ơn được dùng "chúng em".
-- **Câu:** tiêu chí là đọc một lần hiểu ngay, không phải số chữ. Mỗi câu nói một ý chính kèm điều kiện của nó. Câu dài vì gộp hai ý thì tách; câu dài vì số cần đi cùng điều kiện đo thì giữ. Xen câu ngắn để chốt một kết luận cần nhấn. Nhóm không đặt trần cứng cho độ dài câu và đoạn: viết theo ngưỡng làm câu dài đều nhau và đoạn dồn về cùng một số câu, là một dấu hiệu của văn do máy sinh (§3.4). Không lồng định nghĩa vào câu ("…, tức …", hay "(*…*, viết tắt)" giữa một câu liệt kê). Liệt kê từ 3 vế trở lên mà vế nào cũng cần giải thích thì tách câu, hoặc lập bảng nếu đủ điều kiện ở §6.
+- **Câu:** tiêu chí là đọc một lần hiểu ngay, không phải số chữ. Mỗi câu nói một ý chính kèm điều kiện của nó. Câu dài vì gộp hai ý thì tách; câu dài vì số cần đi cùng điều kiện đo thì giữ. Xen câu ngắn để chốt một kết luận cần nhấn. Nhóm không đặt trần cứng cho độ dài câu và đoạn. Khi viết theo ngưỡng, câu dài đều nhau và đoạn dồn về cùng một số câu, và đó là một dấu hiệu của văn do máy sinh (§3.4). Không lồng định nghĩa vào câu ("…, tức …", hay "(*…*, viết tắt)" giữa một câu liệt kê). Liệt kê từ 3 vế trở lên mà vế nào cũng cần giải thích thì tách câu, hoặc lập bảng nếu đủ điều kiện ở §6.
 - **Đoạn:** mỗi đoạn một ý chính, mở bằng câu chủ đề (§3.1); số câu theo ý. Đoạn 1–2 câu là hợp lý khi mở mục (§2), dẫn vào danh sách hay tiểu mục, chuyển ý, hoặc nhấn một kết luận. Tránh nhiều đoạn ngắn liền nhau, vì khi đó văn rời rạc như một danh sách. Đoạn rất dài thì xem có tách được thành hai ý không. Thân bài là văn xuôi; danh sách chỉ dùng khi liệt kê từ 3 mục song song, ngắn, không lồng nhau. Chỉ mở đoạn bằng cụm in đậm khi tiểu mục có từ 3 khía cạnh song song (thay cho tiêu đề cấp 4, §1); không in đậm giữa câu.
 - **Chủ ngữ rõ:** "Nhóm chọn …", "A2 thêm replica …"; không viết câu cụt chủ ngữ kiểu "Được thiết kế để …". Giải thích lý do như khi trình bày cho thầy cô: "Nhóm không dùng GPU utilization vì …".
 - **Không dùng văn nói:** không viết "khá", "rất nhiều", "cực kỳ", "ổn", "ngon", "chạy ngon", "khủng". Thay bằng số: "nhanh hơn 4 lần" thay cho "nhanh hơn rất nhiều".
@@ -149,7 +149,7 @@ Chỉ mô tả quy trình đã thật sự diễn ra. Ví dụ: không viết "h
 | "một cách hiệu quả/linh hoạt/toàn diện/nhanh chóng" | số: "trong 16,8 s" |
 | "toàn diện", "mạnh mẽ", "vượt trội", "liền mạch", "tối ưu (hoá)", "hiệu quả cao", "mang lại lợi ích" | số so sánh, hoặc bỏ |
 | "góp phần", "hướng tới", "nhằm mục đích", "với mục tiêu" | "để" |
-| "Điều này cho thấy", "Có thể thấy rằng", "Đáng chú ý là", "Nhìn chung", "Tóm lại" (trừ Kết chương) | bỏ, nói thẳng kết luận |
+| "Điều này cho thấy", "Có thể thấy rằng", "Đáng chú ý là", "Nhìn chung", "Tóm lại" (trừ Kết chương và chương 6) | bỏ, nói thẳng kết luận |
 | "tiến hành", "thực hiện việc", "việc … việc …" | động từ thường: đo, chạy, thêm, chọn, sửa |
 | "được … bởi …" (bị động dịch từ tiếng Anh) | câu chủ động: "Runner ghi …" |
 
@@ -259,8 +259,8 @@ Những thứ này chỉ nằm trong comment nguồn. Ngoại lệ: mục phân 
   - Số mô phỏng và số đề xuất chỉ xuất hiện ở chương 6 hoặc trong mục có tiêu đề nói rõ.
 - **So với chỉ tiêu:** khi nêu kết quả của một chỉ tiêu (N1…N8), nêu theo thứ tự: chỉ tiêu, số đo, đạt/không đạt, rồi lý do nếu không đạt. Bảng nghiệm thu tổng hợp lại đúng các câu đó, không có số mới.
 - **Mỗi bảng hoặc hình kết quả có một câu nhận xét chính** đứng ngay sau, nói điều người đọc cần thấy. Không chỉ viết "kết quả ở Bảng 5.2".
-- **Chỉ số tự định nghĩa kèm một ví dụ số** ở lần định nghĩa (mục 3.6), để người đọc kiểm được cách tính. Ví dụ: "2 GPU replica chạy trong 30 phút tính là 1,00 GPU-giờ". Ví dụ là phép tính minh hoạ định nghĩa, không phải số đo, nên dùng số tròn, không lấy số của một lượt đo.
-- **Khuyến nghị** (mục 5.6, chương 6) viết theo thứ tự: điều kiện áp dụng, lựa chọn, căn cứ. Khuôn: "Khi <tải, SLO, ngân sách>, nên chọn <cấu hình>, vì <số đo> (mục 5.x)." Khuyến nghị không có điều kiện thì người đọc không biết nó còn đúng ở hệ thống của họ hay không.
+- **Chỉ số tự định nghĩa kèm một ví dụ số** ở lần định nghĩa (mục 3.6), để người đọc kiểm được cách tính. Ví dụ: "2 GPU replica giữ GPU trong 30 phút, tính cả lúc cold start, là 1,00 GPU-giờ". Ví dụ là phép tính minh hoạ định nghĩa, không phải số đo, nên dùng số tròn, không lấy số của một lượt đo.
+- **Khuyến nghị** (mục 5.6, chương 6) viết theo thứ tự: điều kiện áp dụng, lựa chọn, căn cứ. Khuôn: "Khi <tải, SLO, ngân sách>, chọn <cấu hình> vì <số đo> (mục 5.x)." Khuyến nghị không có điều kiện thì người đọc không biết nó còn đúng ở hệ thống của họ hay không.
 - **Hạn chế của phép đo** gom vào mục 5.7 (danh sách ở `nguon-tu-lieu.md` §6). Hạn chế của hệ thống và phạm vi viết ở mục 6.2. Mỗi hạn chế nêu kết luận nào bị ảnh hưởng và hướng lệch nếu biết, ví dụ số đo có thể cao hơn hay thấp hơn thực tế. Không biết hướng lệch thì ghi rõ "chưa đo, không suy ra được chiều lệch".
 
 ## 6. Hình, bảng, mã nguồn
@@ -342,7 +342,8 @@ Những thứ này chỉ nằm trong comment nguồn. Ngoại lệ: mục phân 
 - [ ] Độ dài theo nội dung lõi (§1, §3.1): không có đoạn ngoại vi chiếm chỗ của phần lõi. Đề mục theo §2: mỗi tiêu đề (trừ các tiêu đề được miễn) có từ khoảng 1 trang nội dung và nói nội dung, không nói bước của khung.
 - [ ] Văn phong theo §3: câu đầu đoạn là kết luận; không có cụm sáo và dấu hiệu ở §3.4.
 - [ ] Thuật ngữ, tên sản phẩm, mã định danh theo §4; thuật ngữ mới đã giải thích ở lần đầu và đã vào danh mục chữ viết tắt.
-- [ ] Số và đơn vị theo README và §5; số không phải đo thật có nhãn nguồn gốc.
+- [ ] Số và đơn vị theo README và §5; số không phải đo thật có nhãn nguồn gốc. Chỉ số tự định nghĩa có ví dụ tính; khuyến nghị có điều kiện áp dụng và căn cứ; mỗi hạn chế nêu kết luận bị ảnh hưởng và hướng lệch (§5).
+- [ ] Đoạn mở chương 3–5 nêu câu trả lời; mỗi kết luận ở chương 6 kèm một số và dẫn chéo tới chương 5 (§2).
 - [ ] Hình, bảng có chú thích, được nhắc trong bài trước khi xuất hiện, có câu nhận xét đi sau.
 - [ ] Không có văn nói và không nhắc chuyện nội bộ (§3.5) trong thân bài.
 - [ ] `pandoc … --citeproc` chạy không lỗi, không cảnh báo trích dẫn (lệnh ở README).
