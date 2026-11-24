@@ -143,10 +143,11 @@
   3. Sửa README ở những chỗ người mới phải tìm ở tài liệu khác: thêm mục "Cần có" (máy, công cụ, mạng, Telegram tuỳ chọn, cách dựng mà không gửi tin), phần kiểm tra sau `make sim-up` (kết quả mong đợi, mở Grafana), mục "Trên Windows (WSL2)", và thời gian `make sim-up` theo số đo.
 - **Results:**
   - `make sim-down`: 9,5 s. `make sim-up`: 343 s, mã thoát 0. Theo bước: tạo cluster kind 30 s; khai báo repo Helm 5 s; kube-prometheus-stack 206 s; rule và dashboard dưới 1 s; KEDA 81 s; simulator rollout 16 s; ScaledObject dưới 1 s.
-  - Sau `make sim-up`: 1 pod `vllm` 1/1 Running, `vllm-a2` READY=True, HPA `0/10 (avg)`; không pod nào ngoài Running/Completed. Ba node dùng 2,9 GB RAM (`docker stats`).
+  - Sau `make sim-up`: 1 pod `vllm` 1/1 Running, `vllm-a2` READY=True, HPA `0/10 (avg)`; không pod nào ngoài Running/Completed. Ba node dùng 2,9 GB RAM lúc nghỉ và 3,1 GB khi bơm C=25 với 3 replica (`docker stats`).
   - `make sim-test`: 1.128 s, T1–T5 đều đạt. T2 desired=3 sau 3 s (tiêu chí ≤ 15 s); T3 giữ 3 replica 304 s rồi về 2, về 1 sau thêm 61 s; T4 fallback sau 18 s (tiêu chí ≤ 30 s); T5 giữ 1 replica khi A2 lên 25. Log: `runs/sim/20261124-222049-t1-t5.log`.
   - Tổng từ `make sim-down` đến khi T1–T5 đạt: 1.481 s (khoảng 25 phút), dưới ngưỡng 1 giờ của N8.
   - Log Alertmanager không có lần gửi nào trong lúc T1–T5, nên F6 phải tự kích một cảnh báo.
+  - `/code-review high`: 7 điểm, đã sửa cả 7 (README thiếu `jq`, `curl`; W1 không cài `uv`; khối Grafana đặt port-forward trước lệnh lấy mật khẩu; "~6 phút" chưa nói là đã có node image; RAM chưa đo lúc có tải; chưa nói Secret giả ở lại cluster; ô T2 của van-hanh.md dễ đọc nhầm).
 - **Deviations:** chưa đúng "người thứ hai" như N8 viết: agent chạy trên máy của Trình, công cụ đã cài sẵn, và node image của kind (1,3 GB) đã có trong cache Docker. Image của chart và simulator thì tải lại. Thời gian cài công cụ theo W1 §4.2 chưa đo.
 - **Links:** `envs/sim/README.md`; `docs/nhat-ky/van-hanh.md`.
 - **Thesis:** §4 (tái lập môi trường), §5 bảng nghiệm thu N8.

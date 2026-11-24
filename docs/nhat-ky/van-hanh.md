@@ -497,7 +497,7 @@ Máy của Trình, WSL2 Ubuntu 24.04, kind v0.33.0. Làm theo `envs/sim/README.m
 |---|---|---|
 | `make sim-down` | 9,5 s | xoá cụm cũ |
 | `make sim-up` | 343 s | mã thoát 0; kube-prometheus-stack chiếm 206 s, KEDA 81 s |
-| `make sim-test` | 1.128 s | T1–T5 đạt (T2 3 s, T4 fallback 18 s) |
+| `make sim-test` | 1.128 s | T1–T5 đạt (T2: desired=3 sau 3 s; T4: fallback sau 18 s) |
 | Tổng | 1.481 s | dưới 1 giờ (N8) |
 
 - README được bổ sung các bước còn thiếu (công cụ, kiểm tra sau khi dựng, Grafana, WSL2). Chi tiết ở [nhật ký Trình tuần 08](lam-viec/trinh/tuan-08.md).

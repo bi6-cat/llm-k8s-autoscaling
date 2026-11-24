@@ -14,8 +14,9 @@ Kiểm thử vòng autoscaling **không cần GPU**: cluster kind trên laptop, 
 
 | | |
 |---|---|
-| Máy | Linux có Docker Engine. Trên Windows: WSL2 Ubuntu 24.04 có Docker Engine, không cần Docker Desktop (xem [Trên Windows](#trên-windows-wsl2)). Sau `make sim-up`, ba node kind dùng khoảng 2,9 GB RAM (đo 24/11) |
-| Công cụ | `make`, `docker`, `kind`, `kubectl`, `helm`, `hey`, `openssl`; thêm `uv` cho runner, LT7, LT8 và phân tích. Lệnh cài: [W1 §4.2](../../docs/huong-dan/w1.md#42-công-cụ). Bản đã ghim: [phien-ban.md](../../docs/phien-ban.md) |
+| Máy | Linux có Docker Engine. Trên Windows: WSL2 Ubuntu 24.04 có Docker Engine, không cần Docker Desktop (xem [Trên Windows](#trên-windows-wsl2)). Ba node kind dùng khoảng 2,9 GB RAM lúc nghỉ và 3,1 GB khi có tải với 3 replica (đo 24/11, WSL có 6 GB) |
+| Công cụ | `make`, `docker`, `kind`, `kubectl`, `helm`, `hey`, `jq`, `curl`, `openssl` (`make sim-test` và `make sim-lt7` dừng ngay nếu thiếu `kubectl`, `jq`, `curl` hoặc `hey`). Lệnh cài: [W1 §4.2](../../docs/huong-dan/w1.md#42-công-cụ). Bản đã ghim: [phien-ban.md](../../docs/phien-ban.md) |
+| `uv` | Cho runner, LT7, LT8 và phân tích; W1 không cài. Cài bản CI dùng: `curl -LsSf https://astral.sh/uv/0.13.1/install.sh \| sh` |
 | Mạng | Lần đầu tải node image của kind (khoảng 1,3 GB), chart Helm, và image của Prometheus, KEDA, simulator |
 | Telegram (tuỳ chọn) | `.env` có `ALERTMANAGER_TELEGRAM_BOT_TOKEN` và `ALERTMANAGER_TELEGRAM_CHAT_ID` (mẫu ở `.env.example`) thì `make sim-up` tạo Secret, và cảnh báo nào kêu trên kind cũng được gửi thật. Không có thì lệnh chỉ in cảnh báo rồi chạy tiếp |
 
@@ -24,6 +25,8 @@ Muốn dựng thử mà không gửi tin dù `.env` đã có bot: đặt hai bi�
 ```bash
 ALERTMANAGER_TELEGRAM_BOT_TOKEN=1:fake ALERTMANAGER_TELEGRAM_CHAT_ID=1 make sim-up
 ```
+
+Secret giả ở lại trong cluster: Alertmanager vẫn thử gửi và chỉ ghi lỗi vào log. Muốn chuyển sang bot thật trên cùng cluster thì tạo lại Secret từ `.env` bằng `make alertmanager-secret CTX=kind-llm-sim`.
 
 ## Trong thư mục này
 
@@ -40,7 +43,7 @@ ALERTMANAGER_TELEGRAM_BOT_TOKEN=1:fake ALERTMANAGER_TELEGRAM_CHAT_ID=1 make sim-
 ## Chạy
 
 ```bash
-make sim-up                    # kind + Prometheus + KEDA + simulator + A2 (~6 phút, phần lớn là chart Prometheus)
+make sim-up                    # kind + Prometheus + KEDA + simulator + A2 (~6 phút khi đã có node image, phần lớn là chart Prometheus)
 make sim-test                  # T1–T5, ~20 phút; một bài: make sim-test T=t4
 make sim-test-load C=25 DUR=180s   # chỉ bơm tải, xem scale trên Grafana
 make sim-lt7                   # LT7: số replica theo ⌈C ÷ threshold⌉ và trễ từng chặng, ~27 phút
@@ -66,9 +69,9 @@ Kiểm tra sau `make sim-up`:
 kubectl --context kind-llm-sim -n llm-serving get pods,scaledobject,hpa
 # Mong đợi: 1 pod vllm-… Running 1/1; scaledobject/vllm-a2 READY=True; HPA keda-hpa-vllm-a2 TARGETS 0/10 (avg)
 
-# Grafana: mở http://localhost:3000, đăng nhập admin với mật khẩu in ra ở lệnh thứ hai
-kubectl --context kind-llm-sim -n monitoring port-forward svc/kps-grafana 3000:80
+# Grafana: lấy mật khẩu của admin, rồi mở cổng (lệnh port-forward giữ terminal; Ctrl+C để tắt)
 kubectl --context kind-llm-sim -n monitoring get secret grafana-admin -o jsonpath='{.data.admin-password}' | base64 -d; echo
+kubectl --context kind-llm-sim -n monitoring port-forward svc/kps-grafana 3000:80   # mở http://localhost:3000
 ```
 
 | Bài | Kiểm gì |
