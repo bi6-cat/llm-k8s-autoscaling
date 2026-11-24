@@ -35,6 +35,20 @@
 - **Links:** `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§3 M4, M5; §5.1; §11.1; §11.4); `docs/chi-tiet/01`, `03`, `04`, `05` (phần đầu; 05 dòng F4); `docs/luan-van/quy-tac-viet.md`, `nguon-tu-lieu.md`, `README.md`, `03-05-giam-sat-slo-canh-bao.md`.
 - **Thesis:** dàn ý toàn bộ; 1.4 (cách trình bày quy trình); Lời cam đoan (khai báo công cụ AI).
 
+## 2026-11-23 – TR8: bản base mục 3.1 (yêu cầu và chỉ tiêu nghiệm thu)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Đọc Kế hoạch §11.1 (dàn ý 3.1), `quy-tac-viet.md` §2–§5, §10, Thông số §3–§8, Bài toán §6, §8–§12, ADR-005 T3, ADR-006 §3.1, Môi trường §6.1, §13, §19, Kiến trúc §7.1.
+  2. Viết `docs/luan-van/03-01-yeu-cau-chi-tieu.md`: 4 tiểu mục (từ bài toán tới yêu cầu; mã định danh; yêu cầu chức năng; SLO và chỉ tiêu), 5 bảng (truy vết, mã định danh, F1–F7, SLO, N1–N8), comment nguồn sau mỗi đoạn và bảng. Agent viết nháp; Trình chưa đọc lại.
+  3. Kiểm: `kiem_van.py` lần đầu 5 điểm (một cụm "việc … việc", 3 đoạn 2 câu, 1 câu 42 chữ), sửa còn 0; lychee 0 lỗi; pandoc ghép được.
+  4. `/code-review high`: 10 điểm, sửa cả 10. Chính: ngưỡng 99% không 5xx ở Traefik không có số trong lượt đánh giá (thêm ghi chú vào bảng); câu "mỗi chỉ tiêu có một ngưỡng" sai vì N2b và phần KB2 của N1, N3 chỉ báo cáo; comment nguồn ghi V2 ngày 14–15/11 (kế hoạch) trong khi V2 thật chạy 18–19/11; lý do ngưỡng 30 phút dựng lại tính theo model 7B (khoảng 15 GB) nên thân bài nói rõ; KB2 giữ đỉnh tới phút 14 chứ không "giữ 10 phút"; VH2 cũng chạy trên VM (bằng annotation); "co giãn" thay bằng "tự điều chỉnh số replica"; vai trò A3, A4.
+- **Decision:** đặt bảng mã định danh ngay sau bảng truy vết (3.1.2), trước bảng F/N, vì các bảng F/N dùng mã KB, ĐG, VH; bố cục ghi bảng mã ở cuối nhưng không quy định thứ tự. Bảng của 3.1 đánh số chính thức 3.1–3.5 (không dùng số tạm), vì 3.1 là mục đầu chương 3.
+- **Results:** 1.181 chữ văn xuôi, 19 đoạn, 62 câu, trung bình 19,0 chữ/câu; kiem_van 0 điểm. `git log -L` trên `00-thong-so.md`: mọi dòng ngưỡng N1–N8, TPOT, 95%, 99% không đổi từ 08/10; dòng TTFT chỉ đổi ghi chú ngày 10/11, giá trị 2,5 s giữ nguyên.
+- **Incidents:** câu nháp "histogram TTFT không có biên 2 s" không có nguồn trong repo (ADR-005 T3 chỉ nói ngưỡng 2 s lệch bucket 2,5 của recording rule); thử tìm danh sách bucket trong `vllm/v1/metrics/loggers.py` v0.31.0 thì thấy bucket sinh từ hàm `histogram_buckets()`, chưa đọc tiếp; đã viết lại câu theo đúng ADR-005 T3.
+- **Deviations:** mục 3.1 vượt ngân sách lượt 1 (chương 3 lượt 1 khoảng 2.000 chữ, 3.5 đã 1.464 chữ). Chỗ cắt được nếu cần: đoạn lý do ngưỡng chất lượng và thời gian (khoảng 250 chữ) chuyển xuống phụ lục; bảng mã định danh chuyển sang danh mục mã ở phần đầu quyển. `00-thong-so.md` vẫn gắn nhãn "tạm" cho TTFT 2,5 s và N2b vì ADR-003 chưa viết; thân bài 3.1 không nhắc ADR, comment nguồn ghi rõ.
+- **Links:** `docs/luan-van/03-01-yeu-cau-chi-tieu.md`, `docs/luan-van/nguon-tu-lieu.md` (dòng 3.1).
+- **Thesis:** §3.1; danh mục mã định danh ở phần đầu quyển lấy từ Bảng 3.2.
 ## 2026-11-23 – Luận văn: đo trang bằng dàn trang thử, chốt ngân sách từng mục chương 3
 
 - **Task:** TR8 · **Environment:** none
@@ -133,3 +147,24 @@
 - **Results:** `/code-review high` trên diff: 5 điểm nhỏ (§3.5 và §9 nói khác nhau về chỗ ghi việc dùng AI; quy tắc "kết quả cụ thể có số" của Tóm tắt chưa chuyển sang mục 1.3; §1 chưa ghi chỗ đặt đoạn khai báo nếu được yêu cầu; "khuôn T" ở §5.1 chưa có link; thiếu dòng Thesis), đã sửa cả 5.
 - **Links:** `docs/luan-van/quy-tac-viet.md` (§1, §3.5, §9); `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§5.1, §11.1).
 - **Thesis:** phần đầu quyển (không có Tóm tắt, không có Lời cam đoan); Mở đầu; mục 1.3 Đóng góp.
+## 2026-11-24 – Luận văn: cắt mục 3.1 về 1,5 trang
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Merge `origin/main` vào nhánh `docs/tr8-thesis-3-1-base` (PR #63) để có ngân sách trang (D94).
+  2. Viết lại `03-01-yeu-cau-chi-tieu.md`: 5 bảng còn 1 (F1–F7 và N1–N8 gộp, mỗi dòng một cụm ngắn); bỏ 4 tiểu mục; giá trị SLO và lý do của ngưỡng viết thành văn xuôi.
+  3. Ghi các ý đã cắt và nơi chứa chúng vào dòng 3.1 của `nguon-tu-lieu.md`, và vào comment nguồn của mục.
+- **Decision:** bảng mã định danh đầy đủ (S, A, KB, ĐG, VH, LT, L, V, C, B\*, N) chuyển khỏi 3.1 sang danh mục mã định danh ở phần đầu quyển (quy-tac-viet §1 mục 4, §4). Thân bài 3.1 chỉ giữ bảng F/N và một câu dẫn tới mục 3.3–3.6, nơi từng mã được định nghĩa. Lý do: bảng mã tốn khoảng 0,8 trang (khuôn B), hơn nửa ngân sách 1,5 trang. Không chọn giữ bảng mã và bỏ bảng F/N, vì F/N là nội dung chính của mục. Ma trận truy vết (Bảng 3.1 cũ) bỏ khỏi thân bài; cột "Phép thử" của bảng F/N vẫn nối mỗi yêu cầu tới phép thử.
+- **Results:** đo bằng dàn trang thử (pandoc + Typst, hai khuôn như mục 23/11):
+
+  | Bản | Chữ văn xuôi | Bảng | Khuôn A | Khuôn B |
+  |---|---|---|---|---|
+  | Base (trước khi cắt) | 1.181 | 5 | 5 trang | 7 trang |
+  | Lần thử 1 (giữ bảng mã gọn) | 580 | 2 | 2,43 | 3,25 |
+  | Lần thử 2 (trước `/code-review`) | 344 | 1 | 1,16 | 1,49 |
+  | Bản cuối (sau khi sửa theo review) | 314 | 1 | 1,17 | 1,44 |
+
+  `kiem_van.py` 0 điểm; lychee `docs/luan-van/*.md` 0 lỗi. `/code-review high`: 10 điểm, sửa cả 10. Phần lớn do nén bảng làm mất điều kiện của chỉ tiêu (pha của N1, "so với S4" của N3, ca 1 replica của N4, điều kiện fallback của N6, mốc tính giờ của N2a). Ngoài ra: lý do ngưỡng TTFT bị đảo so với ADR-005 T3, câu chủ đề "mọi ngưỡng tính từ nền tảng" mâu thuẫn với mức 95% theo thông lệ, "tức …" lồng định nghĩa (quy-tac-viet §3.2). Bỏ lý do TPOT 100 ms (ghi ở `nguon-tu-lieu.md`) để giữ trong 1,5 trang.
+- **Deviations:** quy-tac-viet §4 trước ghi "mã định danh định nghĩa ở chương 3, gom vào một bảng"; đã sửa thành: mỗi mã định nghĩa ở mục chương 3 dùng nó, bảng gom nằm ở danh mục đầu quyển. Kế hoạch §11.1 (dòng chương 3) bỏ "truy vết, bảng mã định danh" khỏi 3.1.
+- **Links:** `docs/luan-van/03-01-yeu-cau-chi-tieu.md`, `docs/luan-van/nguon-tu-lieu.md` (dòng 3.1), `docs/luan-van/quy-tac-viet.md` §4, `docs/chi-tiet/06-ke-hoach-quan-ly.md` §11.1; PR #63.
+- **Thesis:** §3.1; danh mục mã định danh ở phần đầu quyển lấy từ bảng mã của bản base (commit `fbe651b`).

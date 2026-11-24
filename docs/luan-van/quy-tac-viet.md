@@ -219,7 +219,7 @@ Những thứ này chỉ nằm trong comment nguồn. Ngoại lệ: mục phân 
 - Viết thường khi nói chung: pod, node, cluster.
 
 **Mã định danh của đồ án:**
-- Định nghĩa ở chương 3, gom vào một bảng, và vào danh mục chữ viết tắt. Từ chương 4 trở đi được dùng thẳng.
+- Mỗi mã được định nghĩa ở mục chương 3 dùng nó (F, N ở 3.1; S, A ở 3.3; L ở 3.4; KB, ĐG, VH, LT ở 3.6), và gom vào một bảng ở danh mục mã định danh đầu quyển. Từ chương 4 trở đi được dùng thẳng.
 
   | Mã | Nghĩa |
   |---|---|
