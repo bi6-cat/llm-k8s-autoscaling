@@ -177,3 +177,22 @@
 - **Incidents:** `/code-review high` báo 10 điểm, sửa cả 10: đếm sai số lớp bảo vệ còn giữ (là ba lớp, gồm ghim phiên bản, không phải hai); lý do lược bảo mật viết lệch ADR-006 §3.1; thiếu GPU replica ở máy nhà; `make bootstrap` là Ansible, không phải Helm; "ba môi trường" lệch "hai tầng" của nguồn; thiếu điều kiện self-heal; nói quá về simulator; chú thích hình sai khuôn README; ô tiêu đề bảng trống; "Ba đánh giá" chưa được định nghĩa. Script đo `run.sh` dừng khi `31.md` rỗng (`grep` trả mã 1 dưới `set -e`), nên mục 3.2 được đo ở vị trí của `31.md`.
 - **Links:** `docs/luan-van/03-02-kien-truc-tong-the.md`, `docs/luan-van/tai-lieu.bib`.
 - **Thesis:** §3.2. Việc kéo theo: chương 2 định nghĩa Kustomize base/overlay, App-of-Apps, k3s, time-slicing, external metric; tên đầy đủ Qwen2.5-0.5B/3B-Instruct xuất hiện lần đầu trước 3.2; mục 6.2 nhận ba lớp bảo vệ bị lược.
+## 2026-11-24 – Luận văn: bản base mục 3.3 (thiết kế autoscaling) và cắt về 2,5 trang
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Bản base 3.3 (commit `28be408`, 23/11): ba tiểu mục tín hiệu, threshold và hành vi, mất tín hiệu; mỗi đoạn có comment nguồn trỏ về `docs/chi-tiet/`, manifest và tài liệu KEDA 2.21.
+  2. Merge `origin/main` (có PR #65, ngân sách trang D94), rồi cắt theo thứ tự quy-tac-viet §3.1: Bảng tín hiệu không chọn còn hai câu (TTFT p95, KV cache); bỏ A3/A4, tolerance, ví dụ 3 B\*; gộp 4 tiểu mục thành 3; Bảng 3.3a bỏ cột "Vai trò", Bảng 3.3b bỏ dòng max, scale-up, tolerance.
+  3. `/code-review high` báo 10 điểm, sửa 9 (dưới); điểm "vượt ngân sách" không sửa vì reviewer ước theo chữ, còn số đo dàn trang thử đã đạt.
+- **Decision:** ý bị cắt chuyển chỗ: exporter GPU không có label pod sang 4.3; cảnh báo `KedaScalerErrors` sang 3.5; Deployment không đặt `replicas` (Argo CD và HPA) sang 3.2; giới hạn "threshold gắn với phân phối độ dài request" sang mục Hạn chế. Comment nguồn của 3.3 ghi lại từng chỗ và § gốc.
+- **Results:** đo bằng `.work/tools/do_trang/run.sh` (citation thay tạm bằng `[1]` vì Typst không có nhãn):
+
+  | Bản | Văn xuôi | Bảng | Khuôn A (13 pt) | Khuôn B (14 pt) |
+  |---|---|---|---|---|
+  | Base 23/11 | 1.715 chữ | 3 | 5 trang | 6 trang |
+  | Sau cắt | 809 chữ | 2 | 1,9 trang | 2,5 trang |
+
+  Trang lẻ ước từ toạ độ dòng chữ thấp nhất trên trang cuối. `kiem_van.py` 0 điểm; lychee 0 lỗi.
+- **Incidents:** review phát hiện bản base viết sai cơ chế mất metric: văn cũ nói "giữ mặc định ignoreNullValues", nhưng truy vấn của A1 và A2 kết thúc bằng `or vector(0)` nên không bao giờ rỗng; sửa theo manifest. Các điểm khác đã sửa: thời gian phát hiện 10–25 s (Kiến trúc §6, bảng thứ hai, gồm chờ vượt tolerance) thay cho "tối đa 10 s"; lý do loại TTFT p95 theo Kiến trúc §10.5 (prefill, cửa sổ `rate()` 1 phút) thay cho "giảm ngay sau scale-up", vốn mâu thuẫn với đoạn hàng đợi ở pod cũ; KV cache ghi là dự đoán, chưa kiểm chứng; A1 cộng mọi GPU của node chứ không cộng theo pod; `--max-num-seqs` 64 ghi rõ là máy cloud (nhà 16); fallback ghi "khoảng 20 s theo thiết kế", số đo V2 16,8 s để chương 5; công thức trần đổi sang `$…$` theo README.
+- **Links:** `docs/luan-van/03-03-thiet-ke-autoscaling.md`; nhánh `docs/tr8-thesis-3-3-base`.
+- **Thesis:** §3.3; Hình 4 (vòng lặp autoscaling) còn ghi model 7–8B và sync 15 s, vẽ lại trước khi chèn.
