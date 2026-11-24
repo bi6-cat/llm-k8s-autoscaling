@@ -187,3 +187,17 @@
 - **Deviations:** SLO trong lúc rolling update (tiêu chí VH2 ở Môi trường §13) chưa tính: chưa có script tính SLO theo mốc của VH2 (`vh4_windows.py` chỉ nhận mốc của VH4). Cảnh báo trong các lượt VH2–VH4 không được lưu, nên vế "có cảnh báo" của VH2c và VH3 chưa kiểm được.
 - **Links:** nhánh `docs/tr8-thesis-ch5-drafts` (chưa PR); `docs/luan-van/05-05-kich-ban-van-hanh.md`, `docs/luan-van/05-06-bang-nghiem-thu.md`, `docs/luan-van/nguon-tu-lieu.md`.
 - **Thesis:** §5.5; §5.7 (vh3-kill có lẽ chỉ 1 pod; hành vi SIGTERM của vLLM trên V2 khác ở nhà, chưa kiểm bằng log; không lưu cảnh báo trong VH2–VH4); §4.5 (VH2 trên VM kích hoạt qua annotation, không qua Git).
+
+## 2026-11-24 – Luận văn: bản base mục 5.7 Hạn chế của phép đo và kết chương 5
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Viết `docs/luan-van/05-07-han-che-phep-do.md` từ `nguon-tu-lieu.md` §6 (phần phép đo) và các chỗ ở 5.2, 5.4, 5.5, 5.6 dẫn "(mục 5.7)". Bản nháp do agent soạn; Trình chưa đọc lại.
+  2. Đo trang, cắt về ngân sách, soát văn bằng `kiem_van.py`, soát độc lập rồi sửa, đo lại cả mục và cả chương 5.
+- **Decision:** 5.7 chỉ nêu hạn chế chưa có ở mục khác: cỡ mẫu (1–3 lượt mỗi ô, 6/11 ô chỉ 1 lượt; hai kết luận chính vẫn giữ vì mọi lượt cùng chiều), bước tải ĐG1 0,5 thay vì 0,25, L0 đo từ 0 lên 1, LT1 chưa đo trên 4060 Ti, VH4 một lượt ở 0,5 C, VH6 chỉ chấm `LLMSLOBurnFast`, bản ghi thiếu của VH2–VH4, kịch bản vận hành chưa chạy ở nhà. Những ý mục khác đã nêu (máy 4060 Ti ở 5.1, page cache và tốc độ đĩa ở 5.4, Telegram ở 5.5.6) và các giới hạn nhỏ (metadata ghi commit khi tree dirty, không sao lưu R2, 2 lõi CPU ở phiên thử A4000) chuyển vào comment "Ý không đưa vào". Hạn chế của hệ thống để 6.2.
+- **Results:**
+  - 5.7: 405 chữ văn xuôi, không bảng; 0,75 trang khuôn A, 0,96 trang khuôn B (ngân sách 1, gồm kết chương). `kiem_van.py` 0 điểm; lychee 0 lỗi.
+  - Cả chương 5 (05-01 tới 05-07, bỏ comment): 11,61 trang khuôn A, 13,68 trang khuôn B, trong ngân sách 14 trang (D96).
+- **Incidents:** bản đầu dài 703 chữ (2 trang); cắt ba lần. Soát độc lập báo 10 điểm, đều đã sửa. Các điểm chính: bỏ sót giới hạn VH4, VH6 mà 05-05 hẹn đưa vào 5.7; kết chương chỉ nêu Service chia đều là nguyên nhân KB2, bỏ cold start mà 5.3 nêu ngang hàng; "cảnh báo kêu ở mọi lượt vi phạm" thiếu phạm vi "17 lượt so sánh cấu hình"; giải thích sai nguyên nhân C thô (do bước 0,5, không do mỗi mức 1 lượt); "LT1 chưa kiểm" mâu thuẫn 5.2 (đã kiểm ở nhà và A4000); câu mở "mọi số đo từ một phiên" sai vì chương có số ở nhà và simulator; "khâu gửi tin chưa kiểm" mâu thuẫn 5.5.6 (đã kiểm trên simulator).
+- **Links:** nhánh `docs/tr8-thesis-ch5-drafts` (chưa PR); `docs/luan-van/05-07-han-che-phep-do.md`.
+- **Thesis:** §5.7, kết chương 5; §6.2 nhận phần hạn chế của hệ thống (ghi trong comment đầu file).
