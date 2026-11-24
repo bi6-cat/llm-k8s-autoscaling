@@ -87,7 +87,13 @@ def test_vh2a_must_start_from_one_replica():
 
 def test_git_update_needs_zero_errors_sync_and_both_versions():
     phases = {"min2": {"sync_s": 90.0}, "update": {"sync_s": 120.0}}
-    good = {"recovered": True, "replicas_before": 1, "new_version_seen": True, "old_version_back": True}
+    good = {
+        "recovered": True,
+        "replicas_before": 1,
+        "new_version_seen": True,
+        "old_version_back": True,
+        "finished_under_load": True,
+    }
     assert not grade("vh2-git", CLEAN, {**good, "phases": phases})
     assert grade("vh2-git", DIRTY, {**good, "phases": phases})
     # Argo CD không sync một commit: không kết luận được về vòng Git
@@ -95,6 +101,8 @@ def test_git_update_needs_zero_errors_sync_and_both_versions():
     # Rollout xong nhưng tham số không đổi: cập nhật không thật sự đi qua Git
     assert grade("vh2-git", CLEAN, {**good, "new_version_seen": False, "phases": phases})
     assert grade("vh2-git", CLEAN, {**good, "replicas_before": 2, "phases": phases})
+    # Rollback xong khi tải đã ngừng: 0 lỗi không chứng minh được gì
+    assert grade("vh2-git", CLEAN, {**good, "finished_under_load": False, "phases": phases})
 
 
 def test_min_replicas_patch_is_inserted_once_and_reverts_cleanly():
@@ -117,13 +125,13 @@ def test_ttft_flag_is_changed_exactly_once():
         with_ttft(text + "    - --time-to-first-token=1ms\n", 300)
 
 
-def test_argocd_must_autosync_from_the_given_branch():
-    app = {
-        "metadata": {"name": "serving"},
-        "spec": {"source": {"targetRevision": "feat/x"}, "syncPolicy": {"automated": {}}},
-    }
-    assert argocd_problem(app, "feat/x") is None
-    assert "main" in argocd_problem(
-        {**app, "spec": {**app["spec"], "source": {"targetRevision": "main"}}}, "feat/x"
-    )
-    assert argocd_problem({**app, "spec": {**app["spec"], "syncPolicy": {}}}, "feat/x")
+def test_argocd_must_autosync_from_the_given_repo_and_branch():
+    src = {"repoURL": "https://github.com/bi6-cat/llm-k8s-autoscaling.git", "targetRevision": "feat/x"}
+    app = {"metadata": {"name": "serving"}, "spec": {"source": src, "syncPolicy": {"automated": {}}}}
+    origin = "https://github.com/Bi6-Cat/llm-k8s-autoscaling/"  # khác .git, hoa thường, dấu / cuối
+    assert argocd_problem(app, "feat/x", origin) is None
+    on_main = {**app, "spec": {**app["spec"], "source": {**src, "targetRevision": "main"}}}
+    assert "main" in argocd_problem(on_main, "feat/x", origin)
+    assert argocd_problem({**app, "spec": {**app["spec"], "syncPolicy": {}}}, "feat/x", origin)
+    # Push lên fork: push thành công nhưng Argo CD không bao giờ thấy commit
+    assert argocd_problem(app, "feat/x", "https://github.com/someone/llm-k8s-autoscaling.git")

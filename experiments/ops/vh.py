@@ -126,6 +126,11 @@ class GitTarget:
             raise RuntimeError(f"worktree đang ở nhánh {current}, không phải {self.branch}")
         if self.git("status", "--porcelain"):
             raise RuntimeError(f"worktree {self.worktree} còn thay đổi chưa commit")
+        # Phải trùng nhánh trên origin: commit chưa push sẽ bị push và áp cùng lượt; origin đi trước thì push
+        # bị từ chối giữa lượt
+        self.git("fetch", "-q", "origin", self.branch)
+        if self.git("rev-parse", "HEAD") != self.git("rev-parse", f"origin/{self.branch}"):
+            raise RuntimeError(f"worktree không trùng origin/{self.branch}: pull hoặc push trước")
 
     def commit_push(self, rel: str, edit: Callable[[str], str], message: str) -> str:
         path = self.worktree / rel
@@ -170,6 +175,8 @@ def grade(scenario: str, load: dict[str, Any], facts: dict[str, Any]) -> list[st
             why.append(f"Argo CD không sync commit của bước: {', '.join(unsynced)}")
         if not facts.get("new_version_seen") or not facts.get("old_version_back"):
             why.append("không thấy tham số mới sau cập nhật, hoặc tham số cũ sau rollback")
+        if not facts.get("finished_under_load"):
+            why.append("kịch bản xong sau khi máy tạo tải đã ngừng: tăng --duration")
     if scenario in ("vh2a", "vh2-git") and facts.get("replicas_before") != 1:
         why.append(f"ca 1 replica nhưng trước khi làm có {facts.get('replicas_before')} replica: giảm --rate")
     if scenario == "vh3-delete" and facts.get("ready_before", 2) < 2:
@@ -341,19 +348,21 @@ def vh2c(o: Ops, stuck_after_s: float = 300) -> dict[str, Any]:
     return {"recovered": ok, "rollout_stuck": stuck, "pending_pods": pending}
 
 
-def vh2_git(o: Ops, git: GitTarget, sync_timeout_s: float = 900) -> dict[str, Any]:
-    """vh2a qua Git: 4 commit trên nhánh Argo CD theo dõi. Mỗi bước ghi giây từ push tới lúc Argo CD sync
-    xong (`sync_s`) và tới lúc bước đó hoàn tất (`total_s`: 2 pod Ready, rollout xong, hoặc chỉ sync)."""
+def vh2_git(o: Ops, git: GitTarget, load_until: float, sync_timeout_s: float = 900) -> dict[str, Any]:
+    """vh2a qua Git: 4 commit trên nhánh Argo CD theo dõi. Mỗi bước ghi `sync_s` (giây từ lúc push xong tới
+    lúc Argo CD sync xong commit đó, tức độ trễ của Argo CD) và `total_s` (từ trước khi commit tới lúc bước
+    hoàn tất: 2 pod Ready, rollout xong, hoặc chỉ sync). `load_until`: mốc sớm nhất máy tạo tải ngừng gửi;
+    kịch bản xong sau mốc này thì phần cuối không có tải, nên không chấm là đạt."""
     before = o.spec_replicas()
     phases: dict[str, dict[str, Any]] = {}
 
     def step(name: str, app: str, push: Callable[[], str]) -> float:
         t0 = o.mark(f"{name}_push")
         sha = push()
+        phases[name] = {"sha": sha, "sync_s": None}  # ghi ngay để phần dọn dẹp biết commit nào đã push
         o.mark(f"{name}_pushed", sha=sha[:12])
-        sync_s = o.wait_synced(app, sha, sync_timeout_s)
-        o.mark(f"{name}_synced", sync_s=sync_s)
-        phases[name] = {"sha": sha, "sync_s": sync_s}
+        phases[name]["sync_s"] = o.wait_synced(app, sha, sync_timeout_s)
+        o.mark(f"{name}_synced", sync_s=phases[name]["sync_s"])
         return t0
 
     def finish(name: str, t0: float, ok: bool) -> None:
@@ -361,37 +370,63 @@ def vh2_git(o: Ops, git: GitTarget, sync_timeout_s: float = 900) -> dict[str, An
         o.mark(f"{name}_done", ok=ok, total_s=phases[name]["total_s"])
 
     ttft_new = f"--time-to-first-token={VH2_GIT_TTFT_MS}ms"
-    # Bước 0 của Vận hành §5.3: đang 1 replica thì nâng min lên 2 trước, để rolling update luôn còn 1 pod
-    t0 = step("min2", "autoscaling", lambda: git.commit_push(
-        SIM_A2_KUSTOMIZATION, lambda t: with_min_replicas(t, 2), "test: raise sim A2 min replicas to 2 (VH2)"
-    ))  # fmt: skip
-    second = o.wait_ready(2, 900)
-    finish("min2", t0, second is not None)
-    t0 = step("update", "serving", lambda: git.commit_push(
-        SIM_SERVING_PATCH, lambda t: with_ttft(t, VH2_GIT_TTFT_MS),
-        f"test: set sim time to first token to {VH2_GIT_TTFT_MS} ms (VH2)",
-    ))  # fmt: skip
-    finish("update", t0, o.wait_rollout(1800))
-    new_seen = ttft_new in o.container_args()
-    # Rollback là `git revert`, không phải `kubectl rollout undo` (Vận hành §5.4)
-    t0 = step("rollback", "serving", lambda: git.revert_push(phases["update"]["sha"]))
-    finish("rollback", t0, o.wait_rollout(1800))
-    old_back = ttft_new not in o.container_args()
-    t0 = step("min1", "autoscaling", lambda: git.revert_push(phases["min2"]["sha"]))
-    finish("min1", t0, phases["min1"]["sync_s"] is not None)
+    # Giá trị đang chạy trước khi cập nhật: rollback phải trả về đúng giá trị này, không chỉ "khác 300 ms"
+    ttft_old = next((x for x in o.container_args() if x.startswith("--time-to-first-token=")), None)
+    new_seen = old_back = False
+    try:
+        # Bước 0 của Vận hành §5.3: đang 1 replica thì nâng min lên 2 trước, để rolling update luôn còn 1 pod
+        t0 = step("min2", "autoscaling", lambda: git.commit_push(
+            SIM_A2_KUSTOMIZATION, lambda t: with_min_replicas(t, 2),
+            "test: raise sim A2 min replicas to 2 (VH2)",
+        ))  # fmt: skip
+        finish("min2", t0, o.wait_ready(2, 900) is not None)
+        t0 = step("update", "serving", lambda: git.commit_push(
+            SIM_SERVING_PATCH, lambda t: with_ttft(t, VH2_GIT_TTFT_MS),
+            f"test: set sim time to first token to {VH2_GIT_TTFT_MS} ms (VH2)",
+        ))  # fmt: skip
+        finish("update", t0, o.wait_rollout(1800))
+        new_seen = ttft_new in o.container_args()
+        # Rollback là `git revert`, không phải `kubectl rollout undo` (Vận hành §5.4)
+        t0 = step("rollback", "serving", lambda: git.revert_push(phases["update"]["sha"]))
+        finish("rollback", t0, o.wait_rollout(1800))
+        args = o.container_args()
+        old_back = ttft_old is not None and ttft_old in args and ttft_new not in args
+        t0 = step("min1", "autoscaling", lambda: git.revert_push(phases["min2"]["sha"]))
+        finish("min1", t0, phases["min1"]["sync_s"] is not None)
+    finally:
+        # Lỗi giữa chừng: revert các commit đã push mà chưa được revert (mới trước, cũ sau), để nhánh và
+        # cluster về như trước lượt; nếu không, lượt sau bắt đầu ở min 2 hoặc TTFT mới. Lỗi ở đây chỉ ghi lại.
+        for revert_step, pushed in (("rollback", "update"), ("min1", "min2")):
+            if pushed in phases and revert_step not in phases:
+                try:
+                    git.revert_push(phases[pushed]["sha"])
+                    o.mark("cleanup_revert", step=pushed)
+                except Exception as e:  # noqa: BLE001 - không che lỗi gốc của kịch bản
+                    o.mark("cleanup_failed", step=pushed, error=str(e)[:200])
     return {
         "recovered": all(p.get("ok") for p in phases.values()),
         "replicas_before": before,
         "new_version_seen": new_seen,
         "old_version_back": old_back,
+        "finished_under_load": time.time() < load_until,
         "phases": phases,
     }
 
 
-def argocd_problem(app: dict[str, Any], branch: str) -> str | None:
-    """Application có đang tự sync từ đúng `branch` không; trả lý do nếu không. Hàm thuần, có unit test."""
+def same_repo(a: str, b: str) -> bool:
+    """Hai URL có trỏ cùng một repo không (bỏ qua `.git`, dấu `/` cuối, hoa thường). Hàm thuần."""
+    x, y = (u.strip().rstrip("/").removesuffix(".git").lower() for u in (a, b))
+    return x == y
+
+
+def argocd_problem(app: dict[str, Any], branch: str, origin: str) -> str | None:
+    """Application có đang tự sync từ đúng repo `origin`, nhánh `branch` không; trả lý do nếu không. Hàm
+    thuần, có unit test. Sai repo thì push vẫn thành công nhưng Argo CD không bao giờ thấy commit."""
     name = app.get("metadata", {}).get("name", "?")
-    rev = app.get("spec", {}).get("source", {}).get("targetRevision")
+    src = app.get("spec", {}).get("source", {})
+    if not same_repo(src.get("repoURL", ""), origin):
+        return f"Application {name} đọc repo {src.get('repoURL')}, còn worktree push lên {origin}"
+    rev = src.get("targetRevision")
     if rev != branch:
         return (
             f"Application {name} theo dõi '{rev}', không phải '{branch}': make sim-argocd ARGOCD_REV={branch}"
@@ -572,20 +607,27 @@ def main(argv: list[str] | None = None) -> int:
         if git:
             # Ngược với các kịch bản khác: A2 và simulator do Argo CD áp từ nhánh thử, script không áp gì
             git.check()
+            origin = git.git("remote", "get-url", "origin")
             for name in ("serving", "autoscaling"):
-                problem = argocd_problem(kube.get_json("application", name, "-n", "argocd"), git.branch)
+                problem = argocd_problem(
+                    kube.get_json("application", name, "-n", "argocd"), git.branch, origin
+                )
                 if problem:
                     raise RuntimeError(problem)
             so = kube.get_json("scaledobject", SO_NAME, "-n", target.namespace)
-            if "autoscaling.keda.sh/paused-replicas" in so["metadata"].get("annotations", {}):
-                raise RuntimeError(f"ScaledObject {SO_NAME} đang tạm dừng: gỡ annotation paused-replicas")
+            # KEDA có hai annotation tạm dừng: giữ số replica cố định, hoặc dừng hẳn
+            paused = {configs.PAUSE_ANNOTATION, "autoscaling.keda.sh/paused"} & set(
+                so["metadata"].get("annotations", {})
+            )
+            if paused:
+                raise RuntimeError(f"ScaledObject {SO_NAME} đang tạm dừng: gỡ annotation {', '.join(paused)}")
         else:
             configs.guard_argocd(kube)  # thay đổi ở đây sẽ bị Argo CD selfHeal hoàn tác giữa chừng
             doc = yaml.safe_load((REPO / A2_FILE).read_text(encoding="utf-8"))
             so = configs.render_scaledobject(doc, a2.overrides, paused=False)
             so["metadata"]["namespace"] = target.namespace
             kube.apply(yaml.safe_dump(so, sort_keys=False))
-    except (KubeError, RuntimeError) as e:
+    except (KubeError, RuntimeError, OSError, subprocess.TimeoutExpired) as e:  # OSError: không có lệnh git
         print(f"Không chuẩn bị được cluster: {e}", file=sys.stderr)
         return 2
 
@@ -624,7 +666,7 @@ def main(argv: list[str] | None = None) -> int:
 
     loader = threading.Thread(target=run_load, daemon=True)
     loader.start()
-    ops.mark("load_started", rate=a.rate)
+    load_t0 = ops.mark("load_started", rate=a.rate)
     time.sleep(LEAD_S + 60)  # 60 s cho pod máy tạo tải cài thư viện, LEAD_S để có tải nền
 
     facts: dict[str, Any] = {}
@@ -635,7 +677,9 @@ def main(argv: list[str] | None = None) -> int:
         elif a.scenario == "vh4":
             facts = vh4(ops, a.block_s)
         elif git:
-            facts = vh2_git(ops, git)
+            # Máy tạo tải bắt đầu gửi sau mốc load_started (pod còn phải cài thư viện), nên mốc này + duration
+            # là lúc sớm nhất nó ngừng
+            facts = vh2_git(ops, git, load_t0 + duration)
         else:
             facts = SCENARIOS[a.scenario](ops)
     except Exception as e:  # noqa: BLE001 - vẫn phải chờ tải xong để ghi kết quả
