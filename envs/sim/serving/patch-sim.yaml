@@ -25,7 +25,7 @@
     - --max-model-len=4096
     # Độ trễ giả: 200 ms tới token đầu (TTFT), 50 ms giữa hai token (TPOT). Cố định, không tăng theo
     # tải (--time-factor-under-load mặc định 1), nên trễ chỉ tăng khi request phải xếp hàng.
-    - --time-to-first-token=300ms
+    - --time-to-first-token=200ms
     - --inter-token-latency=50ms
 # Không có GPU trên kind: bỏ runtime NVIDIA và ràng buộc "chỉ xếp lên node có GPU"
 - op: remove
