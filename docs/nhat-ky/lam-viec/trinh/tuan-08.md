@@ -133,3 +133,17 @@
 - **Results:** `/code-review high` trên diff: 5 điểm nhỏ (§3.5 và §9 nói khác nhau về chỗ ghi việc dùng AI; quy tắc "kết quả cụ thể có số" của Tóm tắt chưa chuyển sang mục 1.3; §1 chưa ghi chỗ đặt đoạn khai báo nếu được yêu cầu; "khuôn T" ở §5.1 chưa có link; thiếu dòng Thesis), đã sửa cả 5.
 - **Links:** `docs/luan-van/quy-tac-viet.md` (§1, §3.5, §9); `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§5.1, §11.1).
 - **Thesis:** phần đầu quyển (không có Tóm tắt, không có Lời cam đoan); Mở đầu; mục 1.3 Đóng góp.
+
+## 2026-11-25 – Ghi máy V2 thật (4 × RTX 4060 Ti) vào tài liệu thiết kế
+
+- **Task:** TR8 (phần Q2 của Quang, D115 mục 1) · **Environment:** none
+- **Done:**
+  1. Grep 37 dòng nhắc A4000 trong `docs/chi-tiet/`, đọc từng chỗ, chia hai nhóm: chỗ nói phiên V0+V1 ngày 08/11 hoặc kế hoạch, lựa chọn của ADR-006 C2 (giữ nguyên), và chỗ nói phiên V2 đã chạy (sửa).
+  2. Sửa 30 chỗ ở 6 file: Thông số §1, §9.1, §10.2 (thêm đoạn "Máy V2 thực tế"), §11; Bài toán §1.2, §1.3, G2, hạn chế 1; Kiến thức nền §1.3, bảng băng thông, đoạn decode 3B; Kiến trúc A1′; Môi trường tóm tắt, §2, §3.1 (thêm dòng RTX 4060 Ti), §6.1 (dòng V2: ngày và máy thật), bảng lớp đánh giá, câu hỏi "vì sao dùng A4000"; Kế hoạch M2, phụ thuộc, rủi ro R2.
+- **Decision:**
+  - Trình giữ nguyên các câu về A4000 của V0+V1 và về lựa chọn ADR-006 C2, chỉ thêm câu "thực tế V2 chạy trên 4 × RTX 4060 Ti": các số 08/11 (TPOT 17,2 ms, KV-cache 211.936 token, tải model 27 s) đúng là đo trên A4000. ADR-006 không sửa, vì ADR ghi quyết định tại thời điểm đó.
+  - Thêm số KV-cache của V2 (211.584–224.336 token, đọc từ log vLLM trong `runs/dg1-v2-4060ti/` và `runs/v2-vm/dg3-v2-4060ti/`) để chứng minh phân bổ VRAM của §1.2 vẫn đúng trên máy V2. Không thêm TPOT ở 1 request cho V2, vì V2 không đo; bước decode tối thiểu 21,4 ms chỉ là tính từ băng thông 288 GB/s.
+  - Chi phí V2 ghi "chưa có số": giá 1,5 USD/giờ và ước 14–15 USD là số Quang báo ngày 18/11, chi phí thực đang chờ Quang.
+- **Results:** `lychee --offline --include-fragments` trên `docs/chi-tiet/*.md` đạt; trên toàn bộ `docs/` chỉ còn lỗi có sẵn ở `docs/huong-dan/w2.md` (link tới thư mục chưa có trên main, CI loại trừ).
+- **Links:** `docs/chi-tiet/00-thong-so.md`, `01-bai-toan-yeu-cau.md`, `02-kien-thuc-nen.md`, `03-kien-truc-autoscaling.md`, `05-moi-truong-danh-gia.md`, `06-ke-hoach-quan-ly.md`; nguồn: nhật ký của Quang tuần 07 (18/11), `docs/nhat-ky/van-hanh.md` (18/11).
+- **Thesis:** 5.1 (môi trường đo: máy 4060 Ti thay A4000), 5.7 Hạn chế (C = 3,5 chỉ đúng cho máy V2), 2.x (bảng băng thông GPU).
