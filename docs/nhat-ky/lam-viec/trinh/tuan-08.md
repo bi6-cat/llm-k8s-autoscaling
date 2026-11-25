@@ -171,3 +171,15 @@
 - **Results:** đo khuôn T bằng Word: 4.5 = 2,05 tr (1.245 chữ văn xuôi). Chương 4 tới 4.5: khoảng 14,3 tr, còn 4,7–7,7 tr cho 4.6, 4.7 và kết chương. `kiem_van.py` 0 điểm.
 - **Links:** `docs/luan-van/04-05-scale-down-cap-nhat.md`; nhánh `docs/tr8-thesis-ch4`.
 - **Thesis:** mục 4.5; bản nháp do agent viết từ nguồn trong repo, chưa qua bước soát số độc lập (làm khi mở PR chương 4). Nguồn của đoạn vòng Git trỏ tới nhánh PR vh2-git, sửa sang `main` khi PR đó merge.
+
+## 2026-11-25 – Luận văn: bản base mục 4.6
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Viết `docs/luan-van/04-06-giam-sat-canh-bao.md` theo khung sáu bước, ba tiểu mục của Kế hoạch §11.1. 4.6.1: đổi từ DCGM sang `nvidia_gpu_exporter`, PodMonitor 5 s, kube-state-metrics đọc condition ScaledObject, tám recording rule, Bảng 4.6 (ba dashboard, 20/9/16 panel), CI kiểm dashboard, hai điểm lệch của simulator (nhãn `finish_reason`, TTFT không gồm thời gian chờ hàng đợi). 4.6.2: 9 test promtool, mutation 11/11, kiểm độ phủ, định tuyến bằng `amtool`, chuỗi `KedaScalerErrors` tới `tg-mock` trên kind, VH6 trên V2, sự cố `KedaScalerErrors` qua hết test mà không kêu được, `AlertmanagerFailedToSendAlerts` trong V2. 4.6.3: khung runbook, VH3 trên V2 và lần thử N = 2, các sự cố thật đều ở tầng host và chưa runbook nào được dùng.
+  2. Dữ kiện do agent Explore gom; phiên chính đối chiếu lại các số then chốt (daemonset GPU, nhật ký Trình tuần 05 dòng 403–409, tuần 06 dòng 46 và 114, tuần 07 dòng 533, nhật ký Quang tuần 07 dòng 147–194 và 301–327, `llm-test.yaml`, khung runbook).
+- **Decision:** Không lặp lại Bảng 3.7 và lý do thiết kế của 3.5. Thời gian tới firing của LT8 để 5.5, vì nhật ký Trình tuần 07 có hai bộ số LT8 tính từ hai mốc khác nhau (mục 16/11 và mục 21/11). Bỏ câu nói cảnh báo đĩa của chart ở mức warning nên không được gửi, vì chart còn có bản critical và chưa kiểm cảnh báo nào kêu ở mức đĩa 80%.
+- **Results:** đo khuôn T bằng Word: 4.6 = 3,9 tr (1.983 chữ văn xuôi). Chương 4 tới 4.6: khoảng 18,2 tr, còn khoảng 3,8 tr cho 4.7 và kết chương (định hướng 19–22 tr). `kiem_van.py` 0 điểm, lychee 0 lỗi.
+- **Incidents:** agent gom dữ kiện bị gọi ở chế độ chạy nền thay vì foreground, nên vòng tự chạy trả kết quả "partial" trước khi có dữ kiện; mục được viết ở lượt tiếp theo của cùng vòng, sau khi agent báo về.
+- **Links:** `docs/luan-van/04-06-giam-sat-canh-bao.md`; nhánh `docs/tr8-thesis-ch4`.
+- **Thesis:** mục 4.6; bản nháp do agent viết từ nguồn trong repo, chưa qua bước soát số độc lập (làm khi mở PR chương 4).
