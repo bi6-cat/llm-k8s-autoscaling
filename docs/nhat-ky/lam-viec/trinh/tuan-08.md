@@ -147,3 +147,16 @@
 - **Deviations:** 4.1 dài 4,4 tr khuôn T, hơi nhiều cho một mục hạ tầng. Nếu chương 4 vượt 22 tr khi ghép thì cắt ở 4.1 trước.
 - **Links:** `docs/luan-van/04-01-ha-tang-trien-khai.md`, `docs/luan-van/04-02-phuc-vu-vllm.md`; nhánh `docs/tr8-thesis-ch4`.
 - **Thesis:** mục 4.1, 4.2; bản nháp do agent viết từ nguồn trong repo, chưa qua bước soát số độc lập.
+
+## 2026-11-25 – Luận văn: bản base mục 4.3 và 4.4
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Viết lại 4.3 từ nháp ngày 24/11 (nhánh của PR #69, bốn tiểu mục) thành hai tiểu mục theo dàn ý mới ở Kế hoạch §11.1: 4.3.1 đưa tải đồng thời của vLLM vào HPA qua KEDA, 4.3.2 thử autoscaling và fallback trên simulator. Thêm Bảng 4.3 (giá trị ScaledObject theo môi trường) và kết quả vòng autoscaling đầu tiên trên kind (HPA lên 3 replica ở giây 16, tín hiệu mỗi pod 7–11 so với 8,7 tính trước theo định luật Little; nhật ký Quang tuần 05 mục 04/11).
+  2. Viết mới 4.4 (cold start, một mục, không chia cấp 3): volume `hostPath` chung cho model và compile cache, role Ansible thay DaemonSet và Job của thiết kế, Bảng 4.5 so hai VM thử (capture CUDA graph 127 + 121 s so với 4 + 4 s), thử `cudagraph_mode: PIECEWISE` rồi bỏ, cách đo L0/L2 và bộ đọc log tám pha, hai sự cố (image GC ở nhà, lỗi `set -e` của `dg3.sh`).
+  3. Dữ kiện 4.4 do agent Explore gom từ `van-hanh.md`, phiên A4000 §9, nhật ký Quang tuần 06–07, `dg3.sh`, `vllm_log.py`; phiên chính đối chiếu lại từng số trước khi viết.
+  4. Đổi tên tạm của 4.3.2 trong Kế hoạch §11.1.
+- **Decision:** Trình để số ĐG3 từng lượt và tỷ lệ L2/L0 ở 5.4, mục 4.4 chỉ nêu "L2 nhỏ hơn một nửa L0, đạt chỉ tiêu" (quy tắc viết §8). Lý do giữ chế độ CUDA graph mặc định (TPOT chậm hơn 32–45% với PIECEWISE) suy từ bảng benchmark của `van-hanh.md` 08/11, nhật ký không ghi câu lý do riêng; đã ghi rõ trong comment nguồn.
+- **Results:** đo khuôn T bằng Word: 4.3 = 3,07 tr (1.541 chữ văn xuôi), 4.4 = 2,10 tr (1.139 chữ). Chương 4 tới 4.4: khoảng 12,2 tr, còn 6,8–9,8 tr cho 4.5–4.7 và kết chương. `kiem_van.py` 0 điểm cả hai file; pandoc `--citeproc` không cảnh báo.
+- **Links:** `docs/luan-van/04-03-autoscaling.md`, `docs/luan-van/04-04-cold-start.md`, `docs/chi-tiet/06-ke-hoach-quan-ly.md` §11.1; nhánh `docs/tr8-thesis-ch4`.
+- **Thesis:** mục 4.3, 4.4; bản nháp do agent viết từ nguồn trong repo, chưa qua bước soát số độc lập (làm khi mở PR chương 4).
