@@ -183,3 +183,12 @@
 - **Incidents:** agent gom dữ kiện bị gọi ở chế độ chạy nền thay vì foreground, nên vòng tự chạy trả kết quả "partial" trước khi có dữ kiện; mục được viết ở lượt tiếp theo của cùng vòng, sau khi agent báo về.
 - **Links:** `docs/luan-van/04-06-giam-sat-canh-bao.md`; nhánh `docs/tr8-thesis-ch4`.
 - **Thesis:** mục 4.6; bản nháp do agent viết từ nguồn trong repo, chưa qua bước soát số độc lập (làm khi mở PR chương 4).
+
+## 2026-11-25 – Luận văn: bản base mục 4.7 và kết chương 4
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** viết `docs/luan-van/04-07-cong-cu-danh-gia.md`: 4.7.1 máy tạo tải và runner (CPU theo số chunk SSE, nhiều tiến trình, sự cố port-forward, paused-replicas, thu mốc và log pod trong lúc chạy, điểm lệch sao lưu và annotation pha); 4.7.2 kiểm tính hợp lệ và phân tích (10 tiêu chí, tiêu chí nào được sửa sau lỗi nào, kết quả V2, ba chỗ khác thiết kế, `build_tables`); kết chương với Bảng 4.7 (vấn đề GPU/LLM → cách xử lý → bằng chứng). Dữ kiện gom bằng agent chỉ đọc, số chính đối chiếu lại với nhật ký và mã.
+- **Results:** tính lại từ `runs/v2-vm/v2-dg2/*/attempt-1/{loadgen,checks}.json`: 17/17 lượt hợp lệ ở lần thử đầu; lệch lịch gửi p99 lớn nhất 5,98 ms, event loop p99 lớn nhất 4,11 ms, CPU máy tạo tải lớn nhất 43,6 % một lõi, throttle 0, tín hiệu scale mất mẫu tối đa 5,0 s. Chưa đo khuôn T; `kiem_van` còn 10 điểm cần xem (chưa sửa vì vòng dừng do quota).
+- **Deviations:** đối chiếu TTFT client với histogram server ở mọi lượt (Môi trường §9) chưa làm trên vLLM thật; chỉ có ở LT8 trên simulator. Ghi ở 4.7.2, để 5.7.
+- **Links:** nhánh `docs/tr8-thesis-ch4`.
+- **Thesis:** §4.7, kết chương 4.
