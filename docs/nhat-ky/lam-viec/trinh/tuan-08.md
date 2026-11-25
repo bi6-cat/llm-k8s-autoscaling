@@ -160,3 +160,14 @@
 - **Results:** đo khuôn T bằng Word: 4.3 = 3,07 tr (1.541 chữ văn xuôi), 4.4 = 2,10 tr (1.139 chữ). Chương 4 tới 4.4: khoảng 12,2 tr, còn 6,8–9,8 tr cho 4.5–4.7 và kết chương. `kiem_van.py` 0 điểm cả hai file; pandoc `--citeproc` không cảnh báo.
 - **Links:** `docs/luan-van/04-03-autoscaling.md`, `docs/luan-van/04-04-cold-start.md`, `docs/chi-tiet/06-ke-hoach-quan-ly.md` §11.1; nhánh `docs/tr8-thesis-ch4`.
 - **Thesis:** mục 4.3, 4.4; bản nháp do agent viết từ nguồn trong repo, chưa qua bước soát số độc lập (làm khi mở PR chương 4).
+
+## 2026-11-25 – Luận văn: bản base mục 4.5
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Viết `docs/luan-van/04-05-scale-down-cap-nhat.md` (một mục, không chia cấp 3) theo khung sáu bước: tham số tắt pod trong Deployment chung và overlay sim; kiểm graceful shutdown ở nhà (48 stream, 144/144); sự cố vLLM không thoát khi nhận SIGTERM và hai ca đối chứng; ba ca VH2 trên V2 qua annotation; sự cố kịch bản đạt oan trên kind và bước kiểm điều kiện đầu vào; vòng Git trên kind (615 request, 0 lỗi, TTFT 206 → 306 → 206 ms); độ trễ push → sync và các điểm khác quy trình.
+  2. Dữ kiện do agent Explore gom từ `van-hanh.md` (06/11), nhật ký Quang tuần 05–07, Kiến trúc §8, Vận hành §5, `deployment.yaml`, `vh.py` và mục 25/11 trên nhánh `feat/tr8-vh2-git-run`; phiên chính đối chiếu lại các số then chốt với nguồn trước khi viết.
+- **Decision:** Không ghi số lượt của pha giảm tải KB2 ở 4.5, vì hai nguồn lệch nhau: nhật ký Quang tuần 07 (19/11) ghi 5 lượt A1/A2 × KB2, ADR-007 và Môi trường §13 ghi 3 lượt A2 × KB2. Mục 5.5.1 phải chốt số này từ `runs.csv`. Số thời gian của vh2a/b/c và bảng bốn bước VH2 qua Git để ở 5.5.1 (quy tắc viết §8).
+- **Results:** đo khuôn T bằng Word: 4.5 = 2,05 tr (1.245 chữ văn xuôi). Chương 4 tới 4.5: khoảng 14,3 tr, còn 4,7–7,7 tr cho 4.6, 4.7 và kết chương. `kiem_van.py` 0 điểm.
+- **Links:** `docs/luan-van/04-05-scale-down-cap-nhat.md`; nhánh `docs/tr8-thesis-ch4`.
+- **Thesis:** mục 4.5; bản nháp do agent viết từ nguồn trong repo, chưa qua bước soát số độc lập (làm khi mở PR chương 4). Nguồn của đoạn vòng Git trỏ tới nhánh PR vh2-git, sửa sang `main` khi PR đó merge.
