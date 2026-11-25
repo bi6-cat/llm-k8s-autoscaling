@@ -133,3 +133,17 @@
 - **Results:** `/code-review high` trên diff: 5 điểm nhỏ (§3.5 và §9 nói khác nhau về chỗ ghi việc dùng AI; quy tắc "kết quả cụ thể có số" của Tóm tắt chưa chuyển sang mục 1.3; §1 chưa ghi chỗ đặt đoạn khai báo nếu được yêu cầu; "khuôn T" ở §5.1 chưa có link; thiếu dòng Thesis), đã sửa cả 5.
 - **Links:** `docs/luan-van/quy-tac-viet.md` (§1, §3.5, §9); `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§5.1, §11.1).
 - **Thesis:** phần đầu quyển (không có Tóm tắt, không có Lời cam đoan); Mở đầu; mục 1.3 Đóng góp.
+
+## 2026-11-25 – Luận văn: bản base mục 4.1 và 4.2, đo khuôn T chương 3
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Viết `docs/luan-van/04-01-ha-tang-trien-khai.md` (4.1.1 Ansible và k3s, 4.1.2 Argo CD và CI, 4.1.3 bí mật, bảo vệ tối thiểu, dựng lại) và `04-02-phuc-vu-vllm.md` theo khung sáu bước của quy tắc viết §2.1 (sáu bước là thứ tự đoạn, không thành tiêu đề).
+  2. Đối chiếu từng số với nguồn gốc trước khi viết: mã (`ansible/`, `envs/*/serving/`, `common/serving/deployment.yaml`, `envs/home/argocd/root-app.yaml`, `.github/workflows/ci.yaml`), `van-hanh.md`, nhật ký Quang tuần 03–07, nhật ký Trình tuần 04, 06. Mỗi đoạn có comment nguồn.
+  3. Cắt phần ngoại vi khỏi 4.1 (danh sách 8 app đưa Phụ lục A, sự cố yq, đường hầm SSH, chi tiết MTU) và ghi vào comment "Ý không đưa vào".
+  4. Đo khuôn T bằng Word (`do_trang_word_T.ps1`): 4.1 = 4,4 tr, 4.2 = 2,6 tr; chương 3 (nhánh của PR #80) = 13,5 tr, trong khoảng 13–15.
+- **Decision:** Trình để số dựng lại VH5 (8 phút 22 giây…) ở 5.5, mục 4.1.3 chỉ nêu "ba lần dựng VM gần nhất đều dưới 30 phút", theo bảng ranh giới của quy tắc viết §8 (kịch bản VH: cách làm ở chương 4, kết quả ở 5.5). Câu VH2 qua Git trên kind ở 4.1.2 dẫn sang 4.5 và 5.5, chưa ghi số vì PR của VH2 chưa merge.
+- **Results:** `kiem_van.py` 0 điểm cả hai file (2.361 và 1.340 chữ văn xuôi); lychee `docs/luan-van/*.md` 0 lỗi; pandoc dựng `.docx` không lỗi.
+- **Deviations:** 4.1 dài 4,4 tr khuôn T, hơi nhiều cho một mục hạ tầng. Nếu chương 4 vượt 22 tr khi ghép thì cắt ở 4.1 trước.
+- **Links:** `docs/luan-van/04-01-ha-tang-trien-khai.md`, `docs/luan-van/04-02-phuc-vu-vllm.md`; nhánh `docs/tr8-thesis-ch4`.
+- **Thesis:** mục 4.1, 4.2; bản nháp do agent viết từ nguồn trong repo, chưa qua bước soát số độc lập.
