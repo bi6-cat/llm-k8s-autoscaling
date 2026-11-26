@@ -9,9 +9,11 @@ Một doanh nghiệp muốn dùng mô hình ngôn ngữ lớn (*large language m
 
 GPU là chi phí chính và khó cấp phát. GPU được tính tiền theo giờ, kể cả những giờ không có request nào. Mỗi bản chạy của máy chủ model, gọi là một replica, chiếm trọn một GPU, nên năng lực phục vụ chỉ tăng hoặc giảm theo từng GPU. Trong khi đó, tải của một trợ lý nội bộ cao trong giờ làm việc, gần như bằng 0 ban đêm, và có những đợt tăng đột ngột.
 
+<!-- nguồn: docs/chi-tiet/01-bai-toan-yeu-cau.md §4 (ba đặc điểm: đắt, rời rạc, tải không ổn định), §5.4 (tài nguyên rời rạc và đắt) -->
+
 Hình 1.1 so sánh ba cách cấp phát cho cùng một tải như vậy. Cấp cố định ít replica thì khi tải tăng, request phải xếp hàng và độ trễ vượt mục tiêu mức dịch vụ (*service level objective*, SLO). Cấp cố định đủ cho mức tải đỉnh thì SLO luôn đạt, nhưng phần lớn thời gian GPU nhàn rỗi. Tự động điều chỉnh số replica theo tải (*autoscaling*) cho năng lực bám theo tải và tốn ít GPU-giờ hơn. GPU-giờ là số GPU bị giữ nhân với thời gian giữ, và là thước đo chi phí của đồ án (mục 1.2). Đổi lại, autoscaling có một khoảng trễ khi scale-up, gồm thời gian phát hiện tải tăng và thời gian khởi động replica mới, và trong khoảng đó hệ thống vẫn quá tải.
 
-<!-- nguồn: docs/chi-tiet/01-bai-toan-yeu-cau.md §4 (ba đặc điểm: đắt, rời rạc, tải không ổn định; Hình 1 và ba cách cấp phát; ví dụ tính tay 96 và 48 GPU-giờ/ngày không đưa vào vì chương 1 hạn chế số), §5.4 (tài nguyên rời rạc và đắt). -->
+<!-- nguồn: docs/chi-tiet/01-bai-toan-yeu-cau.md §4 (Hình 1 và ba cách cấp phát; ví dụ tính tay 96 và 48 GPU-giờ/ngày không đưa vào vì chương 1 hạn chế số); §12.2 (G1: chi phí ≈ GPU-giờ) -->
 
 ![Hình 1.1. Ba cách cấp phát GPU cho cùng một tải thay đổi theo thời gian. C là năng lực phục vụ của một replica. Vùng tô đỏ là thiếu năng lực, vi phạm SLO. Vùng gạch chéo là dư năng lực, lãng phí GPU](../images/png/01-bai-toan-trade-off.png)
 
