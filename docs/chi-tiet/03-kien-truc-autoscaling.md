@@ -68,7 +68,7 @@ Giá trị cụ thể nằm ở [Thông số §9.2](00-thong-so.md#92-deployment
 |---|---|
 | `replicas` bỏ trống | Để HPA quản lý; nếu đặt thì Argo CD sẽ "sửa lại" (xem §18.3) |
 | 1 GPU mỗi pod | Model vừa một GPU; đơn vị scale là 1 GPU |
-| CPU lõi riêng (3 lõi mỗi pod trên VM thuê, [Môi trường §3.5](05-moi-truong-danh-gia.md#35-cấu-hình-k3s-và-phân-bổ-cpu-trên-vm-thuê)) | API server cần CPU để tokenize và stream ([Kiến thức nền §2.6](02-kien-thuc-nen.md#26-kiến-trúc-tiến-trình-của-vllm-v1)) |
+| CPU lõi riêng (3 lõi mỗi pod trên VM thuê) | API server cần CPU để tokenize và stream ([Kiến thức nền §2.6](02-kien-thuc-nen.md#26-kiến-trúc-tiến-trình-của-vllm-v1) khuyến nghị 4–6 vCPU); 3 lõi là mức vừa máy ≥ 20 vCPU, và trên V2 vLLM dùng tối đa 1,26 lõi ([Môi trường §3.5](05-moi-truong-danh-gia.md#35-cấu-hình-k3s-và-phân-bổ-cpu-trên-vm-thuê)) |
 | QoS **Guaranteed** (requests = limits, CPU nguyên) trên VM thuê | Với kubelet `cpu-manager-policy=static`, pod nhận **lõi CPU riêng**, không tranh với máy tạo tải chạy cùng VM ([Môi trường §3.5](05-moi-truong-danh-gia.md#35-cấu-hình-k3s-và-phân-bổ-cpu-trên-vm-thuê)) |
 | Memory đủ lớn | Nạp weights qua RAM; nếu giới hạn quá thấp sẽ bị OOM lúc khởi động. Ở nhà RAM chỉ 16 GB nên đặt request nhỏ hơn |
 | `/dev/shm` dùng `emptyDir: {medium: Memory}` | PyTorch và NCCL dùng shared memory; mặc định chỉ có 64 MiB |
