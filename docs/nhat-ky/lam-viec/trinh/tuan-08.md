@@ -310,3 +310,21 @@
 - **Deviations:** phần thêm chưa qua soát số độc lập (để bước 3).
 - **Links:** `docs/luan-van/05-01` đến `05-04`, `05-07`, `tai-lieu.bib`.
 - **Thesis:** 5.1–5.4, 5.7.
+
+## 2026-11-27 – Luận văn: chương 5 bước 3, soát số độc lập và soát diff
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Soát số độc lập 5.0–5.7 (quy-tac-viet §9, lượt khác lượt viết): đối chiếu khoảng 290 khẳng định với nguồn trong comment, `runs/`, `analysis/figures/v2-dg2/` và nhánh của PR #75–#81. Ra 3 lỗi xác nhận và 7 điểm nghi ngờ; đối chiếu lại từng lỗi với nguồn rồi sửa (commit `afeb261`), đánh dấu "Soát số: 27/11/2026" ở cả 8 file.
+  2. `/code-review high` trên diff so với `main`: 10 điểm, đều đúng; sửa 9 điểm ở văn bản và comment nguồn, điểm thiếu nhật ký là mục này.
+- **Decision:** D127: F2 → Đạt một phần (T7 chưa chạy) cho khớp chú thích Bảng 5.6a; hướng giảm cái giá của tải tăng đột ngột ở 5.3.3 viết cùng cách với 5.6.2 (nâng số replica tối thiểu theo khung giờ).
+- **Results:**
+  - Lỗi soát số: 5.7 ghi phiên V2 cấp 6 lõi CPU mỗi pod vLLM, cấu hình thật ở commit 10c0527 là 3 lõi (`requests` = `limits` `cpu: "3"`); 5.6.2 gán 100% SLO cho "khi tải tăng dần", trong khi KB3 chỉ chấm pha duy trì (pha tăng dần A2 84,1% và 79,9%); 5.5.1 nêu "máy nhà thiếu RAM" là lý do của ADR-007, trong khi ADR-007 nêu cluster nhà không sẵn sàng trước mốc nộp.
+  - Điểm nghi ngờ đã sửa: 93% GPU utilization là của S4 × KB1, không phải A1; A2 đòi 2, 3, 7 replica ở λ = 3,5, 4, 5; bốn commit của vòng Git là nâng min, đổi tham số, hai lần revert; 7 giờ 14 phút gồm cả thời gian chuyển giữa 17 lượt khoảng 24 phút.
+  - Lỗi `/code-review`: "3,66–3,73 replica Ready, tức 97–98% GPU-giờ" sai phép suy (GPU-giờ tính từ lúc pod được xếp lịch); TPOT p50 ở nhà tăng 16,7 → 18,1 ms qua điểm gãy rồi mới đứng yên; Bảng 5.6a chưa được nhắc trong bài; công thức chuyển sang `$…$`; các danh sách "Ý không đưa vào" và comment ngân sách cũ sau bước 2b.
+  - Đã khớp nguồn: VH1 3 lượt A2; vh2b 371,6 s; VH2 qua Git 0 lỗi / 615 request, sync 138–247 s; N8 1.481 s; Bảng 5.4a từng ô. Băng thông 288 và 448 GB/s chưa mở lại được trang NVIDIA trong lượt soát.
+  - Độ dài: 13,5 tr khuôn T (đo ở bước 2b, chưa tính Hình 5.3b); các sửa ở bước này chỉ thay vài câu, chưa đo lại.
+- **Incidents:** thứ tự đo ĐG3 theo `trigger_unix` (L2-2 trước L0-2) lệch với câu "ba lượt L2 đo sau L0-2" trong nhật ký Quang tuần 07 mục 19/11; thân bài theo dữ liệu, không đổi kết luận.
+- **Deviations:** 00-thong-so §9.1 ghi `cpu: 6`, `memory: 24Gi` cho pod vLLM trên cloud, khác cấu hình đã chạy ở V2 (3 lõi, 16Gi); chưa sửa ở PR này.
+- **Links:** `docs/luan-van/05-0*.md`; nhánh `docs/tr8-thesis-ch5-drafts`.
+- **Thesis:** chương 5.

@@ -15,7 +15,7 @@ Bảng nghiệm thu đối chiếu kết quả của các mục 5.2–5.5 với 
 | Yêu cầu, chỉ tiêu | Mức | Kết quả, phần còn thiếu | Kết luận |
 |---|---|---|---|
 | F1. API có streaming | Must | ĐG1–ĐG3 chạy qua API có streaming | Đạt |
-| F2. Tự điều chỉnh replica | Must | A2 trong [1, 4]; T7 chưa chạy | Đạt |
+| F2. Tự điều chỉnh replica | Must | A2 trong [1, 4]; T7 chưa chạy | Đạt một phần |
 | F3. Triển khai qua Git | Must | Cập nhật, rollback qua Git trên simulator, 0 lỗi; trên GPU chỉ qua annotation | Đạt |
 | F4. Dựng từ máy trắng | Must | 8 phút 22 giây (1 lần) | Đạt |
 | F5. Ba dashboard | Must | Đủ 3 dashboard; chưa chụp trên GPU thật | Đạt một phần |
@@ -45,11 +45,11 @@ Bảng nghiệm thu đối chiếu kết quả của các mục 5.2–5.5 với 
 <!-- nguồn: N7: analysis/figures/v2-dg2/runs.csv (time_to_alert_s, false_pages), alerts.csv (client_bad_ratio 0,272 và 0,378 ở A2-KB3; đợt kêu ở −176 s của A2-KB3-2 có firing_at_start = True, còn từ lượt trước, không tính) -->
 <!-- nguồn: N8: runs/v2-vm/dg3-v2-4060ti/*/summary.txt (vllm/vllm-openai:v0.31.0@sha256:c1c9…); ansible/inventory/group_vars/all.yaml (k3s v1.36.5+k3s1); envs/cloud/provision/install-platform.sh (nvidia-device-plugin 0.20.1, kube-prometheus-stack 92.1.1, KEDA 2.21.0); nguon-tu-lieu.md §4 (chi phí thực tế chưa có); van-hanh.md mục 24/11 "N8" trên nhánh docs/tr8-n8-sim-rebuild (PR #76: 1.481 s từ sim-down tới hết sim-test, T1–T5 đạt); ADR-007 D4 -->
 
-Mọi yêu cầu và chỉ tiêu mức Must đều đạt hoặc đạt một phần trong phiên đo V2. Điểm yếu nhất là tải tăng đột ngột, kịch bản mà N1 chỉ yêu cầu báo cáo. Replica mới Ready sớm hơn ngưỡng 2 phút ít nhất 38,5 s, nhưng SLO attainment chỉ còn khoảng 80% và cần 409–430 s (3 lượt) mới hồi phục. Nguyên nhân là hàng đợi dồn vào pod có sẵn trong lúc chờ cold start (mục 5.3). Page trong pha tăng dần của A2 × KB3 không bị tính là page giả, vì lúc đó 27% và 38% request xấu theo log của máy tạo tải (2 lượt). Chỉ tiêu tự phục hồi đạt, nhưng ca dừng tiến trình vLLM có 129 lỗi trên 1.041 request, nhiều khả năng vì lúc đó chỉ có một pod (mục 5.5).
+Theo Bảng 5.6a, mọi yêu cầu và chỉ tiêu mức Must đều đạt hoặc đạt một phần. Điểm yếu nhất là tải tăng đột ngột, kịch bản mà N1 chỉ yêu cầu báo cáo. Replica mới Ready sớm hơn ngưỡng 2 phút ít nhất 38,5 s, nhưng SLO attainment chỉ còn khoảng 80% và cần 409–430 s (3 lượt) mới hồi phục. Nguyên nhân là hàng đợi dồn vào pod có sẵn trong lúc chờ cold start (mục 5.3). Page trong pha tăng dần của A2 × KB3 không bị tính là page giả, vì lúc đó 27% và 38% request xấu theo log của máy tạo tải (2 lượt). Chỉ tiêu tự phục hồi đạt, nhưng ca dừng tiến trình vLLM có 129 lỗi trên 1.041 request, nhiều khả năng vì lúc đó chỉ có một pod (mục 5.5).
 
 <!-- nguồn: analysis/figures/v2-dg2/runs.csv (react_s 79,7–81,5; slo_attainment A2-KB2 0,794–0,807; recovery_s 409–430); nhật ký Quang tuần 07 mục 19/11 (hàng đợi ở pod có sẵn, Service chia đều); runs/v2-vm/ops-vh3-kill-*/summary.json (129 lỗi / 1.041 request); alerts.csv (client_bad_ratio 0,272 và 0,378 ở A2-KB3) -->
 
-Các phần còn thiếu đều nằm ở khâu kiểm chứng, không nằm ở chức năng. Vòng cập nhật và rollback qua Git mới chạy trên simulator, chưa trọn vòng trên GPU thật. Nhóm cũng chưa chụp dashboard trên GPU thật và chưa gửi cảnh báo tới Telegram thật. Với F6, cảnh báo kêu đúng lúc đã được kiểm trong V2, còn khâu gửi tin thì Alertmanager báo lỗi suốt 17 lượt, nhiều khả năng do thiếu Secret Telegram (mục 5.5). Chỉ tiêu N8 mới đạt phần tái lập, với lần dựng lại theo README mất khoảng 25 phút trên simulator, còn tổng chi phí thuê chưa có.
+Các phần còn thiếu đều nằm ở khâu kiểm chứng, không nằm ở chức năng. Bài kiểm thử T7 của F2 chưa chạy. Vòng cập nhật và rollback qua Git mới chạy trên simulator, chưa trọn vòng trên GPU thật. Nhóm cũng chưa chụp dashboard trên GPU thật và chưa gửi cảnh báo tới Telegram thật. Với F6, cảnh báo kêu đúng lúc đã được kiểm trong V2, còn khâu gửi tin thì Alertmanager báo lỗi suốt 17 lượt, nhiều khả năng do thiếu Secret Telegram (mục 5.5). Chỉ tiêu N8 mới đạt phần tái lập, với lần dựng lại theo README mất khoảng 25 phút trên simulator, còn tổng chi phí thuê chưa có.
 
 <!-- nguồn: analysis/figures/v2-dg2/alerts.csv; GHI-CHU-CHO-TRINH §3 điểm 1 (Alertmanager báo lỗi gửi Telegram suốt 17 lượt); nguon-tu-lieu.md §4 (chi phí thực tế chưa có) -->
 
