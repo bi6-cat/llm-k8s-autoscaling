@@ -133,3 +133,19 @@
 - **Results:** `/code-review high` trên diff: 5 điểm nhỏ (§3.5 và §9 nói khác nhau về chỗ ghi việc dùng AI; quy tắc "kết quả cụ thể có số" của Tóm tắt chưa chuyển sang mục 1.3; §1 chưa ghi chỗ đặt đoạn khai báo nếu được yêu cầu; "khuôn T" ở §5.1 chưa có link; thiếu dòng Thesis), đã sửa cả 5.
 - **Links:** `docs/luan-van/quy-tac-viet.md` (§1, §3.5, §9); `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§5.1, §11.1).
 - **Thesis:** phần đầu quyển (không có Tóm tắt, không có Lời cam đoan); Mở đầu; mục 1.3 Đóng góp.
+
+## 2026-11-27 – Luận văn: chương 6, kết luận, hạn chế và hướng phát triển (bản base)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** viết bốn file `06-00` (mở chương), `06-01` Kết luận, `06-02` Hạn chế của hệ thống và phạm vi, `06-03` Hướng phát triển theo dàn ý Kế hoạch §11.1 và §12.2. Mọi số lấy lại từ bản base chương 5 (nhánh `docs/tr8-thesis-ch5-drafts`), không thêm kết quả mới; số mô phỏng ở 6.3 lấy từ `docs/bao-cao/de-xuat-v3/ket-qua-du-bao-quy-mo.json` và đối chiếu với `mo_phong_thuc_te.py`, `du_bao_quy_mo.py`.
+- **Decision:**
+  - 6.1 viết ba kết luận theo ba thông điệp, thêm một đoạn nói kết luận về vận hành có ít bằng chứng hơn (một lượt mỗi ca, vòng Git trên simulator, chưa có tin Telegram) và một đoạn tách cơ chế khái quát được khỏi con số chỉ đúng cho máy V2.
+  - 6.2 nhận các hạn chế mà 3.5 và 5.7 dời sang: chia kết nối gần như ngẫu nhiên của Service, tối đa 4 replica, vLLM không dừng khi nhận SIGTERM (đo ở máy nhà), `LLMErrorRateHigh` nhạy ở tải thấp, chưa có dead man's switch, cảnh báo lỗi gửi tin đi qua chính Alertmanager, bảo mật và GitOps tối thiểu. Viết "chia kết nối mới gần như ngẫu nhiên" thay cho chữ "round-robin" của dàn ý, theo Kiến trúc §3.4 (kube-proxy chế độ iptables).
+  - 6.3 chọn định tuyến theo hàng đợi, rút ngắn cold start và scale-to-zero, dự báo và lịch tải, đánh giá mở rộng, cộng một đoạn cải tiến nhỏ; dùng số mô phỏng có nhãn và điều kiện (D133). Định tuyến được nêu phải đi cùng rút cold start, vì 42–44% request trượt SLO được gửi trước khi pod mới đầu tiên Ready.
+- **Results:**
+  - Độ dài văn xuôi: 06-00 108 chữ, 06-01 693, 06-02 565, 06-03 971; tổng khoảng 2.340 chữ, ước 4,5 trang khuôn T, chưa đo bằng Word (dàn ý định hướng 3 trang).
+  - `kiem_van.py`: 0 điểm cần xem. `pandoc … --citeproc` chạy không lỗi, không cảnh báo (chương 6 không có trích dẫn).
+  - `/code-review high`: 10 điểm (3 quan trọng: câu "mỗi ca vận hành chỉ một lượt" sai với VH6 17 lượt; trộn cold start 75,7–80,8 s của ĐG3 với thời gian phản ứng của KB2; "một nửa nguyên nhân" không có số đo), đã sửa cả 10, gồm cả mô tả least request của Envoy (power of two choices) và chế độ ngủ của vLLM (pod vẫn giữ GPU).
+- **Deviations:** dàn ý ghi 3 trang; bản base dài khoảng 4,5 trang vì 6.3 có bốn hướng kèm số đo và số mô phỏng. Phần cắt được nếu cần: đoạn cải tiến nhỏ cuối 6.3, đoạn đánh giá mở rộng.
+- **Links:** `docs/luan-van/06-00-ket-luan-huong-phat-trien.md`, `06-01-ket-luan.md`, `06-02-han-che.md`, `06-03-huong-phat-trien.md`.
+- **Thesis:** chương 6 (toàn chương).
