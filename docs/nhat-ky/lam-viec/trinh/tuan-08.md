@@ -192,3 +192,16 @@
 - **Deviations:** đối chiếu TTFT client với histogram server ở mọi lượt (Môi trường §9) chưa làm trên vLLM thật; chỉ có ở LT8 trên simulator. Ghi ở 4.7.2, để 5.7.
 - **Links:** nhánh `docs/tr8-thesis-ch4`.
 - **Thesis:** §4.7, kết chương 4.
+
+## 2026-11-26 – Luận văn: soát văn phong 4.7 và đo trang chương 4
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Sửa 10 điểm `kiem_van` ở `04-07-cong-cu-danh-gia.md`: bỏ tên người và ngày khỏi thân bài (đã có trong comment nguồn), tách câu 46 chữ liệt kê tiêu chí của runner, bỏ hai câu lặp ", nên", đổi "tối ưu" và "chứng minh", thêm comment nguồn cho Bảng 4.7.
+  2. Đo khuôn T cả chương bằng Word: gộp 04-01…04-07, bỏ comment, `pandoc` sang .docx, `do_trang_word_T.ps1`. Lần đầu 22,1 tr, vượt trần 22.
+  3. Cắt 4.1 (phần ngoại vi): bỏ ý laptop làm node thứ hai (đã có ở 4.2), token Hugging Face, cách runner tắt auto-sync (4.7 đã nêu); rút gọn ba câu khác. Ghi danh sách ý đã cắt ở comment đầu 04-01.
+- **Decision:** cắt ở 4.1 trước theo định hướng độ dài chương 4 (phần hạ tầng là ngoại vi so với autoscaling), chỉ bỏ ý đã có ở mục khác hoặc không đổi kết luận.
+- **Results:** chương 4 = 21,8 tr khuôn T, chưa có hình (4.1 4,2 · 4.2 2,7 · 4.3 3,1 · 4.4 2,1 · 4.5 2,1 · 4.6 3,9 · 4.7 2,9 · kết chương 0,7). `kiem_van` 0 điểm ở 04-01 và 04-07.
+- **Incidents:** lần đo thử đầu ra 45 tr vì dùng `pandoc -f markdown-raw_html`, làm comment nguồn hiện thành chữ và nuốt tiêu đề ngay sau comment; sửa bằng cách xoá comment trước khi chuyển.
+- **Links:** `docs/luan-van/04-01-ha-tang-trien-khai.md`, `docs/luan-van/04-07-cong-cu-danh-gia.md`; nhánh `docs/tr8-thesis-ch4`.
+- **Thesis:** chương 4; nếu chèn hình vào chương 4 thì phải cắt tiếp để giữ trần 22 tr.
