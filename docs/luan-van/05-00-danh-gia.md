@@ -1,0 +1,8 @@
+<!-- Mục đích: tiêu đề và đoạn mở đầu chương 5 của luận văn (Đánh giá). Người viết: Trình. Viết 26/11/2026 khi đổi đề mục theo D101. Quy ước: docs/luan-van/README.md (file CC-00), docs/luan-van/quy-tac-viet.md §2 (đoạn mở chương 5 nêu câu trả lời kèm số chính) -->
+<!-- Thông điệp: chương 5 trả lời hệ thống có đạt chỉ tiêu không, đo trên 4 × RTX 4060 Ti; số chính: A2 dùng 25% GPU-giờ của S4 ở tải thấp ổn định, SLO 100%; tải tăng đột ngột SLO khoảng 80%; kịch bản vận hành không rớt request khi còn pod phục vụ, cảnh báo không báo giả. Kết chương nằm ở cuối file 05-07 -->
+<!-- Soát số: chưa · Soát văn phong: kiem_van 26/11 · Người viết đọc lại: chưa -->
+# Chương 5. Đánh giá
+
+Chương này kiểm hệ thống của chương 3 và 4 có đạt các chỉ tiêu ở mục 3.1 hay không, trên một VM thuê có 4 × RTX 4060 Ti. Ở tải thấp ổn định, cấu hình A2 dùng 25% GPU-giờ của cấu hình tĩnh 4 replica mà vẫn giữ SLO attainment 100%, nhưng khi tải tăng đột ngột thì SLO attainment chỉ còn khoảng 80% dù replica mới Ready trong giới hạn 2 phút. Các kịch bản cập nhật, thay pod và mất nguồn metric không làm rớt request khi còn ít nhất một pod phục vụ, và cảnh báo SLO không có page giả. Mục 5.1 nêu môi trường và điều kiện đo, mục 5.2 đo năng lực một replica làm căn cứ cho threshold. Mục 5.3 so autoscaling với cấu hình tĩnh, mục 5.4 đo cold start, mục 5.5 chạy các kịch bản vận hành. Mục 5.6 tổng hợp bảng nghiệm thu, mục 5.7 nêu hạn chế của phép đo.
+
+<!-- nguồn: 05-03 (Bảng 5.3a: A2 × KB1 25% GPU-giờ, SLO 100%; A2 × KB2 SLO 79,4–80,7%, phản ứng 79,7–81,5 s < N2a 2 phút); 05-05 (VH2a, VH2b, VH3 xoá pod, VH4: 0 lỗi; VH6: 0 page giả ở 17 lượt); 05-01 (V2, 4 × RTX 4060 Ti); docs/chi-tiet/06-ke-hoach-quan-ly.md §11.1 (dòng chương 5) -->

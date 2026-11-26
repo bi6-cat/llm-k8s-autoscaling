@@ -279,3 +279,13 @@
 - **Results:** `/code-review high` trên diff: 5 điểm nhỏ (§3.5 và §9 nói khác nhau về chỗ ghi việc dùng AI; quy tắc "kết quả cụ thể có số" của Tóm tắt chưa chuyển sang mục 1.3; §1 chưa ghi chỗ đặt đoạn khai báo nếu được yêu cầu; "khuôn T" ở §5.1 chưa có link; thiếu dòng Thesis), đã sửa cả 5.
 - **Links:** `docs/luan-van/quy-tac-viet.md` (§1, §3.5, §9); `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§5.1, §11.1).
 - **Thesis:** phần đầu quyển (không có Tóm tắt, không có Lời cam đoan); Mở đầu; mục 1.3 Đóng góp.
+
+## 2026-11-26 – Luận văn: chương 5 bước 1, merge main và đổi đề mục theo D101
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** trên nhánh `docs/tr8-thesis-ch5-drafts`: merge `origin/main` (xung đột ở Kế hoạch §11.1 lấy bản main, đoạn "Độ dài" thay "Cân đối"; xung đột ở `nguon-tu-lieu.md` lấy bản main theo đề mục mới, giữ lại con trỏ tới bảng từng lượt VH4, VH6 ở commit `bc49ff6`). Đổi đề mục 5.3: TĐ1 (GPU utilization so với tải đồng thời) lên 5.3.1, tải ổn định 5.3.2, tải tăng đột ngột 5.3.3; Bảng 5.3a ở đoạn dẫn. 5.5 gom 7 tiểu mục thành 3 theo N4 (VH1 kèm pha giảm tải KB2 chuyển từ 5.3, VH2, graceful shutdown), N6 (VH3, VH4, VH5), N7 (VH6). Thêm `05-00-danh-gia.md` với đoạn mở chương kèm số chính. Sửa dẫn chéo §5.5.x trong comment của 5.7.
+- **Decision:** D124: bảng 5.3a đặt trước 5.3.1 vì phục vụ cả ba tiểu mục; tiêu đề 5.5.x không mang mã VH (quy-tac-viet §2), mã nằm trong câu chủ đề.
+- **Results:** `kiem_van.py` 0 điểm cần xem ở 05-00, 05-02 tới 05-07; 05-01 còn 1 điểm "ngày tháng §5" có chủ ý (ngày phiên đo nêu một lần ở 5.1). lychee trên `docs/luan-van/*.md`: 0 lỗi. Chưa đo số trang (để bước 2, sau khi khôi phục phần lõi).
+- **Deviations:** nội dung 5.5 chưa theo ADR-007 (PR #75: VH1 lấy từ V2, VH2 qua Git trên kind ở PR #78, N8 ở PR #76), vì các PR đó chưa merge; sửa ở bước 2.
+- **Links:** nhánh `docs/tr8-thesis-ch5-drafts`; `docs/luan-van/05-00-danh-gia.md`, `05-03-autoscaling-so-voi-tinh.md`, `05-05-kich-ban-van-hanh.md`.
+- **Thesis:** chương 5.
