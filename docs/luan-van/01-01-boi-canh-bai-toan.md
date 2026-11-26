@@ -7,7 +7,7 @@ Một doanh nghiệp muốn dùng mô hình ngôn ngữ lớn (*large language m
 
 <!-- nguồn: docs/chi-tiet/01-bai-toan-yeu-cau.md §4 (đoạn "Bối cảnh": trợ lý AI nội bộ, dữ liệu không gửi ra API ngoài, ba yêu cầu của đội platform, nơi làm việc của hai thành viên) -->
 
-GPU là chi phí chính và khó cấp phát. GPU được tính tiền theo giờ, kể cả những giờ không có request nào. Mỗi bản chạy của máy chủ model, gọi là một replica, chiếm trọn một GPU, nên năng lực phục vụ chỉ tăng hoặc giảm theo từng GPU. Trong khi đó, tải của một trợ lý nội bộ cao trong giờ làm việc, gần như bằng 0 ban đêm, và có những đợt tăng đột ngột.
+GPU là chi phí chính và khó cấp phát. GPU được tính tiền theo giờ, kể cả những giờ không có request nào. Mỗi bản chạy của máy chủ model gọi là một replica. Khi không chia sẻ GPU, mỗi replica chiếm trọn một GPU, nên năng lực phục vụ chỉ tăng hoặc giảm theo từng GPU. Trong khi đó, tải của một trợ lý nội bộ cao trong giờ làm việc, gần như bằng 0 ban đêm, và có những đợt tăng đột ngột.
 
 <!-- nguồn: docs/chi-tiet/01-bai-toan-yeu-cau.md §4 (ba đặc điểm: đắt, rời rạc, tải không ổn định), §5.4 (tài nguyên rời rạc và đắt) -->
 
@@ -25,7 +25,7 @@ Các thao tác vận hành hằng ngày cũng có cạm bẫy riêng. Một requ
 
 <!-- nguồn: docs/chi-tiet/01-bai-toan-yeu-cau.md §5.5 (request dài, có trạng thái, phải drain), §5.6 (Service chia gần như ngẫu nhiên, không biết hàng đợi), §5.7 (maxSurge 1, maxUnavailable 0 kẹt khi hết GPU) -->
 
-Từ bối cảnh trên, đồ án phát biểu bài toán như sau. Với một nhóm cố định N GPU (trong đồ án N = 4), xây dựng và vận hành một nền tảng phục vụ LLM tự host trên Kubernetes, nền tảng điều phối container mà đồ án dùng, sao cho đạt đồng thời ba yêu cầu:
+Từ bối cảnh trên, đồ án phát biểu bài toán như sau. Đồ án dùng Kubernetes, một nền tảng điều phối container mã nguồn mở. Với một nhóm cố định N GPU (trong đồ án N = 4), cần xây dựng và vận hành một nền tảng phục vụ LLM tự host trên Kubernetes sao cho đạt đồng thời ba yêu cầu:
 
 - phần lớn request đạt SLO về độ trễ, kể cả khi tải thay đổi theo giờ hoặc tăng đột ngột (chất lượng phục vụ);
 - số GPU-giờ bị giữ chỉ ở mức cần thiết, lúc tải thấp thì GPU được giải phóng (hiệu quả GPU);
@@ -33,6 +33,6 @@ Từ bối cảnh trên, đồ án phát biểu bài toán như sau. Với một
 
 <!-- nguồn: docs/chi-tiet/01-bai-toan-yeu-cau.md §6 (phát biểu bài toán, N = 4, ba yêu cầu); docs/chi-tiet/00-thong-so.md §9.3 (N = 4) -->
 
-Ba yêu cầu này kéo nhau. Chất lượng phục vụ muốn giữ nhiều GPU, còn hiệu quả muốn giữ ít. Giữ ít GPU thì phải scale thường xuyên, mà mỗi lần scale lại có rủi ro: thêm replica phải chờ cold start, bớt replica có thể cắt request. Đồ án vì vậy coi đây là một bài toán vận hành. Nhóm không tìm thuật toán autoscaling mới, mà ghép các thành phần mã nguồn mở phổ biến thành một nền tảng giữ được cả ba yêu cầu, rồi đo xem nó giữ được tới đâu. Nhờ đó, cấu hình và quy tắc cảnh báo rút ra từ đồ án dùng được cho các nền tảng phục vụ LLM khác dựa trên cùng cơ chế (mục 2.6).
+Ba yêu cầu này kéo nhau. Chất lượng phục vụ muốn giữ nhiều GPU, còn hiệu quả muốn giữ ít. Giữ ít GPU thì phải scale thường xuyên, mà mỗi lần scale lại có rủi ro: thêm replica phải chờ cold start, bớt replica có thể cắt request. Đồ án vì vậy coi đây là một bài toán vận hành. Nhóm ghép các thành phần mã nguồn mở phổ biến thành một nền tảng giữ được cả ba yêu cầu, rồi đo xem nó giữ được tới đâu. Nhờ đó, cấu hình và quy tắc cảnh báo rút ra từ đồ án dùng được cho các nền tảng phục vụ LLM khác dựa trên cùng cơ chế (mục 2.6).
 
-<!-- nguồn: docs/chi-tiet/01-bai-toan-yeu-cau.md §6 (ba yêu cầu kéo nhau, Hình 1), §7 (ý nghĩa thực tiễn: thành phần chuẩn KEDA, HPA, Prometheus, Argo CD; áp dụng cho KServe, vLLM Production Stack), §11 (không đề xuất thuật toán mới) -->
+<!-- nguồn: docs/chi-tiet/01-bai-toan-yeu-cau.md §6 (ba yêu cầu kéo nhau, Hình 1), §7 (ý nghĩa thực tiễn: thành phần chuẩn KEDA, HPA, Prometheus, Argo CD; áp dụng cho KServe, vLLM Production Stack), §11 (không đề xuất thuật toán mới, nêu ở mục 1.2) -->
