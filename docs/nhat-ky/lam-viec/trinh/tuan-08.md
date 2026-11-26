@@ -289,3 +289,13 @@
 - **Deviations:** nội dung 5.5 chưa theo ADR-007 (PR #75: VH1 lấy từ V2, VH2 qua Git trên kind ở PR #78, N8 ở PR #76), vì các PR đó chưa merge; sửa ở bước 2.
 - **Links:** nhánh `docs/tr8-thesis-ch5-drafts`; `docs/luan-van/05-00-danh-gia.md`, `05-03-autoscaling-so-voi-tinh.md`, `05-05-kich-ban-van-hanh.md`.
 - **Thesis:** chương 5.
+
+## 2026-11-27 – Luận văn: chương 5 bước 2a, đưa ADR-007, VH2 qua Git và N8 vào 5.5–5.7
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** trên nhánh `docs/tr8-thesis-ch5-drafts`, sửa 5.5 theo ADR-007 (PR #75): đoạn mở mục nêu phần nào chạy trên simulator và vì sao; 5.5.1 ghi VH1 lấy từ pha giảm tải của 3 lượt A2 × KB2, không phải lượt riêng; thêm vế chưa có bằng chứng `LLMPodPending` kêu ở ca kẹt Pending (`for: 10m` so với khoảng 300 s chờ); thêm đoạn kết quả vòng Git trên simulator (PR #78), phần cách làm dẫn sang 4.5 để không lặp; thời gian pod cũ giữ GPU trên V2 ghi "chưa đo". 5.5.2 thêm N8 trên simulator (PR #76). 5.5.3 nêu rõ LT8 và VH6 cùng mốc tính. 5.6: dòng F3, N8 và đoạn "phần còn thiếu" theo kết quả mới. 5.7: thêm đoạn hạn chế của phép đo trên simulator (không cold start, commit không qua PR và CI, người dựng lại đã quen hệ thống).
+- **Decision:** D125: bằng chứng VH1 chỉ gồm 3 lượt A2 × KB2. Hai lượt A1 × KB2 giữ 4 replica suốt pha giảm (`scale_downs` 0), nên không kiểm được scale-down. F3 chuyển sang "Đạt" (vòng Git kiểm trên simulator theo ADR-007 D2), N8 sang "Đạt một phần" (còn thiếu chi phí).
+- **Results:** `analysis/figures/v2-dg2/runs.csv`: 5 lượt KB2 của A1, A2; chỉ 3 lượt A2 có `scale_downs` = 3. Đo khuôn T bằng Word (pandoc → `do_trang_word_T.ps1`): chương 5 = 11,3 tr (5.1 0,8; 5.2 1,0; 5.3 2,1; 5.4 1,1; 5.5 3,0; 5.6 1,9; 5.7 + kết chương 1,0), chưa tính Hình 5.3b, dưới định hướng 14–17 tr. `kiem_van.py` 0 điểm cần xem ở 05-05, 05-06, 05-07. lychee `docs/luan-van/*.md` 0 lỗi.
+- **Deviations:** số và khẳng định trong các đoạn sửa dẫn từ nhánh của PR #75, #76, #78 (chưa merge); phần sửa chưa qua soát số độc lập (để bước 3).
+- **Links:** `docs/luan-van/05-05-kich-ban-van-hanh.md`, `05-06-bang-nghiem-thu.md`, `05-07-han-che-phep-do.md`.
+- **Thesis:** 5.5, 5.6, 5.7.
