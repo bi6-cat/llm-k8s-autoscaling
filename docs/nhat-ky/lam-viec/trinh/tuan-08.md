@@ -299,3 +299,14 @@
 - **Deviations:** số và khẳng định trong các đoạn sửa dẫn từ nhánh của PR #75, #76, #78 (chưa merge); phần sửa chưa qua soát số độc lập (để bước 3).
 - **Links:** `docs/luan-van/05-05-kich-ban-van-hanh.md`, `05-06-bang-nghiem-thu.md`, `05-07-han-che-phep-do.md`.
 - **Thesis:** 5.5, 5.6, 5.7.
+
+## 2026-11-27 – Luận văn: chương 5 bước 2b, khôi phục lõi 5.1–5.4
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** trên nhánh `docs/tr8-thesis-ch5-drafts`, khôi phục phần lõi đã cắt ngày 24/11 từ các comment "Ý không đưa vào". 5.2: LT2 ở cluster nhà (1,5B) và trên A4000 khớp trong sai số làm tròn; đoạn LT3 ở cluster nhà (điểm gãy khi số request chạy chạm 32); giả thuyết C bám TPOT ở batch lớn ghi rõ "chưa kiểm chứng". 5.3.1 viết lại thành 4 đoạn: mô hình LT6 của GPU utilization, khoảng hở tín hiệu trên V2 (A2 4,6×, KV cache 3,9× nhưng đứng yên khi quá tải), A1 trong ma trận (97–98% GPU-giờ của S4 trong pha ổn định của KB1), pha tăng dần của KB3. 5.3.2: A1 × KB1 tiết kiệm 9,4% và 10,3% (một lượt dưới ngưỡng); vì sao A2 giữ 4 replica suốt pha duy trì của KB3 (mẫu đòi 4 replica cách nhau ≤ 120 s, ngắn hơn cửa sổ ổn định 300 s). 5.3.3: tốc độ xử lý và hàng đợi của pod cũ. 5.4: LT4 ở cluster nhà (pha 7 mất 107–109 s), compile cache của ba lượt L2. 5.7: so C giữa A4000 (2 lõi CPU mỗi pod) và V2 chỉ để tham khảo. Sửa ", nên" lặp ở 05-02, 05-04, 05-07; dòng "Soát văn phong" ở 05-01–05-04 ghi kiem_van. Thêm 2 mục NVIDIA vào `tai-lieu.bib` và dẫn ở 5.1.
+- **Decision:** D126: 448 GB/s dẫn datasheet A4000 của NVIDIA; 288 GB/s dẫn bài của NVIDIA về VRAM dòng RTX 40, vì trang sản phẩm 4060 Ti chỉ ghi bus 128-bit. Giữ số pha tăng dần của KB3 ở 5.3.1 dù pha này không được chấm, vì đây là một điểm yếu của A2 (quy-tac-viet §3.3).
+- **Results:** chạy lại `analysis.dg2_a2` trên `runs/v2-vm/v2-dg2`: số phần 1, 3, 4, 5 khớp comment nguồn. `phases.csv` pha ramp của KB3: SLO A1 1,0, A2 0,841 và 0,799. Thứ tự đo ĐG3 theo `trigger_unix`: L2-2, L0-2, L2-1, L2-3, L0-1; compile cache hit ở cả 3 lượt L2. Đo khuôn T bằng Word: chương 5 = 13,5 tr (5.1 0,8; 5.2 1,3; 5.3 3,8; 5.4 1,4; 5.5 3,0; 5.6 1,9; 5.7 + kết chương 1,0), chưa tính Hình 5.3b (pandoc thiếu rsvg-convert), cộng hình thì khoảng 14 tr, trong định hướng 14–17. `kiem_van.py`: 0 điểm ở mọi file 05-*, trừ 1 điểm ngày tháng có chủ ý ở 05-01. lychee `docs/luan-van/*.md` 0 lỗi; pandoc `--citeproc` dựng đủ 2 mục mới.
+- **Incidents:** trang sản phẩm 4060 Ti và trang A4000 không ghi băng thông; datasheet A4000 phải trích chữ bằng pypdf (bản quét, OCR đọc "4'8GB/s" cạnh "256-bit"). TechPowerUp trả 403.
+- **Deviations:** phần thêm chưa qua soát số độc lập (để bước 3).
+- **Links:** `docs/luan-van/05-01` đến `05-04`, `05-07`, `tai-lieu.bib`.
+- **Thesis:** 5.1–5.4, 5.7.
