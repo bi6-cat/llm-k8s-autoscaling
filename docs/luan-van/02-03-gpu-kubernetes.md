@@ -4,7 +4,7 @@
 <!-- Soát số: chưa · Soát văn phong: kiem_van 27/11 · Người viết đọc lại: chưa -->
 ## 2.3. GPU trên Kubernetes
 
-Kubernetes quyết định GPU nào chạy replica nào, và cách nó cấp GPU đặt ra giới hạn cho cả autoscaling lẫn cập nhật phiên bản. Mục này nêu các khái niệm Kubernetes mà các chương sau dùng, cách Kubernetes cấp GPU cho container, và vì sao chỉ số GPU utilization không phản ánh tải của một replica vLLM.
+Kubernetes quyết định GPU nào chạy replica nào, và cách nó cấp GPU đặt ra giới hạn cho cả autoscaling lẫn cập nhật phiên bản. Phần dưới nêu các khái niệm Kubernetes mà các chương sau dùng, cách Kubernetes cấp GPU cho container, và vì sao chỉ số GPU utilization không phản ánh tải của một replica vLLM.
 
 Kubernetes quản lý một cụm máy (*cluster*) gồm nhiều máy chủ, mỗi máy là một node. Đơn vị chạy nhỏ nhất là pod, gồm một hoặc vài container dùng chung mạng và vòng đời. Người dùng không tạo pod trực tiếp mà khai báo trạng thái mong muốn trong các object. Ví dụ, một Deployment khai báo mẫu pod và số replica, còn một Service cho các pod đó một địa chỉ chung và chia request cho những pod đang sẵn sàng. Pod được coi là sẵn sàng khi vượt qua phép kiểm *readiness probe*, ví dụ một lời gọi HTTP tới endpoint kiểm tra sức khoẻ. Mỗi loại object có một bộ điều khiển (*controller*) chạy vòng lặp liên tục, so trạng thái thật với trạng thái khai báo và sửa phần lệch. Các công cụ ở mục 2.4 và 2.5 mở rộng Kubernetes theo cùng cách: chúng đăng ký loại object mới (*custom resource*) và chạy controller riêng cho loại đó.
 

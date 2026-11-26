@@ -11,7 +11,7 @@ Một replica vLLM nhận request đến ngẫu nhiên, giữ mỗi request mộ
 
 <!-- nguồn: tóm tắt Schroeder và cộng sự, NSDI 2006 (mô hình đóng, mô hình mở; khác nhau nhiều trong thực tế); docs/chi-tiet/05-moi-truong-danh-gia.md §8 bước 6 (số request đến dao động Poisson); √30 ≈ 5,48 -->
 
-Với mô hình đóng, hệ thống chậm đi thì tải tự giảm theo, và hàng đợi không bao giờ dài ra. Người dùng một dịch vụ LLM không chờ người khác xong mới gửi câu hỏi. Mô hình mở vì vậy gần với tải thật hơn, và mục 3.6 dùng mô hình này.
+Với mô hình đóng, hệ thống chậm đi thì tải tự giảm theo, và hàng đợi không bao giờ dài quá số người dùng ảo. Người dùng một dịch vụ LLM không chờ người khác xong mới gửi câu hỏi. Mô hình mở vì vậy gần với tải thật hơn, và mục 3.6 dùng mô hình này.
 
 <!-- nguồn: tóm tắt Schroeder, Wierman, Harchol-Balter, NSDI 2006 (usenix.org/events/nsdi06/tech/schroeder.html, đọc 27/11/2026: closed system model, new job arrivals only triggered by job completions; open system model, new jobs arrive independently of job completions; vast difference in behavior between open and closed models in real-world settings); docs/chi-tiet/05-moi-truong-danh-gia.md §8 bước 6 (số request đến dao động Poisson); docs/mo-ta-chi-tiet-do-an.md tài liệu [19]. Tính minh hoạ: Poisson trung bình λt = 30, độ lệch chuẩn √30 ≈ 5,48. "Tải tự giảm, hàng đợi không dài ra" suy ra trực tiếp từ định nghĩa mô hình đóng: số request trong hệ thống không vượt số người dùng ảo -->
 
