@@ -2,7 +2,7 @@
 <!-- Ngân sách (D96): 1,5 trang. Đo 24/11 sau soát số (dàn thử, 1 bảng): 1,07 tr (khuôn A), 1,49 tr (khuôn B); 501 chữ văn xuôi. Số bảng tạm theo mục (Bảng 5.2a), đánh lại khi ghép chương. -->
 <!-- Ý không đưa vào, để chỗ khác: bảng LT1–LT3 đầy đủ (dự đoán, số đo, độ lệch) cho bảng LT ở 5.6 hoặc Phụ lục E; LT2 ở nhà với Qwen2.5-1.5B (28.672 B/token dự đoán, 28.670 đo, 23/10) và trên A4000 (211.936 token cho 7,28 GiB, 08/11); điểm chưa giải thích của LT2 ở nhà (thêm 11.040 token trên k3s); LT3 ở nhà đầy đủ (bảng 6 mức, van-hanh.md LT3); LT1 trên laptop 4050 chưa đo; số pod KV L2 của ĐG3 là 224.336 token cho 7,7 GiB (khác pod ĐG1 211.584 token cho 7,26 GiB, chưa rõ vì sao, cùng tỷ lệ B/token); phiên thử A4000 chạy vLLM với 2 lõi CPU mỗi pod (phien-2026-11-08-a4000.md §8), V2 theo 00-thong-so §9.2. -->
 <!-- Thông điệp: (1) C = 3,5 req/s và B* = 46,3 trên máy 4060 Ti, nên threshold của A2 là 37; (2) LT1–LT3 khớp số đo, và giới hạn chạm trước tiên là số request đồng thời, đúng tín hiệu mà A2 dùng. -->
-<!-- Soát số: 24/11 (phần thêm 27/11 chưa soát) · Soát văn phong: kiem_van 27/11 · Người viết đọc lại: chưa -->
+<!-- Soát số: 27/11/2026 · Soát văn phong: kiem_van 27/11 · Người viết đọc lại: chưa -->
 ## 5.2. Năng lực một replica
 
 ĐG1 đo năng lực C của một replica. Cấu hình S1 giữ cố định 1 replica và nhận tải Poisson với tốc độ không đổi, mỗi mức 300 s, bỏ 60 s đầu khi tính (Bảng 5.2a). Kết quả cho thấy C = 3,5 req/s. Khi λ tăng 14,3% lên 4 req/s, SLO attainment chỉ còn 28,5%, đúng dạng điểm gãy của hàng đợi ở mục 2.2. Mức 3,5 chỉ được thêm sau khi thấy điểm gãy. Vì vậy, C thật nằm trong khoảng 3,5–4 req/s, thô hơn bước 0,25 của thiết kế (mục 5.7). Tại C, B\* = 46,3, và threshold của A2 lấy bằng 0,8 × B\* ≈ 37 (mục 3.3).
