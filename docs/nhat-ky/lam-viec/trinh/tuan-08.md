@@ -133,3 +133,13 @@
 - **Results:** `/code-review high` trên diff: 5 điểm nhỏ (§3.5 và §9 nói khác nhau về chỗ ghi việc dùng AI; quy tắc "kết quả cụ thể có số" của Tóm tắt chưa chuyển sang mục 1.3; §1 chưa ghi chỗ đặt đoạn khai báo nếu được yêu cầu; "khuôn T" ở §5.1 chưa có link; thiếu dòng Thesis), đã sửa cả 5.
 - **Links:** `docs/luan-van/quy-tac-viet.md` (§1, §3.5, §9); `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§5.1, §11.1).
 - **Thesis:** phần đầu quyển (không có Tóm tắt, không có Lời cam đoan); Mở đầu; mục 1.3 Đóng góp.
+
+## 2026-11-27 – Luận văn: viết chương 1 (Giới thiệu), bản base
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** Viết `01-00` (mở chương), `01-01` (1.1 Bối cảnh và bài toán, kèm Hình 1.1), `01-02` (1.2 Mục tiêu, phạm vi và phương pháp, Bảng 1.1 ánh xạ bảy mục tiêu của đề cương sang yêu cầu và mục), `01-03` (1.3 Đóng góp chính) theo dàn ý Kế hoạch §11.1, nguồn ở `nguon-tu-lieu.md` §2–§3 và bản base chương 5 (PR #82). Soát văn bằng `kiem_van.py` tới 0 điểm; cắt hai lượt để gần khoảng 3–4 trang; chạy `/code-review high`, sửa cả 10 điểm.
+- **Decision:** D130: chương 1 chỉ giữ 2–3 số chính, đều ở 1.3; bỏ ví dụ tính tay 96/48 GPU-giờ/ngày; mã F/N chỉ xuất hiện ở Bảng 1.1.
+- **Results:** Khuôn T (đo bằng Word qua `gop.py`): 5,21 → 4,65 → 4,67 trang sau khi sửa review (01-00 0,19 · 01-01 1,89 · 01-02 1,73 · 01-03 0,86), gồm Hình 1.1 và Bảng 1.1; vượt định hướng 3–4 trang khoảng 0,7 trang. Thân bài bản ghép 67,1 trang. `lychee --offline` 0 lỗi.
+- **Incidents:** `/code-review high` thấy 10 điểm: phần phương pháp mô tả sai các phiên thuê thử (thực tế có các phiên 08/11 và 16/11 trên nhiều loại máy) và sai thời điểm đóng băng dữ liệu; nguyên nhân SLO thấp khi tải tăng đột ngột bị viết thành "hàng đợi dồn vào các replica có sẵn" trong khi chương 5 đo được là dồn vào replica duy nhất, rồi Service chia đều nên hàng đợi rút chậm; Bảng 1.1 thiếu mục 3.4, 3.6, 4.4, 4.5, 5.6; mã F/N còn trong văn xuôi; quá nhiều số ở 1.3; dẫn nguồn `00-thong-so` §10.2 chưa có trên main. Đã sửa hết. Một lần lệnh `git push … 2>&1` bị hook chặn: chạy lại không chuyển hướng.
+- **Links:** nhánh `docs/tr8-thesis-ch1`; `docs/luan-van/01-0*.md`.
+- **Thesis:** chương 1 (1.1–1.3).
