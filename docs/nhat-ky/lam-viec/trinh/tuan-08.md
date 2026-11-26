@@ -159,3 +159,12 @@
 - **Deviations:** Tài liệu KEDA 2.21 ghi fallback hỗ trợ cả `Value` và `AverageValue`, khác Kiến thức nền §3.3 ("chỉ hỗ trợ AverageValue") và lý do ở Kiến trúc dòng `metricType: AverageValue … để fallback hoạt động`; mục 2.4 viết theo tài liệu 2.21, hai tài liệu thiết kế chưa sửa. Harchol-Balter 2013 (dẫn ở 2.2 cho công thức M/M/1) vẫn chưa đọc trực tiếp; trang của tác giả chỉ có chương 1. Hình 2.2 (ảnh có sẵn) có thể ghi ngưỡng TTFT của đồ án, chưa kiểm.
 - **Links:** `docs/luan-van/02-00-co-so-ly-thuyet.md`, `02-03-gpu-kubernetes.md`, `02-04-autoscaling-kubernetes.md`, `02-05-slo-gitops.md`, `02-06-giai-phap-lien-quan.md`, `tai-lieu.bib`.
 - **Thesis:** chương 2, mục 2.3–2.6 và Kết chương; Bảng 2.2.
+
+## 2026-11-27 – Kiểm Hình 2.2 và sửa chú thích
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** kiểm ảnh `docs/images/png/10-do-tre-theo-muc-tai.png` dùng làm Hình 2.2 (mục 2.2): ảnh có vẽ đường "SLO: TTFT p95 ≤ 2,5 s", μ = 2,4, C ≈ 2,1 req/s và tiêu đề trong hình "Vì sao không thể cho GPU chạy sát 100% tải". Sửa chú thích: nói đường cong vẽ phác theo dạng trung bình T ≈ T0 + k·ρ/(1 − ρ) và mọi số trên hình chỉ để minh hoạ; comment nguồn ghi cách tính lại C.
+- **Decision:** chú thích không dẫn sang mục 3.1 hay 5.2, vì quy-tac-viet §2 không cho chương 2 nói về hệ thống của nhóm. Cách sửa gốc là vẽ lại hình cho luận văn (bỏ tiêu đề trong hình, đường ngưỡng không ghi số); để sau vì lượt tự chạy sắp hết giờ.
+- **Results:** tính lại từ dòng chân hình: T0 = 0,3 s, k = 0,35 s, C ≈ 2,07 req/s, khớp nhãn "C ≈ 2,1". `kiem_van` 0 điểm; lychee `docs/luan-van` 0 lỗi. `/code-review high` 8 điểm: sửa 5 (dẫn chéo sang chương 3, nhánh khác, cách tính, dạng trung bình, nhật ký); 2 điểm (vẽ lại hình, tiêu đề "GPU 100% tải" trái với đoạn nói ρ khác GPU utilization) để việc vẽ lại; 1 điểm (SLO theo request khác TTFT p95) hết áp dụng khi bỏ dẫn sang 3.1.
+- **Links:** PR #83, `docs/luan-van/02-02-hang-doi-nang-luc.md`.
+- **Thesis:** chương 2, Hình 2.2.
