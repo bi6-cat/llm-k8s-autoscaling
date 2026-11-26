@@ -208,3 +208,74 @@
 - **Done:** Lượt tự chạy 08:33 xong 7 vòng: cắt 5.3, 5.5b, 5.6 về ngân sách D96; viết base 5.1, 5.2, 5.4, 5.5, 5.7. Vòng 8 hết quota giữa lúc chuẩn hoá comment đầu file 5.3–5.7, để lại phần sửa chưa commit; script thoát mà không ghi dòng dừng. Phiên sau soát và commit phần đó: bỏ tên công cụ soát, thêm `<!-- Thông điệp -->` (5.3, 5.4, 5.6), đưa dòng soát về dạng `Soát số · Soát văn phong · Người viết đọc lại`, đổi câu mở 5.3 và 5.6 khỏi dạng "Mục này…" (quy-tac-viet §2).
 - **Results:** đo lại khuôn B: 5.3 = 3,99 trang (bản trước khi sửa cũng 3,99; ngân sách 4), 5.6 = 1,95 trang (ngân sách 2). kiem_van còn 1 điểm ở đoạn mở 5.6 (2 câu), có từ trước, do mâu thuẫn quy-tac-viet §2 (đoạn mở 1–2 câu) với §3.2 (đoạn 3–7 câu), chưa sửa.
 - **Links:** `docs/luan-van/05-03-…`, `05-04-…`, `05-06-…`, `05-07-…`; tổng kết lượt `.work/auto/runs/20261124-0833/` (cục bộ).
+## 2026-11-24 – Luận văn: bỏ ngân sách trang từng mục, sửa dàn ý và quy tắc đề mục
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Ghép một bản đọc liền mạch (cục bộ, không commit) từ `main` và 8 nhánh luận văn chưa merge, có khung cho các mục chưa viết, rồi đo số trang từng mục theo khuôn B: đã có 28,4 trang base (chương 3: 11,5; 4.3: 3,05; chương 5: 13,8).
+  2. Trình đọc bản ghép và nêu hai vấn đề: (a) độ dài không nên ép theo ngân sách, miễn nội dung có giá trị; (b) đề mục con nhiều mà mỗi mục ngắn, nhìn rời rạc, thiếu chuyên nghiệp.
+  3. Đo độ dài từng đề mục của bản base và tìm quy định độ dài của các trường khác; so với một luận văn thạc sĩ cùng chủ đề.
+  4. Sửa dàn ý ở Kế hoạch §11.1 (bảng đề mục, đoạn **Độ dài** thay đoạn "Cân đối", lộ trình, lý do), quy tắc viết §1, §2, §2.1, §3.1, §8, §10, nguồn tư liệu §2, ADR-004 K12 và §7.
+- **Decision:** Trình đồng ý cả bốn điểm của đề xuất:
+  - Độ dài theo nội dung lõi; định hướng 70–90 trang thân bài theo khuôn B, trần 100; bỏ ngân sách trang từng mục. Khoảng theo chương: 1: 5–6 · 2: 12–15 · 3: 15–18 · 4: 22–26 · 5: 16–20 · 6: 3–4. Không chọn giữ 55–65 trang, vì đó là con số nhóm tự đặt ở ADR-004 khi rút gọn phạm vi, không phải quy định của trường, và bản base viết theo ngân sách đó đã mất phần lý do.
+  - Quy tắc đề mục: chỉ đặt tiêu đề khi nội dung dài từ khoảng 1 trang; mục dưới 2,5 trang không chia cấp 3; tiêu đề nói nội dung, không nói bước của khung hay mã kịch bản. Chương 1 gộp 6 mục còn 4; 5.3 đưa TĐ1 lên tiểu mục đầu; 5.5 gom 7 tiểu mục theo mã VH thành 3 theo chỉ tiêu N4, N6, N7; scale-down chuyển từ 5.3 sang 5.5.1.
+  - Mỗi chương một PR, thay cho các PR từng mục (#62–#64, #66–#69); mốc M4 (29/11) là đủ mục theo dàn ý mới; phần lõi đã cắt ở chương 3, 5 được khôi phục tới trước hạn nộp.
+- **Results:**
+  - Bản base viết theo ngân sách cũ: phần lớn tiểu mục cấp 3 chỉ có 55–300 chữ (⅛–⅔ trang), ví dụ 3.2.3: 72 chữ, 5.5.1: 55, 5.5.5: 54; tiểu mục TĐ1 ở chương 5 (5.3.4) chỉ 110 chữ. Trước khi cắt, 5.3 có 3.500 chữ, sau khi cắt còn 830.
+  - Quy định của các trường khác: ĐH KHTN TP.HCM 50–100 trang; một trường CNTT và Truyền thông 60–80 trang không kể phụ lục, mỗi nhóm tiểu mục ít nhất hai tiểu mục; Khoa CNTT ĐH Kinh tế Quốc dân tối thiểu 50 trang. Chưa tìm thấy quy định công khai của PTIT. Luận văn thạc sĩ Aalto về autoscaling Kubernetes: 54 trang thân bài, mục cấp 2 trung bình 2,5–3 trang.
+  - Khuôn ảnh hưởng tới số trang: cả chương 5 (bản base ngày 24/11) đo 11,61 trang khuôn A (13 pt) và 13,68 trang khuôn B (14 pt), B dài hơn khoảng 18%.
+  - `lychee --offline --include-fragments` trên `docs/**/*.md` và `*.md`: 719 link, 0 lỗi.
+  - `/code-review high` trên diff: 9 điểm (2 quan trọng: tên 4.3.2 trái quy tắc mới; quy tắc 1 trang chưa miễn cho "Kết chương", "Cấu trúc luận văn"), đã sửa cả 9.
+- **Deviations:** dàn ý ngày 23/11 (PR #59) và ngân sách trang ngày 23/11 (PR #65) được thay sau một ngày; các bản base 3.1–3.6, 4.3 và chương 5 sẽ phải sửa đề mục.
+- **Links:** `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§3 M4, §11.1); `docs/luan-van/quy-tac-viet.md`; `docs/luan-van/nguon-tu-lieu.md`; `docs/luan-van/README.md`; `docs/adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md`.
+- **Thesis:** áp cho toàn bộ luận văn; căn cứ về độ dài có thể nêu ngắn khi trả lời hội đồng.
+
+## 2026-11-24 – Luận văn: chọn khuôn trình bày từ hai đồ án mẫu của khoa
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. GVHD gửi hai đồ án tốt nghiệp năm 2025 của Khoa Công nghệ Thông tin 1 làm mẫu: một đồ án chương trình tiên tiến viết tiếng Anh (.docx) và một đồ án hệ chính quy viết tiếng Việt (.pdf). Nhóm thuộc hệ chính quy nên luận văn viết tiếng Việt. Trình dặn hai mẫu chỉ là căn cứ tham khảo vì đề tài khác, không áp dập khuôn.
+  2. Trích định dạng và cấu trúc: file .docx đọc style, section, mục lục bằng python-docx và pandoc; file .pdf đo vị trí từng ký tự bằng pdfplumber (khổ giấy, lề, cỡ chữ, khoảng dòng, thụt đầu dòng, vị trí chú thích, đầu trang, chân trang).
+  3. Đo số trang bằng Word (COM, trên bản sao, không lưu): áp khuôn B, khuôn của mẫu tiếng Anh và khuôn T đề xuất lên bản đọc gộp ngày 24/11; áp khuôn của mẫu tiếng Anh lên chính file mẫu để kiểm tra cách giả lập.
+  4. Ghi khuôn T vào quy tắc viết §1, §2; sửa Kế hoạch (dòng tóm tắt đầu file, §11.1: cột "Trang", đoạn **Phần đầu**, đoạn **Độ dài**, lý do thay đổi), nhật ký thay đổi của ADR-004 (K12) và README luận văn.
+- **Decision:**
+  - Khuôn T: A4; lề trên 2,5 cm, dưới 2,5 cm, trái 3 cm, phải 2 cm; Times New Roman 13 pt, giãn dòng 1,15, cách sau đoạn 6 pt, thụt đầu dòng 1,27 cm; chương 16 pt đậm căn giữa, sang trang mới; đầu trang và chân trang theo mẫu tiếng Việt. Ba chỗ khác mẫu: khổ A4 thay Letter (mẫu tiếng Việt dùng Letter, có lẽ do mặc định của Word); tên bảng đặt trên bảng theo IEEE và thông lệ tiếng Việt (hai mẫu đặt dưới); giữ cách đánh số `3.4.1.` và "Hình 3.1." vì hai mẫu không thống nhất với nhau.
+  - Phần đầu quyển theo hai mẫu (bìa, Lời cảm ơn, hai trang nhận xét, mục lục và ba danh mục), giữ Lời cam đoan (chỗ khai báo dùng công cụ AI) và Tóm tắt 1 trang dù hai mẫu không có; bỏ *Abstract* và trang nhiệm vụ đồ án; không có phần "Mở đầu" riêng vì lặp chương 1.
+  - Độ dài đổi đơn vị sang khuôn T, đo bằng Word: định hướng 60–75 trang thân bài, trần 85, cùng nội dung với mốc 70–90 trang, trần 100 theo khuôn B. Không tăng độ dài theo mẫu: phần dài của hai mẫu là sơ đồ và đặc tả use case, đề tài này không có.
+  - Không dùng nguyên khuôn của mẫu tiếng Anh (dòng đơn, lề trên 1,5 cm) vì thuộc chương trình khác và lề trên quá hẹp.
+  - Việc soát văn phong theo luận văn mẫu thu hẹp lại: không khảo sát thêm 4–6 luận văn bên ngoài trước M4. Hai mẫu cho biết mức GVHD chấp nhận, và văn của chúng không chặt hơn quy tắc hiện có, nên quy tắc văn phong giữ nguyên.
+- **Results:**
+  - Mẫu tiếng Việt: 125 trang, khổ Letter; Times New Roman 13 pt; khoảng dòng trung vị 17,5 pt (khoảng 1,17 lần dòng đơn), thêm 7,5 pt giữa hai đoạn; thụt đầu dòng 1,27 cm; lề trái 3 cm, phải 2 cm; chú thích hình và bảng 13 pt nghiêng, căn giữa, đặt dưới; 8 chương, chương 2–7 kết bằng mục "Kết luận"; trung vị 521 chữ trên trang chỉ có chữ. Thân bài 113 trang, trong đó chương phân tích và thiết kế 65 trang.
+  - Mẫu tiếng Anh: 89 trang, A4, 13 pt dòng đơn, cách 6 pt trước và sau đoạn, lề trên/dưới/trái/phải 1,5/1,7/3,5/2 cm; 5 chương, thân bài 74 trang, chương phân tích và thiết kế 42 trang; 55 ảnh, 35 bảng.
+  - Kiểm cách giả lập: áp khuôn của mẫu tiếng Anh lên chính file đó, vị trí các chương lệch bản gốc không quá 0,6 trang trên 89 trang.
+  - Bản đọc gộp, chương 1–6 (gồm cả khung chưa viết): khuôn B 41,24 trang, khuôn T 27,67 trang; B dài gấp 1,49 lần T (từng chương 1,41–1,57). Mục 3.1–3.5: Typst cho 9,54 trang khuôn B, Word cho 11,97 trang (Typst thấp hơn khoảng 20%). Suy ra 1 trang khuôn B cũ bằng khoảng 0,85 trang khuôn T.
+  - `lychee --offline --include-fragments` trên 4 file đã sửa: 94 link, 0 lỗi.
+  - `/code-review high` trên diff: 6 điểm (2 quan trọng: khoảng trang chương 4 và 5 không khớp quy tắc nhân 0,85 rồi làm tròn, nay là 19–22 và 14–17, cộng 63–75 trang; số chữ mỗi trang chỗ ghi 450, chỗ ghi 500), đã sửa cả 6.
+- **Incidents:** script Word lần đầu lỗi ở lệnh `Quit(0)` (COM trong PowerShell đòi tham số `[ref]`) và để lại một tiến trình Word chạy ngầm; số liệu của cả 6 lượt đo đã ghi đủ, tiến trình được tắt. Lần chạy sau, PowerShell trải phẳng mảng một phần tử nên đường dẫn file sai; sửa bằng `,@(...)`.
+- **Links:** `docs/luan-van/quy-tac-viet.md` (§1, §2); `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§11.1); `docs/adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md`; `docs/luan-van/README.md`.
+- **Thesis:** bước định dạng (file `--reference-doc` theo khuôn T); căn cứ về độ dài khi hội đồng hỏi.
+
+## 2026-11-24 – Luận văn: thêm phần Mở đầu, bỏ trang Lời cam đoan
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** thêm phần Mở đầu vào thứ tự các phần của quyển (quy tắc viết §1) và vào bảng "mỗi chương nói gì" (§2); thêm dòng Mở đầu vào bảng dàn ý, bỏ mục 1.4 "Cấu trúc luận văn" khỏi chương 1 (Kế hoạch §11.1); cập nhật bảng nguồn tư liệu cho Mở đầu và chương 1. Bỏ trang Lời cam đoan khỏi phần đầu quyển; chuyển khai báo dùng công cụ AI sang đoạn cuối của Mở đầu (quy tắc viết §1, §3.5, §9; Kế hoạch §11.1).
+- **Decision:**
+  - Trình đề nghị giữ phần Mở đầu để dẫn dắt và mô tả nhanh từng chương, thay cho lựa chọn "không có Mở đầu" ở mục trước. Lý do: đây là thông lệ của đồ án hệ chính quy, mẫu tiếng Việt của khoa có phần này, và hội đồng đọc nó trước để nắm bức tranh chung. Để không lặp với chương 1, hai phần chia vai trò: Mở đầu (không đánh số, 1,5–2 trang) dẫn dắt ở mức người không chuyên và mô tả ngắn từng chương, không có số đo hay chi tiết kỹ thuật; chương 1 giữ bối cảnh, mục tiêu, phạm vi, phương pháp và đóng góp kèm số, còn 3–4 trang. Tóm tắt vẫn giữ vì nêu kết quả kèm số.
+  - Trình đề nghị bỏ trang Lời cam đoan vì hai mẫu không có. Lời khai báo dùng công cụ AI vẫn giữ, vì dự án dùng công cụ AI cho cả viết mã, phân tích số liệu và soạn văn bản. Khai báo đặt ở đoạn cuối của Mở đầu: hội đồng đọc phần này trước, nên khai báo không bị khuất như khi để ở phụ lục, và chương 1–6 vẫn không nhắc tới công cụ AI. Nếu GVHD hoặc khoa quy định chỗ khai báo khác thì chuyển sang đó.
+- **Results:**
+  - Cộng các khoảng trang của chương 1–6 trong bảng dàn ý được 62–74 trang; định hướng chung giữ 60–75 trang thân bài khuôn T, trần 85. Mở đầu (1,5–2 trang) không tính vào thân bài.
+  - `/code-review high` trên diff: 6 điểm nhỏ (Mở đầu chưa rõ có tính vào thân bài không, chưa có tên file nên lệnh ghép có thể bỏ sót, chưa có trong thứ tự viết và bảng phân công, ý lý do cũ mâu thuẫn, §3.5 chưa ghi ngoại lệ cho đoạn khai báo), đã sửa cả 6.
+- **Links:** `docs/luan-van/quy-tac-viet.md` (§1, §2, §3.5, §9); `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§5.1, §11.1); `docs/luan-van/nguon-tu-lieu.md`; `docs/luan-van/README.md` (tên file `00-00-mo-dau.md`).
+- **Thesis:** phần Mở đầu; mục 1.4 cũ không còn.
+
+## 2026-11-24 – Luận văn: bỏ trang Tóm tắt và đoạn khai báo dùng công cụ AI
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** bỏ trang Tóm tắt khỏi phần đầu quyển và khỏi thứ tự viết; bỏ đoạn khai báo dùng công cụ AI ở cuối Mở đầu (quy tắc viết §1, §3.5, §9; Kế hoạch §5.1, §11.1). Sửa dòng Mở đầu ở bảng §5.1 thành "cùng soát".
+- **Decision:**
+  - Trình chọn bỏ trang Tóm tắt vì hai mẫu không có. Khi đã có Mở đầu, Tóm tắt thành phần tóm lược thứ ba cùng với Mở đầu và mục 1.3; 2–3 kết quả chính kèm số vẫn nằm ở mục 1.3.
+  - Trình chọn không đưa đoạn khai báo dùng công cụ AI vào luận văn: hai mẫu không có, và nhóm chưa thấy quy định nào của trường. Câu mẫu giữ ở quy tắc viết §9, để thêm vào cuối Mở đầu nếu GVHD hoặc khoa yêu cầu.
+  - Bảng §5.1 ghi người sở hữu tính năng để soát nội dung, còn bản base của mọi phần do Trình viết (từ 22/11). Dòng Mở đầu ghi ở PR #72 là "Quang, toàn phần", nay sửa thành cả hai cùng soát, vì Mở đầu tóm lược mọi chương.
+- **Results:** `/code-review high` trên diff: 5 điểm nhỏ (§3.5 và §9 nói khác nhau về chỗ ghi việc dùng AI; quy tắc "kết quả cụ thể có số" của Tóm tắt chưa chuyển sang mục 1.3; §1 chưa ghi chỗ đặt đoạn khai báo nếu được yêu cầu; "khuôn T" ở §5.1 chưa có link; thiếu dòng Thesis), đã sửa cả 5.
+- **Links:** `docs/luan-van/quy-tac-viet.md` (§1, §3.5, §9); `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§5.1, §11.1).
+- **Thesis:** phần đầu quyển (không có Tóm tắt, không có Lời cam đoan); Mở đầu; mục 1.3 Đóng góp.
