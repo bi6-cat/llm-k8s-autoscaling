@@ -205,3 +205,24 @@
 - **Incidents:** lần đo thử đầu ra 45 tr vì dùng `pandoc -f markdown-raw_html`, làm comment nguồn hiện thành chữ và nuốt tiêu đề ngay sau comment; sửa bằng cách xoá comment trước khi chuyển.
 - **Links:** `docs/luan-van/04-01-ha-tang-trien-khai.md`, `docs/luan-van/04-07-cong-cu-danh-gia.md`; nhánh `docs/tr8-thesis-ch4`.
 - **Thesis:** chương 4; nếu chèn hình vào chương 4 thì phải cắt tiếp để giữ trần 22 tr.
+
+## 2026-11-26 – Luận văn: soát số độc lập và soát diff chương 4
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Soát số độc lập 4.1–4.7 (quy-tac-viet §9, khác lượt viết nháp): đối chiếu khoảng 240 khẳng định với comment nguồn, ra 20 lỗi xác nhận và 6 điểm nghi ngờ. Trình đối chiếu lại từng lỗi với nguồn rồi sửa cả 20 (commit `82b327c`).
+  2. `/code-review high` trên cả diff so với `main`: 10 điểm, đều đúng; sửa 8 điểm ở văn bản, điểm về nguồn nằm trên nhánh chưa merge ghi ở đầu PR, điểm thiếu nhật ký là mục này.
+  3. Đánh dấu "Soát số: 26/11/2026" ở comment trạng thái của cả 7 file; đo lại khuôn T bằng Word.
+- **Decision:** giữ chương 4 ở 22,1 tr khuôn T (định hướng 19–22 tr), không cắt thêm: phần tăng 0,3 tr là câu điều kiện đo và giới hạn của số liệu do bước soát yêu cầu; D103 coi số trang theo chương là định hướng, trần là 85 tr cả thân bài.
+- **Results:** các lỗi đáng kể đã sửa:
+  - T3 giữ 298–304 s ở 6 lần, 292 s ở 1 lần (lỗi đồng hồ VM WSL2); tiêu chí đúng của script là 295–330 s.
+  - Retention Prometheus ở nhà và VM thuê là 3 ngày, ở simulator 1 ngày.
+  - 27 s tải model là lần chạy tay ngày 08/11, trước khi có role tải trước; N8 trên simulator mới là phép thử gần đúng.
+  - Ca sai khoá API chỉ thử ở nhà; VH2 qua Git có hai lần `git revert`; ở KB1, A2 giữ 1 replica.
+  - Runner thử tối đa hai lần mỗi lượt; ba giá trị tệ nhất của tiêu chí hợp lệ nằm ở ba lượt khác nhau.
+  - Câu "mỗi pod giữ GPU đủ 180 s" giới hạn về máy nhà: trên V2, vh2b thay 4 pod trong 371,6 s (< 4 × 180 s), nên câu suy ra từ vh2a (181,6 s) bị bỏ.
+  - 4.6 nói đúng là `LLMSLOBurnFast` đã được kiểm trên simulator bằng cách tăng TTFT giả (LT8).
+  - Kiểm tra: `kiem_van` 0 điểm cần xem ở cả 7 file; `pandoc --citeproc` không lỗi; `lychee --offline` 0 lỗi. Chương 4 = 22,1 tr khuôn T, chưa có hình.
+- **Incidents:** lượt soát số đầu dừng giữa chừng vì hết quota tuần; sau khi quota reset, lượt soát chạy tiếp từ chỗ dừng.
+- **Links:** nhánh `docs/tr8-thesis-ch4`; `docs/luan-van/04-0*.md`.
+- **Thesis:** chương 4. Chưa rõ vì sao pod trên VM thuê nhả GPU sớm hơn 180 s; nếu cần thì đưa vào 5.5.1 hoặc 5.7.

@@ -2,7 +2,7 @@
 <!-- Đo: chưa. Bảng 4.5 đánh số sau Bảng 4.4 (mục 4.3.2); chèn thêm bảng thì đánh lại cả chương. Mục dưới 2 trang nên không chia cấp 3 (quy-tac-viet §2). Ý không đưa vào, để chỗ khác: tám pha, bảng L0/L2, lý do không đo L1, không dùng --enforce-eager, không giữ replica dự phòng, startup probe 10 phút (3.4); role tải trước chạy nền song song bootstrap, mirror, hf_xet treo, k3s chết khi kéo image trên ổ SATA (4.1.1); số ĐG3 từng lượt, tỷ lệ L2/L0, phân rã tám pha trên V2, ảnh hưởng của L0 đo 0 → 1 lên số đo (5.4, 5.7); LT4 ở nhà (nạp nguội 11,67 s, chậm hơn dự đoán 4–14 lần; 5.4 hoặc Phụ lục E); runner thu log pod và lỗi write_logs (4.7); pha spike 10 phút của KB2 chọn theo cold start (3.6). Sự cố bỏ: docstring vllm_log.py sai về dòng torch.compile khi cache ấm (lỗi chú thích, code đúng); chuông báo động nhầm lúc 01:54 khi so checksum (công cụ tắt VM, không đổi kết luận). -->
 <!-- Thông điệp: (1) L2 được hiện thực bằng ba thứ có sẵn trên node trước khi pod được tạo: image (kéo bằng Ansible, IfNotPresent), model và compile cache (cùng một hostPath trên NVMe); việc tải trước bằng Ansible thay cho DaemonSet và Job của thiết kế. (2) Phần còn lại của cold start phụ thuộc host nhiều hơn phụ thuộc cấu hình: cùng model, cùng image, capture CUDA graph mất 127 + 121 s ở VM thử đầu và 4 + 4 s ở VM A4000; nạp weights chỉ 11 s trên 152 s, nên tăng tốc nạp model gần như không rút được cold start. (3) Image có thể biến mất khỏi node khi vLLM ở 0 replica (image GC của kubelet), và một lần kéo lại mất gần 15 phút. -->
 <!-- Việc kéo theo: chương 2 (2.1) định nghĩa torch.compile, CUDA graph; 2.3 định nghĩa image, registry, hostPath, emptyDir, image GC của kubelet nếu giữ câu đó. -->
-<!-- Soát số: chưa · Soát văn phong: chưa · Người viết đọc lại: chưa -->
+<!-- Soát số: 26/11/2026 · Soát văn phong: chưa · Người viết đọc lại: chưa -->
 ## 4.4. Rút ngắn cold start
 
 Mức L2 của thiết kế (mục 3.4) được hiện thực bằng cách để sẵn trên node ba thứ mà pod vLLM cần lúc khởi động: image, model và compile cache. Việc này quan trọng vì trên VM thuê, mạng có thể chậm tới mức một pod tải lại từ đầu mất hàng chục phút. Ở VM thử đầu tiên (2 × RTX 5060 Ti), băng thông thực chỉ khoảng 8 MB/s. Kéo image vLLM 9,04 GB mất 24 phút 22 giây, và tải model 3B mất 690 s. Trong khi đó, chỉ tiêu ở mục 3.1 yêu cầu replica mới Ready trong 2 phút.
@@ -24,7 +24,7 @@ Khi image và model đã có sẵn, phần còn lại của cold start phụ thu
 | Tải model 3B | 690 s | 27 s |
 | Kéo image 9,04 GB | 1.462 s | 413 s |
 | torch.compile, lần đầu / có compile cache | 32 s / 1,6 s | 27,4 s / 2,0 s |
-| Capture CUDA graph (hai lượt) | 127 + 121 s | 4 + 4 s |
+| Capture CUDA graph (hai lượt) | 131 + 120 s | 4 + 4 s |
 | Ready khi có compile cache | 363 s | 108 s |
 <!-- nguồn: docs/nhat-ky/van-hanh.md mục 08/11 (2 × 5060 Ti, 3 CPU: lần 1 compile 32 s, capture 127 + 121 s, Ready 412 s; lần 2 có compile cache: compile 1,6 s, capture 131 + 120 s, Ready 363 s; tải model 690 s; kéo image 24 phút 22 giây = 1.462 s; Xeon E5-2683 v4); docs/nhat-ky/lam-viec/quang/phien-2026-11-08-a4000.md §1 (Xeon E5-2620 v4, tải HF 93,9 MB/s), bảng "Thời gian dựng" (tải model 27 s, kéo image 413 s), §9 (2 CPU; lần 1 chưa có compile cache 152 s, lần 2 có cache 108 s; torch.compile 27,4 s, có cache 2,0 s; capture 4 s + 4 s, hai lượt piecewise và full; phát hiện: cả hai đều Xeon E5 v4 đời 2016, giả thuyết CPU yếu sai, nguyên nhân chưa rõ, có thể do tầng ảo hoá). Dòng capture của 5060 Ti lấy lần 1 (127 + 121 s); lần 2 là 131 + 120 s. 127 + 121 = 248 s so với 8 s: khoảng 31 lần -->
 
