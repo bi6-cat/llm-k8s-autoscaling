@@ -209,16 +209,16 @@ curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=v1.xx.y+k3s1 sh -s - server \
   --write-kubeconfig-mode=644
 ```
 
-Với `cpu-manager-policy=static`, pod có QoS **Guaranteed** (requests = limits, CPU là số nguyên) được cấp **lõi CPU riêng**, không bị pod khác chen vào. CPU manager chỉ bật trên VM thuê. Ví dụ với máy 48 vCPU:
+Với `cpu-manager-policy=static`, pod có QoS **Guaranteed** (requests = limits, CPU là số nguyên) được cấp **lõi CPU riêng**, không bị pod khác chen vào. CPU manager chỉ bật trên VM thuê. Phân bổ theo [ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C2, dùng cho V2 (máy ≥ 20 vCPU):
 
 | Nhóm | Lõi CPU | Ghi chú |
 |---|---|---|
 | Hệ thống, k3s (`reserved-cpus`) | 0–3 | Không cấp riêng cho pod nào |
-| 4 pod vLLM | 4 × 6 lõi riêng | Theo [Thông số §9.2](00-thong-so.md#92-deployment-vllm) |
+| 4 pod vLLM | 4 × 3 lõi riêng | Theo [Thông số §9.2](00-thong-so.md#92-deployment-vllm) |
 | Pod máy tạo tải | 3 lõi riêng | Mỗi lõi một tiến trình gửi tải (§9); memory 256Mi × (số lõi + 1) |
 | Các pod còn lại (Prometheus, Grafana, KEDA, Argo CD, Traefik) | Vùng CPU dùng chung | Không đòi lõi riêng |
 
-Nếu máy chỉ có 32 vCPU: dùng 5 lõi cho mỗi pod vLLM; máy tạo tải giữ 3 lõi. Vì sao 3 lõi: đo trên kind (07/11), một tiến trình gửi tải ở 10 req/s tốn 53–58% một lõi, ở 20 req/s lên 87–88%. Ước tính một tiến trình chạm ngưỡng 70% ở khoảng 12–14 req/s, nên 3 tiến trình chịu khoảng 36–42 req/s, gấp đôi đỉnh KB3 ước tính 12–18 req/s (C chưa đo; §9).
+Tổng phần cấp riêng là 4 × 3 + 3 = 15 lõi, cộng khoảng 0,4 lõi cho các pod còn lại, nên cần khoảng 16 lõi allocatable, tức máy ≥ 20 vCPU vì 4 lõi `reserved-cpus` không tính vào allocatable. Máy V1 (15 vCPU) không đủ nên khi đó hạ xuống 2 lõi mỗi pod vLLM bằng overlay tạm. *(Sửa 27/11: bản trước lấy ví dụ máy 48 vCPU với 6 lõi mỗi pod vLLM, 5 lõi nếu máy 32 vCPU, theo ADR-001.)* Vì sao máy tạo tải 3 lõi: đo trên kind (07/11), một tiến trình gửi tải ở 10 req/s tốn 53–58% một lõi, ở 20 req/s lên 87–88%. Ước tính một tiến trình chạm ngưỡng 70% ở khoảng 12–14 req/s, nên 3 tiến trình chịu khoảng 36–42 req/s, gấp đôi đỉnh KB3 ước tính 12–18 req/s (C chưa đo; §9).
 
 ### 3.6. Máy tạo tải chạy cùng VM
 

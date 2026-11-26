@@ -133,3 +133,12 @@
 - **Results:** `/code-review high` trên diff: 5 điểm nhỏ (§3.5 và §9 nói khác nhau về chỗ ghi việc dùng AI; quy tắc "kết quả cụ thể có số" của Tóm tắt chưa chuyển sang mục 1.3; §1 chưa ghi chỗ đặt đoạn khai báo nếu được yêu cầu; "khuôn T" ở §5.1 chưa có link; thiếu dòng Thesis), đã sửa cả 5.
 - **Links:** `docs/luan-van/quy-tac-viet.md` (§1, §3.5, §9); `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§5.1, §11.1).
 - **Thesis:** phần đầu quyển (không có Tóm tắt, không có Lời cam đoan); Mở đầu; mục 1.3 Đóng góp.
+
+## 2026-11-27 – Thông số §9.2: CPU, RAM pod vLLM cloud theo manifest (3 lõi, 16Gi)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** Đối chiếu Thông số §9.2 với `envs/cloud/serving/patch-vllm.yaml` (bản trên main, cũng là bản V2 chạy): tài liệu ghi `cpu: 6`, `memory: 24Gi` (thiết kế 08/10, ADR-001), manifest đặt `cpu: "3"`, `memory: 16Gi` từ ADR-006 C2. Sửa dòng CPU, RAM ở Thông số §9.2; bảng phân bổ lõi ở Môi trường §3.5 (4 × 6 → 4 × 3 lõi, bỏ ví dụ máy 48 và 32 vCPU, thêm phép tính 15 lõi riêng + ~0,4 lõi → máy ≥ 20 vCPU); dòng "CPU 4–6 lõi" ở Kiến trúc đổi thành 3 lõi mỗi pod trên VM thuê. Kiến thức nền §2.6 (khuyến nghị chung 4–6 vCPU) và ADR-001 (tư liệu) giữ nguyên.
+- **Decision:** D132: tài liệu theo manifest, không ngược lại, vì manifest là thứ V2 đã chạy và số đo chương 5 gắn với nó; ghi chú "Sửa 27/11" tại chỗ để người đọc thấy giá trị cũ.
+- **Results:** lychee (cách bỏ qua như job `docs` của CI) 0 lỗi.
+- **Links:** `docs/chi-tiet/00-thong-so.md`, `05-moi-truong-danh-gia.md`, `03-kien-truc-autoscaling.md`.
+- **Thesis:** §4.1 hoặc §5.7 (cấu hình pod vLLM trên V2: 3 lõi CPU, 16Gi RAM).
