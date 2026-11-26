@@ -17,7 +17,7 @@ Việc tải trước làm khác thiết kế ở một điểm. Thiết kế d�
 Khi image và model đã có sẵn, phần còn lại của cold start phụ thuộc vào host nhiều hơn vào cấu hình. Bảng 4.5 so cùng một cấu hình trên hai VM thử. Cả hai đều có CPU Xeon E5 v4, nhưng bước capture CUDA graph chênh nhau khoảng 30 lần.
 <!-- nguồn: như comment của Bảng 4.5 -->
 
-**Bảng 4.5.** Thời gian các bước của cold start trên hai VM thử (Qwen2.5-3B, vLLM v0.31.0, 1 GPU mỗi pod; Ready tính từ lúc tạo pod). Hai bước đầu do role tải trước làm lúc dựng VM
+**Bảng 4.5.** Thời gian các bước của cold start trên hai VM thử (Qwen2.5-3B, vLLM v0.31.0, 1 GPU mỗi pod; Ready tính từ lúc tạo pod). Hai bước đầu chạy lúc dựng VM, làm tay trước khi có role tải trước
 
 | Bước | VM 2 × RTX 5060 Ti | VM 4 × RTX A4000 |
 |---|---|---|
