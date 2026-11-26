@@ -367,7 +367,7 @@ vLLM/GPU exporter ──scrape 5 s──► Prometheus ◄──PromQL── KED
 
 - Chu kỳ sync của HPA đặt **5 s** (tham số của k3s). Mặc định là 15 s, và đó mới là bên quyết định tốc độ phát hiện khi scale giữa 1 và N.
 - `pollingInterval` của KEDA vẫn đặt 5 s cho đồng bộ, nhưng tham số này chủ yếu ảnh hưởng việc kích hoạt 0 ↔ 1 (không dùng trong đồ án) và cache metric.
-- `metricType: AverageValue` cho mọi trigger, để công thức thống nhất là ⌈tổng ÷ threshold⌉ và để `fallback` không phụ thuộc số pod đang Ready. KEDA v2.21 cũng hỗ trợ fallback với `Value`, nhưng khi đó giá trị giả được chia cho số replica Ready, và fallback bị bỏ nếu không còn pod nào Ready ([Kiến thức nền §3.3](02-kien-thuc-nen.md#33-keda)).
+- `metricType: AverageValue` cho mọi trigger, để công thức thống nhất là ⌈tổng ÷ threshold⌉ và để `fallback` không phụ thuộc số pod đang Ready. KEDA v2.21 cũng hỗ trợ fallback với `Value`, nhưng khi đó giá trị giả được chia cho số replica Ready, và khi không còn pod nào Ready thì fallback không chạy, HPA giữ nguyên số replica ([Kiến thức nền §3.3](02-kien-thuc-nen.md#33-keda)).
 - Danh sách cấu hình (S1, S4, A1–A4), PromQL và target nằm ở [Thông số §8.1](00-thong-so.md#81-các-cấu-hình). Ma trận đánh giá trên GPU thuê gồm S1, S4, A1 và A2 ([Thông số §8.2](00-thong-so.md#82-ma-trận-đg2-17-lượt)).
 
 ---
@@ -533,7 +533,7 @@ spec:
 
 ### 13.3. A1, A3, A4 chỉ khác phần `triggers`
 
-Chỉ thay `query` và `threshold`; mọi trigger giữ `serverAddress`, `metricType: AverageValue` và `timeout: "1000"` như A2, để fallback của mọi cấu hình đều kịp N6.
+Chỉ thay `query` và `threshold`; mọi trigger giữ `serverAddress`, `metricType: AverageValue` và `timeout: "1000"` như A2: `AverageValue` để công thức và fallback giống A2 (§9), `timeout` để fallback của mọi cấu hình đều kịp N6.
 
 ```yaml
 # A1: GPU utilization.
