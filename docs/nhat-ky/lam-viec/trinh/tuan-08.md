@@ -133,3 +133,16 @@
 - **Results:** `/code-review high` trên diff: 5 điểm nhỏ (§3.5 và §9 nói khác nhau về chỗ ghi việc dùng AI; quy tắc "kết quả cụ thể có số" của Tóm tắt chưa chuyển sang mục 1.3; §1 chưa ghi chỗ đặt đoạn khai báo nếu được yêu cầu; "khuôn T" ở §5.1 chưa có link; thiếu dòng Thesis), đã sửa cả 5.
 - **Links:** `docs/luan-van/quy-tac-viet.md` (§1, §3.5, §9); `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§5.1, §11.1).
 - **Thesis:** phần đầu quyển (không có Tóm tắt, không có Lời cam đoan); Mở đầu; mục 1.3 Đóng góp.
+
+## 2026-11-27 – Luận văn: chương 2 phần 1, mục 2.1 và 2.2
+
+- **Task:** TR8 (luận văn, bản base chương 2) · **Environment:** none
+- **Done:**
+  1. Tạo nhánh `docs/tr8-thesis-ch2` từ `origin/main`.
+  2. Viết `02-00` (mở chương), `02-01` (2.1.1 Sinh token và bộ nhớ GPU, 2.1.2 vLLM: continuous batching và các chỉ số TTFT, TPOT, Bảng 2.1 metric của vLLM, Hình 2.1 batching) và `02-02` (2.2 Hàng đợi và năng lực phục vụ: tải mở và tải đóng, định luật Little áp cho một replica, M/M/1, năng lực dùng được C và B\*, Hình 2.2 độ trễ theo mức tải). Nguồn: Kiến thức nền §1–§2, Bài toán §1, §3, phần lý thuyết LT1–LT6 trong `van-hanh.md`.
+  3. Thêm 8 tài liệu vào `tai-lieu.bib`: Vaswani 2017, GQA 2023, Sarathi-Serve 2024, PagedAttention 2023, Orca 2022, Little 1961, Harchol-Balter 2013, Schroeder NSDI 2006. Tên tác giả đối chiếu trên trang arXiv và USENIX, tóm tắt đọc ngày 27/11; Little kiểm qua Crossref.
+- **Decision:** chương 2 chỉ dùng số minh hoạ tròn (model 3 tỷ tham số ≈ 6 GB, GPU 300 GB/s), không dùng số đo của đồ án, để không trùng mục 5.2 (quy-tac-viet §2, §5). Mục mới trong `tai-lieu.bib` đặt ở đầu file để tránh xung đột với các nhánh chương 3, 5 (thêm ở cuối). Không đưa mức ρ 0,7–0,85 của Bài toán §3, vì không có nguồn chung; hệ số dư do chương 3 chọn.
+- **Results:** đo bằng Word theo khuôn T: mở chương 0,3 tr, 2.1 3,9 tr (1.838 chữ văn xuôi, 1 bảng, 1 hình), 2.2 2,3 tr (1.155 chữ, 1 hình); cộng 6,5 tr. Còn 3,5–6,5 tr cho 2.3–2.6 và kết chương để nằm trong 10–13 tr. `kiem_van` 0 điểm cả ba file; `pandoc --citeproc` không cảnh báo; `lychee --offline` thư mục `docs/luan-van/` 0 lỗi.
+- **Deviations:** Harchol-Balter 2013 là giáo trình, chưa đọc trực tiếp trong lần viết này (dẫn cho công thức M/M/1); comment trong bib ghi để người soát đối chiếu trước khi chốt.
+- **Links:** `docs/luan-van/02-00-co-so-ly-thuyet.md`, `02-01-phuc-vu-llm-vllm.md`, `02-02-hang-doi-nang-luc.md`, `tai-lieu.bib`.
+- **Thesis:** chương 2, mục 2.1, 2.2; Hình 2.1 (`11-batching.png`), Hình 2.2 (`10-do-tre-theo-muc-tai.png`).
