@@ -69,7 +69,7 @@ Ba đại lượng khác hay đi cùng hai chỉ số trên. Độ trễ toàn t
 
 <!-- nguồn: docs/chi-tiet/05-moi-truong-danh-gia.md §15 (bảng chỉ số: TPOT = (t_last − t_first) ÷ (n_out − 1)); docs/chi-tiet/02-kien-thuc-nen.md §1.2 (prefill quyết định TTFT cùng thời gian chờ, decode quyết định ITL/TPOT), §2.8 (TTFT tính từ khi request vào engine); docs/luan-van/quy-tac-viet.md §4 (p95 = phân vị 95; TTFT, TPOT); 03-05 trên nhánh chương 3 (vLLM tính TTFT gồm thời gian chờ nên TTFT tăng đầu tiên khi quá tải; TPOT ít biến động hơn); docs/nhat-ky/van-hanh.md LT3 (quá điểm gãy TTFT tăng vọt trong khi TPOT đứng yên) -->
 
-vLLM xuất trạng thái của mình qua endpoint `/metrics` theo định dạng của Prometheus, hệ thống giám sát trình bày ở mục 2.5.2 [@vllm-metrics]. Bảng 2.1 liệt kê các metric mà các chương sau dùng. Gauge là giá trị tức thời, counter là bộ đếm chỉ tăng, còn histogram đếm số lần đo rơi vào từng khoảng giá trị (*bucket*) định trước.
+vLLM xuất trạng thái của mình qua endpoint `/metrics` theo định dạng của Prometheus, hệ thống giám sát trình bày ở mục 2.5 [@vllm-metrics]. Bảng 2.1 liệt kê các metric mà các chương sau dùng. Gauge là giá trị tức thời, counter là bộ đếm chỉ tăng, còn histogram đếm số lần đo rơi vào từng khoảng giá trị (*bucket*) định trước.
 
 **Bảng 2.1.** Các metric của vLLM được dùng trong luận văn.
 

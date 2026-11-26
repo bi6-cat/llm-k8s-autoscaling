@@ -91,6 +91,143 @@
   urldate   = {2026-11-27}
 }
 
+% Mục 2.3: device plugin, extended resource chỉ nhận số nguyên, không cấp vượt, không chia giữa container.
+@online{k8s-device-plugins,
+  title   = {{Kubernetes} documentation {v1.36}: Device Plugins},
+  url     = {https://github.com/kubernetes/website/blob/release-1.36/content/en/docs/concepts/extend-kubernetes/compute-storage-net/device-plugins.md},
+  urldate = {2026-11-27}
+}
+
+% Mục 2.3: tài nguyên nvidia.com/gpu, time-slicing không cô lập bộ nhớ và lỗi, MPS.
+@online{nvidia-device-plugin,
+  title   = {{NVIDIA} device plugin for {Kubernetes}, {v0.20.1}},
+  author  = {{NVIDIA}},
+  url     = {https://github.com/NVIDIA/k8s-device-plugin/blob/v0.20.1/README.md},
+  urldate = {2026-11-27}
+}
+
+% Mục 2.3: bộ xuất metric GPU cho Prometheus (tài liệu [11] của đề cương).
+@online{nvidia-dcgm-exporter,
+  title   = {{DCGM} Exporter},
+  author  = {{NVIDIA}},
+  url     = {https://github.com/NVIDIA/dcgm-exporter},
+  urldate = {2026-11-27}
+}
+
+% Mục 2.4: thuật toán HPA, tolerance, behavior mặc định, các loại metric.
+@online{k8s-hpa,
+  title   = {{Kubernetes} documentation {v1.36}: Horizontal Pod Autoscaling},
+  url     = {https://github.com/kubernetes/website/blob/release-1.36/content/en/docs/concepts/workloads/autoscaling/horizontal-pod-autoscale.md},
+  urldate = {2026-11-27}
+}
+
+% Mục 2.5: alerting rule, trạng thái pending và firing.
+@online{prometheus-alerting-rules,
+  title   = {{Prometheus} {v3.15.0} documentation: Alerting rules},
+  url     = {https://github.com/prometheus/prometheus/blob/v3.15.0/docs/configuration/alerting_rules.md},
+  urldate = {2026-11-27}
+}
+
+% Mục 2.5: Application, sync, trạng thái mong muốn trong Git.
+@online{argocd-core-concepts,
+  title   = {{Argo CD} {v3.5.4} documentation: Core Concepts},
+  url     = {https://github.com/argoproj/argo-cd/blob/v3.5.4/docs/core_concepts.md},
+  urldate = {2026-11-27}
+}
+
+% Mục 2.5: maxSurge, maxUnavailable, progressDeadlineSeconds.
+@online{k8s-deployment,
+  title   = {{Kubernetes} documentation {v1.36}: Deployments},
+  url     = {https://github.com/kubernetes/website/blob/release-1.36/content/en/docs/concepts/workloads/controllers/deployment.md},
+  urldate = {2026-11-27}
+}
+
+% Mục 2.6, Bảng 2.2: Knative KPA theo số request đồng thời, cửa sổ 60 s và 6 s.
+@online{kserve-kpa,
+  title   = {{KServe} documentation: Autoscaling with {Knative} Pod Autoscaler},
+  url     = {https://github.com/kserve/website/blob/main/docs/model-serving/predictive-inference/autoscaling/kpa-autoscaler.md},
+  urldate = {2026-11-27}
+}
+
+% Mục 2.6, Bảng 2.2: target_ongoing_requests.
+@online{ray-serve-autoscaling,
+  title   = {{Ray Serve} documentation: Autoscaling guide},
+  url     = {https://github.com/ray-project/ray/blob/master/doc/source/serve/autoscaling-guide.md},
+  urldate = {2026-11-27}
+}
+
+% Mục 2.6, Bảng 2.2: autoscaling theo metric của vLLM nằm trong lộ trình (README, mục Roadmap).
+@online{vllm-production-stack,
+  title   = {{vLLM} Production Stack},
+  url     = {https://github.com/vllm-project/production-stack},
+  urldate = {2026-11-27}
+}
+
+% Mục 2.6, Bảng 2.2: định tuyến theo prefix cache và tải, tách prefill và decode, autoscaling theo SLO.
+@online{llm-d,
+  title   = {{llm-d}},
+  url     = {https://github.com/llm-d/llm-d},
+  urldate = {2026-11-27}
+}
+
+% Mục 2.6, Bảng 2.2 (đã đọc tóm tắt).
+@misc{aibrix,
+  author  = {{The AIBrix Team} and Shan, J. and others},
+  title   = {{AIBrix}: Towards Scalable, Cost-Effective Large Language Model Inference Infrastructure},
+  year    = {2025},
+  url     = {https://arxiv.org/abs/2504.03648},
+  urldate = {2026-11-27}
+}
+
+% Mục 2.6: tách prefill và decode, goodput (đã đọc tóm tắt).
+@inproceedings{zhong-distserve,
+  author    = {Zhong, Y. and Liu, S. and others},
+  title     = {{DistServe}: Disaggregating Prefill and Decoding for Goodput-optimized Large Language Model Serving},
+  booktitle = {18th {USENIX} Symposium on Operating Systems Design and Implementation ({OSDI})},
+  year      = {2024},
+  url       = {https://arxiv.org/abs/2401.09670},
+  urldate   = {2026-11-27}
+}
+
+% Mục 2.6: tách pha theo phần cứng (đã đọc tóm tắt).
+@inproceedings{patel-splitwise,
+  author    = {Patel, P. and Choukse, E. and others},
+  title     = {Splitwise: Efficient Generative {LLM} Inference Using Phase Splitting},
+  booktitle = {51st {ACM/IEEE} Annual International Symposium on Computer Architecture ({ISCA})},
+  year      = {2024},
+  url       = {https://arxiv.org/abs/2311.18677},
+  urldate   = {2026-11-27}
+}
+
+% Mục 2.6: lập lịch lại request giữa các instance (đã đọc tóm tắt).
+@inproceedings{sun-llumnix,
+  author    = {Sun, B. and Huang, Z. and others},
+  title     = {Llumnix: Dynamic Scheduling for Large Language Model Serving},
+  booktitle = {18th {USENIX} Symposium on Operating Systems Design and Implementation ({OSDI})},
+  year      = {2024},
+  url       = {https://arxiv.org/abs/2406.03243},
+  urldate   = {2026-11-27}
+}
+
+% Mục 2.6: nạp checkpoint nhiều tầng để rút ngắn cold start (đã đọc tóm tắt).
+@inproceedings{fu-serverlessllm,
+  author    = {Fu, Y. and Xue, L. and others},
+  title     = {{ServerlessLLM}: Low-Latency Serverless Inference for Large Language Models},
+  booktitle = {18th {USENIX} Symposium on Operating Systems Design and Implementation ({OSDI})},
+  year      = {2024},
+  url       = {https://arxiv.org/abs/2401.14351},
+  urldate   = {2026-11-27}
+}
+
+% Mục 2.6: trace 10,31 triệu request Azure OpenAI trong 213 ngày, tải theo đợt (đã đọc tóm tắt).
+@misc{wang-burstgpt,
+  author  = {Wang, Y. and Chen, Y. and others},
+  title   = {{BurstGPT}: A Real-world Workload Dataset to Optimize {LLM} Serving Systems},
+  year    = {2024},
+  url     = {https://arxiv.org/abs/2401.17644},
+  urldate = {2026-11-27}
+}
+
 @book{sre-workbook,
   editor    = {Beyer, B. and Murphy, N. R. and Rensin, D. K. and Kawahara, K. and Thorne, S.},
   title     = {The Site Reliability Workbook},
