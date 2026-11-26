@@ -29,7 +29,8 @@ spec:
   # pkg/fallback/fallback.go v2.21.0) → HPA nhận giá trị giả để lên đúng 4 replica (tối đa). Mất tín hiệu
   # thì thà thừa GPU còn hơn thiếu: thiếu thì người dùng chịu trễ, thừa chỉ tốn tiền (bài T4, VH4).
   # Mỗi lần hỏi cách nhau khoảng 5 s, nên fallback sau khoảng 20 s, trong N6 (≤ 30 s). Đo trên kind 07/11.
-  # Lưu ý: fallback chỉ chạy với metricType AverageValue.
+  # Lưu ý: với metricType AverageValue, fallback không phụ thuộc số pod Ready; với Value, KEDA chia
+  # giá trị giả cho số replica Ready và bỏ fallback khi số này bằng 0 (pkg/fallback/fallback.go v2.21.0).
   fallback: {failureThreshold: 3, replicas: 4}
   advanced:
     horizontalPodAutoscalerConfig:
