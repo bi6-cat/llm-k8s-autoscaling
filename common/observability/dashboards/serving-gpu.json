@@ -712,7 +712,7 @@
     {
       "type": "timeseries",
       "title": "Khoảng cách giữa hai token (ITL) p50 / p95",
-      "description": "Inter-token latency: thời gian giữa hai token liên tiếp của cùng một request (vllm:inter_token_latency_seconds; tên cũ time_per_output_token_seconds đã bỏ ở v0.31.0). ITL khác TPOT: TPOT là trung bình mỗi request (vllm:request_time_per_output_token_seconds, vẽ ở dashboard SLO và chi phí), còn ITL ghi từng khoảng nên đuôi dài hơn khi bị chen (prefill của request khác, preemption). Panel này để chẩn đoán; SLO và nghiệm thu dùng TPOT (Vận hành §2.1). Đường gạch: 100 ms, ngưỡng TPOT của SLO (Thông số §6), chỉ để tham chiếu.",
+      "description": "Inter-token latency: thời gian giữa hai token liên tiếp của cùng một request (vllm:inter_token_latency_seconds; tên cũ time_per_output_token_seconds đã bỏ ở v0.31.0). ITL khác TPOT: TPOT là trung bình mỗi request (vllm:request_time_per_output_token_seconds; dashboard SLO và chi phí vẽ tỉ lệ request có TPOT ≤ 100 ms), còn ITL ghi từng khoảng nên đuôi dài hơn khi bị chen (prefill của request khác, preemption). Panel này để chẩn đoán; SLO và nghiệm thu dùng TPOT (Vận hành §2.1). Đường gạch: 100 ms, ngưỡng TPOT của SLO (Thông số §6), chỉ để tham chiếu.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
