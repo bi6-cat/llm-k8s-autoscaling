@@ -168,3 +168,12 @@
 - **Results:** tính lại từ dòng chân hình: T0 = 0,3 s, k = 0,35 s, C ≈ 2,07 req/s, khớp nhãn "C ≈ 2,1". `kiem_van` 0 điểm; lychee `docs/luan-van` 0 lỗi. `/code-review high` 8 điểm: sửa 5 (dẫn chéo sang chương 3, nhánh khác, cách tính, dạng trung bình, nhật ký); 2 điểm (vẽ lại hình, tiêu đề "GPU 100% tải" trái với đoạn nói ρ khác GPU utilization) để việc vẽ lại; 1 điểm (SLO theo request khác TTFT p95) hết áp dụng khi bỏ dẫn sang 3.1.
 - **Links:** PR #83, `docs/luan-van/02-02-hang-doi-nang-luc.md`.
 - **Thesis:** chương 2, Hình 2.2.
+
+## 2026-11-27 – Vẽ lại Hình 2.2 cho luận văn
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** thêm tham số `thesis` cho `fig_knee` trong `docs/diagrams/chuyen_sau.py`; `fig_knee(thesis=True)` sinh `docs/images/10-do-tre-theo-muc-tai-luan-van.svg`: cùng đường cong và ba vùng như Hình 10, bỏ tiêu đề trong hình, bỏ số trên hai trục, nhãn C, μ không kèm số, đường ngưỡng chỉ ghi "ngưỡng TTFT", bỏ dòng ví dụ ρ ở chân hình. Xuất PNG bằng Chrome headless (cùng cờ với `export_png.sh`, chỉ cho file mới). Hình 2.2 ở 02-02 trỏ sang PNG mới; chú thích bỏ câu liệt kê số, comment nguồn ghi cách sinh hình và tham số vẽ.
+- **Decision:** D135: làm biến thể riêng thay vì sửa Hình 10, vì Hình 10 phục vụ Bài toán §3 (cần số và SLO của đồ án), còn chương 2 không nói SLO của nhóm (quy-tac-viet §2). Bỏ cả số trên trục, vì giữ trục số thì người đọc vẫn đọc được ngưỡng 2,5 s từ đường ngưỡng.
+- **Results:** chạy lại `build_diagrams.py`: 19 SVG cũ chỉ khác CRLF (Python trên Windows), đã khôi phục; SVG mới đổi sang LF. `kiem_van` 02-02: 0 điểm; lychee `docs/luan-van`: 0 lỗi; ruff trên `chuyen_sau.py` không thêm lỗi so với trước.
+- **Links:** PR #83, `docs/diagrams/chuyen_sau.py`, `docs/images/10-do-tre-theo-muc-tai-luan-van.svg`, `docs/images/png/10-do-tre-theo-muc-tai-luan-van.png`, `docs/luan-van/02-02-hang-doi-nang-luc.md`.
+- **Thesis:** chương 2, Hình 2.2.
