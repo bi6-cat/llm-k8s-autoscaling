@@ -353,6 +353,14 @@
 - **Links:** `docs/luan-van/quy-tac-viet.md` (§1, §3.5, §9); `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§5.1, §11.1).
 - **Thesis:** phần đầu quyển (không có Tóm tắt, không có Lời cam đoan); Mở đầu; mục 1.3 Đóng góp.
 
+## 2026-11-27 – Môi trường §3.6, §3.8, §6 ghi theo phiên V2 thật
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** sửa `05-moi-truong-danh-gia.md`: §3.6 ghi máy tạo tải gọi thẳng Service (không qua Traefik) và cách runner thực sự chạy ở V2 (ĐG1 từ PC qua tunnel, ĐG2/VH/ĐG3 trong `tmux` trên VM, `--no-backup`); §3.8 ghi việc kéo `runs/` về PC, kiểm sha256 rồi `poweroff` thay cho R2 và `make release`; §6.1 dòng V2 ghi ngày, máy, giờ thực tế; §6.2 thêm tiến trình thực tế 18–19/11 theo giờ và danh sách điểm khác kế hoạch, giữ bản kế hoạch để đối chiếu.
+- **Decision:** giữ bản kế hoạch dưới bản thực tế, theo cách "Sửa dd/mm" của các tài liệu thiết kế, vì chú thích Hình 17 (#90) dẫn §6.2 làm mốc so sánh. Không sửa Kế hoạch §9.5 (dòng "Mất SSH tới VM" vẫn ghi `systemd`), vì đó là runbook theo thiết kế, và `make runner-start` vẫn có trong code.
+- **Results:** mốc giờ lấy từ `runs/v2-evidence/console/` (bootstrap 15:42:08–15:47:16, ĐG1 15:50:50–16:28:55), `runs/v2-vm/vh-all-console.log` (VH 16:46:53Z–18:43:41Z), `runs/v2-vm/dg3-all-console.log` (ĐG3 18:43:53Z–19:04:22Z), `poweroff` 19:05:02Z (nhật ký Quang tuần 07). Từ bootstrap tới poweroff 10 giờ 23 phút ≈ 41,5 GPU-giờ. Chi phí thực tế: chưa có. lychee trên file: 0 lỗi. `/code-review high`: 8 điểm, đã sửa cả 8 (VH và ĐG3 là script riêng, không phải runner; vòng kéo `runs/` mất lúc khoảng 23:15; ma trận hơn 7 giờ, không phải 8; thêm 4 điểm khác kế hoạch: thứ tự, `vh.py` của PR #46, VH2c 1200 s, compile cache của L2 đo lại; VH1, VH6 ghi là lấy từ dữ liệu các lượt; câu về `vllm bench serve` ghi theo nguồn; §12 thêm ghi chú L0 0 → 1; giờ ở §6.1 ghi là cận dưới).
+- **Links:** `docs/chi-tiet/05-moi-truong-danh-gia.md` (§3.6, §3.8, §6.1, §6.2, §12).
+- **Thesis:** §3.6 (môi trường đánh giá), §5.7 và §6.2 (Hạn chế: không sao lưu R2, không kiểm năng lực giữa phiên, Alertmanager không gửi được tin trong V2).
 ## 2026-11-27 – Phụ lục A–C: manifest chính, quy tắc cảnh báo, runbook mẫu
 
 - **Task:** TR8 · **Environment:** none
@@ -989,3 +997,11 @@
 - **Done:** lượt tự chạy có cho merge, vòng 3, gỡ tiếp hàng đợi theo thứ tự ở STATE. Mỗi PR kiểm đủ 5 điều kiện merge: CI 6/6 xanh, đã chạy `/code-review high` lúc mở PR, `MERGEABLE`, không có review hay bình luận, chỉ sửa `docs/` (không đụng manifest Argo CD theo dõi), base `main`. Merge commit, xoá nhánh head.
 - **Results:** #84 `98aa53b`, #85 `a05f52f`, #86 `0718d30`, #87 `05699bb`, #88 `6254844`. #85–#88 chỉ xung đột ở nhật ký tuần 08, `git merge origin/main` tự gộp (merge=union), không trùng tiêu đề mục; push nhánh rồi chờ CI xanh lại trước khi merge.
 - **Links:** PR #84, #85, #86, #87, #88.
+
+## 2026-11-27 – Merge PR #89–#93 (Hình 2, Hình 8 và 17, ADR-003, phần đầu quyển, phụ lục)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** lượt tự chạy có cho merge, vòng 4, gỡ tiếp hàng đợi theo thứ tự ở STATE. Mỗi PR kiểm đủ 5 điều kiện merge: CI 6/6 xanh, đã chạy `/code-review high` lúc mở PR, `MERGEABLE`, không có review hay bình luận, chỉ sửa `docs/` và `loadgen/scenarios.py` (không đụng manifest Argo CD theo dõi), base `main`. Merge commit, xoá nhánh head.
+- **Results:** #89 `eeb1930`, #90 `b1b1b43`, #91 `bc998f5`, #92 `a93fc0f`, #93 `5eaae78`. #90 và #92 chỉ xung đột ở nhật ký tuần 08 (merge=union tự gộp). #91 xung đột bảng `docs/adr/README.md`: giữ trạng thái ADR-006 "C2 bị thay một phần bởi 003" của #91 và thêm dòng ADR-007 từ main. #93 xung đột lệnh pandoc trong `docs/luan-van/README.md` với #92: gộp thành `phan-dau/[0-9]*`, `[0-9]*`, `phu-luc/*` cùng biến `SEP`, giữ cả ghi chú danh mục hình và bảng của #92; chạy thử lệnh gộp ra `.docx` được (chỉ cảnh báo thiếu `rsvg-convert` cho hình SVG). Gộp main vào nhánh #94 xung đột ở Môi trường §6.1–6.2 (main có câu V2 thật từ #91): giữ bản chi tiết của #94, chuyển số ước 18/11 (9–10 giờ ≈ 14–15 USD) vào đoạn "V2 thực tế" để không lặp.
+- **Incidents:** job `yaml` của #89 và job `manifests` của #91 kết thúc `success` nhưng GitHub vẫn để trạng thái `in_progress`, nên `gh pr checks` báo pending mãi → chạy lại riêng job đó (`gh run rerun --job`), lần sau xanh.
+- **Links:** PR #89, #90, #91, #92, #93; `docs/adr/README.md`, `docs/luan-van/README.md`, `docs/chi-tiet/05-moi-truong-danh-gia.md`.
