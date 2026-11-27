@@ -54,12 +54,12 @@ Sau mỗi đoạn văn hoặc bảng có số liệu hay khẳng định kỹ th
 Pandoc 3.13 (ghim ở [docs/phien-ban.md](../phien-ban.md)). Chạy từ gốc repo, ghi file ra ngoài repo:
 
 ```bash
-pandoc docs/luan-van/[0-9]*.md \
-  --resource-path=docs/luan-van \
+pandoc docs/luan-van/[0-9]*.md docs/luan-van/phu-luc/*.md \
+  --resource-path="docs/luan-van:docs/luan-van/phu-luc" \
   --citeproc --bibliography=docs/luan-van/tai-lieu.bib \
   -o ../luan-van.docx
 ```
 
-- `--resource-path`: đường dẫn hình trong file viết tương đối với thư mục này (`../images/png/…`), nên pandoc cần biết gốc để tìm hình.
-- `--citeproc`: thay `[@key]` bằng trích dẫn và tạo danh mục tài liệu ở cuối.
+- `--resource-path`: đường dẫn hình trong file viết tương đối với thư mục này (`../images/png/…`), nên pandoc cần biết gốc để tìm hình. Hình trong `phu-luc/` viết tương đối với thư mục `phu-luc/` nên thêm thư mục đó; trên Windows, các thư mục cách nhau bằng `;` thay cho `:`.
+- `--citeproc`: thay `[@key]` bằng trích dẫn và tạo danh mục tài liệu. Danh mục nằm ở khối `::: {#refs}` nếu có, không thì ở cuối file. Hiện chưa file nào có khối này, nên danh mục đứng sau phụ lục; bước định dạng thêm trang "Tài liệu tham khảo" có khối `::: {#refs}` vào giữa chương 6 và phụ lục.
 - Bước định dạng sẽ thêm `--reference-doc=<khuôn T>.docx` ([quy tắc viết §1](quy-tac-viet.md#1-khuôn-trình-bày)) (lề, phông, kiểu tiêu đề) và `--csl=<kiểu trích dẫn>.csl`.
