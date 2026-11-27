@@ -109,7 +109,7 @@ make sim-argocd ARGOCD_REV=<nhánh>   # Argo CD core + app serving, autoscaling 
 git worktree add -b <nhánh> <thư mục> origin/main && git -C <thư mục> push -u origin <nhánh>
 make sim-argocd ARGOCD_REV=<nhánh>
 # Trong WSL: python3 của Ubuntu có pyyaml; --git-cmd git.exe để push bằng credential của Windows
-python3 -m experiments.ops.vh vh2-git --matrix envs/sim/experiments/matrix.yaml --rate 0.5 \
+python3 -m experiments.ops.vh vh2-git --matrix envs/sim/experiments/matrix.yaml --rate 0.3 \
   --context kind-llm-sim --git-worktree <thư mục> --git-branch <nhánh> --git-cmd git.exe
 ```
 
