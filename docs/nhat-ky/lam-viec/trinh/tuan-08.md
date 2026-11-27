@@ -226,3 +226,13 @@
 - **Incidents:** lượt soát số đầu dừng giữa chừng vì hết quota tuần; sau khi quota reset, lượt soát chạy tiếp từ chỗ dừng.
 - **Links:** nhánh `docs/tr8-thesis-ch4`; `docs/luan-van/04-0*.md`.
 - **Thesis:** chương 4. Chưa rõ vì sao pod trên VM thuê nhả GPU sớm hơn 180 s; nếu cần thì đưa vào 5.5.1 hoặc 5.7.
+
+## 2026-11-27 – Đoạn mở chương 4
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** viết `docs/luan-van/04-00-trien-khai-van-hanh.md` (tiêu đề chương và đoạn mở 5 câu) theo mẫu `03-00`, `05-00`: chương trả lời câu hỏi gì, khó khăn chính (mặc định và hành vi không hợp với LLM trên GPU), trình tự sáu bước của mỗi mục, các mục 4.1–4.7 và Bảng 4.7 ở kết chương. Không nêu số đo. Lượt tự chạy, vòng 1 ngày 27/11.
+- **Decision:** ví dụ trong đoạn mở lấy từ Bảng 4.7 (rolling update cần GPU trống, vLLM không tự thoát khi nhận SIGTERM), gọi là "mặc định và hành vi", vì vLLM không thoát là hành vi trái giả định thiết kế, không phải một giá trị mặc định.
+- **Results:** `kiem_van` 0 điểm cần xem (5 câu, câu dài nhất 34 chữ); `lychee --offline` 0 lỗi; bản gộp `gop.py` không còn khối [CHƯA VIẾT] ở chương 4. Đoạn mở 0,31 tr khuôn T, chương 4 = 22,77 tr (định hướng 19–22; việc cắt trang để ở danh sách việc nhóm C).
+- **Incidents:** `/code-review high` ra 9 điểm trên bản đầu, đều sửa: gọi SIGTERM là "cấu hình mặc định" là sai; "hợp với ứng dụng web" vượt quá nguồn; thiếu "điểm lệch" trong sáu bước; hai câu quá 35 chữ; liệt kê mục có "và" lồng nhau; thiếu chỉ tới Bảng 4.7; "trình bày" lặp 4 lần; thiếu "runbook" ở tên 4.6.
+- **Links:** nhánh `docs/tr8-thesis-ch4`, PR #81.
+- **Thesis:** đoạn mở chương 4.
