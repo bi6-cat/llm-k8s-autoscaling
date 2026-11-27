@@ -1091,3 +1091,12 @@
 - **Results:** Hình 5: L0 310,7 / 300,7 s, L2 75,7 / 75,7 / 80,8 s (tổng theo mốc thật; L2 lượt 3 cộng các pha đã làm tròn ra 80,9 s, ghi trong comment). Hình 15: TPOT p95 36 → 64 ms khi B tăng 16 → 64 (giới hạn `--max-num-seqs`), λ = 4 chỉ 28,5% request đạt SLO. lychee trên ba file `docs/chi-tiet/` đã sửa: 0 lỗi; ruff (E, F, W) trên hai script không thêm lỗi mới so với main. `/code-review high`: 10 điểm, đã sửa cả 10.
 - **Links:** `docs/diagrams/build_diagrams.py`, `docs/diagrams/chuyen_sau.py`, `docs/images/05-cold-start.svg`, `docs/images/15-hieu-chinh-nang-luc.svg` (+ PNG), `docs/chi-tiet/01`, `02`, `03`, `06`.
 - **Thesis:** Hình 5 dùng được cho 5.4 (cạnh Bảng 5.4a), Hình 15 cho 5.2; chưa chèn vào luận văn.
+
+## 2026-11-27 – Merge PR #96; sửa mô tả hai panel dashboard theo thiết kế hiện hành
+
+- **Task:** TR4 · **Environment:** sim
+- **Done:** (1) Merge PR #96 (Hình 5, Hình 15 theo số V2) bằng merge commit `bb0d922` sau khi 6 check CI xanh, `MERGEABLE`, không có review đòi sửa. (2) Sửa `description` của panel "GPU-giờ theo ngày" trong `slo-cost.json`: retention cloud ghi 10 ngày theo mặc định chart (Thông số §9.4, sửa 21/11), thay "cloud 15 ngày". (3) Sửa `description` của panel ITL trong `serving-gpu.json`: nói rõ ITL khác TPOT, panel chỉ để chẩn đoán, SLO và nghiệm thu dùng TPOT (`vllm:request_time_per_output_token_seconds`, vẽ ở dashboard SLO và chi phí), vạch 100 ms chỉ để tham chiếu (Vận hành §2.1, D78). (4) Kiểm trên kind `llm-sim`: áp riêng hai ConfigMap dashboard sinh từ `kubectl kustomize common/observability`, chờ sidecar Grafana nạp lại, đọc dashboard qua API Grafana.
+- **Decision:** Chỉ sửa chữ mô tả, không đổi PromQL hay panel ITL sang TPOT, đúng D78. Kiểm trên kind thay cho cluster nhà theo D114. Trên kind chỉ áp hai ConfigMap đã đổi, không áp lại cả `common/observability`, để không đụng phần khác của simulator.
+- **Results:** `python -m json.tool` hợp lệ cả hai file; `make dashboards-check`: đã kiểm 3 dashboard, đạt. Trên kind: `llm-slo-cost` 19 panel, `llm-serving-gpu` 24 panel, API Grafana trả về mô tả mới ở đúng hai panel đã sửa.
+- **Links:** nhánh `fix/tr4-dashboard-panel-desc`; `common/observability/dashboards/slo-cost.json`, `serving-gpu.json`.
+- **Thesis:** §4.4 (dashboard), nếu cần dẫn chuyện ITL và TPOT.

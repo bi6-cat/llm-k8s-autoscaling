@@ -1290,7 +1290,7 @@
     {
       "type": "timeseries",
       "title": "GPU-giờ theo ngày (7 ngày gần nhất)",
-      "description": "Mỗi cột là GPU-giờ của một ngày theo giờ của trình duyệt (Grafana căn bước 1 ngày theo múi giờ của dashboard; ảnh chụp trên kind 07/11 cho cột đặt ở 00:00 giờ Việt Nam); cột cuối là ngày hôm nay, chưa trọn. Cách tính pod giữ GPU như ô GPU-giờ. `offset -1d` = lấy 24 giờ SAU mốc của cột thay vì 24 giờ trước, để cột đặt ở đầu ngày nào thì tính đúng ngày đó. Chỉ có dữ liệu trong thời gian Prometheus còn giữ (retention: sim 1 ngày, nhà 3 ngày, cloud 15 ngày). Panel luôn xem 7 ngày tới hiện tại; khi dashboard đặt khoảng thời gian tuyệt đối (xem lại một lượt cũ), Grafana bỏ qua thiết lập này và panel báo Data outside time range.",
+      "description": "Mỗi cột là GPU-giờ của một ngày theo giờ của trình duyệt (Grafana căn bước 1 ngày theo múi giờ của dashboard; ảnh chụp trên kind 07/11 cho cột đặt ở 00:00 giờ Việt Nam); cột cuối là ngày hôm nay, chưa trọn. Cách tính pod giữ GPU như ô GPU-giờ. `offset -1d` = lấy 24 giờ SAU mốc của cột thay vì 24 giờ trước, để cột đặt ở đầu ngày nào thì tính đúng ngày đó. Chỉ có dữ liệu trong thời gian Prometheus còn giữ (retention: sim 1 ngày, nhà 3 ngày, cloud 10 ngày theo mặc định của chart, Thông số §9.4). Panel luôn xem 7 ngày tới hiện tại; khi dashboard đặt khoảng thời gian tuyệt đối (xem lại một lượt cũ), Grafana bỏ qua thiết lập này và panel báo Data outside time range.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
