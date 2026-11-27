@@ -242,7 +242,7 @@ KEDA gồm *operator*, đọc `ScaledObject` và tạo HPA tương ứng, và *m
 - **`pollingInterval` (mặc định 30 s) chủ yếu dùng cho việc kích hoạt 0 ↔ 1.** Khi scale từ 1 lên N, **HPA** mới là bên hỏi metric theo chu kỳ sync của nó (15 s), và KEDA metrics server chạy truy vấn đúng lúc được hỏi. Tuỳ chọn `useCachedMetrics: true` cho phép trả kết quả đã cache theo `pollingInterval`.
   → Muốn phát hiện tải nhanh hơn khi đã có ít nhất 1 replica, phải **giảm chu kỳ sync của HPA**. Trên k3s làm được bằng `--kube-controller-manager-arg=horizontal-pod-autoscaler-sync-period=5s`.
 - `cooldownPeriod` (mặc định 300 s) chỉ áp dụng khi scale **về 0**.
-- `fallback`: số replica dự phòng khi scaler lỗi liên tục, ví dụ khi Prometheus sập. Fallback **chỉ hỗ trợ** `metricType: AverageValue`.
+- `fallback`: số replica dự phòng khi scaler lỗi liên tục, ví dụ khi Prometheus sập. KEDA v2.21 hỗ trợ fallback cho cả `metricType: AverageValue` và `Value`, trừ trigger CPU và memory. Với `fallback.behavior` mặc định (`static`, đồ án dùng) và `AverageValue`, KEDA trả cho HPA giá trị giả `threshold × fallback.replicas`. Với `Value`, giá trị đó còn chia cho số replica đang Ready; khi số này bằng 0, KEDA không tính được fallback và trả lỗi, nên HPA không nhận metric và **giữ nguyên số replica** suốt lúc mất tín hiệu (`pkg/fallback/fallback.go`).
 - `activationThreshold`: ngưỡng để "thức dậy" từ 0 replica. KEDA hỗ trợ scale về 0, nhưng đồ án không dùng vì cold start dài không hợp với dịch vụ tương tác.
 - Annotation `autoscaling.keda.sh/paused-replicas: "N"` **tạm dừng** autoscaling và giữ nguyên N replica. Runner đánh giá dùng annotation này để reset giữa các lượt chạy.
 

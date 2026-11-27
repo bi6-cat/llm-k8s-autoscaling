@@ -353,6 +353,14 @@
 - **Links:** `docs/luan-van/quy-tac-viet.md` (§1, §3.5, §9); `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§5.1, §11.1).
 - **Thesis:** phần đầu quyển (không có Tóm tắt, không có Lời cam đoan); Mở đầu; mục 1.3 Đóng góp.
 
+## 2026-11-27 – Sửa mô tả fallback KEDA theo mã nguồn v2.21.0
+
+- **Task:** TR8 (hỗ trợ TR2) · **Environment:** none
+- **Done:** đối chiếu `pkg/fallback/fallback.go` ở tag v2.21.0 và trang "ScaledObject specification" của tài liệu KEDA 2.21; sửa Kiến thức nền §3.3, Kiến trúc §9 và comment trong `common/autoscaling/a2/scaledobject-a2.yaml`, `common/autoscaling/eval/A1.yaml`.
+- **Decision:** giữ `metricType: AverageValue` cho mọi trigger; chỉ sửa lý do. Bản cũ ghi "fallback chỉ hỗ trợ AverageValue", nhưng KEDA 2.21 hỗ trợ cả `Value` (trừ CPU, memory). Lý do đúng: với `Value`, giá trị giả `threshold × fallback.replicas` bị chia cho số replica Ready; khi số này bằng 0, KEDA trả lỗi và HPA giữ nguyên số replica, nên fallback phụ thuộc trạng thái pod; `AverageValue` thì không. Bản nháp chương 2 (PR #83) đã viết theo tài liệu 2.21; hai tài liệu thiết kế còn bản cũ. Kiến trúc §13.3 cũng sửa cho tách hai lý do: `AverageValue` để giống A2, `timeout` để kịp N6.
+- **Results:** `/code-review high`: 4 điểm nhỏ (§13.3 còn lý do cũ; chưa nói hậu quả khi 0 pod Ready; công thức chỉ đúng với `fallback.behavior: static`; nhật ký dẫn mã quyết định cục bộ), đã sửa cả 4. `yamllint -s` hai file YAML đạt; `lychee --offline --include-fragments` hai tài liệu: 94 link, 0 lỗi. Chỉ đổi comment nên manifest render không đổi.
+- **Links:** `docs/chi-tiet/02-kien-thuc-nen.md` §3.3; `docs/chi-tiet/03-kien-truc-autoscaling.md` §9.
+- **Thesis:** mục 2.4 (fallback KEDA), 3.3.3 (vì sao dùng AverageValue).
 ## 2026-11-27 – Luận văn: viết chương 1 (Giới thiệu), bản base
 
 - **Task:** TR8 · **Environment:** none
