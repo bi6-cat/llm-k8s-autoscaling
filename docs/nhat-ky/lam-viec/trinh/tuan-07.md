@@ -669,3 +669,40 @@
   2. Đổi base của PR #57 về `main` trước (D42), rồi merge #56 bằng merge commit `af0a5e8` và xoá nhánh `feat/tr8-analysis-scripts`.
 - **Decision:** điều kiện merge 4 đạt: PR chỉ đổi `analysis/` và `docs/`, Argo CD ở nhà không thấy thay đổi.
 - **Links:** PR #56, PR #57.
+
+## 2026-11-21 – Merge PR #57 (vh4_windows, vh6_window)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. CI xanh cả 6 job trên commit cuối `a85faaa` (sau khi gộp `origin/main` có PR #56); `mergeable` = MERGEABLE, `mergeStateStatus` = CLEAN; không có review hay bình luận.
+  2. Merge #57 bằng merge commit `af18429` và xoá nhánh `feat/tr8-vh-scripts`.
+- **Decision:** điều kiện merge 4 đạt: PR chỉ đổi `analysis/` và `docs/`, Argo CD ở nhà không thấy thay đổi. Với #57, bước 2 của D80 (đưa script tính số vào `analysis/`) đã xong; còn bước 3 là Hình 7.
+- **Links:** PR #57, `analysis/vh4_windows.py`, `analysis/vh6_window.py`.
+
+## 2026-11-22 – Luận văn: đưa ba nháp chương 5 vào `docs/luan-van/`
+
+- **Task:** chung (luận văn), TR8 · **Environment:** none
+- **Done:**
+  1. Trình và Quang chốt cách viết mới: Trình (cùng AI agent) viết bản base của toàn bộ luận văn theo dàn ý (Kế hoạch §11.1); khi bản base xong, Quang review, sửa và cập nhật số liệu mới.
+  2. Đưa ba nháp soạn ngày 21/11 (mục 5.3; phần VH4, VH6 của mục 5.5; mục 5.6), trước đó chỉ có bản cục bộ, vào `docs/luan-van/` bằng một script chuyển đổi: 50 dòng nguồn dạng chữ `[nguồn: …]` thành comment `<!-- nguồn: … -->` như README; hạ mọi tiêu đề một cấp (`## 5.3.`, `### 5.3.1.`); bỏ phần ghi chú nội bộ ở cuối file; đường dẫn bảng `runs/v2-vm/v2-dg2/tables/` (thư mục `runs/` không có trong Git) đổi sang `analysis/figures/v2-dg2/` (`cmp` xác nhận hai bản giống hệt); hai hình trỏ vào SVG ở `analysis/figures/v2-dg2/`. Thân bài giữ nguyên.
+  3. Kiểm: lychee offline 7/7 link OK; pandoc 3.13 ghép `docs/luan-van/[0-9]*.md` ra `.docx`, không có lỗi trích dẫn.
+- **Decision:** D83: bản base viết bằng Markdown trong `docs/luan-van/` (quay về D70), thay phần "Google Doc của Quang là bản gốc, không mở PR cho từng mục" của D72; nháp đưa vào repo để có bản sao trên GitHub và Quang đọc được bất cứ lúc nào. Bỏ phương án giữ nháp ở `.work/` chờ Doc (chỉ có một bản, trên một máy).
+  - D84 (văn phong và lộ trình, Trình chốt): mật độ gọn (văn xuôi nêu khoảng giá trị kèm số lượt, số của từng lượt chỉ ở bảng; ngân sách khoảng 300 chữ văn xuôi cho mỗi trang của dàn ý §11.1); người đọc mục tiêu là giảng viên CNTT chưa vận hành Kubernetes và vLLM, nên chương 2 giải thích mỗi khái niệm một lần và các chương sau dùng thẳng; lộ trình "đủ mục trước, sâu sau" (lượt 1 viết mọi mục ở khoảng 60% ngân sách trước 29/11, theo thứ tự chương 3, 4, 5, 2, 1, 6, tóm tắt); bản gốc giữ Markdown tới bước định dạng, Quang góp ý qua PR hoặc comment trên `.docx` xuất ra. Bỏ: viết đầy đủ rồi cắt (gấp đôi công), viết xong từng chương (dễ thiếu chương khi tới hạn), chuyển sang Google Doc sau bản base (mất comment nguồn). Các điểm này gộp vào `quy-tac-viet.md` bằng PR sau khi PR #52 merge.
+- **Results:** thân bài (bỏ comment, `wc -w`): 5.3 có 2.785 chữ, phần 5.5 có 3.296, 5.6 có 1.911; tổng khoảng 8.000 chữ, tức khoảng 18–20 trang (ước tính 400–450 chữ một trang), trong khi Kế hoạch §11.1 dành 10–12 trang cho cả chương 5. Nguyên nhân chính là mật độ (số của từng lượt nhắc lại trong văn xuôi dù đã có trong bảng), không phải câu dài.
+- **Incidents:** pandoc cảnh báo không chuyển được SVG vì máy thiếu `rsvg-convert`; SVG vẫn được nhúng vào `.docx` (Word 365 hiển thị được). Để lại cho bước định dạng.
+- **Deviations:** nhánh mới push để có bản sao, chưa mở PR, chưa chạy `/code-review high`; PR mở sau khi chốt văn phong và Trình đọc lại ba nháp.
+- **Links:** nhánh `docs/tr8-thesis-ch5-drafts`; `docs/luan-van/05-03-autoscaling-so-voi-tinh.md`, `docs/luan-van/05-05b-vh4-vh6.md`, `docs/luan-van/05-06-bang-nghiem-thu.md`.
+- **Thesis:** §5.3, §5.5, §5.6 (nháp); Lời cam đoan (khai báo dùng AI agent, `quy-tac-viet.md` §9).
+
+## 2026-11-22 – Luận văn: chốt văn phong và công cụ kiểm văn phong
+
+- **Task:** chung (luận văn) · **Environment:** none
+- **Done:**
+  1. Review ba lớp quy tắc viết: `docs/luan-van/README.md` (trên `main`), `quy-tac-viet.md` của Quang (PR #52, chưa merge), các điểm D84. Tìm ra điểm cũ sau D83 (sở hữu file, tách a/b, review 48 giờ, "người sở hữu đối chiếu từng số") và điểm còn thiếu (làm tròn số, mật độ mã định danh, độ dài câu, dấu hiệu văn do AI sinh).
+  2. Viết bổ sung văn phong (bản cục bộ, gộp vào `quy-tac-viet.md` bằng PR sau khi PR #52 merge): giọng văn, quy tắc 20/80 (1–3 thông điệp mỗi mục, câu đầu đoạn là kết luận), câu tối đa 35 chữ, tối đa 4 mã định danh mỗi đoạn, quy ước làm tròn, không kể quá trình và ngày tháng trong thân bài, danh sách cụm sáo rỗng và dấu hiệu cấu trúc, dấu hiệu chữ của văn AI kèm cách thay, quy trình soát cho giai đoạn bản base.
+  3. Viết công cụ kiểm văn phong bằng Python (chỉ báo cáo, có số dòng): câu và đoạn, mã định danh, cụm sáo rỗng, gạch dài, mũi tên, dấu hai chấm và chấm phẩy, ngày tháng, dấu thập phân, số dính đơn vị, đoạn có số mà thiếu comment nguồn. Thử trên câu mẫu; sửa 4 loại báo nhầm (danh sách dính vào đoạn dẫn, chú thích bảng, số mục kiểu "5.2–5.5", "ổn định" bị bắt như "ổn").
+- **Decision:** D85: giọng văn chuyên nghiệp ở nội dung, không ở từ ngữ; đúng trọng tâm theo 20/80; ngôn từ tự nhiên như sinh viên viết; không có dấu hiệu văn AI. Các yêu cầu này được viết thành quy tắc kiểm được, có công cụ chạy trước mỗi PR, vì lời dặn chung chung thì mỗi agent hiểu một kiểu. Mẫu văn là mục 3.4 viết lại theo quy tắc mới; Trình duyệt rồi mới viết các mục khác.
+  - D86 (trình bày quy trình và công cụ AI): thân bài không nhắc công cụ AI, phiên làm việc, nhật ký, số PR, mã quyết định hay tên người (quét bốn mục hiện có: không có chỗ nào); việc dùng công cụ AI khai báo một lần ở Lời cam đoan, đúng mức dùng thật (viết mã, phân tích số liệu, soạn và rà soát văn bản), theo quy định của trường (cần hỏi GVHD hoặc khoa). Dàn ý thêm mục "Phương pháp và tổ chức thực hiện" ở chương 1 và phụ lục "Kế hoạch và phân công"; vai trò người trực trình bày ở mục 3.5 và 4.7–4.9. Chỉ mô tả quy trình đã thật sự diễn ra (nhiều PR được merge không có review, nên không viết "review chéo mọi thay đổi"). Bỏ phương án xoá `AGENTS.md` và nhật ký khỏi repo trước khi nộp, vì như vậy giống che giấu và mâu thuẫn với lời khai báo.
+- **Results:** chạy công cụ trên bốn mục đã viết, tổng cộng 140 điểm cần xem. Mục 3.4: trung bình 29,3 chữ/câu, 28/83 câu dài hơn 35 chữ. Mục 5.3: 10/22 đoạn có hơn 4 mã định danh. Phần 5.5: 11/24 đoạn mở bằng cụm in đậm, 2 chỗ ghi ngày tháng, 2 chỗ "chứng minh". Mục 5.6: "0,5C" thiếu dấu cách. Có 15 đoạn có số liệu mà comment nguồn đặt xa.
+- **Links:** nhánh `docs/tr8-thesis-ch5-drafts`.
+- **Thesis:** áp cho mọi chương; Lời cam đoan (khai báo dùng AI agent).

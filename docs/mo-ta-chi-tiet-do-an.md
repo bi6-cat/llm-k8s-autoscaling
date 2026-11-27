@@ -96,7 +96,7 @@ Kết quả của đồ án được tổng hợp thành một **bảng nghiệm
 
 ![Hình 2 – Kiến trúc tổng thể](images/02-kien-truc-tong-the.svg)
 
-*Hình 2. Kiến trúc tổng thể. Request đi từ client qua Traefik (giới hạn tốc độ) và Service tới các pod vLLM (kiểm API key), mỗi pod gắn một GPU. Prometheus thu metric; KEDA chạy PromQL và cung cấp external metric cho HPA; HPA cập nhật số replica của Deployment.*
+*Hình 2. Kiến trúc tổng thể. Người dùng gọi API qua Traefik, còn máy tạo tải gọi thẳng Service; Service chia request cho các pod vLLM (kiểm API key), mỗi pod gắn một GPU. Prometheus thu metric; KEDA chạy PromQL và cung cấp external metric cho HPA; HPA cập nhật số replica của Deployment. Argo CD đồng bộ cluster ở nhà theo Git.*
 
 ![Hình 4 – Vòng lặp autoscaling](images/04-vong-lap-autoscaling.svg)
 
@@ -150,7 +150,7 @@ Mỗi khó khăn riêng của GPU có một cách xử lý trong thiết kế:
 
 ![Hình 8 – Ba kịch bản tải](images/08-kich-ban-tai.svg)
 
-*Hình 8. Ba kịch bản tải theo đề cương, đơn vị là C (năng lực của một replica).*
+*Hình 8. Ba kịch bản tải theo đề cương (12, 24 và 17 phút), đơn vị là C (năng lực của một replica), vẽ với N = 4 GPU; vạch chấm là ranh giới các pha khi phân tích.*
 
 ---
 
@@ -183,7 +183,7 @@ Mỗi giá trị (yêu cầu, chỉ tiêu, SLO, kịch bản, tham số, cấu h
 | 5 | [Môi trường và đánh giá](chi-tiet/05-moi-truong-danh-gia.md) | Máy nhà và simulator; Vast.ai chế độ VM; burn-in; Makefile; chi phí; dự phòng; các phiên thuê; ĐG1–ĐG3; máy tạo tải; VH1–VH6; chỉ số; bảng nghiệm thu | 6, 8, 17 | 3.6, 4.1, 4.11, 5 |
 | 6 | [Kế hoạch và quản lý](chi-tiet/06-ke-hoach-quan-ly.md) | Lịch 9 tuần, mốc, đường găng, người-giờ, hợp đồng giao diện, cắt giảm, rủi ro, sản phẩm bàn giao, cấu trúc repo, luận văn, slide, demo, hướng mở rộng | 9 | 6 |
 
-Quyết định: [docs/adr/](adr/README.md) ([ADR-001](adr/001-cac-lua-chon-ban-dau.md), [ADR-002](adr/002-chuyen-trong-tam-sang-van-hanh.md), [ADR-004](adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md), [ADR-005](adr/005-sua-thiet-ke-sau-review.md), [ADR-006](adr/006-chot-may-model-va-kich-ban-truoc-v2.md); ADR-003 dành cho kết quả đo năng lực).
+Quyết định: [docs/adr/](adr/README.md) ([ADR-001](adr/001-cac-lua-chon-ban-dau.md), [ADR-002](adr/002-chuyen-trong-tam-sang-van-hanh.md), [ADR-003](adr/003-ket-qua-dg1-va-gia-tri-chot.md), [ADR-004](adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md), [ADR-005](adr/005-sua-thiet-ke-sau-review.md), [ADR-006](adr/006-chot-may-model-va-kich-ban-truoc-v2.md)).
 
 **Cập nhật sau bản 3.0:** các con số về máy thuê và model trong bản này (4 × RTX 4090, Qwen2.5-7B) là của ngày 08/10; từ 08/11 nhóm dùng 4 × RTX A4000 16 GB và Qwen2.5-3B ([ADR-006](adr/006-chot-may-model-va-kich-ban-truoc-v2.md)). Giá trị hiện hành luôn ở [Thông số](chi-tiet/00-thong-so.md).
 

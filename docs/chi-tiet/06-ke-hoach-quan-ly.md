@@ -4,9 +4,9 @@
 
 **Tóm tắt nhanh**
 - Kế hoạch **9 tuần** từ 08/10 đến hạn nộp khoảng **08/12/2026**. Mỗi tuần có việc chính, sản phẩm kiểm chứng được và **điểm dừng** khi chậm.
-- W1–W4 dành cho xây dựng và vận hành thử ở nhà và trên simulator, xen hai phiên thuê nhỏ (V0, V1). **Toàn bộ đánh giá trên GPU thuê dồn vào một lần thuê liền 14–15/11** (V2, dời từ 07–08/11 ngày 04/11, xem [§1.1](#11-điều-chỉnh-ngày-04112026)). **Đóng băng dữ liệu muộn nhất 22/11**; sau đó chỉ viết.
+- W1–W4 dành cho xây dựng và vận hành thử ở nhà và trên simulator, xen hai phiên thuê nhỏ (V0, V1). **Toàn bộ đánh giá trên GPU thuê dồn vào một lần thuê liền 14–15/11** (V2, dời từ 07–08/11 ngày 04/11, xem [§1.1](#11-điều-chỉnh-ngày-04112026); thực tế chạy 18–19/11 trên 4 × RTX 4060 Ti). **Đóng băng dữ liệu muộn nhất 22/11**; sau đó chỉ viết.
 - Khối lượng phạm vi rút gọn khoảng **169–251 người-giờ**, vừa quỹ giờ khi mỗi người làm khoảng 12–15 giờ/tuần. Phân công theo tính năng dọc: Quang "chạy được trên GPU", Trình "tự scale và đo được" ([§5.1](#51-phân-công)).
-- Sổ rủi ro gồm **28 rủi ro**; rủi ro lớn nhất là **thiếu thời gian viết**, **không có máy VM 4 GPU đạt tiêu chí vào đúng cuối tuần 14–15/11**, và **đồ án bị xem là thiên về cài đặt** (R21).
+- Sổ rủi ro gồm **28 rủi ro**; rủi ro lớn nhất là **thiếu thời gian viết**, **không có máy VM 4 GPU đạt tiêu chí vào đúng cuối tuần 14–15/11** (đã xảy ra: V2 chạy 18–19/11 trên máy khác loại), và **đồ án bị xem là thiên về cài đặt** (R21).
 - 7 sản phẩm bàn giao kèm tiêu chí nghiệm thu; luận văn khoảng 60–75 trang thân bài theo khuôn T (định hướng, trần 85), chương 4 "Triển khai và vận hành" dài nhất; 13 hướng mở rộng.
 
 ---
@@ -19,7 +19,7 @@
 
 | Tuần | Ngày | Tuần | Ngày |
 |---|---|---|---|
-| W1 | 08/10 – 11/10 | W6 | 09/11 – 15/11 (V0+V1 gộp; **V2 14–15/11**) |
+| W1 | 08/10 – 11/10 | W6 | 09/11 – 15/11 (V0+V1 gộp; **V2 14–15/11**, thực tế 18–19/11 ở W7) |
 | W2 (M1) | 12/10 – 18/10 (~~V0~~) | W7 | 16/11 – 22/11 (**đóng băng dữ liệu 22/11**) |
 | W3 | 19/10 – 25/10 | W8 (M4) | 23/11 – 29/11 |
 | W4 (M2) | 26/10 – 01/11 (~~V1~~) | W9 | 30/11 – 06/12 |
@@ -41,7 +41,7 @@ Cả nhóm đã đồng ý dời V2. Lý do: tới 04/11, M1 mới đạt 2/7 m�
 |---|---|---|
 | Xây dựng và vận hành thử | xong 01/11 | **làm local trước** (kind + simulator, rồi cluster nhà), xong trước 13/11 |
 | V0, V1 | 17–18/10, 31/10–01/11 (không diễn ra) | gộp thành một phiên ngắn trước V2, dự kiến 11–12/11 |
-| V2 | 07–08/11 | **14–15/11** |
+| V2 | 07–08/11 | **14–15/11** (thực tế 18–19/11) |
 | V3 dự phòng | 14–15/11 | **mất**: V2 hỏng thì áp dụng các dòng còn lại của §8 |
 | Đóng băng dữ liệu (M3) | 15/11, muộn nhất 22/11 | **22/11**, không lùi thêm |
 | Chọn cloud (ADR-004 K6) | 18/10 | chưa chốt, để sau phần local, nhưng phải xong trước phiên V0+V1 |
@@ -80,20 +80,20 @@ Việc gắn với máy: các bước cài đặt trên PC (driver, k3s server) 
 - [x] Simulator chạy trên kind; A2 scale 1 → 3 trên simulator. *(06/11: ScaledObject A2 lên `main` qua PR #11 (bản nháp, Trình review và thay bằng bản chính ở `feat/tr2-sim`). Trên kind: quyết định 3 replica ở 17 s, 3 pod Ready ở 27 s, scale-down đúng window 300 s rồi 1 pod/60 s.)*
 - [x] Repo có CI chạy xanh. *(04/11: PR #5; 6 job xanh trên `main` ngày 02/11.)*
 - [x] V0 đạt: k3s có GPU trong VM Vast, vLLM 7B trả lời, đã đo `fio` và TPOT. *(08/11: VM 4 × A4000, model 3B (chốt thay 7B cùng ngày); ghi tuần tự 599 MB/s, TPOT 17,2 ms ở 1 request. Xem [van-hanh.md](../nhat-ky/van-hanh.md) 08/11.)*
-- [x] Đã chốt cloud (ADR-004 K6). *(08/11: Vast VM; ADR-004 §7 ghi GCP bị từ chối quota (PR #15). 10/11: loại máy V2 4 × A4000 chốt ở ADR-006 C2.)*
+- [x] Đã chốt cloud (ADR-004 K6). *(08/11: Vast VM; ADR-004 §7 ghi GCP bị từ chối quota (PR #15). 10/11: loại máy V2 4 × A4000 chốt ở ADR-006 C2. 18/11: V2 chạy trên 4 × RTX 4060 Ti vì không có máy A4000, xem [Thông số §10.2](00-thong-so.md#102-gpu-thuê).)*
 
 ### M2 (01/11): vận hành thử đạt
 - [ ] A1, A2 qua bài kiểm thử T1–T7 (trên simulator và GPU nhà). *(08/11: T1–T5 tự động trên kind; A1, A2 scale 1 → 4 trên GPU thật ở V1; A1 không tự về 1 replica sau tải (Kiến trúc §13); chưa có T6, T7.)*
 - [ ] Graceful shutdown: 0 lỗi trong 3 lần thử, ca đối chứng có lỗi. *(06/11: 0 lỗi trong 3 lần (144/144 stream); đối chứng không preStop, timeout 0 nhưng grace 180 s cũng 0 lỗi, chỉ đối chứng grace 5 s mới cắt 48/48. vLLM 0.31.0 không dừng khi nhận SIGTERM, nên request an toàn là nhờ grace period, drain chưa hoạt động như thiết kế; pod giữ GPU đủ 180 s. Xem [van-hanh.md](../nhat-ky/van-hanh.md) 06/11.)*
 - [ ] Đủ 3 dashboard; 6 cảnh báo có unit test, tới được Telegram; **mỗi cảnh báo có runbook**. *(08/11: 3 dashboard và `make dashboards-check` (PR #23), kiểm trên kind. 04/11: 7 quy tắc cho 6 cảnh báo, 8 unit test `promtool`, 7 runbook (PR #3). Chưa có Telegram, chưa áp cảnh báo lên cluster.)*
 - [ ] Bảo mật tối thiểu đạt checklist ([Vận hành §8](04-van-hanh.md#8-bảo-mật-tối-thiểu)).
-- [ ] VH1, VH2 (gồm ca 1 replica), VH6 đạt ở nhà.
+- [ ] VH1, VH2 (gồm ca 1 replica), VH6 đạt ở nhà. *(24/11: VH1 lấy từ pha `drop` của KB2 trên V2; vòng Git của VH2 chạy trên kind + simulator có Argo CD, ca 1 replica đã đo trên V2; tin Telegram thật kiểm trên kind ([ADR-007](../adr/007-doi-vh1-vh2-f6-n8-khoi-cluster-nha.md)).)*
 - [x] ĐG1-mini xong; có `capacity-home.json`. *(06/11: đo lại với 0,5B bằng runner, 10 mức λ đều hợp lệ: C = 12,5 req/s, B\* = 28,4, threshold A2 tạm 23; chưa đối chiếu với `vllm bench serve` (bước 7). Bản 1,5B giữ ở `capacity-home-1.5b.json`.)* *(05/11: có bản tạm `envs/home/experiments/capacity.json`: C = 6 req/s, B\* ≈ 27, threshold A2 tạm 21. Còn thiếu: quét bước 0,25 quanh λ = 6; lượt λ = 6 bị máy tạo tải đánh dấu không hợp lệ vì 1 chu kỳ CPU throttle.)*
 - [ ] LT1–LT8 có kết quả (dự đoán, số đo, giải thích) trong `docs/nhat-ky/van-hanh.md` ([Môi trường §19](05-moi-truong-danh-gia.md#19-kiểm-chứng-lý-thuyết-lt1lt8)). *(05/11: LT1 (5060), LT2, LT3 có kết quả trong `van-hanh.md`; dữ liệu ĐG1-mini đã có cho LT5, LT6 của Trình; LT1 trên 4050, LT4, LT7, LT8 chưa làm.)* *(16/11: LT7 có kết quả, đo trên simulator. LT5 có kết quả từ dữ liệu nhà (ĐG1-mini 1,5B và 0,5B) và simulator; V2 chưa có.)* *(16/11: LT6 có kết quả từ dữ liệu nhà (ĐG1-mini); phần V2 từ lượt A1 chưa có.)* *(21/11: LT5, LT6 thêm V2. LT5: 27/27 cửa sổ chưa xếp hàng lệch −5,8…+4,9 %, kể cả lúc 4 replica. LT6: util = 1,000 từ 0,57 C, không tách được; dự đoán "A1 × KB1 gần bằng S4" đúng (97–98 % GPU-giây của S4 trong pha `steady`). Còn thiếu: so tổng util theo node với số pod đang có request, trên dữ liệu thô.)* *(16/11: LT8 có kết quả, đo trên simulator: 9/9 lần bơm, x = 0,1 không kêu, x = 0,3 và 0,6 kêu đúng như dự đoán (lệch −11 đến +31 s).)*
 - [x] Máy tạo tải đạt tiêu chí tự kiểm tra; runner chạy 2 lượt **không cần can thiệp** trên V1; `make bootstrap` dựng xong VM dưới 30 phút. *(08/11: runner chạy A1 × KB3, A2 × KB2 liền nhau không can thiệp; tự kiểm đánh dấu cả 2 invalid vì máy tạo tải 2 lõi vượt ngưỡng CPU, Quang chấp nhận sau xem xét (nhật ký tuần 05). Ansible dựng VM 164 s, tới vLLM phục vụ 12,5 phút; cài nền vẫn bằng script tay.)*
 
 ### M3 (22/11): xong đánh giá
-- [ ] `capacity.json` đã chốt (C, B\*, SLO, threshold), có ADR-003 đi kèm.
+- [x] `capacity.json` đã chốt (C, B\*, SLO, threshold), có ADR-003 đi kèm. *(18/11: C = 3,5 req/s, B\* = 46,3, target A2 37 chốt trước ma trận; ADR-003 viết ngày 27/11.)*
 - [ ] Cold start: L0 và L2 đủ số lần hợp lệ.
 - [ ] Ma trận: mọi ô đủ số lượt hợp lệ.
 - [ ] VH1–VH6 có kết quả trên môi trường tương ứng.
@@ -118,7 +118,7 @@ Việc gắn với máy: các bước cài đặt trên PC (driver, k3s server) 
 
 ```text
 Thử vLLM trên 5060 (W1) ─► k3s + Argo CD + giám sát ở nhà (W2) ─► A1/A2, graceful shutdown, cảnh báo (W3)
-      ─► rolling update, runbook, runner (W4) ─► V2: toàn bộ đánh giá (14–15/11, dời từ 07–08/11) ─► phân tích (W6) ─► chương 5 (W7)
+      ─► rolling update, runbook, runner (W4) ─► V2: toàn bộ đánh giá (14–15/11, dời từ 07–08/11; thực tế 18–19/11) ─► phân tích (W6) ─► chương 5 (W7)
 Simulator: A2, dashboard, cảnh báo, runner (W1–W4, song song) ──────────────────────┘
 Tìm offer Vast (W1–W2) ─► V0 (17–18/10) ─► chốt cloud (18/10) ─► V1 (31/10–01/11) ─┘
 Viết chương 2–4 (W5–W7) ─► bản thảo (29/11) ─► bản cuối (06/12)
@@ -126,7 +126,7 @@ Viết chương 2–4 (W5–W7) ─► bản thảo (29/11) ─► bản cuối 
 
 - **Đường găng:** cài GPU nhà → nền tảng ở nhà → vận hành thử → V1 → **V2** → phân tích → chương 5 → bản thảo. Gần như không có độ dư; mỗi tuần có điểm dừng ở §2.
 - **Có thời gian đệm:** dashboard, cảnh báo, runner và autoscaling làm trên simulator song song với phần GPU thật.
-- **Phụ thuộc bên ngoài:** có máy 4 × A4000 chế độ VM (≥ 20 vCPU) hoặc dự phòng 4 × 4090 vào cuối tuần 14–15/11 ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C2).
+- **Phụ thuộc bên ngoài:** có máy 4 × A4000 chế độ VM (≥ 20 vCPU) hoặc dự phòng 4 × 4090 vào cuối tuần 14–15/11 ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C2). *(Thực tế 18/11: không có máy A4000, máy 4090 không lên SSH; V2 chạy trên 4 × RTX 4060 Ti.)*
 
 ---
 
@@ -152,9 +152,9 @@ Viết chương 2–4 (W5–W7) ─► bản thảo (29/11) ─► bản cuối 
 
 **Nguyên tắc**
 - Hai người **cùng vai trò** (DevOps/SRE), chia theo **tính năng dọc**. Ai sở hữu tính năng nào thì làm trọn tính năng đó: thiết kế chi tiết, code và manifest, kiểm thử, phần giám sát liên quan, runbook, rồi viết mục luận văn tương ứng (từ 22/11/2026: Trình viết bản base toàn bộ luận văn, người sở hữu tính năng soát mục tương ứng, xem §11.1). Người còn lại review PR (bắt buộc từ W3).
-- Mọi việc trên cluster đều làm được từ xa qua Tailscale (Trình có quyền kubectl và SSH đầy đủ). Chỉ các việc **phải có mặt cạnh máy** do Quang làm: cài OS và driver, khởi động lại khi máy treo, cắm dây. Phần này tốn khoảng 3–5 giờ cho cả dự án, đã tính khi cân giờ.
+- Mọi việc trên cluster đều làm được từ xa qua Tailscale (Trình có quyền kubectl và SSH đầy đủ). *(24/11: Trình chưa có kubeconfig; các việc cần quyền này chuyển sang kind + simulator, [ADR-007](../adr/007-doi-vh1-vh2-f6-n8-khoi-cluster-nha.md).)* Chỉ các việc **phải có mặt cạnh máy** do Quang làm: cài OS và driver, khởi động lại khi máy treo, cắm dây. Phần này tốn khoảng 3–5 giờ cho cả dự án, đã tính khi cân giờ.
 - Cluster nhà chạy **một node là PC**. Từ 06/11, RTX 5060 được chia thành 2 GPU replica (time-slicing) và chạy model 0,5B, nên các bài cần nhiều replica (KB2-mini 1 → 2, VH1, VH2) làm được trên PC; drain node (VH3) làm trên kind nhiều node. Laptop 4050 không còn bắt buộc ([ADR-004 §7](../adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md#7-cập-nhật-sau-ngày-08102026)).
-- **Học chéo:** mỗi người chạy ít nhất một kịch bản VH thuộc phần của người kia. VH5 ở nhà do **Trình** dựng lại cluster theo README, đúng yêu cầu N8 "người thứ hai dựng lại".
+- **Học chéo:** mỗi người chạy ít nhất một kịch bản VH thuộc phần của người kia. VH5 ở nhà do **Trình** dựng lại cluster theo README, đúng yêu cầu N8 "người thứ hai dựng lại". *(24/11: Trình dựng lại cluster kind + simulator thay cho cluster nhà, [ADR-007](../adr/007-doi-vh1-vh2-f6-n8-khoi-cluster-nha.md).)*
 
 **Quang: "chạy được trên GPU"** (hạ tầng → serving → vòng đời pod → đo năng lực)
 
@@ -266,7 +266,7 @@ Nhờ hợp đồng này, dashboard, cảnh báo, autoscaling và runner đượ
 |---|---|
 | **vLLM không chạy trên RTX 5060** | Laptop 4050 làm node GPU; hoặc thuê 1 GPU cho các bài cần GPU thật; phần còn lại làm trên simulator |
 | **GVHD không đồng ý phạm vi rút gọn** | Đòi ma trận đủ 28 lượt: thêm khoảng 6 giờ máy 4 GPU (~10–15 USD), vẫn trong ngân sách. Đòi demo trực tiếp với GPU: mang PC đi hoặc dùng Tailscale. Đòi lịch 16 tuần: không khả thi với hạn 08/12, cần GVHD và trường xác nhận lại hạn |
-| **Tới 18/10 không có offer Vast đạt tiêu chí** | ~~Chuyển sang GCP~~ (GCP bị từ chối quota 05/11). Đã xử lý 08/11: đổi sang 4 × A4000 và model 3B (ADR-006). Nếu 14/11 cũng không có: 4 × 4090 VM đắt hơn, hoặc máy 2 GPU với N = 2 và viết lại N3 theo N ở ADR-003 |
+| **Tới 18/10 không có offer Vast đạt tiêu chí** | ~~Chuyển sang GCP~~ (GCP bị từ chối quota 05/11). Đã xử lý 08/11: đổi sang 4 × A4000 và model 3B (ADR-006). Nếu 14/11 cũng không có: 4 × 4090 VM đắt hơn, hoặc máy 2 GPU với N = 2 và viết lại N3 theo N ở ADR-003. Đã xảy ra 18/11: không có máy A4000, máy 4090 không lên SSH; dùng 4 × RTX 4060 Ti 16 GB |
 | **Trễ 1 tuần ở M2** | Bỏ các mục Could; nếu V2 vẫn chưa sẵn sàng thì dời V2 sang 14–15/11 (mất phiên dự phòng) |
 | **Runner chưa chạy trọn ở V1** | V2 giảm số lượt lặp của mọi ô (tối thiểu 1 lượt/ô) và bỏ KB3 của S1. **Không bỏ A1 và L0**: đây là đối chứng cho đóng góp 2 và 3 |
 | **V2: sau 3 giờ chạy ma trận mà < 70% lượt hợp lệ** | Dừng runner, sửa, chạy lại phần hỏng trong 15/11 (không còn V3, [ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C9). Hết giờ thì ô đó chỉ có 1 lượt |
@@ -292,12 +292,12 @@ Thứ tự cắt: Could → Should, theo [Thông số §5](00-thong-so.md#5-mứ
 | ID | Nhóm | Rủi ro | Dấu hiệu sớm | K | A | Điểm | Phòng ngừa | Kế hoạch B |
 |---|---|---|---|---|---|---|---|---|
 | R1 | Chi phí | Tiền thuê GPU vượt dự toán | V2 kéo dài quá 24 giờ; nhiều lượt phải chạy lại | 1 | 2 | 2 | Phát triển ở nhà và trên simulator; V0, V1 trước; tín dụng trả trước làm giới hạn cứng; runner tự dừng | Bỏ lượt Could; V3 chỉ chạy phần tối thiểu |
-| R2 | Hạ tầng | Không có máy VM 4 GPU đạt tiêu chí vào đúng cuối tuần V2 (**đã xảy ra** với 4 × 4090: 06/11 không có máy verified vừa giá → đổi sang 4 × A4000, ADR-006) | `make find MODE=v2` sáng 14/11 không có offer A4000 (09/11: không có) | 2 | 3 | **6** | Lọc bằng `vast.sh`; đo máy bằng `make probe`; code tham số hoá theo N | 4 × 4090 VM (~2,5 USD/giờ, trong trần); máy 2 GPU với N = 2; kế hoạch Z |
+| R2 | Hạ tầng | Không có máy VM 4 GPU đạt tiêu chí vào đúng cuối tuần V2 (**đã xảy ra** với 4 × 4090: 06/11 không có máy verified vừa giá → đổi sang 4 × A4000, ADR-006; lại xảy ra 18/11 với A4000 → dùng 4 × RTX 4060 Ti) | `make find MODE=v2` sáng 14/11 không có offer A4000 (09/11: không có) | 2 | 3 | **6** | Lọc bằng `vast.sh`; đo máy bằng `make probe`; code tham số hoá theo N | 4 × 4090 VM (~2,5 USD/giờ, trong trần); máy 2 GPU với N = 2; kế hoạch Z |
 | R3 | Hạ tầng | Thuê nhầm máy container (không chạy được K8s) | Không có systemd | 1 | 2 | 2 | Chỉ lọc máy `vms_enabled=true`; thử ở V0 | Huỷ, thuê máy khác |
 | R4 | Hạ tầng | Máy lỗi hoặc bị thu hồi giữa V2 | Mất kết nối, node NotReady, GPU biến mất | 2 | 2 | 4 | Chỉ thuê on-demand; sao lưu sau mỗi lượt; `progress.json` | Thuê máy Vast khác ngay trong 14–15/11, chạy lại trọn kịch bản hỏng (không còn V3) |
 | R5 | Kỹ thuật | Device plugin hoặc exporter GPU khó chạy trên k3s ở nhà | Tới cuối W2 vẫn chưa thấy `nvidia.com/gpu` | 2 | 2 | 4 | Theo hướng dẫn k3s; chỉ cài device plugin | Simulator cho phần lớn việc; thử GPU trên V0 |
 | R6 | Kỹ thuật | Cold start quá dài làm autoscaling "vô dụng" ở KB2 | L2 vẫn ≥ 3 phút ở V1 | 2 | 1 | 2 | Tối ưu L2; đĩa VM đọc ≥ 1 GB/s | Ghi N2a "không đạt", dùng số đo 8 pha chỉ ra pha chậm; cân nhắc warm pool |
-| R7 | Kỹ thuật | Scale-down hoặc rolling update làm lỗi request | Có lỗi ở test graceful shutdown hoặc VH2 ở nhà | 2 | 2 | 4 | `--shutdown-timeout`, preStop, grace period; bước nâng min = 2 khi cập nhật; kiểm thử từ W3 | Tăng preStop; chủ động gỡ pod khỏi Endpoints trước; ghi vào runbook và đo lại |
+| R7 | Kỹ thuật | Scale-down hoặc rolling update làm lỗi request | Có lỗi ở test graceful shutdown hoặc VH2 | 2 | 2 | 4 | `--shutdown-timeout`, preStop, grace period; bước nâng min = 2 khi cập nhật; kiểm thử từ W3 | Tăng preStop; chủ động gỡ pod khỏi Endpoints trước; ghi vào runbook và đo lại |
 | R8 | Kỹ thuật | Tên, ý nghĩa metric hoặc cờ vLLM thay đổi | Truy vấn trả rỗng; cờ không có trong `--help` | 2 | 1 | 2 | Ghim digest ở W2; kiểm tra `/metrics`, `--help`, danh sách bucket | Cập nhật truy vấn, ghi vào phụ lục |
 | R9 | Đo lường | Máy tạo tải là nút thắt hoặc đo sai | Độ lệch lịch gửi p99 > 50 ms; event loop nghẽn; TTFT lệch với `vllm bench` | 2 | 2 | 4 | Lịch sinh trước; tự kiểm tra phía gửi và phía nhận mọi lượt; đối chiếu công cụ chuẩn | Nhiều tiến trình; loại lượt hỏng |
 | R10 | Đo lường | Kết quả dao động lớn giữa các lượt, khó nghiệm thu | Kiểm tra năng lực giữa phiên lệch > 10%; hai lượt cùng ô chênh nhiều | 2 | 2 | 4 | Cùng một máy; xáo trộn thứ tự; kiểm tra giữa phiên | Thêm lượt cho ô đó trong phần chạy lại; báo cáo đủ mọi lượt |
@@ -328,7 +328,7 @@ Thứ tự cắt: Could → Should, theo [Thông số §5](00-thong-so.md#5-mứ
 - **Kế hoạch B:** thu hẹp chương 5 (bỏ phần phân tích phụ), không đo thêm sau 22/11.
 
 **R2. Không có máy VM 4 GPU đạt tiêu chí vào cuối tuần V2**
-- **Vì sao đáng chú ý:** cả phần đánh giá dồn vào một lần thuê và không còn cuối tuần dự phòng. Đã xảy ra một lần: 06/11 không có máy 4 × 4090 VM verified vừa giá, GCP bị từ chối quota 05/11; nhóm đổi sang 4 × A4000 và model 3B, chạy trọn V0+V1 ngày 08/11 ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md)). Ngày 09/11 lại không thấy offer 4 × A4000 VM.
+- **Vì sao đáng chú ý:** cả phần đánh giá dồn vào một lần thuê và không còn cuối tuần dự phòng. Đã xảy ra một lần: 06/11 không có máy 4 × 4090 VM verified vừa giá, GCP bị từ chối quota 05/11; nhóm đổi sang 4 × A4000 và model 3B, chạy trọn V0+V1 ngày 08/11 ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md)). Ngày 09/11 lại không thấy offer 4 × A4000 VM. Ngày V2 (18/11) cũng không có, nhóm dùng 4 × RTX 4060 Ti 16 GB.
 - **Phòng ngừa:** `make find MODE=v2` nhiều lần trước 14/11; nạp tiền sẵn; code và ma trận tham số hoá theo N.
 - **Kế hoạch B:** 4 × 4090 VM (~2,5 USD/giờ, ≈ 55–60 USD cho V2, trong trần); máy 2 GPU với N = 2 (N3 viết lại theo N). **Kế hoạch Z:** chạy ở nhà, chỉ rút kết luận định tính.
 
@@ -472,8 +472,8 @@ Bố cục chốt ngày 23/11/2026, thay dàn ý trước đó; đề mục và 
 | 1. Giới thiệu | 1.1 Bối cảnh và bài toán (vì sao vận hành LLM trên GPU khó, các điểm chính ở [Bài toán §5](01-bai-toan-yeu-cau.md#5-vì-sao-vận-hành-llm-trên-gpu-khó); ba yêu cầu kéo nhau, Hình 1) · 1.2 Mục tiêu, phạm vi và phương pháp (bảng bảy mục tiêu đề cương → F/N → mục, theo [Bài toán §9](01-bai-toan-yeu-cau.md#9-đối-chiếu-với-bảy-mục-tiêu-của-đề-cương); giả định G1 "chi phí ≈ GPU-giờ"; phương pháp và tổ chức thực hiện) · 1.3 Đóng góp chính (TĐ1–TĐ3, 2–3 số chính, dẫn chéo tới chương 5) | 3–4 |
 | 2. Cơ sở lý thuyết và giải pháp liên quan | 2.1 Phục vụ LLM và vLLM: 2.1.1 Sinh token và bộ nhớ GPU (prefill, decode, KV cache, giới hạn băng thông bộ nhớ) · 2.1.2 vLLM: continuous batching và các chỉ số TTFT, TPOT, metric của vLLM · 2.2 Hàng đợi và năng lực phục vụ (định luật Little, vì sao không chạy GPU sát 100%) · 2.3 GPU trên Kubernetes (device plugin, time-slicing, vì sao GPU utilization bão hoà) · 2.4 Autoscaling trên Kubernetes: 2.4.1 HPA · 2.4.2 KEDA và fallback · 2.5 Vận hành theo SLO và GitOps: 2.5.1 SLO, error budget và burn rate · 2.5.2 Prometheus và Alertmanager · 2.5.3 GitOps với Argo CD, rolling update · 2.6 Giải pháp liên quan và vị trí của đồ án | 10–13 |
 | 3. Yêu cầu và thiết kế | 3.1 Yêu cầu và chỉ tiêu nghiệm thu (F1–F7, N1–N8; giá trị SLO: TTFT ≤ 2,5 s cho 95% request; truy vết bài toán → yêu cầu; bảng mã định danh) · 3.2 Kiến trúc tổng thể: 3.2.1 Thành phần và ba luồng (luồng request, luồng autoscaling, luồng thay đổi qua Git; bảo vệ tối thiểu) · 3.2.2 Hai môi trường dùng chung manifest · 3.3 Thiết kế autoscaling (HG1): 3.3.1 Chọn tín hiệu scale · 3.3.2 Threshold từ năng lực một replica (tham số KEDA và HPA; các cấu hình S1, S4, A1, A2) · 3.3.3 Fallback khi mất tín hiệu · 3.4 Thiết kế cold start và thay đổi an toàn (HG2, HG3): 3.4.1 Rút ngắn cold start (mức L0, L2) · 3.4.2 Tắt pod và cập nhật không rớt request (graceful shutdown cho streaming; rolling update khi hết GPU) · 3.5 Thiết kế giám sát và cảnh báo (HG4): 3.5.1 SLI và cảnh báo theo burn rate (gồm dashboard) · 3.5.2 Định tuyến cảnh báo, runbook và người trực · 3.6 Thiết kế đánh giá: 3.6.1 Tải và kịch bản tải (KB1–KB3) · 3.6.2 Phép đo, chỉ số và quy tắc so sánh (ĐG1–ĐG3; chỉ số theo đề cương: P95, P99, TTFT, TPOT, throughput, GPU-giờ, token/GPU-giờ, GPU utilization; điều kiện hợp lệ của lượt đo và lý do) · 3.6.3 Kịch bản vận hành và cách chấm cảnh báo (VH1–VH6; định nghĩa page giả; LT1–LT8) | 13–15 |
-| **4. Triển khai và vận hành** | Mỗi mục theo khung sáu bước ([quy tắc viết §2.1](../luan-van/quy-tac-viet.md#21-chương-4-không-được-là-nhật-ký-cài-đặt)); sáu bước là thứ tự các đoạn, không đặt thành tiêu đề. 4.1 Hạ tầng và quy trình triển khai (HG5): 4.1.1 Dựng cluster bằng Ansible và k3s · 4.1.2 GitOps với Argo CD và CI · 4.1.3 Bí mật, bảo vệ tối thiểu và dựng lại từ máy trắng · 4.2 Phục vụ vLLM trên GPU · 4.3 Autoscaling (HG1): 4.3.1 Đưa tải đồng thời của vLLM vào HPA qua KEDA · 4.3.2 Fallback và vòng phát triển trên simulator (tên tạm) · 4.4 Rút ngắn cold start (HG2) · 4.5 Scale-down và cập nhật không rớt request (HG3) · 4.6 Giám sát, cảnh báo và runbook (HG4): 4.6.1 Thu thập metric và dashboard · 4.6.2 Quy tắc cảnh báo, unit test và gửi Telegram · 4.6.3 Runbook và xử lý sự cố · 4.7 Công cụ đánh giá: 4.7.1 Máy tạo tải và runner · 4.7.2 Kiểm tính hợp lệ và phân tích số liệu · Kết chương có bảng "vấn đề riêng của GPU/LLM → cách xử lý ở chương 4 → bằng chứng ở chương 5" ([§9.3](#93-phân-tích-sâu-các-rủi-ro-đáng-chú-ý), [Bài toán §13](01-bai-toan-yeu-cau.md#13-câu-hỏi-hội-đồng-có-thể-đặt-ra)) | **19–22** |
-| 5. Đánh giá | 5.1 Môi trường và điều kiện đo (phiên V2; tính hợp lệ: 17/17 lượt; máy RTX 4060 Ti thay cho A4000; chi phí nếu đã có số) · 5.2 Năng lực một replica (ĐG1; LT1–LT3, ghi điều kiện đo của từng LT) · 5.3 Autoscaling so với cấu hình tĩnh (ĐG2: bảng chỉ số đề cương theo ô, lấy từ `runs.csv`; LT5–LT7): 5.3.1 Tải đồng thời so với GPU utilization làm tín hiệu (TĐ1) · 5.3.2 Tải ổn định: tiết kiệm GPU-giờ mà vẫn đạt SLO (TĐ2) · 5.3.3 Tải tăng đột ngột: vì sao SLO chỉ đạt khoảng 80% (TĐ2) · 5.4 Cold start (ĐG3; LT4) · 5.5 Kịch bản vận hành (TĐ3; LT8): 5.5.1 Scale-down và cập nhật không rớt request (N4: pha giảm tải của KB2, VH1 ở nhà nếu có; VH2 kèm ca đối chứng VH2c; graceful shutdown kèm ca đối chứng grace 5 s) · 5.5.2 Tự phục hồi và dựng lại (N6: VH3, VH4, VH5) · 5.5.3 Cảnh báo kịp thời, không báo giả (N7: VH6) · 5.6 Tổng hợp: bảng nghiệm thu, bảng kiểm chứng LT1–LT8 (dự đoán, số đo, độ lệch, giải thích), khuyến nghị cấu hình · 5.7 Hạn chế của phép đo | 14–17 |
+| **4. Triển khai và vận hành** | Mỗi mục theo khung sáu bước ([quy tắc viết §2.1](../luan-van/quy-tac-viet.md#21-chương-4-không-được-là-nhật-ký-cài-đặt)); sáu bước là thứ tự các đoạn, không đặt thành tiêu đề. 4.1 Hạ tầng và quy trình triển khai (HG5): 4.1.1 Dựng cluster bằng Ansible và k3s · 4.1.2 GitOps với Argo CD và CI · 4.1.3 Bí mật, bảo vệ tối thiểu và dựng lại từ máy trắng · 4.2 Phục vụ vLLM trên GPU · 4.3 Autoscaling (HG1): 4.3.1 Đưa tải đồng thời của vLLM vào HPA qua KEDA · 4.3.2 Thử autoscaling và fallback trên simulator trước khi thuê GPU · 4.4 Rút ngắn cold start (HG2) · 4.5 Scale-down và cập nhật không rớt request (HG3) · 4.6 Giám sát, cảnh báo và runbook (HG4): 4.6.1 Thu thập metric và dashboard · 4.6.2 Quy tắc cảnh báo, unit test và gửi Telegram · 4.6.3 Runbook và xử lý sự cố · 4.7 Công cụ đánh giá: 4.7.1 Máy tạo tải và runner · 4.7.2 Kiểm tính hợp lệ và phân tích số liệu · Kết chương có bảng "vấn đề riêng của GPU/LLM → cách xử lý ở chương 4 → bằng chứng ở chương 5" ([§9.3](#93-phân-tích-sâu-các-rủi-ro-đáng-chú-ý), [Bài toán §13](01-bai-toan-yeu-cau.md#13-câu-hỏi-hội-đồng-có-thể-đặt-ra)) | **19–22** |
+| 5. Đánh giá | 5.1 Môi trường và điều kiện đo (phiên V2; tính hợp lệ: 17/17 lượt; máy RTX 4060 Ti thay cho A4000; chi phí nếu đã có số) · 5.2 Năng lực một replica (ĐG1; LT1–LT3, ghi điều kiện đo của từng LT) · 5.3 Autoscaling so với cấu hình tĩnh (ĐG2: bảng chỉ số đề cương theo ô, lấy từ `runs.csv`; LT5–LT7): 5.3.1 Tải đồng thời so với GPU utilization làm tín hiệu (TĐ1) · 5.3.2 Tải ổn định: tiết kiệm GPU-giờ mà vẫn đạt SLO (TĐ2) · 5.3.3 Tải tăng đột ngột: vì sao SLO chỉ đạt khoảng 80% (TĐ2) · 5.4 Cold start (ĐG3; LT4) · 5.5 Kịch bản vận hành (TĐ3; LT8): 5.5.1 Scale-down và cập nhật không rớt request (N4: pha giảm tải của KB2, thay cho VH1 ở nhà theo ADR-007; VH2 kèm ca đối chứng VH2c; graceful shutdown kèm ca đối chứng grace 5 s) · 5.5.2 Tự phục hồi và dựng lại (N6: VH3, VH4, VH5) · 5.5.3 Cảnh báo kịp thời, không báo giả (N7: VH6) · 5.6 Tổng hợp: bảng nghiệm thu, bảng kiểm chứng LT1–LT8 (dự đoán, số đo, độ lệch, giải thích), khuyến nghị cấu hình · 5.7 Hạn chế của phép đo | 14–17 |
 | 6. Kết luận và hướng phát triển | 6.1 Kết luận theo TĐ1–TĐ3 · 6.2 Hạn chế của hệ thống và phạm vi (cân bằng tải round-robin, tối đa 4 replica, các phần bảo mật đã lược) · 6.3 Hướng phát triển, chọn theo phát hiện ([§12](#12-hướng-mở-rộng)): E1 định tuyến theo hàng đợi (nguyên nhân của TĐ2), E3 khởi động nhanh và scale-to-zero, E5 autoscaling dự báo, E13 đánh giá mở rộng | 3 |
 
 Chương 2–5 kết bằng mục "Kết chương" (một đoạn). Tiểu mục cấp 3 trong bảng là dự kiến: chỉ giữ khi mục cấp 2 đạt khoảng 2 trang (khoảng 1.000 chữ) và mỗi tiểu mục đạt khoảng 1 trang (khoảng 500 chữ) ([quy tắc viết §2](../luan-van/quy-tac-viet.md#2-mỗi-chương-nói-gì)); không đạt thì viết thành đoạn.

@@ -77,7 +77,7 @@ def kb2(c: float, n_replicas: int = 4) -> Scenario:
     trong 30 s, giữ tới phút 24.
 
     Đỉnh 0,75 × N × C cùng quy tắc với KB3: HPA cần đúng N replica (= 3 C khi N = 4, như bản cũ; = 1,5 C khi
-    N = 2). Giảm trở lại ở phút 11 để cùng một lượt kiểm được cả scale-up (pha spike) lẫn scale-down an toàn
+    N = 2). Giảm trở lại ở phút 14 để cùng một lượt kiểm được cả scale-up (pha spike) lẫn scale-down an toàn
     (pha drop, N4).
     Thời lượng (trước 08/11 là 25 phút, pre [2, 5], spike [5, 15], drop [15, 25]):
       - pre 2 phút: chỉ cần mức nền trước khi tăng.
