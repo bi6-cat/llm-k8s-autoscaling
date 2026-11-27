@@ -35,6 +35,79 @@
 - **Links:** `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§3 M4, M5; §5.1; §11.1; §11.4); `docs/chi-tiet/01`, `03`, `04`, `05` (phần đầu; 05 dòng F4); `docs/luan-van/quy-tac-viet.md`, `nguon-tu-lieu.md`, `README.md`, `03-05-giam-sat-slo-canh-bao.md`.
 - **Thesis:** dàn ý toàn bộ; 1.4 (cách trình bày quy trình); Lời cam đoan (khai báo công cụ AI).
 
+## 2026-11-23 – TR8: bản base mục 3.1 (yêu cầu và chỉ tiêu nghiệm thu)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Đọc Kế hoạch §11.1 (dàn ý 3.1), `quy-tac-viet.md` §2–§5, §10, Thông số §3–§8, Bài toán §6, §8–§12, ADR-005 T3, ADR-006 §3.1, Môi trường §6.1, §13, §19, Kiến trúc §7.1.
+  2. Viết `docs/luan-van/03-01-yeu-cau-chi-tieu.md`: 4 tiểu mục (từ bài toán tới yêu cầu; mã định danh; yêu cầu chức năng; SLO và chỉ tiêu), 5 bảng (truy vết, mã định danh, F1–F7, SLO, N1–N8), comment nguồn sau mỗi đoạn và bảng. Agent viết nháp; Trình chưa đọc lại.
+  3. Kiểm: `kiem_van.py` lần đầu 5 điểm (một cụm "việc … việc", 3 đoạn 2 câu, 1 câu 42 chữ), sửa còn 0; lychee 0 lỗi; pandoc ghép được.
+  4. `/code-review high`: 10 điểm, sửa cả 10. Chính: ngưỡng 99% không 5xx ở Traefik không có số trong lượt đánh giá (thêm ghi chú vào bảng); câu "mỗi chỉ tiêu có một ngưỡng" sai vì N2b và phần KB2 của N1, N3 chỉ báo cáo; comment nguồn ghi V2 ngày 14–15/11 (kế hoạch) trong khi V2 thật chạy 18–19/11; lý do ngưỡng 30 phút dựng lại tính theo model 7B (khoảng 15 GB) nên thân bài nói rõ; KB2 giữ đỉnh tới phút 14 chứ không "giữ 10 phút"; VH2 cũng chạy trên VM (bằng annotation); "co giãn" thay bằng "tự điều chỉnh số replica"; vai trò A3, A4.
+- **Decision:** đặt bảng mã định danh ngay sau bảng truy vết (3.1.2), trước bảng F/N, vì các bảng F/N dùng mã KB, ĐG, VH; bố cục ghi bảng mã ở cuối nhưng không quy định thứ tự. Bảng của 3.1 đánh số chính thức 3.1–3.5 (không dùng số tạm), vì 3.1 là mục đầu chương 3.
+- **Results:** 1.181 chữ văn xuôi, 19 đoạn, 62 câu, trung bình 19,0 chữ/câu; kiem_van 0 điểm. `git log -L` trên `00-thong-so.md`: mọi dòng ngưỡng N1–N8, TPOT, 95%, 99% không đổi từ 08/10; dòng TTFT chỉ đổi ghi chú ngày 10/11, giá trị 2,5 s giữ nguyên.
+- **Incidents:** câu nháp "histogram TTFT không có biên 2 s" không có nguồn trong repo (ADR-005 T3 chỉ nói ngưỡng 2 s lệch bucket 2,5 của recording rule); thử tìm danh sách bucket trong `vllm/v1/metrics/loggers.py` v0.31.0 thì thấy bucket sinh từ hàm `histogram_buckets()`, chưa đọc tiếp; đã viết lại câu theo đúng ADR-005 T3.
+- **Deviations:** mục 3.1 vượt ngân sách lượt 1 (chương 3 lượt 1 khoảng 2.000 chữ, 3.5 đã 1.464 chữ). Chỗ cắt được nếu cần: đoạn lý do ngưỡng chất lượng và thời gian (khoảng 250 chữ) chuyển xuống phụ lục; bảng mã định danh chuyển sang danh mục mã ở phần đầu quyển. `00-thong-so.md` vẫn gắn nhãn "tạm" cho TTFT 2,5 s và N2b vì ADR-003 chưa viết; thân bài 3.1 không nhắc ADR, comment nguồn ghi rõ.
+- **Links:** `docs/luan-van/03-01-yeu-cau-chi-tieu.md`, `docs/luan-van/nguon-tu-lieu.md` (dòng 3.1).
+- **Thesis:** §3.1; danh mục mã định danh ở phần đầu quyển lấy từ Bảng 3.2.
+## 2026-11-23 – Luận văn: viết lại mục 3.5 thành mẫu văn
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Viết lại `docs/luan-van/03-05-giam-sat-slo-canh-bao.md` theo bố cục mới (Kế hoạch §11.1) và `quy-tac-viet.md`: tiêu đề "Thiết kế giám sát, cảnh báo và xử lý sự cố"; bốn tiểu mục SLI và dashboard, cảnh báo theo burn rate, danh sách cảnh báo và định tuyến, xử lý sự cố và vai trò người trực (mới, theo Vận hành §4, §6 và runbook `LLMSLOBurnFast`). Comment thông điệp và trạng thái soát ở đầu file.
+  2. Đối chiếu lại số với `docs/chi-tiet/00-thong-so.md` §3, §4, §6; `04-van-hanh.md` §2.1, §2.2, §3.1–§3.5, §4, §6; `03-kien-truc-autoscaling.md` §13.4; `llm.yaml`, `slo.yaml`, `alertmanager-values.yaml`, `scaledobject-a2.yaml`, ba dashboard.
+  3. Bản viết đầu còn 1.854 chữ văn xuôi, nên rút tiếp còn 1.367 chữ. Chạy `/code-review high`, sửa 10 điểm, bản cuối 1.464 chữ.
+  4. Cập nhật `nguon-tu-lieu.md` (dòng 2.5, 3.3, 3.5, 4.6, 6.2) để ghi phần đã chuyển ra khỏi 3.5.
+- **Decision:** Bản cũ có 2.407 chữ, trong khi trần của cả chương 3 (6 mục) là 3.000–3.600 chữ, nên chỉ giữ những gì phục vụ ba thông điệp của mục. Chuyển sang 4.6: bảng nguồn metric và chu kỳ scrape, retention, NaN khi không có traffic, chuyện chọn lại tín hiệu `KedaScalerErrors`, khuôn tin Telegram. Chuyển sang 6.2 (3.5 chỉ dẫn chéo): điểm yếu `LLMErrorRateHigh`, chưa có dead man's switch. Chuyển sang 3.1: cột giá trị SLO. Chuyển sang 2.5: định nghĩa SLI, SLO, burn rate, vai trò hai cửa sổ, vì sao không dùng ngưỡng p95. Bảng định tuyến chuyển thành văn xuôi. Thân bài không còn mã F/N. Giữ công thức ước tính thời gian báo (dự đoán LT8) ở 3.5.2, vì đó là lý do chọn cặp cửa sổ 5 phút và 1 phút. Giữ tên file để không phải sửa link. Chưa chèn Hình 7, vì hình còn lệch 6 điểm (nhật ký 18/11). Phương án bỏ: chỉ sửa lỗi văn phong của bản cũ (vượt xa ngân sách); cắt còn khoảng 600 chữ (mất phần ước tính và vai trò người trực mà bố cục yêu cầu).
+- **Results:** `kiem_van.py`: bản cũ 50 điểm, bản mới 0 điểm (1.464 chữ, 19 đoạn, 71 câu, trung bình 20,6 chữ/câu). `lychee --offline --include-fragments` trên `docs/luan-van/*.md`: 0 lỗi. `pandoc … --citeproc` ra `.docx`: không lỗi, không cảnh báo trích dẫn.
+- **Incidents:** `/code-review high` xác nhận 10 điểm, đã sửa cả 10:
+  - câu "đã kiểm hai biên 2,5 s và 0,1 s trên `/metrics`" không có nguồn cho biên 0,1 s;
+  - mất câu đánh đổi "cửa sổ ngắn nhạy hơn với đợt xấu ngắn", trong khi thông điệp nói "đợt chậm ngắn không page";
+  - mất ý tin "đã hết" tới muộn tới 5 phút (`group_interval`);
+  - câu "`KedaScalerErrors` page sau 1 phút" đánh giá thấp độ trễ;
+  - mốc 20% của cảnh báo và của page giả đo từ hai nguồn khác nhau nhưng không nói ra;
+  - câu "dashboard cho cùng một số" không đúng với panel TPOT và panel ngân sách lỗi;
+  - con số 12 phút xuất hiện trước công thức dùng để tính nó;
+  - các khái niệm 3.5 dùng thẳng chưa được giao cho chương 2;
+  - phần chuyển sang 4.6 và 3.3 chưa được ghi lại ở nguồn tư liệu.
+- **Links:** nhánh `docs/tr8-thesis-3-5-sample`; `docs/luan-van/03-05-giam-sat-slo-canh-bao.md`, `docs/luan-van/nguon-tu-lieu.md`.
+- **Thesis:** §3.5 (mẫu văn, chờ Trình duyệt trước khi viết các mục khác của chương 3).
+## 2026-11-23 – TR8: bản base mục 3.6 (thiết kế đánh giá)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  - Trình (viết cùng agent, lượt tự chạy) viết bản base `docs/luan-van/03-06-thiet-ke-danh-gia.md` theo dàn ý ở Kế hoạch §11.1. Bản này có 7 tiểu mục và 7 bảng:
+    - ba lớp đánh giá;
+    - tải và kịch bản tải;
+    - ĐG1–ĐG3;
+    - chỉ số theo đề cương và quy tắc so sánh;
+    - điều kiện hợp lệ của một lượt;
+    - VH1–VH6 và cách chấm cảnh báo;
+    - LT1–LT8.
+  - Phần "Cách đo" của VH6 (mốc vi phạm, page giả, thời gian tới cảnh báo) được viết ở 3.6.6 theo dàn ý. Nhánh nháp chương 5 không bị sửa.
+  - Mọi đoạn và bảng có số đều kèm comment nguồn: § của `docs/chi-tiet/`, mã nguồn `analysis/` và `experiments/runner/`, nhật ký vận hành.
+- **Decision:**
+  - Không chèn Hình 8 và Hình 17, vì Hình 8 còn thời lượng cũ 20/25/25 phút và Hình 17 còn Argo CD trên VM thuê. Bảng 3.6b và 3.6c dùng thay. Hai hình phải vẽ lại trước khi chèn.
+  - Số bảng tạm là 3.6a–3.6g, vì mục 3.2–3.4 chưa viết.
+  - ĐG3 viết "khi thêm một replica" thay cho "scale 1 → 2" của thiết kế. Lý do: ở V2, mức L0 được đo 0 → 1 vì containerd không xoá được image đang dùng (`van-hanh.md` 19/11), và LT4 ở nhà cũng đo 0 → 1. Mục 5.4 sẽ ghi lệch này; comment nguồn của 3.6 đã nhắc.
+  - Phần LT không khẳng định mọi dự đoán đều tính trước khi đo. Theo `van-hanh.md`, dự đoán của LT4 được tính sau khi đã có số đo lần A, nên 3.6 ghi rằng chương 5 nêu rõ các ca như vậy.
+  - Không ghi công cụ cụ thể của ĐG1 ở V2, vì chưa đối chiếu được.
+- **Results:**
+  - `kiem_van.py`: 2.305 chữ văn xuôi, 31 đoạn, 111 câu, 0 điểm cần xem.
+  - lychee 0.24.2 (offline, kèm anchor): 0 lỗi. Pandoc ghép thử `docs/luan-van/[0-9]*.md` ra `.docx` được.
+  - `/code-review high` báo 10 điểm. Từng điểm được đối chiếu với mã nguồn, git log và nhật ký, và cả 10 đã được sửa:
+    - lý do bỏ S1 × KB1 ghi sai thành "autoscaling chạy 1 replica", trong khi A1 scale lên ở KB1 (đúng là A2);
+    - "không thể chỉnh theo kết quả" nói quá, vì `analysis/dg2_a2.py` và `vh6_window.py` được thêm ngày 21/11, sau V2; chỉ `metrics.py` (sửa lần cuối 16/11) được chốt trước;
+    - ĐG3 1 → 2 khác với cách đo L0 ở V2;
+    - định nghĩa thời gian hồi phục SLO chưa khớp `metrics.slo_recovery_s`;
+    - phân vị chỉ tính trên request thành công;
+    - VH6: độ kịp chỉ chấm ở S1 × KB3;
+    - lý do 10 phút của pha tăng đột ngột là cold start đo ngày 08/11, không phải flapping;
+    - TTFT/TPOT ánh xạ sai sang P95/P99 của đề cương;
+    - chỉ độ lệch lịch gửi, event loop và CPU được chấm theo từng tiến trình;
+    - kiểm thử chức năng chỉ chạy trong CI ở phần tự động hoá được.
+- **Deviations:** 2.305 chữ văn xuôi, vượt ngân sách chương 3 (10–12 trang cho 6 mục; 3.1 và 3.5 đã khoảng 2.650 chữ). Ba chỗ cắt được: đoạn quy ước tính (chuyển sang 5.1), chi tiết reset, làm ấm và cooldown (sang 4.7), đoạn ca đối chứng (sang 5.5).
+- **Links:** PR #64; `docs/luan-van/03-06-thiet-ke-danh-gia.md`.
+- **Thesis:** 3.6; dẫn chéo từ 3.1 (mục 3.6), 4.7 (runner kiểm tính hợp lệ), 5.1–5.5.
 ## 2026-11-23 – Luận văn: đo trang bằng dàn trang thử, chốt ngân sách từng mục chương 3
 
 - **Task:** TR8 · **Environment:** none
@@ -133,6 +206,160 @@
 - **Results:** `/code-review high` trên diff: 5 điểm nhỏ (§3.5 và §9 nói khác nhau về chỗ ghi việc dùng AI; quy tắc "kết quả cụ thể có số" của Tóm tắt chưa chuyển sang mục 1.3; §1 chưa ghi chỗ đặt đoạn khai báo nếu được yêu cầu; "khuôn T" ở §5.1 chưa có link; thiếu dòng Thesis), đã sửa cả 5.
 - **Links:** `docs/luan-van/quy-tac-viet.md` (§1, §3.5, §9); `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§5.1, §11.1).
 - **Thesis:** phần đầu quyển (không có Tóm tắt, không có Lời cam đoan); Mở đầu; mục 1.3 Đóng góp.
+## 2026-11-24 – Luận văn: cắt mục 3.1 về 1,5 trang
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Merge `origin/main` vào nhánh `docs/tr8-thesis-3-1-base` (PR #63) để có ngân sách trang (D94).
+  2. Viết lại `03-01-yeu-cau-chi-tieu.md`: 5 bảng còn 1 (F1–F7 và N1–N8 gộp, mỗi dòng một cụm ngắn); bỏ 4 tiểu mục; giá trị SLO và lý do của ngưỡng viết thành văn xuôi.
+  3. Ghi các ý đã cắt và nơi chứa chúng vào dòng 3.1 của `nguon-tu-lieu.md`, và vào comment nguồn của mục.
+- **Decision:** bảng mã định danh đầy đủ (S, A, KB, ĐG, VH, LT, L, V, C, B\*, N) chuyển khỏi 3.1 sang danh mục mã định danh ở phần đầu quyển (quy-tac-viet §1 mục 4, §4). Thân bài 3.1 chỉ giữ bảng F/N và một câu dẫn tới mục 3.3–3.6, nơi từng mã được định nghĩa. Lý do: bảng mã tốn khoảng 0,8 trang (khuôn B), hơn nửa ngân sách 1,5 trang. Không chọn giữ bảng mã và bỏ bảng F/N, vì F/N là nội dung chính của mục. Ma trận truy vết (Bảng 3.1 cũ) bỏ khỏi thân bài; cột "Phép thử" của bảng F/N vẫn nối mỗi yêu cầu tới phép thử.
+- **Results:** đo bằng dàn trang thử (pandoc + Typst, hai khuôn như mục 23/11):
+
+  | Bản | Chữ văn xuôi | Bảng | Khuôn A | Khuôn B |
+  |---|---|---|---|---|
+  | Base (trước khi cắt) | 1.181 | 5 | 5 trang | 7 trang |
+  | Lần thử 1 (giữ bảng mã gọn) | 580 | 2 | 2,43 | 3,25 |
+  | Lần thử 2 (trước `/code-review`) | 344 | 1 | 1,16 | 1,49 |
+  | Bản cuối (sau khi sửa theo review) | 314 | 1 | 1,17 | 1,44 |
+
+  `kiem_van.py` 0 điểm; lychee `docs/luan-van/*.md` 0 lỗi. `/code-review high`: 10 điểm, sửa cả 10. Phần lớn do nén bảng làm mất điều kiện của chỉ tiêu (pha của N1, "so với S4" của N3, ca 1 replica của N4, điều kiện fallback của N6, mốc tính giờ của N2a). Ngoài ra: lý do ngưỡng TTFT bị đảo so với ADR-005 T3, câu chủ đề "mọi ngưỡng tính từ nền tảng" mâu thuẫn với mức 95% theo thông lệ, "tức …" lồng định nghĩa (quy-tac-viet §3.2). Bỏ lý do TPOT 100 ms (ghi ở `nguon-tu-lieu.md`) để giữ trong 1,5 trang.
+- **Deviations:** quy-tac-viet §4 trước ghi "mã định danh định nghĩa ở chương 3, gom vào một bảng"; đã sửa thành: mỗi mã định nghĩa ở mục chương 3 dùng nó, bảng gom nằm ở danh mục đầu quyển. Kế hoạch §11.1 (dòng chương 3) bỏ "truy vết, bảng mã định danh" khỏi 3.1.
+- **Links:** `docs/luan-van/03-01-yeu-cau-chi-tieu.md`, `docs/luan-van/nguon-tu-lieu.md` (dòng 3.1), `docs/luan-van/quy-tac-viet.md` §4, `docs/chi-tiet/06-ke-hoach-quan-ly.md` §11.1; PR #63.
+- **Thesis:** §3.1; danh mục mã định danh ở phần đầu quyển lấy từ bảng mã của bản base (commit `fbe651b`).
+## 2026-11-24 – Luận văn: bản base mục 3.2 (Kiến trúc tổng thể)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** viết `docs/luan-van/03-02-kien-truc-tong-the.md` theo bố cục 3.2 (ba luồng: request, autoscaling, thay đổi qua Git; hai tầng môi trường dùng chung base Kustomize; bảo vệ tối thiểu). Đối chiếu từng khẳng định với Kiến trúc §1–§5, §18; Môi trường §1, §2.7; Thông số §3, §9, §10; Vận hành §7–§8; ADR-006 §3, §3.1; `envs/home/argocd/apps/`, `Makefile`, `docs/phien-ban.md`. Thêm `argocd-cluster-bootstrapping` (Argo CD v3.5.4) vào `tai-lieu.bib`. Đo trang, cắt, chạy `/code-review high`, sửa, đo lại.
+- **Decision:** chèn tạm hình kiến trúc hiện có (Hình 2 của `docs/chi-tiet/`) làm Hình 3.2a để đo trang có tính hình; hình phải vẽ lại trước khi ghép, vì còn ghi giới hạn tốc độ ở Traefik và chưa có Argo CD. Không chèn Hình 6 (còn A4000, A3/A4): Bảng 3.2a thay cho nó. Giữ cách gọi "hai tầng" của Môi trường §1, bảng vẫn tách ba cột (simulator, máy nhà, VM thuê).
+- **Results:** bản đầu khoảng 900 chữ (đếm thô bằng `wc`, gồm tiêu đề và chú thích), bản cuối 505 chữ văn xuôi (kiem_van), 1 bảng, 1 hình. Dàn trang thử có chèn hình: bản đầu 2,87 trang (khuôn B), bản cuối 1,65 trang (khuôn A), 1,98 trang (khuôn B). kiem_van 0 điểm; lychee 0 lỗi.
+- **Incidents:** `/code-review high` báo 10 điểm, sửa cả 10: đếm sai số lớp bảo vệ còn giữ (là ba lớp, gồm ghim phiên bản, không phải hai); lý do lược bảo mật viết lệch ADR-006 §3.1; thiếu GPU replica ở máy nhà; `make bootstrap` là Ansible, không phải Helm; "ba môi trường" lệch "hai tầng" của nguồn; thiếu điều kiện self-heal; nói quá về simulator; chú thích hình sai khuôn README; ô tiêu đề bảng trống; "Ba đánh giá" chưa được định nghĩa. Script đo `run.sh` dừng khi `31.md` rỗng (`grep` trả mã 1 dưới `set -e`), nên mục 3.2 được đo ở vị trí của `31.md`.
+- **Links:** `docs/luan-van/03-02-kien-truc-tong-the.md`, `docs/luan-van/tai-lieu.bib`.
+- **Thesis:** §3.2. Việc kéo theo: chương 2 định nghĩa Kustomize base/overlay, App-of-Apps, k3s, time-slicing, external metric; tên đầy đủ Qwen2.5-0.5B/3B-Instruct xuất hiện lần đầu trước 3.2; mục 6.2 nhận ba lớp bảo vệ bị lược.
+## 2026-11-24 – Luận văn: bản base mục 3.3 (thiết kế autoscaling) và cắt về 2,5 trang
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Bản base 3.3 (commit `28be408`, 23/11): ba tiểu mục tín hiệu, threshold và hành vi, mất tín hiệu; mỗi đoạn có comment nguồn trỏ về `docs/chi-tiet/`, manifest và tài liệu KEDA 2.21.
+  2. Merge `origin/main` (có PR #65, ngân sách trang D94), rồi cắt theo thứ tự quy-tac-viet §3.1: Bảng tín hiệu không chọn còn hai câu (TTFT p95, KV cache); bỏ A3/A4, tolerance, ví dụ 3 B\*; gộp 4 tiểu mục thành 3; Bảng 3.3a bỏ cột "Vai trò", Bảng 3.3b bỏ dòng max, scale-up, tolerance.
+  3. `/code-review high` báo 10 điểm, sửa 9 (dưới); điểm "vượt ngân sách" không sửa vì reviewer ước theo chữ, còn số đo dàn trang thử đã đạt.
+- **Decision:** ý bị cắt chuyển chỗ: exporter GPU không có label pod sang 4.3; cảnh báo `KedaScalerErrors` sang 3.5; Deployment không đặt `replicas` (Argo CD và HPA) sang 3.2; giới hạn "threshold gắn với phân phối độ dài request" sang mục Hạn chế. Comment nguồn của 3.3 ghi lại từng chỗ và § gốc.
+- **Results:** đo bằng `.work/tools/do_trang/run.sh` (citation thay tạm bằng `[1]` vì Typst không có nhãn):
+
+  | Bản | Văn xuôi | Bảng | Khuôn A (13 pt) | Khuôn B (14 pt) |
+  |---|---|---|---|---|
+  | Base 23/11 | 1.715 chữ | 3 | 5 trang | 6 trang |
+  | Sau cắt | 809 chữ | 2 | 1,9 trang | 2,5 trang |
+
+  Trang lẻ ước từ toạ độ dòng chữ thấp nhất trên trang cuối. `kiem_van.py` 0 điểm; lychee 0 lỗi.
+- **Incidents:** review phát hiện bản base viết sai cơ chế mất metric: văn cũ nói "giữ mặc định ignoreNullValues", nhưng truy vấn của A1 và A2 kết thúc bằng `or vector(0)` nên không bao giờ rỗng; sửa theo manifest. Các điểm khác đã sửa: thời gian phát hiện 10–25 s (Kiến trúc §6, bảng thứ hai, gồm chờ vượt tolerance) thay cho "tối đa 10 s"; lý do loại TTFT p95 theo Kiến trúc §10.5 (prefill, cửa sổ `rate()` 1 phút) thay cho "giảm ngay sau scale-up", vốn mâu thuẫn với đoạn hàng đợi ở pod cũ; KV cache ghi là dự đoán, chưa kiểm chứng; A1 cộng mọi GPU của node chứ không cộng theo pod; `--max-num-seqs` 64 ghi rõ là máy cloud (nhà 16); fallback ghi "khoảng 20 s theo thiết kế", số đo V2 16,8 s để chương 5; công thức trần đổi sang `$…$` theo README.
+- **Links:** `docs/luan-van/03-03-thiet-ke-autoscaling.md`; nhánh `docs/tr8-thesis-3-3-base`.
+- **Thesis:** §3.3; Hình 4 (vòng lặp autoscaling) còn ghi model 7–8B và sync 15 s, vẽ lại trước khi chèn.
+## 2026-11-24 – Luận văn: bản base mục 3.4 (Cold start và thay đổi an toàn)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Đọc Kiến trúc §3.1, §7, §8; Vận hành §5; Thông số §9.2–§9.3; ADR-005 T1, T2; ADR-006 C8; quy tắc viết §2–§6.
+  2. Viết `docs/luan-van/03-04-cold-start-thay-doi-an-toan.md`, ba tiểu mục: rút ngắn cold start (L0, L2), graceful shutdown cho request streaming, rolling update khi mọi GPU đều có pod. Mỗi đoạn có comment nguồn kèm §.
+  3. Đối chiếu hai khẳng định với upstream ở phiên bản ghim: trang Pod Lifecycle của Kubernetes (nhánh `release-1.36`, khớp k3s v1.36.5) cho việc gỡ khỏi EndpointSlice chạy song song với preStop, grace period gồm cả preStop; `VllmConfig.shutdown_timeout` trong vLLM v0.31.0 (`vllm/config/vllm.py`, mặc định 0) cho mô tả của cờ `--shutdown-timeout`. Thêm hai mục vào `tai-lieu.bib`.
+  4. Đo trang, cắt ba lần về ngân sách; `kiem_van.py`, lychee; `/code-review high`.
+- **Decision:**
+  - Bỏ bảng L0/L2 ba dòng, viết thành hai câu: bảng chiếm khoảng 0,3 trang, văn xuôi nói cùng ý trong khoảng 40 chữ.
+  - Không chèn hình (Hình 12, 13, 16 của tài liệu thiết kế) để giữ ngân sách 1,5 trang. Hình 13 còn vẽ pha "drain" mà vLLM v0.31.0 không làm, phải sửa trước khi dùng ở 4.5.
+  - Điểm lệch của `--shutdown-timeout` chỉ nêu một câu kèm dẫn chéo tới 4.5, vì người đọc thiết kế cần biết grace period mới là thứ giữ request; số đo để 4.5 và 5.5.
+  - Bỏ khỏi thân bài, ghi trong comment nơi nên đặt: mức L1, `--enforce-eager`, startup probe 10 phút, sync window, `kubectl rollout undo`.
+- **Results:** dàn thử 24/11: 1,15 trang (khuôn A), 1,49 trang (khuôn B), ngân sách 1,5; khoảng 550 chữ văn xuôi, không bảng, không hình. Lần viết đầu 2,31 trang (B). `kiem_van.py` 0 điểm; lychee 0 lỗi. `/code-review high` báo 10 điểm, sửa 9: đếm pha sai (KV cache và CUDA graph cùng pha 7 với compile), thiếu bước nạp weights, rollback phải giữ `minReplicaCount` 2, pod giữ GPU đủ 180 s chứ không phải "tới 180 s", thiếu trích dẫn, số replica tối thiểu khác nhau theo môi trường, thuật ngữ warm pool, ngoặc `{}` trong bib, thiếu nhật ký. Không sửa điểm "đoạn mở mục 3 câu": quy tắc viết §2 cho 1–2 câu, nhưng §3.2 và `kiem_van.py` đòi đoạn 3–7 câu; giữ 3 câu như mục 3.2.
+- **Links:** `docs/luan-van/03-04-cold-start-thay-doi-an-toan.md`, `docs/luan-van/tai-lieu.bib`.
+- **Thesis:** §3.4. Việc kéo theo: chương 2 định nghĩa probe, EndpointSlice, preStop, SIGTERM/SIGKILL, grace period, torch.compile, CUDA graph, maxSurge/maxUnavailable; 4.5 nhận chi tiết điểm lệch của `--shutdown-timeout`; 5.3 tính phần GPU-giờ do grace 180 s.
+## 2026-11-24 – Luận văn: cắt mục 3.5 (mẫu văn) về 2 trang
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Merge `origin/main` vào nhánh `docs/tr8-thesis-3-5-sample` (PR #62) để có ngân sách trang và thứ tự cắt trong `quy-tac-viet.md`.
+  2. Cắt `03-05-giam-sat-slo-canh-bao.md` theo thứ tự §3.1: bảng SLI thành văn xuôi; gộp 3.5.3 và 3.5.4; bảng cảnh báo bỏ cột "Lý do", còn lại hai lý do không hiển nhiên ở văn xuôi; công thức thời gian báo đưa vào câu. Những ý đã bỏ được ghi ở comment đầu file, kèm nơi còn giữ chúng (`docs/chi-tiet/04-van-hanh.md` §2.1, §3.2, §3.5, §4; mục 3.3; mục 4.6; mục 6.2; chương 5).
+  3. Đo sau mỗi lượt cắt bằng dàn trang thử, rồi xem ảnh trang cuối để biết dòng nào bị tràn.
+  4. Chạy `/code-review high`: 10 điểm, sửa 8.
+- **Decision:**
+  - Bỏ cột "Lý do" thay vì cắt thêm văn xuôi. Đo riêng bảng: 5 cột chiếm 0,61 trang (khuôn B), 4 cột 0,33 trang.
+  - Định nghĩa page/ticket đặt trong chú thích Bảng 3.5a, vì dàn ý chương 2 ở Kế hoạch §11.1 chưa có hai thuật ngữ này.
+  - Hai điểm yếu đã biết chuyển sang mục 6.2 (Hạn chế): một đợt lỗi 503 ngắn vẫn gây page, và `Watchdog` chưa được nối ra ngoài. Mục 6.2 phải nhắc lại hai điểm này.
+  - Bỏ ý "mất metric nguồn thì kết quả là 0", vì mục 3.3 (PR #66) đã trình bày đúng cơ chế `or vector(0)`.
+- **Results:** văn xuôi giảm từ 1.523 xuống khoảng 700 chữ; số bảng từ 2 xuống 1. Đo được 1,62 trang (khuôn A, 13 pt) và 1,97 trang (khuôn B, 14 pt), trước khi cắt là 3,63 và 4,88. Phần trang lẻ = (y thấp nhất trên trang cuối − lề trên) ÷ chiều cao vùng in. Cách đo cho lại đúng số của 3.3 ở vòng trước: 1,90 và 2,52. `kiem_van.py` báo 0 điểm; lychee không báo lỗi ở `docs/luan-van/`.
+- **Incidents:**
+  - Code review ra 10 điểm, 8 điểm đã sửa:
+    - văn bản chưa nói TPOT vẫn được xét khi nghiệm thu;
+    - con số 12 phút xuất hiện trước khi nêu ngưỡng;
+    - lý do rút cửa sổ lệch với tài liệu nguồn (lượt đánh giá 12–24 phút);
+    - thiếu lưu ý về 20 s trễ scrape và tính rule;
+    - sau bảng không có câu nhận xét (quy-tac-viet §6);
+    - thiếu ánh xạ 7 quy tắc ↔ 6 cảnh báo;
+    - page/ticket chưa được định nghĩa;
+    - header dẫn mã quyết định riêng và nguồn tên dashboard sai.
+
+    Hai điểm còn lại không cần sửa: ý "mất metric thành 0" đã có ở 3.3; nhật ký được ghi ở mục này.
+- **Links:** PR #62; `docs/luan-van/03-05-giam-sat-slo-canh-bao.md`.
+- **Thesis:** §3.5. Mục 6.2 phải có hai điểm yếu nêu trên. Hình 7 (vòng vận hành, PR #60) mà chèn vào 3.5.3 thì phải bỏ bớt câu ở đoạn tự xử lý sự cố.
+## 2026-11-24 – Luận văn: cắt mục 3.6 về 2 trang
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Merge `origin/main` vào nhánh `docs/tr8-thesis-3-6-base` để có ngân sách trang (PR #65, D94).
+  2. Viết lại 3.6 theo thứ tự cắt của `quy-tac-viet.md` §3.1: bảy bảng còn một (Bảng 3.6a, ba kịch bản tải); ĐG, VH, LT, chỉ số, quy tắc so sánh, điều kiện hợp lệ và cách chấm cảnh báo viết thành văn xuôi ngắn, mỗi đoạn kèm comment nguồn.
+  3. Ghi vào dòng 3.6 của `nguon-tu-lieu.md` từng ý đã chuyển ra và nơi chứa nó (`docs/chi-tiet/`, mục 4.7, chương 5, Phụ lục E).
+  4. Chạy `/code-review high` trên diff, sửa 10/10 lỗi được báo, rồi cắt lại cho vừa 2 trang.
+- **Decision:**
+  - Bỏ bảng VH1–VH6 và LT1–LT8 khỏi thân bài: 3.6 chỉ cần nêu có phép thử nào và đạt khi nào; cách làm và kết quả từng VH, LT thuộc 5.2–5.5. Bảng ma trận 17 lượt, bảng chỉ số, bảng điều kiện hợp lệ cũng bỏ, vì dưới 3 cột thông tin riêng hoặc trùng văn xuôi (§6).
+  - Không định nghĩa lại C, B\* và threshold 0,8 B\*, vì mục 3.3 đã định nghĩa; 3.6 chỉ dẫn chéo.
+  - Giữ trong thân bài các định nghĩa mà 3.1 trỏ tới: KB, ĐG, VH, LT, page giả, pha ổn định của KB1 (D95).
+  - Theo review: nêu rõ seed theo kịch bản và lần lặp, mọi lượt ĐG2 ở mức ấm, "đỉnh 3,0 C cần vừa đủ 4 replica" là ước tính của 3.3, thời gian tới cảnh báo chấm ở S1 × KB3, page giả chỉ chấm ở A2 × KB1 và A2 × KB3.
+- **Results:** đo bằng dàn trang thử (khuôn A 13 pt, khuôn B 14 pt; đạt khi khuôn B ≤ 2 trang):
+
+  | Bản | Chữ văn xuôi | Bảng | Khuôn A | Khuôn B |
+  |---|---|---|---|---|
+  | Base 23/11 | 2.305 | 7 | 10 | 13 |
+  | Lần cắt 1 | khoảng 1.580 | 3 | 3,04 | 4,05 |
+  | Lần cắt 2 | khoảng 900 | 2 | 2,00 | 2,76 |
+  | Lần cắt 3 | khoảng 720 | 1 | 1,65 | 2,14 |
+  | Sau review, cắt lại | 670 | 1 | 1,63 | 1,99 |
+
+  `kiem_van.py`: 0 điểm cần xem (37 câu, trung bình 18,1 chữ/câu). `lychee --offline --include-fragments 'docs/luan-van/*.md'`: 0 lỗi.
+- **Incidents:** sau khi sửa theo review, bản tăng lên 2,14 trang và một đoạn có 5 mã (quá 4, §4). Đã bỏ mã L2 ở câu ĐG2 (thay bằng "mức ấm, mục 3.4"), bỏ câu "hai lượt chỉ khác nhau ở cấu hình" (câu seed ở 3.6.1 đã nói), và rút các dòng cuối đoạn chỉ có 1–2 chữ.
+- **Deviations:** ý "LT chạy được ở máy nhà và simulator" và ca đối chứng VH2 không còn trong 3.6; đã ghi nơi chứa ở `nguon-tu-lieu.md`. Chương 5.5 phải nhắc ca đối chứng khi trình bày VH2.
+- **Links:** PR #64; `docs/luan-van/03-06-thiet-ke-danh-gia.md`, `docs/luan-van/nguon-tu-lieu.md`.
+- **Thesis:** 3.6; dẫn chéo từ 3.1, 3.3; các ý chuyển ra đi vào 4.7, 5.1–5.5, Phụ lục E.
+
+## 2026-11-25 – Luận văn: gom chương 3 vào một nhánh, đổi đề mục theo dàn ý mới (bước 1)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** tạo nhánh `docs/tr8-thesis-ch3` từ `origin/main`; merge 6 nhánh mục (#63 3.1, #67 3.2, #66 3.3, #68 3.4, #62 3.5, #64 3.6), giữ lịch sử và các mục nhật ký 23–24/11 vốn chỉ nằm trên các nhánh đó. Đổi đề mục theo Kế hoạch §11.1: 3.2.3 "Bảo vệ tối thiểu" thành đoạn cuối của 3.2.1 "Thành phần và ba luồng"; 3.4.3 gộp vào 3.4.2 "Tắt pod và cập nhật không rớt request"; 3.5.2 gộp vào 3.5.1 "SLI và cảnh báo theo burn rate", 3.5.3 thành 3.5.2 "Định tuyến cảnh báo, runbook và người trực"; 3.6.2, 3.6.3 đổi tên. Khôi phục phần lõi đã cắt ngày 24/11 ở 3.3 (ba câu hỏi thiết kế, bảng tín hiệu không chọn, điểm yếu của tín hiệu A2, lý do hệ số 0,8, dòng max = N, lý do timeout 1 s, dẫn chéo `KedaScalerErrors`, lấy từ bản base 28be408) và 3.4 (bảng L0/L2 ba dòng, lý do không đo L1, không dùng `--enforce-eager`, startup probe 10 phút, không dùng sync window). Thêm `03-00-yeu-cau-thiet-ke.md`: tiêu đề chương và đoạn mở nêu các lựa chọn thiết kế chính (quy tắc viết §2).
+- **Decision:** D118. Gom bằng merge thay vì chép file, để giữ nhật ký của từng PR mục. Xung đột Kế hoạch §11.1 lấy bản main (dàn ý mới); `tai-lieu.bib` giữ cả hai mục; `nguon-tu-lieu.md` giữ dòng mới của cả hai phía, dòng 4.6.x theo đề mục của main. Khôi phục có chọn lọc: chỉ lý do thiết kế và phương án bỏ, không khôi phục phần đã có chỗ ở chương 4, 5 hay phụ lục. Câu "triển khai qua Git chỉ được kiểm ở cluster nhà" ở 3.2 chưa sửa, chờ PR #75 và #78 được duyệt (ghi comment trong file).
+- **Results:** văn xuôi theo `kiem_van.py`: 03-00 153 chữ, 3.2 522, 3.3 998, 3.4 668, 3.5 681, 3.6 670; 0 điểm cần xem ở cả 6 file đã sửa. `lychee --offline --include-fragments 'docs/luan-van/*.md'`: 0 lỗi. Chưa đo trang khuôn T.
+- **Incidents:** khi chèn comment "Chờ PR #75" vào giữa đoạn cuối 3.2.2, phần sau comment bị tách khỏi đoạn; đã đưa comment xuống sau đoạn.
+- **Deviations:** 3.2 (522 chữ) và 3.4 (668 chữ) dưới mức 1.000 chữ mà quy tắc viết §2 đặt cho việc chia cấp 3; vẫn giữ hai tiểu mục theo dàn ý §11.1, xem lại khi đo khuôn T ở bước 2.
+- **Links:** nhánh `docs/tr8-thesis-ch3` (chưa PR); `docs/luan-van/03-00-yeu-cau-thiet-ke.md`, `03-02`…`03-06`.
+- **Thesis:** chương 3. Còn lại cho bước 2: khôi phục phần lõi 3.1, 3.5, 3.6; kết chương; đánh lại số bảng; đo khuôn T (13–15 tr); `/code-review high`; PR; đóng #62–#64, #66–#68.
+
+## 2026-11-25 – Luận văn: khôi phục phần lõi của 3.1, 3.5, 3.6 (chương 3, bước 1b)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** trên nhánh `docs/tr8-thesis-ch3`, so từng mục với bản base trước lượt cắt 24/11 (3.1: `fbe651b`, 3.5: `d14e6e5`, 3.6: `6e63ad5`) và đưa lại phần lý do. 3.1: ba yêu cầu kéo nhau được nêu tên; sáu việc nền tảng phải làm thành danh sách và cột "Việc" của Bảng 3.1; lý do TPOT 100 ms; lý do giữ một ngưỡng TTFT 2,5 s cho cả cảnh báo và nghiệm thu; lý do không áp 95% cho KB2 và chỉ tính pha duy trì của KB3. 3.5: burn rate 14,4 của SRE Workbook và lý do rút cửa sổ; mốc 20% trùng định nghĩa page giả nhưng khác nguồn; định nghĩa page và ticket; cột "Lý do của điều kiện" của Bảng 3.5a; định tuyến của Alertmanager (page nhắc mỗi giờ, warning/info của chart không gửi); khung runbook; chỉ sửa cấu hình qua Git. 3.6: hai câu hỏi của đánh giá; lý do số đo hiệu năng chỉ lấy từ VM thuê; lý do không dùng closed-loop; độ dài prompt; lý do đỉnh 0,75 × N × C; lý do thời lượng từng pha; hai lượt chỉ khác cấu hình; cách báo chỉ số đề cương; GPU-giờ không thổi phồng mức tiết kiệm; lý do chấm cảnh báo độc lập; lý do LT chạy ở máy nhà và simulator. Cập nhật dòng 3.1, 3.5, 3.6 của `nguon-tu-lieu.md`.
+- **Decision:** D119. Không khôi phục bảng truy vết 5 cột và bảng mã định danh của bản base: bảng truy vết đầy đủ đã ở Kế hoạch §11.1, danh mục mã ở phần đầu quyển; cột "Việc" giữ phần truy vết mà dàn ý §11.1 nêu. Không khôi phục các phần đã ghi nơi chứa ở chương 4, 5 và phụ lục (ma trận 17 lượt, bảng chỉ số, bảng VH, bảng LT, chi tiết ĐG3, ví dụ runbook, Watchdog).
+- **Results:** văn xuôi theo `kiem_van.py`: 3.1 tăng từ 314 lên 666 chữ, 3.5 từ 681 lên 942, 3.6 từ 670 lên 1.207; 0 điểm cần xem ở cả ba file. `lychee --offline --include-fragments 'docs/luan-van/*.md'`: 0 lỗi. Chưa đo trang khuôn T.
+- **Deviations:** dàn ý §11.1 ghi "bảng mã định danh" ở 3.1; bảng này nằm ở danh mục đầu quyển (D119).
+- **Links:** nhánh `docs/tr8-thesis-ch3` (chưa PR); `docs/luan-van/03-01-yeu-cau-chi-tieu.md`, `03-05-giam-sat-slo-canh-bao.md`, `03-06-thiet-ke-danh-gia.md`, `nguon-tu-lieu.md`.
+- **Thesis:** chương 3. Còn lại cho bước 2: kết chương, đánh lại số bảng, đo khuôn T (13–15 tr), `/code-review high`, PR, đóng #62–#64, #66–#68.
+
+## 2026-11-25 – Luận văn: kết chương 3, đánh lại số bảng, soát và mở PR chương 3 (bước 2)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** viết mục "Kết chương" (một đoạn) ở cuối `03-06-thiet-ke-danh-gia.md`; đánh lại số hình, bảng theo thứ tự xuất hiện (Hình 3.2a → Hình 3.1; Bảng 3.2a, 3.3a–3.3c, 3.4a, 3.5a, 3.6a → Bảng 3.2–3.8) và sửa các comment "Số tạm"; chạy `/code-review high` trên diff chương 3 so với `origin/main`, sửa cả 10 điểm; mở PR chương 3 và đóng các PR mục #62–#64, #66–#68 với ghi chú superseded.
+- **Decision:** D120. "Kết chương" đặt ở cuối file mục cuối (3.6), như nhánh nháp chương 5, thay cho file riêng `03-kc`: không cần thêm dòng vào bảng tổ chức file của README; `gop.py` nhận cả hai cách.
+- **Results:** văn xuôi theo `kiem_van.py`: 03-00 155 chữ, 3.1 666, 3.2 559, 3.3 1.002, 3.4 668, 3.5 949, 3.6 kèm kết chương 1.474; tổng 5.473 chữ, 8 bảng, 1 hình. Ước tính theo quy ước D103 (khoảng 500 chữ/tr, bảng 0,5–0,8 tr): khoảng 15–18 tr, trên định hướng 13–15 tr; chưa đo khuôn T bằng Word. `kiem_van.py`: 0 điểm cần xem ở cả 7 file. `lychee --offline --include-fragments docs/luan-van/`: 0 lỗi.
+- **Incidents:** lệnh đo khuôn T (`powershell.exe -ExecutionPolicy Bypass -File .work/tools/gop_luan_van/do_trang_word_T.ps1`) bị auto mode từ chối trong lượt tự chạy; không thử cách khác, để Trình chạy tay.
+  Review phát hiện các lỗi nội dung đã có từ bước 1, 1b, gồm: đoạn mở chương ghi "lên tối đa khi mất tín hiệu" trong khi 3.3.3 nói mất metric nguồn làm số replica về 1; 3.6 nhắc cold start "hơn 6 phút" mà không nói đó là L2 đo trên máy khác (2 × RTX 5060 Ti, 08/11), mâu thuẫn với mức 0,5–1,5 phút dùng để đặt N2a ở 3.1; dẫn sai mục 1.1, 1.2; câu 12 phút của cửa sổ 1 giờ đứng trước ngưỡng burn rate 4 mà nó dựa vào; mục tiêu 99% không 5xx xuất hiện ở Bảng 3.7 mà chưa được định nghĩa; "máy cloud" (từ cấm ở quy tắc viết §4); hình 3.1 và Bảng 3.8 đứng ngay trước tiêu đề.
+- **Deviations:** chương 3 có thể vượt định hướng 13–15 tr (ước tính); chưa cắt, chờ số đo khuôn T.
+- **Links:** nhánh `docs/tr8-thesis-ch3`; PR chương 3; các PR mục đã đóng #62, #63, #64, #66, #67, #68.
+- **Thesis:** chương 3 đủ các mục theo dàn ý §11.1. Còn lại: đo khuôn T; vẽ lại Hình 3.1 (Hình 2 cũ) trước khi chèn; sửa câu Argo CD ở 3.2.2 khi #75, #78 merge.
 
 ## 2026-11-25 – Ghi máy V2 thật (4 × RTX 4060 Ti) vào tài liệu thiết kế
 
