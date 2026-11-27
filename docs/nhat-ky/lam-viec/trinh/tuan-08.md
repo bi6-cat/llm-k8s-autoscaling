@@ -133,3 +133,12 @@
 - **Results:** `/code-review high` trên diff: 5 điểm nhỏ (§3.5 và §9 nói khác nhau về chỗ ghi việc dùng AI; quy tắc "kết quả cụ thể có số" của Tóm tắt chưa chuyển sang mục 1.3; §1 chưa ghi chỗ đặt đoạn khai báo nếu được yêu cầu; "khuôn T" ở §5.1 chưa có link; thiếu dòng Thesis), đã sửa cả 5.
 - **Links:** `docs/luan-van/quy-tac-viet.md` (§1, §3.5, §9); `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§5.1, §11.1).
 - **Thesis:** phần đầu quyển (không có Tóm tắt, không có Lời cam đoan); Mở đầu; mục 1.3 Đóng góp.
+
+## 2026-11-27 – Môi trường §3.6, §3.8, §6 ghi theo phiên V2 thật
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** sửa `05-moi-truong-danh-gia.md`: §3.6 ghi máy tạo tải gọi thẳng Service (không qua Traefik) và cách runner thực sự chạy ở V2 (ĐG1 từ PC qua tunnel, ĐG2/VH/ĐG3 trong `tmux` trên VM, `--no-backup`); §3.8 ghi việc kéo `runs/` về PC, kiểm sha256 rồi `poweroff` thay cho R2 và `make release`; §6.1 dòng V2 ghi ngày, máy, giờ thực tế; §6.2 thêm tiến trình thực tế 18–19/11 theo giờ và danh sách điểm khác kế hoạch, giữ bản kế hoạch để đối chiếu.
+- **Decision:** giữ bản kế hoạch dưới bản thực tế, theo cách "Sửa dd/mm" của các tài liệu thiết kế, vì chú thích Hình 17 (#90) dẫn §6.2 làm mốc so sánh. Không sửa Kế hoạch §9.5 (dòng "Mất SSH tới VM" vẫn ghi `systemd`), vì đó là runbook theo thiết kế, và `make runner-start` vẫn có trong code.
+- **Results:** mốc giờ lấy từ `runs/v2-evidence/console/` (bootstrap 15:42:08–15:47:16, ĐG1 15:50:50–16:28:55), `runs/v2-vm/vh-all-console.log` (VH 16:46:53Z–18:43:41Z), `runs/v2-vm/dg3-all-console.log` (ĐG3 18:43:53Z–19:04:22Z), `poweroff` 19:05:02Z (nhật ký Quang tuần 07). Từ bootstrap tới poweroff 10 giờ 23 phút ≈ 41,5 GPU-giờ. Chi phí thực tế: chưa có. lychee trên file: 0 lỗi.
+- **Links:** `docs/chi-tiet/05-moi-truong-danh-gia.md`.
+- **Thesis:** §3.6 (môi trường đánh giá), §5.7 và §6.2 (Hạn chế: không sao lưu R2, không kiểm năng lực giữa phiên, Alertmanager không gửi được tin trong V2).
