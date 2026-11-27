@@ -1091,3 +1091,15 @@
 - **Results:** Hình 5: L0 310,7 / 300,7 s, L2 75,7 / 75,7 / 80,8 s (tổng theo mốc thật; L2 lượt 3 cộng các pha đã làm tròn ra 80,9 s, ghi trong comment). Hình 15: TPOT p95 36 → 64 ms khi B tăng 16 → 64 (giới hạn `--max-num-seqs`), λ = 4 chỉ 28,5% request đạt SLO. lychee trên ba file `docs/chi-tiet/` đã sửa: 0 lỗi; ruff (E, F, W) trên hai script không thêm lỗi mới so với main. `/code-review high`: 10 điểm, đã sửa cả 10.
 - **Links:** `docs/diagrams/build_diagrams.py`, `docs/diagrams/chuyen_sau.py`, `docs/images/05-cold-start.svg`, `docs/images/15-hieu-chinh-nang-luc.svg` (+ PNG), `docs/chi-tiet/01`, `02`, `03`, `06`.
 - **Thesis:** Hình 5 dùng được cho 5.4 (cạnh Bảng 5.4a), Hình 15 cho 5.2; chưa chèn vào luận văn.
+
+## 2026-11-27 – Thay nguồn công thức M/M/1 ở mục 2.2 bằng giáo trình mở đã đọc trực tiếp
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Tìm nguồn công khai cho W = 1/(μ − λ) (mục 2.2 dẫn Harchol-Balter 2013, giáo trình chưa đọc trực tiếp; điểm còn để ngỏ từ code-review của #83).
+  2. Đọc bản PDF arXiv:1307.2968v27 (M. Zukerman, *Introduction to Queueing Theory and Stochastic Teletraffic Models*, 15/03/2025): mục 6 giả định dòng đến Poisson, phục vụ IID phân phối mũ, một server; mục 6.3 phương trình (303) cho E[D] = E[Q]/λ = 1/(μ − λ), suy từ E[Q] = ρ/(1 − ρ) bằng định luật Little.
+  3. Đổi trích dẫn trong `02-02` thành `[@zukerman-queueing, mục 6.3]`, sửa hai comment nguồn; thay mục `harchol-balter-queueing` trong `tai-lieu.bib` bằng `zukerman-queueing` (`@misc`, URL arXiv, ngày đọc).
+- **Decision:** thay hẳn, không giữ Harchol-Balter song song: luận văn chỉ dẫn tài liệu đã đọc (quy-tac-viet), và giáo trình mở đủ cho khẳng định đang dẫn. Bỏ phương án dẫn Wikipedia (không phải nguồn học thuật) và bài giảng MIT 2.854 (bản tìm được không nêu trực tiếp 1/(μ − λ)). Tài liệu thiết kế `01-bai-toan-yeu-cau.md` vẫn ghi Harchol-Balter, không sửa (ngoài luận văn).
+- **Results:** `pandoc … --citeproc` cả quyển: không cảnh báo trích dẫn (chỉ cảnh báo SVG thiếu `rsvg-convert`, có từ trước); câu ra "(Zukerman 2025, mục 6.3)". `kiem_van.py` 02-02: 0 điểm.
+- **Links:** `docs/luan-van/02-02-hang-doi-nang-luc.md`, `docs/luan-van/tai-lieu.bib`.
+- **Thesis:** §2.2, danh mục tài liệu tham khảo.
