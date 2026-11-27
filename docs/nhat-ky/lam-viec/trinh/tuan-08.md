@@ -1091,3 +1091,13 @@
 - **Results:** Hình 5: L0 310,7 / 300,7 s, L2 75,7 / 75,7 / 80,8 s (tổng theo mốc thật; L2 lượt 3 cộng các pha đã làm tròn ra 80,9 s, ghi trong comment). Hình 15: TPOT p95 36 → 64 ms khi B tăng 16 → 64 (giới hạn `--max-num-seqs`), λ = 4 chỉ 28,5% request đạt SLO. lychee trên ba file `docs/chi-tiet/` đã sửa: 0 lỗi; ruff (E, F, W) trên hai script không thêm lỗi mới so với main. `/code-review high`: 10 điểm, đã sửa cả 10.
 - **Links:** `docs/diagrams/build_diagrams.py`, `docs/diagrams/chuyen_sau.py`, `docs/images/05-cold-start.svg`, `docs/images/15-hieu-chinh-nang-luc.svg` (+ PNG), `docs/chi-tiet/01`, `02`, `03`, `06`.
 - **Thesis:** Hình 5 dùng được cho 5.4 (cạnh Bảng 5.4a), Hình 15 cho 5.2; chưa chèn vào luận văn.
+
+## 2026-11-27 – Ảnh ba dashboard trên kind làm phương án dự phòng cho F5
+
+- **Task:** TR4 (F5) · **Environment:** sim
+- **Done:** (1) Tạm bật anonymous Viewer cho Grafana trên kind bằng `kubectl set env` để Chrome headless mở được dashboard. (2) `make sim-test-load C=25 DUR=240s`, A2 scale 1 → 3. (3) Port-forward Grafana, chụp ba dashboard ở chế độ kiosk, khoảng 15 phút gần nhất, bằng Chrome headless trên Windows. (4) Cắt khoảng trống ở đáy hai ảnh bằng Pillow. (5) Gỡ hai biến môi trường anonymous, Grafana rollout lại.
+- **Decision:** Dùng anonymous Viewer tạm thời thay vì đăng nhập qua script, vì Chrome headless không giữ được phiên đăng nhập khi gọi từ dòng lệnh; bật trong vài phút trên kind cục bộ rồi gỡ ngay. Ảnh đặt tên đuôi `-sim` để không nhầm với ảnh GPU nhà; chưa gắn vào luận văn.
+- **Results:** hey 971 response 200, p95 13,2 s ở C = 25 (simulator). Dashboard SLO và chi phí: 972 request đã trả xong trong 15 phút, TTFT ≤ 2,5 s và TPOT ≤ 100 ms đều 100 %, `LLMAtMaxReplicas` pending, đồng thời cao nhất 25. Dashboard Autoscaling: desired = Ready = max = 3, cold start hai pod mới 6 s. Hàng GPU "No data" (kind không có GPU).
+- **Incidents:** Bảng "Request đang chạy" và "Token/s theo pod" chỉ có số ở pod cũ: `load-sim.sh` gửi tải qua `kubectl port-forward svc/vllm`, mà port-forward chỉ nối tới một pod, nên hai pod mới Ready nhưng không nhận request. Ảnh vẫn đúng cho vòng lặp scale (tín hiệu tổng, HPA, trạng thái pod), nhưng không minh hoạ chia tải giữa các pod. Nếu cần ảnh chia tải thì bơm tải từ một pod trong cluster tới Service.
+- **Links:** `docs/images/png/20-dashboard-autoscaling-sim.png`, `21-dashboard-serving-gpu-sim.png`, `22-dashboard-slo-cost-sim.png`, `docs/nhat-ky/van-hanh.md`.
+- **Thesis:** dự phòng cho F5 ở 4.4 hoặc 5.6 nếu không có ảnh dashboard GPU nhà; khi dùng phải ghi rõ là simulator và hạn chế chia tải ở trên.
