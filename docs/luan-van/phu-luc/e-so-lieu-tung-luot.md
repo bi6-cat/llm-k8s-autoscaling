@@ -3,7 +3,7 @@
 
 # Phụ lục E. Số liệu từng lượt của phiên đo V2 {.unnumbered}
 
-Phụ lục này ghi số của từng lượt trong phiên đo V2 (4 × RTX 4060 Ti, model Qwen2.5-3B, ngày 18–19/11/2026), mà chương 5 chỉ báo cáo theo ô hoặc theo khoảng giá trị. Mọi số được tính lại từ dữ liệu thô của phiên bằng các script trong thư mục `analysis/` của repository. Thời điểm trong các bảng tính bằng giây kể từ lúc máy tạo tải bắt đầu gửi request của lượt đó.
+Phụ lục này ghi số của từng lượt trong phiên đo V2 (4 × RTX 4060 Ti, model Qwen2.5-3B, ngày 18–19/11/2026), mà chương 5 chỉ báo cáo theo ô hoặc theo khoảng giá trị. Số của Bảng E.1–E.3 lấy từ các bảng mà script trong thư mục `analysis/` của repository dựng từ dữ liệu thô. Số của Bảng E.4 và E.5 đọc từ file kết quả của từng lượt. Thời điểm trong các bảng tính bằng giây kể từ lúc máy tạo tải bắt đầu gửi request của lượt đó.
 <!-- nguồn: nhật ký Quang tuần 07 mục 18/11 và 19/11 (V2: 4 × RTX 4060 Ti; ĐG2 17/17 lượt hợp lệ; VH; ĐG3 đo lại); analysis/figures/v2-dg2/runs.csv (cột t0_unix, model và image ghi trong metadata của lượt) -->
 
 ## E.1. So sánh autoscaling với cấu hình tĩnh (ĐG2)
@@ -42,7 +42,7 @@ Hình E.1 đặt từng lượt lên mặt phẳng GPU-giờ và SLO attainment,
 
 ## E.2. Phản ứng của A2 khi tải tăng đột ngột
 
-Bảng E.2 tách thời gian phản ứng của A2 ở ba lượt KB2 thành hai phần. Phần phát hiện tính từ lúc tải tăng theo lịch tới khi pod mới đầu tiên được tạo, gồm thời gian KEDA đọc metric, HPA tính số replica và cửa sổ ổn định. Phần còn lại tính từ lúc tạo pod tới khi pod mới đầu tiên Ready.
+Bảng E.2 tách thời gian phản ứng của A2 ở ba lượt KB2 thành hai phần. Phần phát hiện tính từ lúc tải tăng theo lịch tới khi pod mới đầu tiên được tạo, gồm thời gian KEDA đọc metric và HPA tính số replica. Phần còn lại tính từ lúc tạo pod tới khi pod mới đầu tiên Ready.
 <!-- nguồn: analysis/metrics.py reaction() (detect_s: t_rise → pod mới đầu tiên được tạo; react_s: t_rise → pod mới đầu tiên Ready; create_to_ready_s = react_s − detect_s; mốc tạo pod theo API server, chính xác tới 1 s) -->
 
 **Bảng E.2.** Thời gian phản ứng của A2 × KB2 (s)
@@ -72,7 +72,7 @@ Bảng E.3 ghi 7 lượt có cảnh báo `LLMSLOBurnFast` (mức page). Mốc vi
 | S1 × KB3, lượt 1 | 120 | 224,5 | 104,5 | 67,8 |
 <!-- nguồn: analysis/figures/v2-dg2/runs.csv (slo_violation_s, slo_alert_s, time_to_alert_s, false_pages 0 ở mọi lượt); alerts.csv dòng LLMSLOBurnFast (first_s trùng slo_alert_s, client_bad_ratio 0,521406 / 0,525079 / 0,540706 / 0,272… / 0,378… / 0,734… / 0,678…, false_page False); A2 × KB3 lượt 2 có thêm một đợt LLMSLOBurnFast còn kêu từ lượt chạy trước lúc bắt đầu (alerts_at_start), không chấm -->
 
-Cả 7 page đều kêu khi tỷ lệ request xấu đã vượt 20%, nên không có page giả. Ngoài các lượt trên, cảnh báo `KubeHpaMaxedOut` (mức warning, của chart kube-prometheus-stack) kêu ở các lượt chạy lâu ở 4 replica, và hai cảnh báo lỗi gửi tin của Alertmanager kêu sẵn từ đầu mọi lượt. Không cảnh báo nào trong số này ở mức page.
+Cả 7 page đều kêu khi tỷ lệ request xấu đã vượt 20%, nên không có page giả. Bảng không tính một đợt page còn kêu từ lượt trước khi lượt 2 của A2 × KB3 bắt đầu, vì đợt đó không thuộc lượt nào được chấm. Ngoài các lượt trên, cảnh báo `KubeHpaMaxedOut` (mức warning, của chart kube-prometheus-stack) kêu ở các lượt chạy lâu ở 4 replica, và hai cảnh báo lỗi gửi tin của Alertmanager kêu sẵn từ đầu mọi lượt. Không cảnh báo nào trong số này ở mức page.
 <!-- nguồn: alerts.csv (false_page False ở 7 dòng LLMSLOBurnFast; KubeHpaMaxedOut warning ở 5 lượt A1 × KB2 lượt 1, 2, A1 × KB3, A2 × KB3 lượt 1, 2; AlertmanagerClusterFailedToSendAlerts critical, AlertmanagerFailedToSendAlerts warning, firing_at_start True ở mọi lượt); lý do Alertmanager báo lỗi gửi: chưa ghi ở phụ lục này (5.5.3, 5.7) -->
 
 ## E.4. Cold start (ĐG3)
@@ -105,7 +105,7 @@ Bảng E.5 ghi các lượt kịch bản vận hành chạy trên V2, mỗi kị
 
 | Kịch bản | Thao tác | Request / lỗi | Thời gian | Ghi chú |
 |---|---|---|---|---|
-| VH2a | Rolling update, từ 1 replica | 2.077 / 0 | Hoàn tất sau 141,4 s | Nâng tối thiểu lên 2 replica và chờ đủ 2 pod Ready trước khi cập nhật |
+| VH2a | Rolling update, 2 replica trên 4 GPU | 2.077 / 0 | Hoàn tất sau 141,4 s | Bắt đầu từ 1 replica, nâng tối thiểu lên 2 và chờ đủ 2 pod Ready rồi mới cập nhật |
 | VH2b | Rolling update, 4 replica trên 4 GPU | 4.229 / 0 | Hoàn tất sau 371,6 s | Pod mới phải chờ pod cũ nhả GPU |
 | VH2c | Rolling update với maxSurge 1 khi hết GPU | 2.077 / 0 | Kẹt sau 300,5 s | 1 pod Pending; trả maxSurge về 0 thì hoàn tất sau 379,1 s |
 | VH3, xoá pod | Xoá 1 trong 2 pod | 1.351 / 0 | Pod thay thế Ready sau 67,4 s | |

@@ -3,7 +3,7 @@
 
 # Phụ lục A. Manifest chính {.unnumbered}
 
-Mã nguồn, manifest và tài liệu thiết kế của đồ án nằm ở repository <https://github.com/bi6-cat/llm-k8s-autoscaling>. Phụ lục này trích những đoạn mà thân bài nhắc tới, mỗi đoạn kèm đường dẫn file và commit. Comment trong file gốc dài hơn, nên ở đây chỉ giữ dòng giải thích tham số chính, còn các phần bỏ bớt được đánh dấu bằng `# …`.
+Mã nguồn, manifest và tài liệu thiết kế của đồ án nằm ở repository <https://github.com/bi6-cat/llm-k8s-autoscaling>. Phụ lục này trích những đoạn mà thân bài nhắc tới, mỗi đoạn kèm đường dẫn file và commit. Comment trong file gốc dài hơn, nên ở đây chỉ giữ dòng giải thích tham số chính, còn các khối bỏ bớt được đánh dấu bằng `# …`. Các trường không liên quan tới ý của thân bài, như nhãn, selector, cổng và nodeSelector, được bỏ mà không đánh dấu.
 <!-- nguồn: repository công khai của nhóm; cách trích theo quy tắc viết §6 -->
 
 ## A.1. Deployment vLLM

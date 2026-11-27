@@ -147,3 +147,17 @@
 - **Deviations:** threshold trong file ScaledObject là 24 (giá trị tạm), phiên V2 dùng 37 do runner ghi đè từ `matrix-v2.yaml`; Phụ lục A ghi rõ điều này.
 - **Links:** `docs/luan-van/phu-luc/a-manifest-chinh.md`, `b-quy-tac-canh-bao.md`, `c-runbook-mau.md`; `docs/luan-van/README.md`.
 - **Thesis:** Phụ lục A–C; dẫn từ mục 3.5, 4.1, 4.3, 4.6.
+
+## 2026-11-27 – Phụ lục D–F: phiên bản, số từng lượt của V2, kế hoạch và phân công
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  - Viết `d-phien-ban.md`: hai bảng phiên bản (nền tảng và tầng phục vụ; công cụ kiểm tra) chép từ `docs/phien-ban.md`, bỏ dòng laptop chưa điền và các dòng thân bài không dẫn.
+  - Viết `e-so-lieu-tung-luot.md`: 17 lượt ĐG2 (Bảng E.1) kèm Hình C4 (Hình E.1), phản ứng của A2 × KB2 (E.2), mốc vi phạm và page của 7 lượt (E.3), 8 pha cold start của 5 lượt ĐG3 (E.4), 6 kịch bản vận hành (E.5).
+  - Viết `f-ke-hoach-phan-cong.md`: mốc M1–M5, điều chỉnh lịch 04/11, bảng Q1–Q8 và TR1–TR8 kèm giờ công ước lượng, người soát từng chương.
+  - Sửa lệnh pandoc trong `docs/luan-van/README.md`: thêm `phu-luc/*.md` và thư mục `phu-luc/` vào `--resource-path` (dấu tách `;` trên Windows).
+- **Decision:** Trình chọn ghi đường dẫn hình ở phụ lục tương đối với chính file (lychee và GitHub mở được), thêm `phu-luc/` vào `--resource-path` thay vì viết đường dẫn theo thư mục `docs/luan-van/` như các chương. Bảng nghiệm thu đầy đủ, bảng LT1–LT8 và các lượt chạy thử không đưa vào Phụ lục E.
+- **Results:** soát số độc lập (agent Opus, khoảng 320 số): 1 lỗi xác nhận (lượt ĐG3 nào được đo lại), 6 điểm nghi vấn, đã sửa cả 7. `/code-review high`: 10 điểm, sửa 9 (gồm câu "người còn lại review PR" trái với quy tắc viết §2.2, dấu tách `--resource-path` trên Windows, "cửa sổ ổn định" không có ở scale-up, đợt page thứ 8 còn sót từ lượt trước); bỏ qua gợi ý ghim mọi trích đoạn theo một tag (để lúc gắn `v1.0`). lychee 0 lỗi; pandoc ghép toàn bộ `[0-9]*.md` + `phu-luc/*.md` nhúng được Hình E.1 (chỉ cảnh báo thiếu rsvg-convert). Chưa đo khuôn T (phụ lục không tính vào thân bài).
+- **Deviations:** tên có dấu của Quang ở Phụ lục F suy từ tên Git; mã sinh viên, lớp chưa điền.
+- **Links:** `docs/luan-van/phu-luc/d-phien-ban.md`, `e-so-lieu-tung-luot.md`, `f-ke-hoach-phan-cong.md`; `docs/luan-van/README.md`.
+- **Thesis:** Phụ lục D–F; dẫn từ mục 1.2, 4.1, 5.3–5.6.

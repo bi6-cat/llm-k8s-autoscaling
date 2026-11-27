@@ -24,7 +24,7 @@ Lịch được điều chỉnh một lần lớn ngày 04/11/2026. Khi đó M1 
 
 ## F.2. Phân công theo tính năng
 
-Hai thành viên cùng vai trò DevOps/SRE và chia việc theo tính năng dọc. Người sở hữu một tính năng làm trọn tính năng đó, từ thiết kế chi tiết, code và manifest, kiểm thử, phần giám sát liên quan, runbook, tới mục luận văn tương ứng. Người còn lại review PR. Những việc phải có mặt cạnh máy nhà (cài hệ điều hành và driver, khởi động lại máy) do Nguyễn Ngọc Quang làm. Theo kế hoạch, hai người chia ca trực phiên đo V2. Phân công được chốt ngày 15/10/2026. Bảng F.2 ghi các tính năng và giờ công ước lượng theo kế hoạch, chưa tính phần viết luận văn và thời gian trực V2.
+Hai thành viên cùng vai trò DevOps/SRE và chia việc theo tính năng dọc. Người sở hữu một tính năng làm trọn tính năng đó, từ thiết kế chi tiết, code và manifest, kiểm thử, phần giám sát liên quan, runbook, tới mục luận văn tương ứng. Mọi thay đổi đi qua PR và được CI kiểm tự động trước khi merge. Những việc phải có mặt cạnh máy nhà (cài hệ điều hành và driver, khởi động lại máy) do Nguyễn Ngọc Quang làm. Theo kế hoạch, hai người chia ca trực phiên đo V2. Phân công được chốt ngày 15/10/2026. Bảng F.2 ghi các tính năng và giờ công ước lượng theo kế hoạch, chưa tính phần viết luận văn và thời gian trực V2.
 <!-- nguồn: 06-ke-hoach-quan-ly.md §5 (phân công chốt 15/10/2026), §5.1 Nguyên tắc (tính năng dọc; việc cạnh máy do Quang, 3–5 giờ cả dự án) và "Việc chung" (trực V2 cả hai) -->
 
 **Bảng F.2.** Phân công tính năng và giờ công ước lượng
