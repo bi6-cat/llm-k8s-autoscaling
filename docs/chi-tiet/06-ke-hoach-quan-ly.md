@@ -4,9 +4,9 @@
 
 **Tóm tắt nhanh**
 - Kế hoạch **9 tuần** từ 08/10 đến hạn nộp khoảng **08/12/2026**. Mỗi tuần có việc chính, sản phẩm kiểm chứng được và **điểm dừng** khi chậm.
-- W1–W4 dành cho xây dựng và vận hành thử ở nhà và trên simulator, xen hai phiên thuê nhỏ (V0, V1). **Toàn bộ đánh giá trên GPU thuê dồn vào một lần thuê liền 14–15/11** (V2, dời từ 07–08/11 ngày 04/11, xem [§1.1](#11-điều-chỉnh-ngày-04112026)). **Đóng băng dữ liệu muộn nhất 22/11**; sau đó chỉ viết.
+- W1–W4 dành cho xây dựng và vận hành thử ở nhà và trên simulator, xen hai phiên thuê nhỏ (V0, V1). **Toàn bộ đánh giá trên GPU thuê dồn vào một lần thuê liền 14–15/11** (V2, dời từ 07–08/11 ngày 04/11, xem [§1.1](#11-điều-chỉnh-ngày-04112026); thực tế chạy 18–19/11 trên 4 × RTX 4060 Ti). **Đóng băng dữ liệu muộn nhất 22/11**; sau đó chỉ viết.
 - Khối lượng phạm vi rút gọn khoảng **169–251 người-giờ**, vừa quỹ giờ khi mỗi người làm khoảng 12–15 giờ/tuần. Phân công theo tính năng dọc: Quang "chạy được trên GPU", Trình "tự scale và đo được" ([§5.1](#51-phân-công)).
-- Sổ rủi ro gồm **28 rủi ro**; rủi ro lớn nhất là **thiếu thời gian viết**, **không có máy VM 4 GPU đạt tiêu chí vào đúng cuối tuần 14–15/11**, và **đồ án bị xem là thiên về cài đặt** (R21).
+- Sổ rủi ro gồm **28 rủi ro**; rủi ro lớn nhất là **thiếu thời gian viết**, **không có máy VM 4 GPU đạt tiêu chí vào đúng cuối tuần 14–15/11** (đã xảy ra: V2 chạy 18–19/11 trên máy khác loại), và **đồ án bị xem là thiên về cài đặt** (R21).
 - 7 sản phẩm bàn giao kèm tiêu chí nghiệm thu; luận văn khoảng 60–75 trang thân bài theo khuôn T (định hướng, trần 85), chương 4 "Triển khai và vận hành" dài nhất; 13 hướng mở rộng.
 
 ---
@@ -19,7 +19,7 @@
 
 | Tuần | Ngày | Tuần | Ngày |
 |---|---|---|---|
-| W1 | 08/10 – 11/10 | W6 | 09/11 – 15/11 (V0+V1 gộp; **V2 14–15/11**) |
+| W1 | 08/10 – 11/10 | W6 | 09/11 – 15/11 (V0+V1 gộp; **V2 14–15/11**, thực tế 18–19/11 ở W7) |
 | W2 (M1) | 12/10 – 18/10 (~~V0~~) | W7 | 16/11 – 22/11 (**đóng băng dữ liệu 22/11**) |
 | W3 | 19/10 – 25/10 | W8 (M4) | 23/11 – 29/11 |
 | W4 (M2) | 26/10 – 01/11 (~~V1~~) | W9 | 30/11 – 06/12 |
@@ -41,7 +41,7 @@ Cả nhóm đã đồng ý dời V2. Lý do: tới 04/11, M1 mới đạt 2/7 m�
 |---|---|---|
 | Xây dựng và vận hành thử | xong 01/11 | **làm local trước** (kind + simulator, rồi cluster nhà), xong trước 13/11 |
 | V0, V1 | 17–18/10, 31/10–01/11 (không diễn ra) | gộp thành một phiên ngắn trước V2, dự kiến 11–12/11 |
-| V2 | 07–08/11 | **14–15/11** |
+| V2 | 07–08/11 | **14–15/11** (thực tế 18–19/11) |
 | V3 dự phòng | 14–15/11 | **mất**: V2 hỏng thì áp dụng các dòng còn lại của §8 |
 | Đóng băng dữ liệu (M3) | 15/11, muộn nhất 22/11 | **22/11**, không lùi thêm |
 | Chọn cloud (ADR-004 K6) | 18/10 | chưa chốt, để sau phần local, nhưng phải xong trước phiên V0+V1 |
@@ -80,7 +80,7 @@ Việc gắn với máy: các bước cài đặt trên PC (driver, k3s server) 
 - [x] Simulator chạy trên kind; A2 scale 1 → 3 trên simulator. *(06/11: ScaledObject A2 lên `main` qua PR #11 (bản nháp, Trình review và thay bằng bản chính ở `feat/tr2-sim`). Trên kind: quyết định 3 replica ở 17 s, 3 pod Ready ở 27 s, scale-down đúng window 300 s rồi 1 pod/60 s.)*
 - [x] Repo có CI chạy xanh. *(04/11: PR #5; 6 job xanh trên `main` ngày 02/11.)*
 - [x] V0 đạt: k3s có GPU trong VM Vast, vLLM 7B trả lời, đã đo `fio` và TPOT. *(08/11: VM 4 × A4000, model 3B (chốt thay 7B cùng ngày); ghi tuần tự 599 MB/s, TPOT 17,2 ms ở 1 request. Xem [van-hanh.md](../nhat-ky/van-hanh.md) 08/11.)*
-- [x] Đã chốt cloud (ADR-004 K6). *(08/11: Vast VM; ADR-004 §7 ghi GCP bị từ chối quota (PR #15). 10/11: loại máy V2 4 × A4000 chốt ở ADR-006 C2.)*
+- [x] Đã chốt cloud (ADR-004 K6). *(08/11: Vast VM; ADR-004 §7 ghi GCP bị từ chối quota (PR #15). 10/11: loại máy V2 4 × A4000 chốt ở ADR-006 C2. 18/11: V2 chạy trên 4 × RTX 4060 Ti vì không có máy A4000, xem [Thông số §10.2](00-thong-so.md#102-gpu-thuê).)*
 
 ### M2 (01/11): vận hành thử đạt
 - [ ] A1, A2 qua bài kiểm thử T1–T7 (trên simulator và GPU nhà). *(08/11: T1–T5 tự động trên kind; A1, A2 scale 1 → 4 trên GPU thật ở V1; A1 không tự về 1 replica sau tải (Kiến trúc §13); chưa có T6, T7.)*
@@ -118,7 +118,7 @@ Việc gắn với máy: các bước cài đặt trên PC (driver, k3s server) 
 
 ```text
 Thử vLLM trên 5060 (W1) ─► k3s + Argo CD + giám sát ở nhà (W2) ─► A1/A2, graceful shutdown, cảnh báo (W3)
-      ─► rolling update, runbook, runner (W4) ─► V2: toàn bộ đánh giá (14–15/11, dời từ 07–08/11) ─► phân tích (W6) ─► chương 5 (W7)
+      ─► rolling update, runbook, runner (W4) ─► V2: toàn bộ đánh giá (14–15/11, dời từ 07–08/11; thực tế 18–19/11) ─► phân tích (W6) ─► chương 5 (W7)
 Simulator: A2, dashboard, cảnh báo, runner (W1–W4, song song) ──────────────────────┘
 Tìm offer Vast (W1–W2) ─► V0 (17–18/10) ─► chốt cloud (18/10) ─► V1 (31/10–01/11) ─┘
 Viết chương 2–4 (W5–W7) ─► bản thảo (29/11) ─► bản cuối (06/12)
@@ -126,7 +126,7 @@ Viết chương 2–4 (W5–W7) ─► bản thảo (29/11) ─► bản cuối 
 
 - **Đường găng:** cài GPU nhà → nền tảng ở nhà → vận hành thử → V1 → **V2** → phân tích → chương 5 → bản thảo. Gần như không có độ dư; mỗi tuần có điểm dừng ở §2.
 - **Có thời gian đệm:** dashboard, cảnh báo, runner và autoscaling làm trên simulator song song với phần GPU thật.
-- **Phụ thuộc bên ngoài:** có máy 4 × A4000 chế độ VM (≥ 20 vCPU) hoặc dự phòng 4 × 4090 vào cuối tuần 14–15/11 ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C2).
+- **Phụ thuộc bên ngoài:** có máy 4 × A4000 chế độ VM (≥ 20 vCPU) hoặc dự phòng 4 × 4090 vào cuối tuần 14–15/11 ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C2). *(Thực tế 18/11: không có máy A4000, máy 4090 không lên SSH; V2 chạy trên 4 × RTX 4060 Ti.)*
 
 ---
 
@@ -266,7 +266,7 @@ Nhờ hợp đồng này, dashboard, cảnh báo, autoscaling và runner đượ
 |---|---|
 | **vLLM không chạy trên RTX 5060** | Laptop 4050 làm node GPU; hoặc thuê 1 GPU cho các bài cần GPU thật; phần còn lại làm trên simulator |
 | **GVHD không đồng ý phạm vi rút gọn** | Đòi ma trận đủ 28 lượt: thêm khoảng 6 giờ máy 4 GPU (~10–15 USD), vẫn trong ngân sách. Đòi demo trực tiếp với GPU: mang PC đi hoặc dùng Tailscale. Đòi lịch 16 tuần: không khả thi với hạn 08/12, cần GVHD và trường xác nhận lại hạn |
-| **Tới 18/10 không có offer Vast đạt tiêu chí** | ~~Chuyển sang GCP~~ (GCP bị từ chối quota 05/11). Đã xử lý 08/11: đổi sang 4 × A4000 và model 3B (ADR-006). Nếu 14/11 cũng không có: 4 × 4090 VM đắt hơn, hoặc máy 2 GPU với N = 2 và viết lại N3 theo N ở ADR-003 |
+| **Tới 18/10 không có offer Vast đạt tiêu chí** | ~~Chuyển sang GCP~~ (GCP bị từ chối quota 05/11). Đã xử lý 08/11: đổi sang 4 × A4000 và model 3B (ADR-006). Nếu 14/11 cũng không có: 4 × 4090 VM đắt hơn, hoặc máy 2 GPU với N = 2 và viết lại N3 theo N ở ADR-003. Đã xảy ra 18/11: không có máy A4000, máy 4090 không lên SSH; dùng 4 × RTX 4060 Ti 16 GB |
 | **Trễ 1 tuần ở M2** | Bỏ các mục Could; nếu V2 vẫn chưa sẵn sàng thì dời V2 sang 14–15/11 (mất phiên dự phòng) |
 | **Runner chưa chạy trọn ở V1** | V2 giảm số lượt lặp của mọi ô (tối thiểu 1 lượt/ô) và bỏ KB3 của S1. **Không bỏ A1 và L0**: đây là đối chứng cho đóng góp 2 và 3 |
 | **V2: sau 3 giờ chạy ma trận mà < 70% lượt hợp lệ** | Dừng runner, sửa, chạy lại phần hỏng trong 15/11 (không còn V3, [ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C9). Hết giờ thì ô đó chỉ có 1 lượt |
@@ -292,7 +292,7 @@ Thứ tự cắt: Could → Should, theo [Thông số §5](00-thong-so.md#5-mứ
 | ID | Nhóm | Rủi ro | Dấu hiệu sớm | K | A | Điểm | Phòng ngừa | Kế hoạch B |
 |---|---|---|---|---|---|---|---|---|
 | R1 | Chi phí | Tiền thuê GPU vượt dự toán | V2 kéo dài quá 24 giờ; nhiều lượt phải chạy lại | 1 | 2 | 2 | Phát triển ở nhà và trên simulator; V0, V1 trước; tín dụng trả trước làm giới hạn cứng; runner tự dừng | Bỏ lượt Could; V3 chỉ chạy phần tối thiểu |
-| R2 | Hạ tầng | Không có máy VM 4 GPU đạt tiêu chí vào đúng cuối tuần V2 (**đã xảy ra** với 4 × 4090: 06/11 không có máy verified vừa giá → đổi sang 4 × A4000, ADR-006) | `make find MODE=v2` sáng 14/11 không có offer A4000 (09/11: không có) | 2 | 3 | **6** | Lọc bằng `vast.sh`; đo máy bằng `make probe`; code tham số hoá theo N | 4 × 4090 VM (~2,5 USD/giờ, trong trần); máy 2 GPU với N = 2; kế hoạch Z |
+| R2 | Hạ tầng | Không có máy VM 4 GPU đạt tiêu chí vào đúng cuối tuần V2 (**đã xảy ra** với 4 × 4090: 06/11 không có máy verified vừa giá → đổi sang 4 × A4000, ADR-006; lại xảy ra 18/11 với A4000 → dùng 4 × RTX 4060 Ti) | `make find MODE=v2` sáng 14/11 không có offer A4000 (09/11: không có) | 2 | 3 | **6** | Lọc bằng `vast.sh`; đo máy bằng `make probe`; code tham số hoá theo N | 4 × 4090 VM (~2,5 USD/giờ, trong trần); máy 2 GPU với N = 2; kế hoạch Z |
 | R3 | Hạ tầng | Thuê nhầm máy container (không chạy được K8s) | Không có systemd | 1 | 2 | 2 | Chỉ lọc máy `vms_enabled=true`; thử ở V0 | Huỷ, thuê máy khác |
 | R4 | Hạ tầng | Máy lỗi hoặc bị thu hồi giữa V2 | Mất kết nối, node NotReady, GPU biến mất | 2 | 2 | 4 | Chỉ thuê on-demand; sao lưu sau mỗi lượt; `progress.json` | Thuê máy Vast khác ngay trong 14–15/11, chạy lại trọn kịch bản hỏng (không còn V3) |
 | R5 | Kỹ thuật | Device plugin hoặc exporter GPU khó chạy trên k3s ở nhà | Tới cuối W2 vẫn chưa thấy `nvidia.com/gpu` | 2 | 2 | 4 | Theo hướng dẫn k3s; chỉ cài device plugin | Simulator cho phần lớn việc; thử GPU trên V0 |
@@ -328,7 +328,7 @@ Thứ tự cắt: Could → Should, theo [Thông số §5](00-thong-so.md#5-mứ
 - **Kế hoạch B:** thu hẹp chương 5 (bỏ phần phân tích phụ), không đo thêm sau 22/11.
 
 **R2. Không có máy VM 4 GPU đạt tiêu chí vào cuối tuần V2**
-- **Vì sao đáng chú ý:** cả phần đánh giá dồn vào một lần thuê và không còn cuối tuần dự phòng. Đã xảy ra một lần: 06/11 không có máy 4 × 4090 VM verified vừa giá, GCP bị từ chối quota 05/11; nhóm đổi sang 4 × A4000 và model 3B, chạy trọn V0+V1 ngày 08/11 ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md)). Ngày 09/11 lại không thấy offer 4 × A4000 VM.
+- **Vì sao đáng chú ý:** cả phần đánh giá dồn vào một lần thuê và không còn cuối tuần dự phòng. Đã xảy ra một lần: 06/11 không có máy 4 × 4090 VM verified vừa giá, GCP bị từ chối quota 05/11; nhóm đổi sang 4 × A4000 và model 3B, chạy trọn V0+V1 ngày 08/11 ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md)). Ngày 09/11 lại không thấy offer 4 × A4000 VM. Ngày V2 (18/11) cũng không có, nhóm dùng 4 × RTX 4060 Ti 16 GB.
 - **Phòng ngừa:** `make find MODE=v2` nhiều lần trước 14/11; nạp tiền sẵn; code và ma trận tham số hoá theo N.
 - **Kế hoạch B:** 4 × 4090 VM (~2,5 USD/giờ, ≈ 55–60 USD cho V2, trong trần); máy 2 GPU với N = 2 (N3 viết lại theo N). **Kế hoạch Z:** chạy ở nhà, chỉ rút kết luận định tính.
 
