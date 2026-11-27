@@ -997,3 +997,11 @@
 - **Done:** lượt tự chạy có cho merge, vòng 3, gỡ tiếp hàng đợi theo thứ tự ở STATE. Mỗi PR kiểm đủ 5 điều kiện merge: CI 6/6 xanh, đã chạy `/code-review high` lúc mở PR, `MERGEABLE`, không có review hay bình luận, chỉ sửa `docs/` (không đụng manifest Argo CD theo dõi), base `main`. Merge commit, xoá nhánh head.
 - **Results:** #84 `98aa53b`, #85 `a05f52f`, #86 `0718d30`, #87 `05699bb`, #88 `6254844`. #85–#88 chỉ xung đột ở nhật ký tuần 08, `git merge origin/main` tự gộp (merge=union), không trùng tiêu đề mục; push nhánh rồi chờ CI xanh lại trước khi merge.
 - **Links:** PR #84, #85, #86, #87, #88.
+
+## 2026-11-27 – Merge PR #89–#93 (Hình 2, Hình 8 và 17, ADR-003, phần đầu quyển, phụ lục)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** lượt tự chạy có cho merge, vòng 4, gỡ tiếp hàng đợi theo thứ tự ở STATE. Mỗi PR kiểm đủ 5 điều kiện merge: CI 6/6 xanh, đã chạy `/code-review high` lúc mở PR, `MERGEABLE`, không có review hay bình luận, chỉ sửa `docs/` và `loadgen/scenarios.py` (không đụng manifest Argo CD theo dõi), base `main`. Merge commit, xoá nhánh head.
+- **Results:** #89 `eeb1930`, #90 `b1b1b43`, #91 `bc998f5`, #92 `a93fc0f`, #93 `5eaae78`. #90 và #92 chỉ xung đột ở nhật ký tuần 08 (merge=union tự gộp). #91 xung đột bảng `docs/adr/README.md`: giữ trạng thái ADR-006 "C2 bị thay một phần bởi 003" của #91 và thêm dòng ADR-007 từ main. #93 xung đột lệnh pandoc trong `docs/luan-van/README.md` với #92: gộp thành `phan-dau/[0-9]*`, `[0-9]*`, `phu-luc/*` cùng biến `SEP`, giữ cả ghi chú danh mục hình và bảng của #92; chạy thử lệnh gộp ra `.docx` được (chỉ cảnh báo thiếu `rsvg-convert` cho hình SVG). Gộp main vào nhánh #94 xung đột ở Môi trường §6.1–6.2 (main có câu V2 thật từ #91): giữ bản chi tiết của #94, chuyển số ước 18/11 (9–10 giờ ≈ 14–15 USD) vào đoạn "V2 thực tế" để không lặp.
+- **Incidents:** job `yaml` của #89 và job `manifests` của #91 kết thúc `success` nhưng GitHub vẫn để trạng thái `in_progress`, nên `gh pr checks` báo pending mãi → chạy lại riêng job đó (`gh run rerun --job`), lần sau xanh.
+- **Links:** PR #89, #90, #91, #92, #93; `docs/adr/README.md`, `docs/luan-van/README.md`, `docs/chi-tiet/05-moi-truong-danh-gia.md`.
