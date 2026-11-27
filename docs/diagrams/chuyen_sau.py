@@ -1,4 +1,5 @@
-"""Sơ đồ bổ sung cho các tài liệu chuyên sâu trong docs/chi-tiet/ (Hình 10–17).
+"""Sơ đồ bổ sung cho các tài liệu chuyên sâu trong docs/chi-tiet/ (Hình 10–17), và bản riêng cho luận văn
+của Hình 10 (10-do-tre-theo-muc-tai-luan-van.svg, dùng làm Hình 2.2 ở docs/luan-van/).
 
 Được gọi từ build_diagrams.py; dùng chung lớp Svg và bảng màu.
 """
@@ -19,6 +20,15 @@ def _dec(v):
 # ======================================================================
 # Hình 10 — Độ trễ theo mức tải (đầu gối của đường cong hàng đợi)
 # ======================================================================
+# Tham số minh hoạ dùng chung cho Hình 10 và bản luận văn: μ (req/s), C (req/s, nơi TTFT chạm 2,5 s)
+# và đường cong T ≈ T₀ + k·ρ/(1 − ρ) với T₀ = 0,3 s, k = 0,35 s.
+KNEE_MU, KNEE_C = 2.4, 2.07
+
+
+def knee_ttft(l):
+    return 0.3 + 0.35 * (l / KNEE_MU) / (1 - l / KNEE_MU)
+
+
 def fig_knee():
     W, H = 1100, 450
     s = Svg(W, H, "TTFT theo tốc độ request trên một replica: tăng chậm khi tải thấp, tăng vọt khi gần thông lượng "
@@ -27,10 +37,10 @@ def fig_knee():
              "TTFT p95 theo tốc độ request trên 1 replica — mô hình hàng đợi minh hoạ: T ≈ T₀ + k·ρ/(1 − ρ), với ρ = λ/μ")
     x0, top, pw, ph = 96, 110, 900, 240
     y1 = top + ph
-    lmax, ymax, mu, C = 3.0, 8.0, 2.4, 2.07
+    lmax, ymax, mu, C = 3.0, 8.0, KNEE_MU, KNEE_C
     X = lambda l: x0 + l / lmax * pw
     Y = lambda v: y1 - v / ymax * ph
-    ttft = lambda l: 0.3 + 0.35 * (l / mu) / (1 - l / mu)
+    ttft = knee_ttft
 
     s.rect(X(C), top, X(mu) - X(C), ph, fill=WARN, stroke=None, rx=0, opacity=0.16)
     s.rect(X(mu), top, X(lmax) - X(mu), ph, fill=CRIT, stroke=None, rx=0, opacity=0.12)
@@ -71,6 +81,60 @@ def fig_knee():
     s.text(x0, 418, "ρ = 0,5 → TTFT ≈ 0,65 s   ·   ρ = 0,8 → ≈ 1,7 s   ·   ρ = 0,9 → ≈ 3,5 s   "
                     "(tăng ρ từ 0,8 lên 0,9 làm TTFT gấp đôi)", size=12, fill=INK2)
     s.save("10-do-tre-theo-muc-tai.svg")
+
+
+def fig_knee_thesis():
+    """Hình 2.2 của luận văn: cùng đường cong và ba vùng như Hình 10, nhưng
+    - không tiêu đề trong hình (chú thích nằm dưới hình, theo quy-tac-viet §6);
+    - không số trên trục, trên C, μ và đường ngưỡng, không lưới: chương 2 chỉ nêu khái niệm, chưa nói SLO
+      hay số đo của đồ án, mà giữ trục số thì vẫn đọc được ngưỡng 2,5 s;
+    - nhãn vùng nói "ngưỡng" thay cho "SLO", vì mục 2.2 đứng trước chỗ định nghĩa SLO (mục 2.5);
+    - khổ hẹp hơn, chữ to hơn, để còn đọc được khi thu về bề rộng trang A4."""
+    W, H = 760, 392
+    s = Svg(W, H, "TTFT theo tốc độ request trên một replica: tăng chậm khi tải thấp, tăng vọt khi gần thông lượng "
+                  "tối đa μ; C là tốc độ lớn nhất mà TTFT còn dưới ngưỡng")
+    x0, top, pw, ph = 70, 56, 640, 280
+    y1 = top + ph
+    lmax, ymax = 3.0, 8.0
+    X = lambda l: x0 + l / lmax * pw
+    Y = lambda v: y1 - v / ymax * ph
+
+    s.rect(X(KNEE_C), top, X(KNEE_MU) - X(KNEE_C), ph, fill=WARN, stroke=None, rx=0, opacity=0.16)
+    s.rect(X(KNEE_MU), top, X(lmax) - X(KNEE_MU), ph, fill=CRIT, stroke=None, rx=0, opacity=0.12)
+    s.text(x0 + pw, y1 + 30, "tốc độ request đến λ (req/s)", size=15, fill=INK2, anchor="end")
+    s.text(x0, top - 16, "TTFT (s)", size=15, fill=INK2)
+
+    pts = []
+    l = 0.0
+    while l < KNEE_MU:
+        v = knee_ttft(l)
+        if v > ymax:
+            break
+        pts.append((X(l), Y(v)))
+        l += 0.005
+    s.polyline(pts, BLUE, sw=3)
+    s.arrow([pts[-1], (pts[-1][0] + 2, top + 2)], BLUE, sw=3, r=0)
+    s.line(x0, y1, x0 + pw, y1, stroke=AXIS, sw=1.4)
+    s.line(x0, top, x0, y1, stroke=AXIS, sw=1.4)
+
+    s.line(x0, Y(2.5), x0 + pw, Y(2.5), stroke=INK2, sw=1.5, dash="7 5")
+    s.label(x0 + 10, Y(2.5) - 7, "ngưỡng TTFT", size=14, anchor="start", fill=INK)
+    for lv, lab in ((KNEE_C, "C"), (KNEE_MU, "μ")):
+        s.line(X(lv), top, X(lv), y1, stroke=INK, sw=1.4, dash="4 4")
+        s.text(X(lv), top - 16, lab, size=16, weight=650, anchor="middle")
+    s.text(X(0.95), Y(7.0), "dưới ngưỡng", size=15, weight=650, anchor="middle")
+    s.text(X(0.95), Y(7.0) + 21, "vùng vận hành an toàn", size=14, fill=INK2, anchor="middle")
+    xm = (X(KNEE_C) + X(KNEE_MU)) / 2
+    s.text(xm, Y(1.6), "vượt", size=14, weight=650, anchor="middle")
+    s.text(xm, Y(1.6) + 19, "ngưỡng", size=14, weight=650, anchor="middle")
+    xr = (X(KNEE_MU) + X(lmax)) / 2
+    s.text(xr, Y(7.0), "quá tải", size=15, weight=650, anchor="middle")
+    s.text(xr, Y(7.0) + 21, "hàng đợi", size=14, fill=INK2, anchor="middle")
+    s.text(xr, Y(7.0) + 40, "tăng mãi", size=14, fill=INK2, anchor="middle")
+    s.text(X(0.2), Y(4.7), "đầu gối: thêm một chút tải", size=14, fill=INK)
+    s.text(X(0.2), Y(4.7) + 20, "→ độ trễ tăng mạnh", size=14, fill=INK)
+    s.arrow([(X(1.3), Y(3.85)), (X(1.78), Y(1.45))], INK2, sw=1.5, r=0)
+    s.save("10-do-tre-theo-muc-tai-luan-van.svg")
 
 
 # ======================================================================
@@ -522,6 +586,7 @@ def fig_eval_pipeline():
 
 def build_all():
     fig_knee()
+    fig_knee_thesis()
     fig_batching()
     fig_coldstart_detail()
     fig_shutdown()

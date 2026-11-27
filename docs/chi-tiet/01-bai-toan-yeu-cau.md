@@ -27,7 +27,7 @@ Chi tiết từng pha nằm trong [Kiến thức nền §1](02-kien-thuc-nen.md#
 
 ### 1.2. VRAM bị chiếm vào đâu
 
-Lấy đúng cấu hình của phiên đánh giá: một GPU RTX A4000 16 GB chạy Qwen2.5-3B-Instruct ở định dạng BF16, với `--gpu-memory-utilization 0.9`. Số liệu đo trong phiên V0+V1 ngày 08/11/2026:
+Lấy cấu hình model của phiên đánh giá: Qwen2.5-3B-Instruct ở định dạng BF16, với `--gpu-memory-utilization 0.9`, trên một GPU 16 GB. Số liệu dưới đây đo trong phiên V0+V1 ngày 08/11/2026 trên RTX A4000. Phiên V2 chạy trên RTX 4060 Ti, cũng 16 GB; log vLLM của V2 báo KV-cache 211.584–224.336 token tuỳ lượt, gần với số của A4000:
 
 | Thành phần | Dung lượng | Ghi chú |
 |---|---|---|
@@ -45,6 +45,8 @@ Pha decode bị **giới hạn bởi băng thông bộ nhớ**: mỗi bước ph
 Trên RTX A4000 (băng thông khoảng 448 GB/s), một bước decode mất tối thiểu khoảng 6,17 GB ÷ 448 GB/s ≈ **13,8 ms**. Đo ngày 08/11/2026 bằng `vllm bench serve` (input 512, output 256 token):
 - 1 request đồng thời: mỗi bước 17,2 ms, khoảng **57 token/s** cho cả GPU.
 - 32 request đồng thời: mỗi bước 25,1 ms, tổng **1.121 token/s**, gấp khoảng 20 lần. Thời gian mỗi bước chỉ tăng 46 % trong khi số request tăng 32 lần, vì vẫn chỉ đọc weights một lần.
+
+Trên RTX 4060 Ti của V2 (khoảng 288 GB/s), bước decode tối thiểu là 6,17 ÷ 288 ≈ 21,4 ms. V2 không đo TPOT ở 1 request.
 
 Như vậy **gộp nhiều request vào cùng một batch** là cách duy nhất để khai thác GPU hiệu quả. Khi số request vượt quá khả năng chứa của batch và KV-cache, request mới phải chờ. Đây là lý do đồ án chọn **số request đồng thời** làm tín hiệu scale chính (cấu hình A2, xem [Kiến trúc §10](03-kien-truc-autoscaling.md#10-phân-tích-từng-metric)).
 
@@ -280,7 +282,7 @@ Bảng đối chiếu nội dung đề cương với bản mô tả nằm ở [P
 | # | Giả định | Vì sao hợp lý | Cách kiểm tra | Nếu sai thì sao |
 |---|---|---|---|---|
 | G1 | **Chi phí ≈ GPU-giờ cấp phát cho pod vLLM** | Trên cloud trả theo mức dùng (hoặc cluster dùng chung), GPU được giải phóng sẽ được dùng vào việc khác | Không kiểm chứng được bằng thực nghiệm; nêu rõ đây là quy ước | Trên một nhóm GPU cố định dành riêng, scale-down **không giảm tiền**. Khi đó kết quả chỉ còn nói về "GPU giải phóng được" |
-| G2 | Model vừa với 1 GPU, mỗi replica dùng 1 GPU | 3B ở BF16 cần khoảng 6 GB weights, vừa GPU 16 GB (A4000) với KV-cache ~7 GB; ở nhà dùng model 0,5B ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md)) | Log vLLM: KV-cache còn đủ cho `max-num-seqs` | Phải dùng lượng tử hoá hoặc model nhỏ hơn |
+| G2 | Model vừa với 1 GPU, mỗi replica dùng 1 GPU | 3B ở BF16 cần khoảng 6 GB weights, vừa GPU 16 GB (A4000 ở V0+V1, RTX 4060 Ti ở V2) với KV-cache ~7 GB; ở nhà dùng model 0,5B ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md)) | Log vLLM: KV-cache còn đủ cho `max-num-seqs` | Phải dùng lượng tử hoá hoặc model nhỏ hơn |
 | G3 | Máy tạo tải không làm nhiễu hệ thống được đo | Trên GPU thuê, chạy cùng VM nhưng trên **lõi CPU riêng** (CPU manager static); không đi qua mạng ngoài | CPU của pod máy tạo tải; độ lệch lịch gửi p99 < 50 ms; độ trễ event loop | Phải tách lõi hoặc đổi sang máy riêng |
 | G4 | Phiên bản phần mềm cố định suốt đợt đánh giá | Ghim image digest và phiên bản Helm chart | `metadata.json` ghi digest | Kết quả giữa các lượt không so được với nhau |
 | G5 | Năng lực C ổn định trong suốt phiên đo | **Cùng một máy** trong cả phiên V2; máy đã qua burn-in rút gọn | Chạy lại nhanh một mức tải giữa phiên (3 phút) | Nếu lệch hơn 10% thì đo năng lực lại và ghi vào nhật ký |
@@ -289,7 +291,7 @@ Bảng đối chiếu nội dung đề cương với bản mô tả nằm ở [P
 
 ### 12.3. Hạn chế sẽ ghi trong luận văn
 
-1. **Chỉ một model (Qwen2.5-3B), một loại GPU (RTX A4000 16 GB, card workstation Ampere).** Kết luận về cơ chế (metric nào phản ánh tải, vì sao cold start dài) có khả năng khái quát. Con số cụ thể (bao nhiêu giây, bao nhiêu phần trăm) chỉ đúng cho cấu hình đã đo; cold start của 3B ngắn hơn 7B, chỉ ngoại suy được theo kích thước weights ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C3).
+1. **Chỉ một model (Qwen2.5-3B), một loại GPU trong phiên đo chính (RTX 4060 Ti 16 GB ở V2, card GeForce Ada Lovelace; ĐG1 thử ở V0+V1 dùng RTX A4000).** C = 3,5 req/s chỉ đúng với máy V2. Kết luận về cơ chế (metric nào phản ánh tải, vì sao cold start dài) có khả năng khái quát. Con số cụ thể (bao nhiêu giây, bao nhiêu phần trăm) chỉ đúng cho cấu hình đã đo; cold start của 3B ngắn hơn 7B, chỉ ngoại suy được theo kích thước weights ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C3).
 2. **Tối đa 4 replica.** Chưa kiểm tra được hành vi ở quy mô hàng chục replica, nơi scheduling và cân bằng tải phức tạp hơn.
 3. **Tải tổng hợp** với độ dài output cố định, và chỉ ba kịch bản tải. Tải thật đa dạng hơn.
 4. **Mỗi ô của ma trận chỉ có 1–3 lượt.** Đủ để nghiệm thu và thấy các khác biệt lớn, không đủ để khẳng định các khác biệt nhỏ. Đồ án không tính khoảng tin cậy thống kê.
