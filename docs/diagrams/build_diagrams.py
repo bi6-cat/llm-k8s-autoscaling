@@ -613,7 +613,7 @@ def scenario(k, t):
     for (ta, va), (tb, vb) in pairwise(pts):
         if ta <= t <= tb:
             return va + (vb - va) * (t - ta) / (tb - ta)
-    return pts[0][1]
+    raise ValueError(f"t = {t} nằm ngoài lịch của KB{k}")
 
 
 def fig_scenarios():
@@ -625,7 +625,7 @@ def fig_scenarios():
              "vẽ với N = 4 GPU, đỉnh 0,75 × N × C = 3C")
     # (k, tiêu đề, thời lượng, ghi chú [(t, độ cao nhãn theo C, chữ)], pha khi phân tích [(tên, bắt đầu, kết thúc)])
     meta = [
-        (1, "KB1 · Thấp, ổn định", "12 phút", [(7, 1.35, "0,5C suốt lượt: 1 replica là đủ")],
+        (1, "KB1 · Thấp, ổn định", "12 phút", [(9.5, 1.35, "0,5C suốt lượt: 1 replica là đủ")],
          [("steady", 2, 12)]),
         (2, "KB2 · Tăng đột ngột rồi giảm", "24 phút",
          [(9.25, 3.0, "0,5C → 3C trong 30 s ở phút 4"), (19.5, 1.35, "về 0,5C ở phút 14")],
@@ -637,7 +637,7 @@ def fig_scenarios():
     tmax, ymax = 25, 4.6
     lx = s.legend_line(32, 92, "1C = năng lực 1 replica · 4C = năng lực tối đa (N = 4 replica)", MUTED, dash="4 4",
                        sw=1.1)
-    lx = s.legend_swatch(lx, 92, "ổn định, không tính", GRAY_T, stroke=AXIS)
+    lx = s.legend_swatch(lx, 92, "2 phút đầu, không tính", GRAY_T)
     s.line(lx, 84, lx, 100, stroke=INK2, dash="2 3")
     s.text(lx + 8, 96, "ranh giới pha khi phân tích", size=12, fill=INK2)
     for col, (k, title, dur, notes, phases) in enumerate(meta):
@@ -669,10 +669,10 @@ def fig_scenarios():
             pts.append((X(t), Y(v)))
         s.polygon([(pts[0][0], y1)] + pts + [(pts[-1][0], y1)], fill="#cde2fb", opacity=0.55)
         s.polyline(pts, BLUE, sw=2.2)
+        # Hai pha liền nhau chung một ranh giới: vẽ mỗi ranh giới một lần.
+        for edge in sorted({e for _, a, b in phases for e in (a, b) if e > 0}):
+            s.line(X(edge), top, X(edge), y1, stroke=INK2, sw=1, dash="2 3")
         for name, a, b in phases:
-            for edge in (a, b):
-                if edge > 0:
-                    s.line(X(edge), top, X(edge), y1, stroke=INK2, sw=1, dash="2 3")
             s.text((X(a) + X(b)) / 2, top + 12, name, size=10.5, fill=INK2, anchor="middle", family=MONO)
         s.line(x0, y1, x0 + pw, y1, stroke=AXIS)
         for at, av, note in notes:

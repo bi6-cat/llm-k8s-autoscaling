@@ -463,14 +463,14 @@ def fig_eval_pipeline():
                   "Argo CD, đo năng lực, vòng lặp 17 lượt, kịch bản vận hành và cold start, kéo dữ liệu về rồi "
                   "tắt máy, phân tích")
     s.header("Quy trình phiên đánh giá chính trên GPU thuê (V2)",
-             "Một lần thuê VM 4 GPU; mọi bước chạy bằng lệnh make hoặc script, runner và máy tạo tải chạy trên "
-             "chính VM")
+             "Một lần thuê VM 4 GPU; mọi bước chạy bằng lệnh make hoặc script; máy tạo tải là pod trong cluster "
+             "trên chính VM")
     xs = [32, 448, 864]
     row1 = [(1, "Thuê và kiểm máy", ["thuê VM 4 GPU trên Vast.ai;",
                                      "make probe: phần cứng, ổ, mạng → giữ máy"]),
-            (2, "Dựng từ máy trắng (VH5)", ["make bootstrap: k3s, GPU, tải sẵn model, image;",
+            (2, "Dựng từ máy trắng", ["make bootstrap: k3s, GPU, tải sẵn model, image;",
                                             "make cloud-platform: Helm, không Argo CD"]),
-            (3, "ĐG1: đo năng lực", ["5 mức λ cố định, 1 replica, mỗi mức 300 s;",
+            (3, "ĐG1: đo năng lực", ["5 mức λ, 1 replica, 300 s mỗi mức; runner trên PC;",
                                     "capacity.py → C, B*, threshold A2"])]
     for i, (n, t, ls) in enumerate(row1):
         s.step_box(xs[i], 86, 344, 100, n, t, ls, INK2)
@@ -506,7 +506,7 @@ def fig_eval_pipeline():
     s.arrow([(1036, 470), (1036, 514)], INK2, sw=1.8)
 
     row3 = [(864, 5, "Vận hành và cold start", ["VH2–VH4 dưới tải 0,5C (vh.py);",
-                                                 "ĐG3: L2 × 3 rồi L0 × 2 (dg3.sh)"]),
+                                                 "ĐG3: L2 × 3, L0 × 2 (dg3.sh)"]),
             (448, 6, "Kéo dữ liệu, tắt máy", ["rsync runs/ về PC, khớp sha256 mọi file;",
                                               "poweroff VM, xoá instance"])]
     for bx, n, t, ls in row3:

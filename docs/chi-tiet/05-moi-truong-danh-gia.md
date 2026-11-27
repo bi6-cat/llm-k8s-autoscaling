@@ -486,7 +486,7 @@ Mỗi kịch bản có một mục trong `docs/nhat-ky/van-hanh.md`: ngày, môi
 
 ![Hình 17 – Quy trình một phiên đánh giá](../images/17-quy-trinh-danh-gia.svg)
 
-*Hình 17. Quy trình phiên đánh giá chính V2 trên VM thuê, như đã chạy ngày 18–19/11/2026: thuê và kiểm máy, dựng từ máy trắng (không có Argo CD), đo năng lực, vòng lặp 17 lượt, kịch bản vận hành và cold start, kéo dữ liệu về rồi tắt máy, phân tích. Khác kế hoạch ở §3.6, §3.8 và §6.2: runner chạy trong tmux thay cho `systemd`, dữ liệu được kéo về PC và đối chiếu sha256 thay cho sao lưu lên R2 ([nhật ký Quang tuần 07](../nhat-ky/lam-viec/quang/tuan-07.md)).*
+*Hình 17. Quy trình phiên đánh giá chính V2 trên VM thuê, như đã chạy ngày 18–19/11/2026: thuê và kiểm máy, dựng từ máy trắng (không có Argo CD), đo năng lực, vòng lặp 17 lượt, kịch bản vận hành và cold start, kéo dữ liệu về rồi tắt máy, phân tích. Khác kế hoạch ở §3.4, §3.6, §3.8, §6.2 và §12: chỉ chạy `make probe`, không chạy `vllm bench serve` từng GPU; ĐG1 chạy runner từ PC qua tunnel, ĐG2 chạy runner trong tmux trên VM thay cho `systemd`; dữ liệu được kéo về PC và đối chiếu sha256 thay cho sao lưu lên R2; ĐG3 L0 đo 0 → 1 thay cho 1 → 2; GPU là 4 × RTX 4060 Ti thay cho 4 × A4000 (ADR-006 C2) ([nhật ký Quang tuần 07](../nhat-ky/lam-viec/quang/tuan-07.md)).*
 
 ### 14.1. Các bước của một lượt
 

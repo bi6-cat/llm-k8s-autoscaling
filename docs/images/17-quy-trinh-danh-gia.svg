@@ -3,7 +3,7 @@
 <defs><marker id="a52514e" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path d="M0,1 L10,5 L0,9 z" fill="#52514e"/></marker></defs>
 <rect x="0.5" y="0.5" width="1239" height="649" rx="14" fill="#fcfcfb" stroke="#e4e3de"/>
 <text x="32" y="38" font-size="19" font-weight="700" fill="#0b0b0b" text-anchor="start">Quy trình phiên đánh giá chính trên GPU thuê (V2)</text>
-<text x="32" y="61" font-size="13" font-weight="400" fill="#52514e" text-anchor="start">Một lần thuê VM 4 GPU; mọi bước chạy bằng lệnh make hoặc script, runner và máy tạo tải chạy trên chính VM</text>
+<text x="32" y="61" font-size="13" font-weight="400" fill="#52514e" text-anchor="start">Một lần thuê VM 4 GPU; mọi bước chạy bằng lệnh make hoặc script; máy tạo tải là pod trong cluster trên chính VM</text>
 <rect x="32" y="86" width="344" height="100" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
 <circle cx="56" cy="111" r="12" fill="#52514e"/>
 <text x="56" y="115.5" font-size="12.5" font-weight="700" fill="#ffffff" text-anchor="middle">1</text>
@@ -13,14 +13,14 @@
 <rect x="448" y="86" width="344" height="100" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
 <circle cx="472" cy="111" r="12" fill="#52514e"/>
 <text x="472" y="115.5" font-size="12.5" font-weight="700" fill="#ffffff" text-anchor="middle">2</text>
-<text x="492" y="116" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">Dựng từ máy trắng (VH5)</text>
+<text x="492" y="116" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">Dựng từ máy trắng</text>
 <text x="464" y="142" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">make bootstrap: k3s, GPU, tải sẵn model, image;</text>
 <text x="464" y="159.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">make cloud-platform: Helm, không Argo CD</text>
 <rect x="864" y="86" width="344" height="100" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
 <circle cx="888" cy="111" r="12" fill="#52514e"/>
 <text x="888" y="115.5" font-size="12.5" font-weight="700" fill="#ffffff" text-anchor="middle">3</text>
 <text x="908" y="116" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">ĐG1: đo năng lực</text>
-<text x="880" y="142" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">5 mức λ cố định, 1 replica, mỗi mức 300 s;</text>
+<text x="880" y="142" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">5 mức λ, 1 replica, 300 s mỗi mức; runner trên PC;</text>
 <text x="880" y="159.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">capacity.py → C, B*, threshold A2</text>
 <path d="M376,136 L448,136" fill="none" stroke="#52514e" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
 <path d="M792,136 L864,136" fill="none" stroke="#52514e" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#a52514e)"/>
@@ -72,7 +72,7 @@
 <text x="888" y="543.5" font-size="12.5" font-weight="700" fill="#ffffff" text-anchor="middle">5</text>
 <text x="908" y="544" font-size="13.5" font-weight="650" fill="#0b0b0b" text-anchor="start">Vận hành và cold start</text>
 <text x="880" y="570" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">VH2–VH4 dưới tải 0,5C (vh.py);</text>
-<text x="880" y="587.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">ĐG3: L2 × 3 rồi L0 × 2 (dg3.sh)</text>
+<text x="880" y="587.5" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">ĐG3: L2 × 3, L0 × 2 (dg3.sh)</text>
 <rect x="448" y="514" width="344" height="100" rx="10" fill="#ffffff" stroke="#c3c2b7" stroke-width="1.2"/>
 <circle cx="472" cy="539" r="12" fill="#52514e"/>
 <text x="472" y="543.5" font-size="12.5" font-weight="700" fill="#ffffff" text-anchor="middle">6</text>
