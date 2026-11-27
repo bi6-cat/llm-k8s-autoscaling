@@ -262,13 +262,24 @@
   urldate = {2026-11-18}
 }
 
+@online{k8s-pod-lifecycle,
+  title   = {{Kubernetes} documentation, {release-1.36}: Pod Lifecycle},
+  url     = {https://github.com/kubernetes/website/blob/release-1.36/content/en/docs/concepts/workloads/pods/pod-lifecycle.md},
+  urldate = {2026-11-24}
+}
+
 @online{vllm-metrics,
   title   = {{vLLM} documentation {v0.31.0}: Metrics},
   url     = {https://docs.vllm.ai/en/v0.31.0/design/metrics/},
   urldate = {2026-11-18}
 }
 
-% Chưa dẫn trong mục 3.4; giữ cho mục 3.3 (A2 dùng Prometheus scaler).
+@online{vllm-shutdown-timeout,
+  title   = {{vLLM} {v0.31.0} source code: {VllmConfig.shutdown\_timeout} in vllm/config/vllm.py},
+  url     = {https://github.com/vllm-project/vllm/blob/v0.31.0/vllm/config/vllm.py},
+  urldate = {2026-11-24}
+}
+
 @online{keda-prometheus-scaler,
   title   = {{KEDA} documentation {2.21}: {Prometheus} scaler},
   url     = {https://keda.sh/docs/2.21/scalers/prometheus/},
@@ -279,4 +290,29 @@
   title   = {{KEDA} documentation {2.21}: {ScaledObject} specification},
   url     = {https://keda.sh/docs/2.21/reference/scaledobject-spec/},
   urldate = {2026-11-18}
+}
+
+% Mục 5.1: băng thông bộ nhớ RTX 4060 Ti. Trang sản phẩm chỉ ghi bus 128-bit; con số 288 GB/s nằm ở đoạn
+% về L2 cache, khi NVIDIA thử RTX 4060 Ti.
+@online{nvidia-rtx40-vram,
+  author  = {Burnes, A.},
+  title   = {A Deeper Look At {VRAM} On {GeForce} {RTX} 40 Series Graphics Cards},
+  organization = {{NVIDIA}},
+  year    = {2023},
+  url     = {https://www.nvidia.com/en-us/geforce/news/rtx-40-series-vram-video-memory-explained/},
+  urldate = {2026-11-27}
+}
+
+% Mục 5.1: băng thông bộ nhớ RTX A4000 (256-bit, 448 GB/s).
+@online{nvidia-rtx-a4000-datasheet,
+  title   = {{NVIDIA} {RTX} {A4000} Data Sheet},
+  organization = {{NVIDIA}},
+  url     = {https://www.nvidia.com/content/dam/en-zz/Solutions/products/workstations/nvidia-rtx-a4000-datasheet.pdf},
+  urldate = {2026-11-27}
+}
+
+@online{argocd-cluster-bootstrapping,
+  title   = {{Argo CD} documentation {v3.5.4}: Cluster Bootstrapping},
+  url     = {https://github.com/argoproj/argo-cd/blob/v3.5.4/docs/operator-manual/cluster-bootstrapping.md},
+  urldate = {2026-11-24}
 }

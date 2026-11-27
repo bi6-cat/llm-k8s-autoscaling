@@ -7,7 +7,18 @@ Mục đích: Tránh báo "đạt" oan: stream bị cắt có status 200, kịch
 
 from __future__ import annotations
 
-from experiments.ops.vh import analyze_requests, grade
+import pytest
+
+from experiments.ops.vh import (
+    REPO,
+    SIM_A2_KUSTOMIZATION,
+    SIM_SERVING_PATCH,
+    analyze_requests,
+    argocd_problem,
+    grade,
+    with_min_replicas,
+    with_ttft,
+)
 
 CLEAN = {"requests": 100, "errors": 0, "by_error": {}}
 DIRTY = {"requests": 100, "errors": 2, "by_error": {"IncompleteStream": 2}}
@@ -72,3 +83,55 @@ def test_vh4_starting_at_max_proves_nothing():
 def test_vh2a_must_start_from_one_replica():
     assert not grade("vh2a", CLEAN, {"recovered": True, "replicas_before": 1})
     assert grade("vh2a", CLEAN, {"recovered": True, "replicas_before": 3})
+
+
+def test_git_update_needs_zero_errors_sync_and_both_versions():
+    phases = {"min2": {"sync_s": 90.0}, "update": {"sync_s": 120.0}}
+    good = {
+        "recovered": True,
+        "replicas_before": 1,
+        "new_version_seen": True,
+        "old_version_back": True,
+        "finished_under_load": True,
+    }
+    assert not grade("vh2-git", CLEAN, {**good, "phases": phases})
+    assert grade("vh2-git", DIRTY, {**good, "phases": phases})
+    # Argo CD không sync một commit: không kết luận được về vòng Git
+    assert grade("vh2-git", CLEAN, {**good, "phases": {**phases, "rollback": {"sync_s": None}}})
+    # Rollout xong nhưng tham số không đổi: cập nhật không thật sự đi qua Git
+    assert grade("vh2-git", CLEAN, {**good, "new_version_seen": False, "phases": phases})
+    assert grade("vh2-git", CLEAN, {**good, "replicas_before": 2, "phases": phases})
+    # Rollback xong khi tải đã ngừng: 0 lỗi không chứng minh được gì
+    assert grade("vh2-git", CLEAN, {**good, "finished_under_load": False, "phases": phases})
+
+
+def test_min_replicas_patch_is_inserted_once_and_reverts_cleanly():
+    text = (REPO / SIM_A2_KUSTOMIZATION).read_text(encoding="utf-8")
+    new = with_min_replicas(text, 2)
+    assert new.count("path: /spec/minReplicaCount\n        value: 2\n") == 1
+    # Chỉ thêm dòng, không sửa dòng cũ: `git revert` trả lại đúng file ban đầu
+    assert (
+        new.replace("      - op: replace\n        path: /spec/minReplicaCount\n        value: 2\n", "")
+        == text
+    )
+    with pytest.raises(ValueError):
+        with_min_replicas("resources: []\n", 2)
+
+
+def test_ttft_flag_is_changed_exactly_once():
+    text = (REPO / SIM_SERVING_PATCH).read_text(encoding="utf-8")
+    assert "--time-to-first-token=300ms" in with_ttft(text, 300)
+    with pytest.raises(ValueError):
+        with_ttft(text + "    - --time-to-first-token=1ms\n", 300)
+
+
+def test_argocd_must_autosync_from_the_given_repo_and_branch():
+    src = {"repoURL": "https://github.com/bi6-cat/llm-k8s-autoscaling.git", "targetRevision": "feat/x"}
+    app = {"metadata": {"name": "serving"}, "spec": {"source": src, "syncPolicy": {"automated": {}}}}
+    origin = "https://github.com/Bi6-Cat/llm-k8s-autoscaling/"  # khác .git, hoa thường, dấu / cuối
+    assert argocd_problem(app, "feat/x", origin) is None
+    on_main = {**app, "spec": {**app["spec"], "source": {**src, "targetRevision": "main"}}}
+    assert "main" in argocd_problem(on_main, "feat/x", origin)
+    assert argocd_problem({**app, "spec": {**app["spec"], "syncPolicy": {}}}, "feat/x", origin)
+    # Push lên fork: push thành công nhưng Argo CD không bao giờ thấy commit
+    assert argocd_problem(app, "feat/x", "https://github.com/someone/llm-k8s-autoscaling.git")
