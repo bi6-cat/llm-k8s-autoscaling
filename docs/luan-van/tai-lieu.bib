@@ -6,6 +6,242 @@
 % riêng và số phiên bản phải bọc trong {} để giữ nguyên chữ hoa, chữ thường: {vLLM}, {v0.31.0}.
 % Danh mục gốc của đồ án: docs/mo-ta-chi-tiet-do-an.md, mục "Tài liệu tham khảo".
 
+% Mục 2.1.1: attention, vector key và value của từng token.
+@inproceedings{vaswani-attention,
+  author    = {Vaswani, A. and Shazeer, N. and Parmar, N. and Uszkoreit, J. and Jones, L. and Gomez, A. N. and Kaiser, {\L}. and Polosukhin, I.},
+  title     = {Attention Is All You Need},
+  booktitle = {Advances in Neural Information Processing Systems ({NeurIPS})},
+  year      = {2017},
+  url       = {https://arxiv.org/abs/1706.03762},
+  urldate   = {2026-11-27}
+}
+
+% Mục 2.1.1: grouped-query attention, nhiều query head dùng chung một KV head (đã đọc tóm tắt).
+@inproceedings{ainslie-gqa,
+  author    = {Ainslie, J. and Lee-Thorp, J. and de Jong, M. and Zemlyanskiy, Y. and Lebr{\'o}n, F. and Sanghai, S.},
+  title     = {{GQA}: Training Generalized Multi-Query Transformer Models from Multi-Head Checkpoints},
+  booktitle = {Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing ({EMNLP})},
+  year      = {2023},
+  url       = {https://arxiv.org/abs/2305.13245},
+  urldate   = {2026-11-27}
+}
+
+% Mục 2.1.1, 2.1.2: prefill bão hoà sức tính, decode dùng ít sức tính nên batching hiệu quả; chunked prefill
+% (đã đọc tóm tắt).
+@inproceedings{agrawal-sarathi-serve,
+  author    = {Agrawal, A. and Kedia, N. and Panwar, A. and Mohan, J. and Kwatra, N. and Gulavani, B. S. and Tumanov, A. and Ramjee, R.},
+  title     = {Taming Throughput-Latency Tradeoff in {LLM} Inference with {Sarathi-Serve}},
+  booktitle = {18th USENIX Symposium on Operating Systems Design and Implementation ({OSDI} 24)},
+  year      = {2024},
+  url       = {https://www.usenix.org/conference/osdi24/presentation/agrawal},
+  urldate   = {2026-11-27}
+}
+
+% Mục 2.1.2: PagedAttention và vLLM; KV cache gần như không lãng phí; throughput 2–4 lần so với
+% FasterTransformer và Orca ở cùng độ trễ (đã đọc tóm tắt).
+@inproceedings{kwon-pagedattention,
+  author    = {Kwon, W. and Li, Z. and Zhuang, S. and Sheng, Y. and Zheng, L. and Yu, C. H. and Gonzalez, J. E. and Zhang, H. and Stoica, I.},
+  title     = {Efficient Memory Management for Large Language Model Serving with {PagedAttention}},
+  booktitle = {Proceedings of the 29th Symposium on Operating Systems Principles ({SOSP} '23)},
+  year      = {2023},
+  url       = {https://arxiv.org/abs/2309.06180},
+  urldate   = {2026-11-27}
+}
+
+% Mục 2.1.2: iteration-level scheduling (continuous batching) (đã đọc tóm tắt).
+@inproceedings{yu-orca,
+  author    = {Yu, G.-I. and Jeong, J. S. and Kim, G.-W. and Kim, S. and Chun, B.-G.},
+  title     = {{Orca}: A Distributed Serving System for {Transformer-Based} Generative Models},
+  booktitle = {16th USENIX Symposium on Operating Systems Design and Implementation ({OSDI} 22)},
+  year      = {2022},
+  url       = {https://www.usenix.org/conference/osdi22/presentation/yu},
+  urldate   = {2026-11-27}
+}
+
+% Mục 2.2: định luật Little, L = λW. Metadata kiểm qua Crossref ngày 27/11/2026 (trang DOI chặn curl).
+@article{little-law,
+  author  = {Little, J. D. C.},
+  title   = {A Proof for the Queuing Formula: {$L = \lambda W$}},
+  journal = {Operations Research},
+  volume  = {9},
+  number  = {3},
+  pages   = {383--387},
+  year    = {1961},
+  doi     = {10.1287/opre.9.3.383}
+}
+
+% Mục 2.2: hàng đợi M/M/1, thời gian trong hệ thống 1/(μ − λ). Giáo trình chuẩn; người soát đối chiếu chương
+% về M/M/1 trước khi chốt.
+@book{harchol-balter-queueing,
+  author    = {Harchol-Balter, M.},
+  title     = {Performance Modeling and Design of Computer Systems: Queueing Theory in Action},
+  publisher = {Cambridge University Press},
+  year      = {2013}
+}
+
+% Mục 2.2: máy tạo tải mô hình mở (request đến độc lập với lúc request khác xong) và mô hình đóng
+% (đã đọc tóm tắt).
+@inproceedings{schroeder-open-closed,
+  author    = {Schroeder, B. and Wierman, A. and Harchol-Balter, M.},
+  title     = {Open Versus Closed: A Cautionary Tale},
+  booktitle = {3rd Symposium on Networked Systems Design and Implementation ({NSDI} 06)},
+  pages     = {239--252},
+  year      = {2006},
+  url       = {https://www.usenix.org/conference/nsdi-06/open-versus-closed-cautionary-tale},
+  urldate   = {2026-11-27}
+}
+
+% Mục 2.3: device plugin, extended resource chỉ nhận số nguyên, không cấp vượt, không chia giữa container.
+@online{k8s-device-plugins,
+  title   = {{Kubernetes} documentation {v1.36}: Device Plugins},
+  url     = {https://github.com/kubernetes/website/blob/release-1.36/content/en/docs/concepts/extend-kubernetes/compute-storage-net/device-plugins.md},
+  urldate = {2026-11-27}
+}
+
+% Mục 2.3: tài nguyên nvidia.com/gpu, time-slicing không cô lập bộ nhớ và lỗi, MPS.
+@online{nvidia-device-plugin,
+  title   = {{NVIDIA} device plugin for {Kubernetes}, {v0.20.1}},
+  author  = {{NVIDIA}},
+  url     = {https://github.com/NVIDIA/k8s-device-plugin/blob/v0.20.1/README.md},
+  urldate = {2026-11-27}
+}
+
+% Mục 2.3: bộ xuất metric GPU cho Prometheus (tài liệu [11] của đề cương).
+@online{nvidia-dcgm-exporter,
+  title   = {{DCGM} Exporter},
+  author  = {{NVIDIA}},
+  url     = {https://github.com/NVIDIA/dcgm-exporter},
+  urldate = {2026-11-27}
+}
+
+% Mục 2.4: thuật toán HPA, tolerance, behavior mặc định, các loại metric.
+@online{k8s-hpa,
+  title   = {{Kubernetes} documentation {v1.36}: Horizontal Pod Autoscaling},
+  url     = {https://github.com/kubernetes/website/blob/release-1.36/content/en/docs/concepts/workloads/autoscaling/horizontal-pod-autoscale.md},
+  urldate = {2026-11-27}
+}
+
+% Mục 2.5: mô hình kéo, scrape, chuỗi thời gian.
+@online{prometheus-overview,
+  title   = {{Prometheus} documentation: Overview},
+  url     = {https://github.com/prometheus/docs/blob/main/docs/introduction/overview.md},
+  urldate = {2026-11-27}
+}
+
+% Mục 2.5: recording rule tính trước biểu thức và lưu thành chuỗi mới.
+@online{prometheus-recording-rules,
+  title   = {{Prometheus} {v3.15.0} documentation: Recording rules},
+  url     = {https://github.com/prometheus/prometheus/blob/v3.15.0/docs/configuration/recording_rules.md},
+  urldate = {2026-11-27}
+}
+
+% Mục 2.5: alerting rule, trạng thái pending và firing.
+@online{prometheus-alerting-rules,
+  title   = {{Prometheus} {v3.15.0} documentation: Alerting rules},
+  url     = {https://github.com/prometheus/prometheus/blob/v3.15.0/docs/configuration/alerting_rules.md},
+  urldate = {2026-11-27}
+}
+
+% Mục 2.5: Application, sync, trạng thái mong muốn trong Git.
+@online{argocd-core-concepts,
+  title   = {{Argo CD} {v3.5.4} documentation: Core Concepts},
+  url     = {https://github.com/argoproj/argo-cd/blob/v3.5.4/docs/core_concepts.md},
+  urldate = {2026-11-27}
+}
+
+% Mục 2.5: maxSurge, maxUnavailable, progressDeadlineSeconds.
+@online{k8s-deployment,
+  title   = {{Kubernetes} documentation {v1.36}: Deployments},
+  url     = {https://github.com/kubernetes/website/blob/release-1.36/content/en/docs/concepts/workloads/controllers/deployment.md},
+  urldate = {2026-11-27}
+}
+
+% Mục 2.6, Bảng 2.2: Knative KPA theo số request đồng thời, cửa sổ 60 s và 6 s.
+@online{kserve-kpa,
+  title   = {{KServe} documentation: Autoscaling with {Knative} Pod Autoscaler},
+  url     = {https://github.com/kserve/website/blob/main/docs/model-serving/predictive-inference/autoscaling/kpa-autoscaler.md},
+  urldate = {2026-11-27}
+}
+
+% Mục 2.6, Bảng 2.2: target_ongoing_requests.
+@online{ray-serve-autoscaling,
+  title   = {{Ray Serve} documentation: Autoscaling guide},
+  url     = {https://github.com/ray-project/ray/blob/master/doc/source/serve/autoscaling-guide.md},
+  urldate = {2026-11-27}
+}
+
+% Mục 2.6, Bảng 2.2: autoscaling theo metric của vLLM nằm trong lộ trình (README, mục Roadmap).
+@online{vllm-production-stack,
+  title   = {{vLLM} Production Stack},
+  url     = {https://github.com/vllm-project/production-stack},
+  urldate = {2026-11-27}
+}
+
+% Mục 2.6, Bảng 2.2: định tuyến theo prefix cache và tải, tách prefill và decode, autoscaling theo SLO.
+@online{llm-d,
+  title   = {{llm-d}},
+  url     = {https://github.com/llm-d/llm-d},
+  urldate = {2026-11-27}
+}
+
+% Mục 2.6, Bảng 2.2 (đã đọc tóm tắt).
+@misc{aibrix,
+  author  = {{The AIBrix Team} and Shan, J. and others},
+  title   = {{AIBrix}: Towards Scalable, Cost-Effective Large Language Model Inference Infrastructure},
+  year    = {2025},
+  url     = {https://arxiv.org/abs/2504.03648},
+  urldate = {2026-11-27}
+}
+
+% Mục 2.6: tách prefill và decode, goodput (đã đọc tóm tắt).
+@inproceedings{zhong-distserve,
+  author    = {Zhong, Y. and Liu, S. and others},
+  title     = {{DistServe}: Disaggregating Prefill and Decoding for Goodput-optimized Large Language Model Serving},
+  booktitle = {18th {USENIX} Symposium on Operating Systems Design and Implementation ({OSDI})},
+  year      = {2024},
+  url       = {https://arxiv.org/abs/2401.09670},
+  urldate   = {2026-11-27}
+}
+
+% Mục 2.6: tách pha theo phần cứng (đã đọc tóm tắt).
+@inproceedings{patel-splitwise,
+  author    = {Patel, P. and Choukse, E. and others},
+  title     = {Splitwise: Efficient Generative {LLM} Inference Using Phase Splitting},
+  booktitle = {51st {ACM/IEEE} Annual International Symposium on Computer Architecture ({ISCA})},
+  year      = {2024},
+  url       = {https://arxiv.org/abs/2311.18677},
+  urldate   = {2026-11-27}
+}
+
+% Mục 2.6: lập lịch lại request giữa các instance (đã đọc tóm tắt).
+@inproceedings{sun-llumnix,
+  author    = {Sun, B. and Huang, Z. and others},
+  title     = {Llumnix: Dynamic Scheduling for Large Language Model Serving},
+  booktitle = {18th {USENIX} Symposium on Operating Systems Design and Implementation ({OSDI})},
+  year      = {2024},
+  url       = {https://arxiv.org/abs/2406.03243},
+  urldate   = {2026-11-27}
+}
+
+% Mục 2.6: nạp checkpoint nhiều tầng để rút ngắn cold start (đã đọc tóm tắt).
+@inproceedings{fu-serverlessllm,
+  author    = {Fu, Y. and Xue, L. and others},
+  title     = {{ServerlessLLM}: Low-Latency Serverless Inference for Large Language Models},
+  booktitle = {18th {USENIX} Symposium on Operating Systems Design and Implementation ({OSDI})},
+  year      = {2024},
+  url       = {https://arxiv.org/abs/2401.14351},
+  urldate   = {2026-11-27}
+}
+
+% Mục 2.6: trace 10,31 triệu request Azure OpenAI trong 213 ngày, tải theo đợt (đã đọc tóm tắt).
+@misc{wang-burstgpt,
+  author  = {Wang, Y. and Chen, Y. and others},
+  title   = {{BurstGPT}: A Real-world Workload Dataset to Optimize {LLM} Serving Systems},
+  year    = {2024},
+  url     = {https://arxiv.org/abs/2401.17644},
+  urldate = {2026-11-27}
+}
+
 @book{sre-workbook,
   editor    = {Beyer, B. and Murphy, N. R. and Rensin, D. K. and Kawahara, K. and Thorne, S.},
   title     = {The Site Reliability Workbook},
@@ -26,13 +262,24 @@
   urldate = {2026-11-18}
 }
 
+@online{k8s-pod-lifecycle,
+  title   = {{Kubernetes} documentation, {release-1.36}: Pod Lifecycle},
+  url     = {https://github.com/kubernetes/website/blob/release-1.36/content/en/docs/concepts/workloads/pods/pod-lifecycle.md},
+  urldate = {2026-11-24}
+}
+
 @online{vllm-metrics,
   title   = {{vLLM} documentation {v0.31.0}: Metrics},
   url     = {https://docs.vllm.ai/en/v0.31.0/design/metrics/},
   urldate = {2026-11-18}
 }
 
-% Chưa dẫn trong mục 3.4; giữ cho mục 3.3 (A2 dùng Prometheus scaler).
+@online{vllm-shutdown-timeout,
+  title   = {{vLLM} {v0.31.0} source code: {VllmConfig.shutdown\_timeout} in vllm/config/vllm.py},
+  url     = {https://github.com/vllm-project/vllm/blob/v0.31.0/vllm/config/vllm.py},
+  urldate = {2026-11-24}
+}
+
 @online{keda-prometheus-scaler,
   title   = {{KEDA} documentation {2.21}: {Prometheus} scaler},
   url     = {https://keda.sh/docs/2.21/scalers/prometheus/},
@@ -43,4 +290,29 @@
   title   = {{KEDA} documentation {2.21}: {ScaledObject} specification},
   url     = {https://keda.sh/docs/2.21/reference/scaledobject-spec/},
   urldate = {2026-11-18}
+}
+
+% Mục 5.1: băng thông bộ nhớ RTX 4060 Ti. Trang sản phẩm chỉ ghi bus 128-bit; con số 288 GB/s nằm ở đoạn
+% về L2 cache, khi NVIDIA thử RTX 4060 Ti.
+@online{nvidia-rtx40-vram,
+  author  = {Burnes, A.},
+  title   = {A Deeper Look At {VRAM} On {GeForce} {RTX} 40 Series Graphics Cards},
+  organization = {{NVIDIA}},
+  year    = {2023},
+  url     = {https://www.nvidia.com/en-us/geforce/news/rtx-40-series-vram-video-memory-explained/},
+  urldate = {2026-11-27}
+}
+
+% Mục 5.1: băng thông bộ nhớ RTX A4000 (256-bit, 448 GB/s).
+@online{nvidia-rtx-a4000-datasheet,
+  title   = {{NVIDIA} {RTX} {A4000} Data Sheet},
+  organization = {{NVIDIA}},
+  url     = {https://www.nvidia.com/content/dam/en-zz/Solutions/products/workstations/nvidia-rtx-a4000-datasheet.pdf},
+  urldate = {2026-11-27}
+}
+
+@online{argocd-cluster-bootstrapping,
+  title   = {{Argo CD} documentation {v3.5.4}: Cluster Bootstrapping},
+  url     = {https://github.com/argoproj/argo-cd/blob/v3.5.4/docs/operator-manual/cluster-bootstrapping.md},
+  urldate = {2026-11-24}
 }
