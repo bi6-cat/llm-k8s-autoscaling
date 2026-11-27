@@ -260,3 +260,11 @@
 - **Deviations:** chưa đọc được luận văn của van der Wiel (Cloudflare chặn); quy tắc chỉ dựa trên ba bài đã đọc. Điểm "Hình C4 trở lại 5.3" của mục trên chưa làm ở PR này: sẽ sửa dàn ý (Kế hoạch §11.1) và 5.3 trong PR chương 5.
 - **Links:** `docs/luan-van/quy-tac-viet.md` §2, §3.1, §3.2, §3.4, §5; PR #61 (`analysis/kiem_van.py`, `analysis/tests/test_kiem_van.py`).
 - **Thesis:** áp dụng cho mọi chương khi làm PR chương; mục 3.6, 5.6, 5.7, 6.2.
+
+## 2026-11-27 – Merge PR #74–#78 (quy tắc viết, ADR-007, README simulator, `sim-argocd`, VH2 qua Git)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** lượt tự chạy có cho merge, gỡ hàng đợi PR theo thứ tự phụ thuộc. Mỗi PR kiểm đủ 5 điều kiện merge: CI 6/6 xanh, đã chạy `/code-review high` lúc mở PR, `MERGEABLE`, không có review hay bình luận, không đụng `envs/home/argocd/apps` (thư mục root-app ở nhà theo dõi), base `main`. Merge commit, xoá nhánh head. #78 được đổi base từ `feat/tr8-vh2-sim-argocd` về `main` trước khi merge #77.
+- **Results:** #74 `46c17bb`, #75 `2ec55f3`, #76 `2f500f7`, #77 `97213e6`, #78 `5e3c621`. #75, #76, #78 chỉ xung đột ở nhật ký, `git merge origin/main` tự gộp (merge=union), không trùng tiêu đề mục.
+- **Incidents:** #77 xung đột thật với #76 ở `docs/nhat-ky/van-hanh.md` và `envs/sim/README.md` (cả hai thêm mục cùng chỗ). Giữ cả hai phía: van-hanh.md xếp mục N8 trước mục Argo CD theo thứ tự đã làm; README đặt mục "VH2 qua Git" trước "Trên Windows (WSL2)", và sửa chú thích "(mục cuối)" ở bảng đầu thành link tới mục đó (`0fbd6e1`). Lệnh mẫu `vh2-git` trong README ghi `--rate 0.5` trong khi câu dưới khuyên dùng 0,3; sửa thành `--rate 0.3` trên nhánh #78 trước khi merge (`012d269`).
+- **Links:** PR #74, #75, #76, #77, #78.
