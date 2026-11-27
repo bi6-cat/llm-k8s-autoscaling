@@ -501,31 +501,40 @@ def fig_loop():
 
 
 # ======================================================================
-# Hình 5 — Phân rã cold start (minh hoạ)
+# Hình 5 — Phân rã cold start (số đo ĐG3 trên V2)
 # ======================================================================
+# Số đo thật của ĐG3 trên V2 (sửa 27/11, trước là số minh hoạ): VM 4 × RTX 4060 Ti, Qwen2.5-3B, vLLM v0.31.0;
+# 5 lượt hợp lệ ở runs/v2-vm/dg3-v2-4060ti/ (L0 đo 0 → 1, L2 đo 1 → 2). Số từng pha chép từ comment đầu
+# docs/luan-van/05-04-cold-start.md (cách chia pha cũng ở đó; script tính pha chưa có trong analysis/);
+# tổng = ready_seen_unix − trigger_unix, có thể lệch 0,1 s so với tổng các pha đã làm tròn (L2 · lượt 3).
 def fig_coldstart():
-    W, H = 1120, 352
-    s = Svg(W, H, "Phân rã cold start minh hoạ: pull image và tải model chiếm phần lớn; "
-                  "cache model, pre-pull image và compile cache rút từ khoảng 5 phút xuống dưới 1 phút")
-    s.header("Phân rã thời gian cold start của một pod vLLM",
-             "Số liệu MINH HOẠ (model 7–8B, image ~10 GB) — sẽ được thay bằng kết quả đo thực tế trong đồ án")
-    phases = [("Scheduling", BLUE), ("Pull image", ORANGE), ("Tải model", AQUA),
-              ("Nạp weight → GPU", YELLOW), ("Compile · CUDA graph", MAGENTA), ("Probe → Ready", GREEN)]
+    W, H = 1120, 476
+    s = Svg(W, H, "Phân rã cold start đo trên V2: ở L0 kéo image chiếm khoảng một nửa trong khoảng 5 phút; "
+                  "ở L2 còn 76–81 s, phần lớn là khởi động tiến trình")
+    s.header("Phân rã thời gian cold start của một pod vLLM (ĐG3, phiên V2)",
+             "VM 4 × RTX 4060 Ti 16 GB · Qwen2.5-3B · vLLM v0.31.0 · image 9,04 GB · "
+             "từ lệnh scale tới pod Ready, mỗi thanh một lượt đo")
+    phases = [("1–3 Scheduling · kéo image", BLUE), ("4 Khởi động tiến trình", ORANGE), ("5 Tải model", AQUA),
+              ("6 Khởi tạo · nạp weights", YELLOW), ("7 Compile · KV · CUDA graph", MAGENTA),
+              ("8 Mở cổng · probe", GREEN)]
     x = 32
     for name, c in phases:
         x = s.legend_swatch(x, 96, name, c)
+    l0, l2 = "image, model, compile cache bị xoá", "image, model, compile cache có sẵn"
     bars = [
-        ("Không tối ưu", "image + model tải từ Internet", [2, 90, 150, 25, 45, 10]),
-        ("Cache model trên PVC", "image vẫn phải pull", [2, 90, 0, 60, 45, 10]),
-        ("Tối ưu đầy đủ", "pre-pull · NVMe cục bộ · compile cache", [2, 0, 0, 20, 15, 6]),
+        ("L0 · lượt 1", l0, [158.0, 50.3, 54.2, 6.7, 34.9, 6.6], 310.7),
+        ("L0 · lượt 2", l0, [156.0, 46.1, 56.8, 6.1, 31.9, 3.8], 300.7),
+        ("L2 · lượt 1", l2, [1.5, 43.0, 0, 13.6, 13.7, 3.9], 75.7),
+        ("L2 · lượt 2", l2, [1.5, 42.9, 0, 13.3, 13.6, 4.4], 75.7),
+        ("L2 · lượt 3", l2, [1.7, 42.6, 0, 13.4, 16.1, 7.1], 80.8),
     ]
-    x0, scale, top = 320, 2.0, 138
+    x0, scale, top, step = 320, 2.0, 138, 58
     for v in range(0, 351, 50):
         gx = x0 + v * scale
-        s.line(gx, top - 12, gx, top + 3 * 64 - 20, stroke=GRID)
-        s.text(gx, top + 3 * 64 - 2, f"{v} s", size=11, fill=MUTED, anchor="middle")
-    for i, (name, sub, vals) in enumerate(bars):
-        y = top + i * 64
+        s.line(gx, top - 12, gx, top + len(bars) * step - 20, stroke=GRID)
+        s.text(gx, top + len(bars) * step - 2, f"{v} s", size=11, fill=MUTED, anchor="middle")
+    for i, (name, sub, vals, total) in enumerate(bars):
+        y = top + i * step
         s.text(x0 - 16, y + 12, name, size=13, weight=650, anchor="end")
         s.text(x0 - 16, y + 29, sub, size=11, fill=INK2, anchor="end")
         cx = x0
@@ -543,11 +552,12 @@ def fig_coldstart():
             else:
                 s.rect(cx, y, dw, 28, fill=color, stroke=None, rx=0)
             if w >= 34:
-                s.text(cx + dw / 2, y + 43, f"{v} s", size=10.5, fill=INK2, anchor="middle")
+                s.text(cx + dw / 2, y + 43, f"{v:g} s".replace(".", ","), size=10.5, fill=INK2, anchor="middle")
             cx += w
-        total = sum(vals)
-        s.rich(cx + 10, y + 19, [(f"{total} s", 700, INK), (f"  ≈ {total / 60:.1f} phút".replace(".", ","), 400, INK2)],
-               size=12.5)
+        s.rich(cx + 10, y + 19, [(f"{total:g} s".replace(".", ","), 700, INK),
+                                 (f"  ≈ {total / 60:.1f} phút".replace(".", ","), 400, INK2)], size=12.5)
+    s.text(32, H - 20, "L0 đo khi scale 0 → 1 replica, L2 khi scale 1 → 2; trước mỗi lượt xoá page cache của node. "
+                       "Số từng pha: Bảng 5.4a và Phụ lục E của luận văn (làm tròn 0,1 s).", size=12, fill=INK2)
     s.save("05-cold-start.svg")
 
 

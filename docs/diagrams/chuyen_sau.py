@@ -3,7 +3,9 @@ của Hình 10 (10-do-tre-theo-muc-tai-luan-van.svg, dùng làm Hình 2.2 ở do
 
 Được gọi từ build_diagrams.py; dùng chung lớp Svg và bảng màu.
 """
+import json
 import math
+import os
 
 from build_diagrams import (AQUA, AXIS, BLUE, BLUE_T, CRIT, GOOD, GRAY_T, GREEN_T, GRID, INK, INK2, MONO,
                             MUTED, ORANGE, ORANGE_T, OWNER, SURFACE, VIOLET, VIOLET_T, WARN, WHITE, YELLOW,
@@ -386,61 +388,77 @@ def fig_flapping():
 # ======================================================================
 # Hình 15 — Đo năng lực một replica
 # ======================================================================
+# Số đo thật của ĐG1 trên V2 (sửa 27/11, trước là số minh hoạ), đọc thẳng từ envs/cloud/experiments/capacity.json
+# (mảng curves: S1 CONST, 300 s mỗi mức, bỏ 60 s đầu). Cột B lấy B_server (trung bình running + waiting từ metric
+# vLLM), trùng với B_star = 46,3 tại C. Điểm vượt trục vẽ ở mép trên kèm số thật, nối bằng nét đứt.
+# Chữ trong tiêu đề và dòng chú thích dưới hình vẫn viết tay: chạy lại ĐG1 thì soát lại cả hai.
+CAPACITY = os.path.join(os.path.dirname(__file__), "..", "..", "envs", "cloud", "experiments", "capacity.json")
+
+
 def fig_calibration():
     W, H = 1240, 452
-    s = Svg(W, H, "Đo năng lực: quét tốc độ request trên một replica; TTFT chạm ngưỡng SLO trước ITL; "
-                  "C bằng 2,0 req/s, B* bằng 30 request đồng thời")
-    s.header("Đo năng lực một replica (capacity planning)",
-             "Quét tốc độ λ trên 1 replica; C = λ lớn nhất mà mọi SLO còn đạt — số liệu minh hoạ")
+    s = Svg(W, H, "Đo năng lực trên V2: quét tốc độ request trên một replica; TTFT vượt ngưỡng SLO ở 4 req/s "
+                  "trong khi TPOT còn xa ngưỡng; C bằng 3,5 req/s, B* bằng 46,3 request đồng thời")
+    s.header("Đo năng lực một replica (ĐG1, phiên V2)",
+             "Quét tốc độ λ trên 1 replica (RTX 4060 Ti 16 GB, Qwen2.5-3B); C = λ lớn nhất mà mọi SLO còn đạt")
     x = 32
     s.add(f'<circle cx="{x + 6}" cy="92" r="5.5" fill="{BLUE}"/>')
     s.text(x + 18, 96, "đạt mọi SLO", size=12, fill=INK2)
     x += 18 + text_width("đạt mọi SLO", 12) + 26
     s.add(f'<circle cx="{x + 6}" cy="92" r="5.5" fill="{CRIT}"/>')
-    s.text(x + 18, 96, "vi phạm SLO (ở bất kỳ chỉ số nào)", size=12, fill=INK2)
-    x += 18 + text_width("vi phạm SLO (ở bất kỳ chỉ số nào)", 12) + 26
-    s.legend_line(x, 92, "ngưỡng SLO · C · B*", INK2, dash="6 4", sw=1.3)
+    s.text(x + 18, 96, "vi phạm SLO (dưới 95% request đạt)", size=12, fill=INK2)
+    x += 18 + text_width("vi phạm SLO (dưới 95% request đạt)", 12) + 26
+    s.legend_line(x, 92, "ngưỡng SLO · C · B* · threshold", INK2, dash="6 4", sw=1.3)
 
-    lams = [0.5, 1.0, 1.5, 1.75, 2.0, 2.25, 2.5]
-    mu = 2.52
-    ttft = [0.25 + 0.3 * (l / mu) / (1 - l / mu) for l in lams]
-    itl = [30 + 45 * (l / mu) for l in lams]
-    conc = [4.5, 9.5, 15.5, 19.5, 30, 44, 85]
-    ok = [t <= 2.5 and i <= 100 for t, i in zip(ttft, itl)]
+    with open(CAPACITY, encoding="utf-8") as fh:
+        cap = json.load(fh)
+    curves = cap["curves"]
+    lams = [c["lambda_rps"] for c in curves]
+    ttft = [c["ttft_p95_s"] for c in curves]
+    tpot = [c["tpot_p95_s"] * 1000 for c in curves]
+    conc = [c["B_server"] for c in curves]
+    ok = [c["slo_attainment"] >= cap["slo"]["attainment"] for c in curves]
     panels = [
         ("TTFT p95 (s)", ttft, 8, [0, 2, 4, 6, 8], [(2.5, "SLO 2,5 s", -5)]),
-        ("ITL p95 (ms)", itl, 120, [0, 30, 60, 90, 120], [(100, "SLO 100 ms", -5)]),
-        ("Request đồng thời B (trung bình)", conc, 90, [0, 30, 60, 90], [(30, "B* = 30 (tại C)", -5),
-                                                                          (24, "target A2 = 0,8·B* = 24", 16)]),
+        ("TPOT p95 (ms)", tpot, 120, [0, 30, 60, 90, 120], [(100, "SLO 100 ms", -5)]),
+        ("Request đồng thời B (trung bình)", conc, 100, [0, 25, 50, 75, 100], [(46.3, "B* = 46,3 (tại C)", -5),
+                                                                              (37, "threshold A2 = 0,8·B* ≈ 37", 16)]),
     ]
     pw, ph, top = 320, 210, 150
     for p, (title, ys, ymax, ticks, refs) in enumerate(panels):
         x0 = 84 + p * 404
         y1 = top + ph
-        X = lambda l: x0 + l / 2.75 * pw
+        X = lambda l: x0 + l / 5.5 * pw
         Y = lambda v: y1 - min(v, ymax) / ymax * ph
         s.text(x0 - 40, top - 16, title, size=13.5, weight=700)
         for v in ticks:
             if v:
                 s.line(x0, Y(v), x0 + pw, Y(v), stroke=GRID)
             s.text(x0 - 8, Y(v) + 4, str(v), size=11, fill=MUTED, anchor="end")
-        for l in (0, 0.5, 1.0, 1.5, 2.0, 2.5):
-            s.text(X(l), y1 + 17, _dec(l), size=11, fill=MUTED, anchor="middle")
+        for l in range(6):
+            s.text(X(l), y1 + 17, str(l), size=11, fill=MUTED, anchor="middle")
         s.text(x0 + pw, y1 + 33, "λ (req/s)", size=11, fill=MUTED, anchor="end")
         s.line(x0, y1, x0 + pw, y1, stroke=AXIS)
         for v, lab, dy in refs:
             s.line(x0, Y(v), x0 + pw, Y(v), stroke=INK2, sw=1.2, dash="6 4")
             s.label(x0 + 6, Y(v) + dy, lab, anchor="start", fill=INK, size=11)
-        s.line(X(2.0), top, X(2.0), y1, stroke=INK, sw=1.1, dash="3 3")
-        s.text(X(2.0) + 5, top + 12, "C = 2,0", size=11.5, weight=650)
+        s.line(X(3.5), top, X(3.5), y1, stroke=INK, sw=1.1, dash="3 3")
+        s.text(X(3.5) - 5, top + 12, "C = 3,5", size=11.5, weight=650, anchor="end")
         pts = [(X(l), Y(v)) for l, v in zip(lams, ys)]
-        s.add('<polyline points="' + " ".join(f"{f(a)},{f(b)}" for a, b in pts) +
+        inside = [pt for pt, v in zip(pts, ys) if v <= ymax]
+        s.add('<polyline points="' + " ".join(f"{f(a)},{f(b)}" for a, b in inside) +
               f'" fill="none" stroke="{BLUE}" stroke-opacity="0.45" stroke-width="1.6"/>')
-        for (px, py), good in zip(pts, ok):
+        for a, b, v1 in zip(pts, pts[1:], ys[1:]):
+            if v1 > ymax:
+                s.line(a[0], a[1], b[0], b[1], stroke=BLUE, sw=1.6, dash="4 4")
+        for (px, py), v, good in zip(pts, ys, ok):
             s.add(f'<circle cx="{f(px)}" cy="{f(py)}" r="6" fill="{BLUE if good else CRIT}" '
                   f'stroke="{SURFACE}" stroke-width="2"/>')
-    s.text(32, 424, "TTFT chạm ngưỡng trước (≈ 2,2 req/s) trong khi ITL còn xa ngưỡng → C = mức quét lớn nhất còn đạt = 2,0 req/s. "
-                    "Định luật Little: B* ≈ C × E2E ≈ 2,0 × 15 s = 30.", size=12, fill=INK2)
+            if v > ymax:
+                s.label(px - 10, py + 4, f"↑ {v:.1f}".replace(".", ","), anchor="end", fill=CRIT, size=11)
+    s.text(32, 424, "λ = 4 req/s: TTFT p95 7,3 s, chỉ 28,5% request đạt SLO, trong khi TPOT p95 còn 64 ms → "
+                    "C = mức quét lớn nhất còn đạt = 3,5 req/s. Định luật Little: B* ≈ C × E2E ≈ 3,5 × 13,2 s ≈ 46.",
+           size=12, fill=INK2)
     s.save("15-hieu-chinh-nang-luc.svg")
 
 
