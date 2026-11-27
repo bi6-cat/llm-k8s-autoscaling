@@ -26,13 +26,24 @@
   urldate = {2026-11-18}
 }
 
+@online{k8s-pod-lifecycle,
+  title   = {{Kubernetes} documentation, {release-1.36}: Pod Lifecycle},
+  url     = {https://github.com/kubernetes/website/blob/release-1.36/content/en/docs/concepts/workloads/pods/pod-lifecycle.md},
+  urldate = {2026-11-24}
+}
+
 @online{vllm-metrics,
   title   = {{vLLM} documentation {v0.31.0}: Metrics},
   url     = {https://docs.vllm.ai/en/v0.31.0/design/metrics/},
   urldate = {2026-11-18}
 }
 
-% Chưa dẫn trong mục 3.4; giữ cho mục 3.3 (A2 dùng Prometheus scaler).
+@online{vllm-shutdown-timeout,
+  title   = {{vLLM} {v0.31.0} source code: {VllmConfig.shutdown\_timeout} in vllm/config/vllm.py},
+  url     = {https://github.com/vllm-project/vllm/blob/v0.31.0/vllm/config/vllm.py},
+  urldate = {2026-11-24}
+}
+
 @online{keda-prometheus-scaler,
   title   = {{KEDA} documentation {2.21}: {Prometheus} scaler},
   url     = {https://keda.sh/docs/2.21/scalers/prometheus/},
@@ -62,4 +73,10 @@
   organization = {{NVIDIA}},
   url     = {https://www.nvidia.com/content/dam/en-zz/Solutions/products/workstations/nvidia-rtx-a4000-datasheet.pdf},
   urldate = {2026-11-27}
+}
+
+@online{argocd-cluster-bootstrapping,
+  title   = {{Argo CD} documentation {v3.5.4}: Cluster Bootstrapping},
+  url     = {https://github.com/argoproj/argo-cd/blob/v3.5.4/docs/operator-manual/cluster-bootstrapping.md},
+  urldate = {2026-11-24}
 }
