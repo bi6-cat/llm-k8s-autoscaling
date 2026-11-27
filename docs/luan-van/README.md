@@ -16,6 +16,7 @@ Thư mục này chứa **nội dung** luận văn, viết bằng Markdown, mỗi
 | `CC-SS-<ten>.md` | Chương `CC`, mục `SS`. Hai chữ số để thứ tự khi ghép đúng với thứ tự mục, ví dụ `03-05-<ten>.md` đứng trước `04-01-<ten>.md` |
 | `CC-00-<ten>.md` | Tiêu đề chương (`# Chương CC. …`) và đoạn mở đầu chương |
 | `00-00-mo-dau.md` | Phần Mở đầu, không đánh số: tiêu đề `# Mở đầu {.unnumbered}`. Tên bắt đầu bằng `00` để đứng trước chương 1 và khớp mẫu `[0-9]*.md` của lệnh ghép ([quy tắc viết §1](quy-tac-viet.md#1-khuôn-trình-bày)) |
+| `phan-dau/NN-<ten>.md` | Các trang đứng trước Mở đầu, theo thứ tự ở [quy tắc viết §1](quy-tac-viet.md#1-khuôn-trình-bày): `01` bìa, Lời cảm ơn, trang nhận xét, Mục lục (trường TOC của Word); `02` danh mục thuật ngữ, chữ viết tắt và mã định danh; `03` danh mục hình vẽ và bảng biểu. Hai danh mục hình và bảng không viết tay: khi ghép, chúng được sinh từ chú thích "Hình x.y." và "Bảng x.y." và thay cho dòng đánh dấu `<!-- @danh-muc-hinh -->`, `<!-- @danh-muc-bang -->`. Đặt trong thư mục con để không lẫn với khoá `CC-SS` và đứng trước `00-00-mo-dau.md` khi ghép |
 | `tai-lieu.bib` | Danh mục tài liệu tham khảo dùng chung (BibTeX) |
 | [`quy-tac-viet.md`](quy-tac-viet.md) | Quy tắc viết chung cho hai người: chương nào nói gì, văn phong, thuật ngữ thống nhất, trình bày kết quả, review, checklist trước PR. Không ghép vào `.docx` |
 | [`nguon-tu-lieu.md`](nguon-tu-lieu.md) | Mục nào lấy tư liệu ở đâu, số liệu đã chốt, những gì chưa có số, cách lấy dữ liệu V2. Không ghép vào `.docx` |
@@ -53,7 +54,7 @@ Sau mỗi đoạn văn hoặc bảng có số liệu hay khẳng định kỹ th
 Pandoc 3.13 (ghim ở [docs/phien-ban.md](../phien-ban.md)). Chạy từ gốc repo, ghi file ra ngoài repo:
 
 ```bash
-pandoc docs/luan-van/[0-9]*.md \
+pandoc docs/luan-van/phan-dau/[0-9]*.md docs/luan-van/[0-9]*.md \
   --resource-path=docs/luan-van \
   --citeproc --bibliography=docs/luan-van/tai-lieu.bib \
   -o ../luan-van.docx
@@ -61,4 +62,5 @@ pandoc docs/luan-van/[0-9]*.md \
 
 - `--resource-path`: đường dẫn hình trong file viết tương đối với thư mục này (`../images/png/…`), nên pandoc cần biết gốc để tìm hình.
 - `--citeproc`: thay `[@key]` bằng trích dẫn và tạo danh mục tài liệu ở cuối.
+- Lệnh trên để nguyên hai dòng đánh dấu của danh mục hình và bảng (comment, không hiện trong `.docx`). Bước định dạng sinh hai danh mục từ chú thích rồi mới ghép; Mục lục là trường TOC, Word điền khi cập nhật trường.
 - Bước định dạng sẽ thêm `--reference-doc=<khuôn T>.docx` ([quy tắc viết §1](quy-tac-viet.md#1-khuôn-trình-bày)) (lề, phông, kiểu tiêu đề) và `--csl=<kiểu trích dẫn>.csl`.
