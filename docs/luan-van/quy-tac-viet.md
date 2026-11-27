@@ -24,7 +24,7 @@ Nhóm chưa nhận được văn bản quy định trình bày của trường. 
 
 Thân bài gồm chương 1–6; độ dài thân bài không tính Mở đầu và phụ lục. Không có ngân sách trang cho từng mục: mục dài hay ngắn theo phần nội dung 20/80 của nó (§3.1). Độ dài đo bằng Word theo khuôn T, **gồm cả bảng và hình**; một trang khuôn T chứa khoảng 500 chữ văn xuôi (mẫu tiếng Việt: trung vị 521 chữ trên các trang chỉ có chữ). Bảng tốn chỗ hơn văn xuôi: 17 bảng của các bản nháp chương 3 chiếm trung bình 0,5–0,75 trang khuôn B mỗi bảng khi đo bằng Typst, và Word dàn bảng to hơn Typst (mục 3.1, nhiều bảng nhất, dài hơn 62%), nên ở khuôn T tính khoảng 0,5–0,8 trang mỗi bảng. Trước ngày 24/11/2026, độ dài đo theo khuôn B (14 pt, giãn 1,5 dòng, lề 3,5/3/3,5/2 cm) bằng Typst, định hướng 70–90 trang, trần 100. Đo cùng bản ghép ngày 24/11 bằng Word thì khuôn B dài gấp 1,49 lần khuôn T, còn Typst cho số trang khuôn B ít hơn Word khoảng 20%. Vì vậy một trang khuôn B cũ bằng khoảng 0,85 trang khuôn T, và mốc cũ đổi thành 60–75 trang, trần 85, với cùng nội dung. Hai đồ án mẫu dài 74 và 113 trang thân bài, nhưng chương phân tích và thiết kế của chúng chiếm 42 và 65 trang, phần lớn là sơ đồ use case, đặc tả use case và bảng cơ sở dữ liệu. Đề tài của nhóm không có phần này, nên không cần dài bằng mẫu.
 
-Thứ tự các phần của quyển (tên file dự kiến ở khung luận văn, chưa dựng), theo hai mẫu trừ các chỗ ghi rõ:
+Thứ tự các phần của quyển, theo hai mẫu trừ các chỗ ghi rõ. Các trang 1–4 nằm ở thư mục `phan-dau/`, Mở đầu ở `00-00-mo-dau.md` ([README](README.md#tổ-chức-file)):
 1. Bìa chính và bìa phụ, theo mẫu của khoa.
 2. Lời cảm ơn.
 3. Hai trang "Nhận xét, đánh giá, cho điểm" để trống theo mẫu: của người hướng dẫn và của giảng viên phản biện.

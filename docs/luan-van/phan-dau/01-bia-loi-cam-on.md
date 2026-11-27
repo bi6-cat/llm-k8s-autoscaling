@@ -9,9 +9,11 @@
 
 > **[Bước định dạng]** Hai trang "Nhận xét, đánh giá, cho điểm" để trống theo mẫu: của người hướng dẫn và của giảng viên phản biện.
 
-# Mục lục {.unnumbered}
+<!-- Tiêu đề "Mục lục" dùng kiểu TOC Heading của Word, không phải đề mục, để mục lục không tự liệt kê chính nó. Bên dưới là trường TOC của Word, sinh từ các đề mục cấp 1–3; Word điền khi bấm chuột phải vào trường rồi chọn Update Field. -->
 
-<!-- Trường TOC của Word, sinh từ các đề mục cấp 1–3. Word điền khi bấm chuột phải vào trường rồi chọn Update Field. -->
+::: {custom-style="TOC Heading"}
+Mục lục
+:::
 
 ```{=openxml}
 <w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> TOC \o "1-3" \h \z \u </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>Mục lục sinh tự động trong Word (Update Field).</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>

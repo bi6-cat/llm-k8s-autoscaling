@@ -133,3 +133,19 @@
 - **Results:** `/code-review high` trên diff: 5 điểm nhỏ (§3.5 và §9 nói khác nhau về chỗ ghi việc dùng AI; quy tắc "kết quả cụ thể có số" của Tóm tắt chưa chuyển sang mục 1.3; §1 chưa ghi chỗ đặt đoạn khai báo nếu được yêu cầu; "khuôn T" ở §5.1 chưa có link; thiếu dòng Thesis), đã sửa cả 5.
 - **Links:** `docs/luan-van/quy-tac-viet.md` (§1, §3.5, §9); `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§5.1, §11.1).
 - **Thesis:** phần đầu quyển (không có Tóm tắt, không có Lời cam đoan); Mở đầu; mục 1.3 Đóng góp.
+
+## 2026-11-27 – Phần đầu quyển: danh mục thuật ngữ, danh mục hình và bảng
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  - Tạo thư mục `docs/luan-van/phan-dau/` cho các trang trước Mở đầu: `01` khung bìa, Lời cảm ơn (khung, Trình viết), hai trang nhận xét (bước định dạng), Mục lục (trường TOC của Word); `02` danh mục thuật ngữ, chữ viết tắt, mã định danh và ký hiệu; `03` danh mục hình vẽ và bảng biểu (dòng đánh dấu, sinh tự động).
+  - Danh mục thuật ngữ chỉ giữ mục có dùng trong thân bài: đếm chữ viết tắt và thuật ngữ trên bản ghép ngày 27/11 (main và các nhánh luận văn còn PR mở, bỏ comment, khối code và `code`), nghĩa đối chiếu với định nghĩa trong thân bài, Kiến thức nền §7 và quy tắc viết §4. Gồm 51 chữ viết tắt, 57 thuật ngữ, 12 nhóm mã, 6 ký hiệu.
+  - Công cụ ghép cục bộ: thêm script sinh danh mục hình và bảng từ chú thích, báo số trùng, số tạm, nhảy số, sai chương, số được nhắc mà chưa có chú thích và hình/bảng không được nhắc; công cụ ghép nhận `phan-dau/` và chèn danh mục.
+  - Sửa README (bảng "Tổ chức file", lệnh ghép) và quy tắc viết §1 (chỗ đặt các trang đầu).
+- **Decision:** các trang đầu đặt trong thư mục con, vì tiền tố `00-0x` sẽ đứng sau `00-00-mo-dau.md`. Danh mục bảng không dùng trường của Word được, vì chú thích bảng là đoạn in đậm chứ không phải chú thích của pandoc; danh mục hình và bảng cùng sinh bằng script để một cơ chế cho cả hai. Tiêu đề Mục lục dùng kiểu TOC Heading của Word (outline level 9) để mục lục không tự liệt kê chính nó.
+- **Results:**
+  - Bản ghép có 5 hình và 23 bảng có chú thích. Script báo 5 điểm, đều là số tạm ở chương 5: Hình 5.3b → 5.1, Bảng 5.2a → 5.1, 5.3a → 5.2, 5.4a → 5.3, 5.6a → 5.4 khi đánh lại theo thứ tự xuất hiện. Không có số trùng, nhảy số hay số được nhắc mà chưa có chú thích.
+  - `pandoc` dựng `.docx` từ `phan-dau/` không lỗi; lychee 0 lỗi; `kiem_van.py` 0 điểm ở danh mục thuật ngữ.
+  - `/code-review high`: 9 điểm, sửa 8 (thêm OOM, RPS, vCPU, μ, ρ, các thuật ngữ scrape, histogram, recording rule, sync…; sửa nghĩa stabilization window theo mục 2.4; Mục lục không tự liệt kê; thứ tự chữ cái; README và quy tắc viết §1 nói đúng việc sinh danh mục). Điểm còn lại (dùng trường TOF của Word thay script) chỉ làm được cho hình, ghi lại để xem ở bước dựng bản nộp.
+- **Links:** `docs/luan-van/phan-dau/`, `docs/luan-van/README.md`, `docs/luan-van/quy-tac-viet.md` §1.
+- **Thesis:** phần đầu quyển (Mục lục, danh mục thuật ngữ, danh mục hình và bảng).
