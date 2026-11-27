@@ -16,9 +16,11 @@ Thư mục này chứa **nội dung** luận văn, viết bằng Markdown, mỗi
 | `CC-SS-<ten>.md` | Chương `CC`, mục `SS`. Hai chữ số để thứ tự khi ghép đúng với thứ tự mục, ví dụ `03-05-<ten>.md` đứng trước `04-01-<ten>.md` |
 | `CC-00-<ten>.md` | Tiêu đề chương (`# Chương CC. …`) và đoạn mở đầu chương |
 | `00-00-mo-dau.md` | Phần Mở đầu, không đánh số: tiêu đề `# Mở đầu {.unnumbered}`. Tên bắt đầu bằng `00` để đứng trước chương 1 và khớp mẫu `[0-9]*.md` của lệnh ghép ([quy tắc viết §1](quy-tac-viet.md#1-khuôn-trình-bày)) |
+| `phan-dau/NN-<ten>.md` | Các trang đứng trước Mở đầu, theo thứ tự ở [quy tắc viết §1](quy-tac-viet.md#1-khuôn-trình-bày): `01` bìa, Lời cảm ơn, trang nhận xét, Mục lục (trường TOC của Word); `02` danh mục thuật ngữ, chữ viết tắt và mã định danh; `03` danh mục hình vẽ và bảng biểu. Hai danh mục hình và bảng không viết tay: ở bước định dạng, người ghép sinh chúng từ chú thích "Hình x.y." và "Bảng x.y." rồi thay vào dòng đánh dấu `<!-- @danh-muc-hinh -->`, `<!-- @danh-muc-bang -->`. Đặt trong thư mục con để không lẫn với khoá `CC-SS` và đứng trước `00-00-mo-dau.md` khi ghép |
 | `tai-lieu.bib` | Danh mục tài liệu tham khảo dùng chung (BibTeX) |
 | [`quy-tac-viet.md`](quy-tac-viet.md) | Quy tắc viết chung cho hai người: chương nào nói gì, văn phong, thuật ngữ thống nhất, trình bày kết quả, review, checklist trước PR. Không ghép vào `.docx` |
 | [`nguon-tu-lieu.md`](nguon-tu-lieu.md) | Mục nào lấy tư liệu ở đâu, số liệu đã chốt, những gì chưa có số, cách lấy dữ liệu V2. Không ghép vào `.docx` |
+| `phu-luc/<chữ>-<ten>.md` | Phụ lục A–F, mỗi phụ lục một file, tiêu đề `# Phụ lục A. … {.unnumbered}`; mục con, hình, bảng và đoạn mã đánh số theo chữ (`A.1`, `Bảng A.1`, `Đoạn mã A.1`). Ghép sau chương 6 và danh mục tài liệu tham khảo. Trích manifest hay quy tắc thì ghi đường dẫn file và commit sửa file đó gần nhất, để người đọc tìm lại được bản đầy đủ. Vì vậy phụ lục được ghi đường dẫn trong repository ngay trong văn bản, kể cả `docs/` (ngoại lệ của [quy tắc viết §3.5](quy-tac-viet.md#35-không-nhắc-chuyện-nội-bộ-trong-thân-bài)) |
 
 - **Mỗi mục cấp 2 là một file**, không tách phần `a`, `b` theo người viết. Góp ý qua review PR hoặc comment trên `.docx` ghép thử ([quy tắc viết §8](quy-tac-viet.md#8-phối-hợp-giữa-hai-người)).
 - Dòng đầu mỗi file là comment `<!-- Mục đích: … Người viết: … -->` (CONTRIBUTING §2). Comment HTML không xuất hiện trong `.docx`.
@@ -53,12 +55,15 @@ Sau mỗi đoạn văn hoặc bảng có số liệu hay khẳng định kỹ th
 Pandoc 3.13 (ghim ở [docs/phien-ban.md](../phien-ban.md)). Chạy từ gốc repo, ghi file ra ngoài repo:
 
 ```bash
-pandoc docs/luan-van/[0-9]*.md \
-  --resource-path=docs/luan-van \
+# Pandoc tách các thư mục của --resource-path bằng ":" trên Linux/macOS, bằng ";" trên Windows (kể cả khi gọi từ Git Bash)
+SEP=":"; case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) SEP=";" ;; esac
+pandoc docs/luan-van/phan-dau/[0-9]*.md docs/luan-van/[0-9]*.md docs/luan-van/phu-luc/*.md \
+  --resource-path="docs/luan-van${SEP}docs/luan-van/phu-luc" \
   --citeproc --bibliography=docs/luan-van/tai-lieu.bib \
   -o ../luan-van.docx
 ```
 
-- `--resource-path`: đường dẫn hình trong file viết tương đối với thư mục này (`../images/png/…`), nên pandoc cần biết gốc để tìm hình.
-- `--citeproc`: thay `[@key]` bằng trích dẫn và tạo danh mục tài liệu ở cuối.
+- `--resource-path`: đường dẫn hình trong file viết tương đối với thư mục này (`../images/png/…`), nên pandoc cần biết gốc để tìm hình. Hình trong `phu-luc/` viết tương đối với thư mục `phu-luc/` nên thêm thư mục đó; trên Windows, các thư mục cách nhau bằng `;` thay cho `:`.
+- `--citeproc`: thay `[@key]` bằng trích dẫn và tạo danh mục tài liệu. Danh mục nằm ở khối `::: {#refs}` nếu có, không thì ở cuối file. Hiện chưa file nào có khối này, nên danh mục đứng sau phụ lục; bước định dạng thêm trang "Tài liệu tham khảo" có khối `::: {#refs}` vào giữa chương 6 và phụ lục.
+- Lệnh trên **chưa** sinh danh mục hình và bảng: hai dòng đánh dấu là comment, nên trong `.docx` hai trang này chỉ có tiêu đề. Bước định dạng (người ghép, theo dòng "Người viết" ở trên) sinh hai danh mục từ chú thích trước khi chạy pandoc, và thêm số trang. Mục lục là trường TOC của Word, điền khi cập nhật trường (Update Field).
 - Bước định dạng sẽ thêm `--reference-doc=<khuôn T>.docx` ([quy tắc viết §1](quy-tac-viet.md#1-khuôn-trình-bày)) (lề, phông, kiểu tiêu đề) và `--csl=<kiểu trích dẫn>.csl`.
