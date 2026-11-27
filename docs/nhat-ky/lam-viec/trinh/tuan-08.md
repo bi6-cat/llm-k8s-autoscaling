@@ -353,6 +353,17 @@
 - **Links:** `docs/luan-van/quy-tac-viet.md` (§1, §3.5, §9); `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§5.1, §11.1).
 - **Thesis:** phần đầu quyển (không có Tóm tắt, không có Lời cam đoan); Mở đầu; mục 1.3 Đóng góp.
 
+## 2026-11-27 – Vẽ lại Hình 8 (kịch bản tải) và Hình 17 (quy trình phiên V2)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** viết lại `fig_scenarios()` (`docs/diagrams/build_diagrams.py`) và `fig_eval_pipeline()` (`docs/diagrams/chuyen_sau.py`), chỉ chạy hai hàm này; xuất SVG và PNG 2x bằng Chrome headless như `export_png.sh`. Sửa chú thích Hình 8 ở `05-moi-truong-danh-gia.md` và `mo-ta-chi-tiet-do-an.md`, chú thích Hình 17, và câu "giảm tải trở lại ở phút 15" thành phút 14 (Môi trường §10).
+  - Hình 8 theo Thông số §7 bản 08/11: KB1 12 phút, KB2 24 phút (lên 0,75 × N × C trong [4; 4,5], về 0,5C trong [14; 14,5]), KB3 17 phút (tăng tuyến tính trong 5 phút đầu); λ(t) tuyến tính từng đoạn như `loadgen/scenarios.py`; thêm vùng 2 phút ổn định không tính và ranh giới pha (`steady`, `pre`/`spike`/`drop`, `ramp`/`sustain`); ô kiểm chứng ghi N2a, N2b thay cho N2.
+  - Hình 17 theo cách V2 đã chạy (nhật ký Quang tuần 07, van-hanh.md 18–19/11): `make probe`, `make bootstrap` + `make cloud-platform` không Argo CD (ADR-006 §3.1), ĐG1 5 mức λ, 17 lượt ĐG2 bằng runner trong tmux trên VM, VH2–VH4 rồi ĐG3 (L2 × 3, L0 × 2), kéo `runs/` về PC và khớp sha256 rồi tắt máy, phân tích trên PC. Bỏ Argo CD trên VM, burn-in `vllm bench` từng GPU và sao lưu R2.
+- **Decision:** Hình 17 vẽ quy trình thực tế của V2 thay cho kế hoạch §6.2 (D136); chú thích nêu chỗ khác §3.6, §3.8, §6.2. Hình không ghi số đo (C, thời gian dựng), để chèn được vào chương 3 luận văn mà không lộ kết quả chương 5. Hình 8 vẽ với N = 4, đỉnh 3C.
+- **Results:** `/code-review high` báo 10 điểm, sửa 9: subtitle và ô ĐG1 (ĐG1 chạy runner từ PC qua tunnel, chỉ ĐG2 chạy trong tmux trên VM); bỏ thứ tự "L2 rồi L0" (3 lượt hỏng do lỗi `dg3.sh` được đo lại sau L0-2); chú thích Hình 17 thêm §3.4, §12, GPU 4060 Ti; bỏ "(VH5)" vì thời gian dựng đo bằng tay, không qua `make vh5`; docstring `kb2` trong `loadgen/scenarios.py` ghi "phút 11" sửa thành 14; nhãn KB1 che vùng 2 phút đầu; vạch pha vẽ trùng; nhánh chết trong `scenario()`; nhãn chú giải. Không làm: dựng đường cong từ `loadgen` (script hình chỉ dùng thư viện chuẩn); thay vào đó đối chiếu một lần từng giây của KB1–KB3 với `loadgen.scenarios` (N = 4): 0 điểm lệch, pha trùng. `pytest loadgen` 55 passed, ruff loadgen đạt; `ruff check docs/diagrams` 28 lỗi như trên main (thư mục này không nằm trong phạm vi ruff của CI; 2 lỗi mới do bản đầu đã sửa); lychee offline 40 lỗi như trên main (file chưa có trên nhánh); yamllint đạt.
+- **Deviations:** Môi trường §3.6 (gửi request qua Traefik, runner là dịch vụ `systemd`) và §6.2 vẫn ghi kế hoạch cũ; chưa sửa trong PR này.
+- **Links:** `docs/diagrams/build_diagrams.py`, `docs/diagrams/chuyen_sau.py`, `docs/images/08-kich-ban-tai.svg`, `docs/images/17-quy-trinh-danh-gia.svg`.
+- **Thesis:** Hình 8 và Hình 17 cho mục 3.6 (sau khi PR chương 3 được merge).
 ## 2026-11-27 – Vẽ lại Hình 2 (kiến trúc tổng thể) theo thiết kế hiện hành
 
 - **Task:** TR8 · **Environment:** none

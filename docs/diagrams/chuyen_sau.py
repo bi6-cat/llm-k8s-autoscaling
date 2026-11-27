@@ -519,58 +519,68 @@ def fig_rolling_update():
 
 
 # ======================================================================
-# Hình 17 — Quy trình một đợt đánh giá trên GPU thuê
+# Hình 17 — Quy trình phiên đánh giá chính V2 (như đã chạy 18–19/11)
 # ======================================================================
 def fig_eval_pipeline():
-    W, H = 1240, 620
-    s = Svg(W, H, "Quy trình phiên đánh giá chính: thuê và dựng từ máy trắng, triển khai, đo năng lực, vòng lặp 17 lượt, "
-                  "cold start và kịch bản vận hành, sao lưu, huỷ máy và phân tích")
-    s.header("Quy trình tự động của phiên đánh giá chính trên GPU thuê",
-             "Một lần thuê liền ~20–22 giờ; mọi bước chạy bằng script để dựng lại được và rút ngắn thời gian thuê GPU")
+    W, H = 1240, 650
+    s = Svg(W, H, "Quy trình phiên đánh giá chính V2 trên VM thuê: thuê và kiểm máy, dựng từ máy trắng không có "
+                  "Argo CD, đo năng lực, vòng lặp 17 lượt, kịch bản vận hành và cold start, kéo dữ liệu về rồi "
+                  "tắt máy, phân tích")
+    s.header("Quy trình phiên đánh giá chính trên GPU thuê (V2)",
+             "Một lần thuê VM 4 GPU; mọi bước chạy bằng lệnh make hoặc script; máy tạo tải là pod trong cluster "
+             "trên chính VM")
     xs = [32, 448, 864]
-    row1 = [(1, "Thuê máy & dựng từ đầu", ["vastai: thuê VM 4 GPU, burn-in rút gọn", "Ansible + Argo CD; đo thời gian (VH5)"]),
-            (2, "Triển khai nền tảng", ["Argo CD sync: giám sát, cảnh báo,", "KEDA, vLLM; tắt auto-sync autoscaling"]),
-            (3, "Đo năng lực", ["quét tốc độ → tìm C của 1 replica", "chốt SLO, target A1, A2 (ADR-003)"])]
+    row1 = [(1, "Thuê và kiểm máy", ["thuê VM 4 GPU trên Vast.ai;",
+                                     "make probe: phần cứng, ổ, mạng → giữ máy"]),
+            (2, "Dựng từ máy trắng", ["make bootstrap: k3s, GPU, tải sẵn model, image;",
+                                            "make cloud-platform: Helm, không Argo CD"]),
+            (3, "ĐG1: đo năng lực", ["5 mức λ, 1 replica, 300 s mỗi mức; runner trên PC;",
+                                    "capacity.py → C, B*, threshold A2"])]
     for i, (n, t, ls) in enumerate(row1):
         s.step_box(xs[i], 86, 344, 100, n, t, ls, INK2)
     s.arrow([(376, 136), (448, 136)], INK2, sw=1.8)
     s.arrow([(792, 136), (864, 136)], INK2, sw=1.8)
     s.arrow([(1036, 186), (1036, 234)], INK2, sw=1.8)
 
-    s.rect(32, 234, 1176, 216, fill=GRAY_T, stroke=AXIS, rx=14)
+    s.rect(32, 234, 1176, 236, fill=GRAY_T, stroke=AXIS, rx=14)
     s.add(f'<circle cx="56" cy="259" r="12" fill="{INK2}"/>')
     s.text(56, 263.5, "4", size=12.5, weight=700, fill=WHITE, anchor="middle")
-    s.rich(76, 264, [("Vòng lặp đánh giá autoscaling", 650, INK),
-                     ("  4 cấu hình × 3 kịch bản, 1–3 lượt mỗi ô = 17 lượt · runner (Python), chạy qua đêm", 400, INK2)],
+    s.rich(76, 264, [("ĐG2: vòng lặp 17 lượt", 650, INK),
+                     (("  11 ô (S1, S4, A1, A2 × KB1–KB3, bỏ S1 × KB1), 1–3 lượt mỗi ô, thứ tự xáo trộn "
+                       "· runner (Python) trong tmux trên VM"), 400, INK2)],
            size=13.5)
-    steps = [("a", "Áp cấu hình", ["S1, S4 hoặc", "ScaledObject A1/A2"]),
-             ("b", "Reset", ["về 1 replica,", "chờ hệ thống ổn định"]),
-             ("c", "Warm-up", ["2 phút tải nhẹ", "(không tính kết quả)"]),
-             ("d", "Chạy kịch bản", ["λ(t) theo KB1–KB3,", "log từng request"]),
-             ("e", "Thu thập", ["CSV, Prometheus,", "sự kiện pod, cảnh báo"]),
-             ("f", "Cooldown", ["chờ scale-down,", "kiểm tra dữ liệu"])]
+    steps = [("a", "Áp cấu hình", ["S1, S4: đặt số replica;", "A1, A2: ScaledObject", "tạm dừng ở 1 replica"]),
+             ("b", "Reset", ["1 pod Ready (S4: 4 pod),", "hàng đợi trống,", "chờ thêm 60 s"]),
+             ("c", "Warm-up", ["0,3C trong 2 phút", "(không tính kết quả)"]),
+             ("d", "Chạy kịch bản", ["bỏ tạm dừng;", "λ(t) theo KB1–KB3,", "log từng request"]),
+             ("e", "Thu thập", ["CSV, Prometheus,", "log vLLM, sự kiện pod,", "cảnh báo (ALERTS)"]),
+             ("f", "Cooldown", ["chờ còn 1 replica", "(tối đa 10 phút)"])]
     for i, (k, t, ls) in enumerate(steps):
         bx = 52 + i * 194
-        s.rect(bx, 286, 172, 96, fill=WHITE, stroke=AXIS, rx=10)
+        s.rect(bx, 286, 172, 110, fill=WHITE, stroke=AXIS, rx=10)
         s.text(bx + 14, 310, f"{k}. {t}", size=13.5, weight=650)
         for j, ln in enumerate(ls):
             s.text(bx + 14, 334 + j * 18, ln, size=11.5, fill=INK2)
         if i < 5:
-            s.arrow([(bx + 172, 334), (bx + 194, 334)], INK2, sw=1.6)
-    s.arrow([(1108, 382), (1108, 424), (138, 424), (138, 382)], INK2, sw=1.6, dash="5 4")
-    s.label(623, 428, "lượt tiếp theo", bg=GRAY_T, fill=INK)
-    s.arrow([(1036, 450), (1036, 494)], INK2, sw=1.8)
+            s.arrow([(bx + 172, 341), (bx + 194, 341)], INK2, sw=1.6)
+    s.arrow([(1108, 396), (1108, 428), (138, 428), (138, 396)], INK2, sw=1.6, dash="5 4")
+    s.label(623, 432, "lượt tiếp theo", bg=GRAY_T, fill=INK)
+    s.text(52, 458, "VH1 (pha drop của KB2) và VH6 (cảnh báo so với log client) được ghi trong chính các lượt; "
+                    "PC kéo runs/ của VM về mỗi 30 phút", size=11.5, fill=INK2)
+    s.arrow([(1036, 470), (1036, 514)], INK2, sw=1.8)
 
-    row3 = [(864, 5, "Cold start & vận hành", ["L0/L2; rolling update, xoá pod,", "chặn Prometheus, kiểm tra cảnh báo"]),
-            (448, 6, "Sao lưu, huỷ máy, phân tích", ["đẩy dữ liệu lên R2; huỷ instance;", "pandas: bảng và biểu đồ"])]
+    row3 = [(864, 5, "Vận hành và cold start", ["VH2–VH4 dưới tải 0,5C (vh.py);",
+                                                 "ĐG3: L2 × 3, L0 × 2 (dg3.sh)"]),
+            (448, 6, "Kéo dữ liệu, tắt máy", ["rsync runs/ về PC, khớp sha256 mọi file;",
+                                              "poweroff VM, xoá instance"])]
     for bx, n, t, ls in row3:
-        s.step_box(bx, 494, 344, 100, n, t, ls, INK2)
-    s.arrow([(864, 544), (792, 544)], INK2, sw=1.8)
-    s.rect(32, 494, 344, 100, fill=SURFACE, stroke=INK2, dash="5 4", rx=10)
-    s.text(48, 524, "Kết quả", size=13.5, weight=650)
-    s.text(48, 550, "bảng nghiệm thu N1–N8,", size=11.5, fill=INK2)
-    s.text(48, 567.5, "khuyến nghị cấu hình vận hành", size=11.5, fill=INK2)
-    s.arrow([(448, 544), (376, 544)], INK2, sw=1.8)
+        s.step_box(bx, 514, 344, 100, n, t, ls, INK2)
+    s.arrow([(864, 564), (792, 564)], INK2, sw=1.8)
+    s.rect(32, 514, 344, 100, fill=SURFACE, stroke=INK2, dash="5 4", rx=10)
+    s.text(48, 544, "Phân tích trên PC", size=13.5, weight=650)
+    s.text(48, 570, "build_tables: bảng và biểu đồ chương 5;", size=11.5, fill=INK2)
+    s.text(48, 587.5, "bảng nghiệm thu N1–N8", size=11.5, fill=INK2)
+    s.arrow([(448, 564), (376, 564)], INK2, sw=1.8)
     s.save("17-quy-trinh-danh-gia.svg")
 
 

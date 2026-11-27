@@ -7,6 +7,7 @@ Kết quả: docs/images/*.svg  (xuất PNG: docs/diagrams/export_png.sh)
 import math
 import os
 from html import escape
+from itertools import pairwise
 
 OUT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "images"))
 
@@ -615,52 +616,70 @@ def fig_slo_alert():
 
 
 # ======================================================================
-# Hình 8 — Ba kịch bản tải
+# Hình 8 — Ba kịch bản tải (Thông số §7, bản 08/11: 12 / 24 / 17 phút)
 # ======================================================================
 def scenario(k, t):
+    """λ(t)/C của KB1–KB3 với N = 4, tuyến tính từng đoạn như loadgen/scenarios.py; None khi hết kịch bản."""
     if k == 1:
-        return 0.5 if t <= 20 else None
-    if k == 2:
-        return (0.5 + 2.5 * smooth((t - 5) / 0.5) - 2.5 * smooth((t - 15) / 0.5)) if t <= 25 else None
-    return (0.5 + 2.5 * smooth(t / 5)) if t <= 25 else None
+        pts = [(0, 0.5), (12, 0.5)]
+    elif k == 2:
+        pts = [(0, 0.5), (4, 0.5), (4.5, 3.0), (14, 3.0), (14.5, 0.5), (24, 0.5)]
+    else:
+        pts = [(0, 0.5), (5, 3.0), (17, 3.0)]
+    if t > pts[-1][0]:
+        return None
+    for (ta, va), (tb, vb) in pairwise(pts):
+        if ta <= t <= tb:
+            return va + (vb - va) * (t - ta) / (tb - ta)
+    raise ValueError(f"t = {t} nằm ngoài lịch của KB{k}")
 
 
 def fig_scenarios():
-    W, H = 1200, 528
-    s = Svg(W, H, "Ba kịch bản tải theo đề cương: thấp ổn định, tăng đột ngột rồi giảm, cao kéo dài; "
-                  "trục tung tính theo C là năng lực 1 replica")
-    s.header("Ba kịch bản tải theo đề cương",
-             "Tốc độ gửi request λ(t), đơn vị C = năng lực tối đa của 1 replica mà vẫn đạt SLO (đo ở bước đo năng lực)")
+    W, H = 1200, 548
+    s = Svg(W, H, "Ba kịch bản tải: KB1 thấp ổn định 12 phút, KB2 tăng đột ngột rồi giảm 24 phút, KB3 tăng dần rồi "
+                  "giữ cao 17 phút; trục tung tính theo C là năng lực 1 replica, vẽ với N = 4")
+    s.header("Ba kịch bản tải",
+             "Tốc độ gửi request λ(t), đơn vị C = năng lực của 1 replica mà vẫn đạt SLO (đo ở ĐG1); "
+             "vẽ với N = 4 GPU, đỉnh 0,75 × N × C = 3C")
+    # (k, tiêu đề, thời lượng, ghi chú [(t, độ cao nhãn theo C, chữ)], pha khi phân tích [(tên, bắt đầu, kết thúc)])
     meta = [
-        (1, "KB1 · Thấp, ổn định", "20 phút", [(10, 0.5, "như ban đêm: 1 replica là đủ")]),
-        (2, "KB2 · Tăng đột ngột rồi giảm", "25 phút",
-         [(10, 3.0, "0,5C → 3C trong 30 s"), (22.5, 0.5, "về 0,5C: scale-down")]),
-        (3, "KB3 · Cao, kéo dài", "25 phút", [(15, 3.0, "giữ 3C = 0,75 × N × C")]),
+        (1, "KB1 · Thấp, ổn định", "12 phút", [(9.5, 1.35, "0,5C suốt lượt: 1 replica là đủ")],
+         [("steady", 2, 12)]),
+        (2, "KB2 · Tăng đột ngột rồi giảm", "24 phút",
+         [(9.25, 3.0, "0,5C → 3C trong 30 s ở phút 4"), (19.5, 1.35, "về 0,5C ở phút 14")],
+         [("pre", 2, 4), ("spike", 4, 14), ("drop", 14, 24)]),
+        (3, "KB3 · Cao, kéo dài", "17 phút", [(11, 3.0, "giữ 3C từ phút 5 tới 17")],
+         [("ramp", 0, 5), ("sustain", 5, 17)]),
     ]
     pw, ph = 300, 168
-    ymax = 4.6
-    s.add(f'<line x1="32" y1="90" x2="58" y2="90" stroke="{MUTED}" stroke-width="1.1" stroke-dasharray="4 4"/>')
-    s.text(66, 94, "đường tham chiếu: 1C = năng lực 1 replica · 4C = năng lực tối đa (N = 4 replica)",
-           size=12, fill=INK2)
-    for col, (k, title, dur, notes) in enumerate(meta):
+    tmax, ymax = 25, 4.6
+    lx = s.legend_line(32, 92, "1C = năng lực 1 replica · 4C = năng lực tối đa (N = 4 replica)", MUTED, dash="4 4",
+                       sw=1.1)
+    lx = s.legend_swatch(lx, 92, "2 phút đầu, không tính", GRAY_T)
+    s.line(lx, 84, lx, 100, stroke=INK2, dash="2 3")
+    s.text(lx + 8, 96, "ranh giới pha khi phân tích", size=12, fill=INK2)
+    for col, (k, title, dur, notes, phases) in enumerate(meta):
         x0 = 76 + col * 384
-        top = 138
+        top = 148
         y1 = top + ph
-        X = lambda t, x0=x0: x0 + t / 30 * pw
+        X = lambda t, x0=x0: x0 + t / tmax * pw
         Y = lambda v, y1=y1: y1 - v / ymax * ph
-        s.text(x0 - 40, top - 14, title, size=13.5, weight=650)
-        s.text(x0 + pw, top - 14, dur, size=11.5, fill=INK2, anchor="end")
+        s.text(x0 - 40, top - 16, title, size=13.5, weight=650)
+        s.text(x0 + pw, top - 16, dur, size=11.5, fill=INK2, anchor="end")
+        # Hai phút đầu của KB1, KB2 là thời gian ổn định, không tính (Thông số §7).
+        if phases[0][1] > 0:
+            s.rect(X(0), top, X(phases[0][1]) - X(0), ph, fill=GRAY_T, stroke=None, rx=0)
         for v in range(1, 5):
             s.line(x0, Y(v), x0 + pw, Y(v), stroke=GRID)
         for v in range(0, 5):
             s.text(x0 - 8, Y(v) + 4, "0" if v == 0 else f"{v}C", size=11, fill=MUTED, anchor="end")
-        for t in (0, 10, 20, 30):
+        for t in range(0, tmax + 1, 5):
             s.text(X(t), y1 + 17, str(t), size=11, fill=MUTED, anchor="middle")
         s.text(x0 + pw, y1 + 33, "phút", size=11, fill=MUTED, anchor="end")
         s.line(x0, Y(1), x0 + pw, Y(1), stroke=MUTED, sw=1.1, dash="4 4")
         s.line(x0, Y(4), x0 + pw, Y(4), stroke=MUTED, sw=1.1, dash="4 4")
         pts = []
-        for i in range(0, 301):
+        for i in range(0, tmax * 10 + 1):
             t = i * 0.1
             v = scenario(k, t)
             if v is None:
@@ -668,23 +687,31 @@ def fig_scenarios():
             pts.append((X(t), Y(v)))
         s.polygon([(pts[0][0], y1)] + pts + [(pts[-1][0], y1)], fill="#cde2fb", opacity=0.55)
         s.polyline(pts, BLUE, sw=2.2)
+        # Hai pha liền nhau chung một ranh giới: vẽ mỗi ranh giới một lần.
+        for edge in sorted({e for _, a, b in phases for e in (a, b) if e > 0}):
+            s.line(X(edge), top, X(edge), y1, stroke=INK2, sw=1, dash="2 3")
+        for name, a, b in phases:
+            s.text((X(a) + X(b)) / 2, top + 12, name, size=10.5, fill=INK2, anchor="middle", family=MONO)
         s.line(x0, y1, x0 + pw, y1, stroke=AXIS)
         for at, av, note in notes:
             lab_y = Y(av) - 10 if av < 3.4 else Y(av) + 18
             s.label(X(at), lab_y, note, size=11, fill=INK)
-    ny = 360
+    ny = 378
     s.rect(32, ny, 1136, 140, fill=WHITE, stroke=AXIS, rx=10)
     s.text(48, ny + 28, "Cách sinh tải", size=13.5, weight=650)
     for i, ln in enumerate(["• Open-loop: request đến theo quá trình Poisson với tốc độ λ(t),",
                             "  không chờ request trước xong.",
-                            "• Seed cố định: mọi cấu hình nhận đúng cùng một chuỗi request.",
+                            "• Seed theo (kịch bản, số thứ tự lượt): mọi cấu hình nhận cùng chuỗi request.",
                             "• Prompt 256–1024 token, output cố định 256 token, có streaming."]):
-        s.text(48, ny + 54 + i * 20, ln, size=12, fill=INK2)
+        # SVG gộp dấu cách đầu dòng, nên dòng nối (bắt đầu bằng "  ") được lùi bằng toạ độ x.
+        s.text(48 + (10 if ln.startswith("  ") else 0), ny + 54 + i * 20, ln.strip(), size=12, fill=INK2)
     s.text(608, ny + 28, "Mỗi kịch bản kiểm chứng gì", size=13.5, weight=650)
     for i, ln in enumerate(["• KB1 (như ban đêm): A2 giữ 1 replica mà vẫn đạt SLO? (N1, N3)",
-                            "• KB2 (như 9 giờ sáng): phản ứng mất bao lâu? scale-down có lỗi? (N2, N4)",
-                            "• KB3 (cao điểm kéo dài): ổn định ở tối đa replica? cảnh báo đúng? (N1, N7)"]):
-        s.text(608, ny + 54 + i * 20, ln, size=12, fill=INK2)
+                            "• KB2 (như 9 giờ sáng): phản ứng, hồi phục mất bao lâu?",
+                            "  scale-down có làm lỗi request? (N2a, N2b, N3, N4)",
+                            "• KB3 (cao điểm kéo dài): đạt SLO ở pha sustain, không flapping,",
+                            "  cảnh báo đúng? (N1, N7)"]):
+        s.text(608 + (10 if ln.startswith("  ") else 0), ny + 54 + i * 18, ln.strip(), size=12, fill=INK2)
     s.save("08-kich-ban-tai.svg")
 
 

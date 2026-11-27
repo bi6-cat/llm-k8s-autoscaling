@@ -150,7 +150,7 @@ Mỗi khó khăn riêng của GPU có một cách xử lý trong thiết kế:
 
 ![Hình 8 – Ba kịch bản tải](images/08-kich-ban-tai.svg)
 
-*Hình 8. Ba kịch bản tải theo đề cương, đơn vị là C (năng lực của một replica).*
+*Hình 8. Ba kịch bản tải theo đề cương (12, 24 và 17 phút), đơn vị là C (năng lực của một replica), vẽ với N = 4 GPU; vạch chấm là ranh giới các pha khi phân tích.*
 
 ---
 

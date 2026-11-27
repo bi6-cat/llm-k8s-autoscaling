@@ -426,11 +426,11 @@ Không đạt thì lượt đó không hợp lệ (§17).
 
 ![Hình 8 – Ba kịch bản tải](../images/08-kich-ban-tai.svg)
 
-*Hình 8. Ba kịch bản tải theo đề cương, đơn vị là C (năng lực của một replica).*
+*Hình 8. Ba kịch bản tải theo đề cương (12, 24 và 17 phút), đơn vị là C (năng lực của một replica), vẽ với N = 4 GPU; vạch chấm là ranh giới các pha khi phân tích.*
 
 Định nghĩa λ(t), thời lượng và các pha nằm ở [Thông số §7](00-thong-so.md#7-kịch-bản-tải).
 
-**Vì sao ba kịch bản này?** Đây đúng là ba kịch bản trong đề cương. Gộp lại, chúng tái hiện các pha của một ngày tải ở bối cảnh của [Bài toán §4](01-bai-toan-yeu-cau.md#4-bối-cảnh-giả-định-và-ba-cách-cấp-phát): ban đêm (KB1), 9 giờ sáng (KB2) và giờ cao điểm kéo dài (KB3). KB2 được cho **giảm tải trở lại** ở phút 15, để cùng một lượt kiểm tra được cả scale-up lẫn scale-down an toàn.
+**Vì sao ba kịch bản này?** Đây đúng là ba kịch bản trong đề cương. Gộp lại, chúng tái hiện các pha của một ngày tải ở bối cảnh của [Bài toán §4](01-bai-toan-yeu-cau.md#4-bối-cảnh-giả-định-và-ba-cách-cấp-phát): ban đêm (KB1), 9 giờ sáng (KB2) và giờ cao điểm kéo dài (KB3). KB2 được cho **giảm tải trở lại** ở phút 14, để cùng một lượt kiểm tra được cả scale-up lẫn scale-down an toàn.
 
 **Vì sao KB3 dừng ở 0,75 × N × C.** Với target 0,8 × B\*, tải 3,5C cần ⌈3,5 ÷ 0,8⌉ = 5 replica, vượt 4 GPU: A2 sẽ chạy sát trần, `LLMAtMaxReplicas` kêu, và N1 trở nên sát biên vì hệ thống thiếu năng lực chứ không vì autoscaling kém. Ở 3C, HPA cần đúng 4 replica. N1 ở KB3 chỉ tính trên pha `sustain`, vì trong pha `ramp` pod đầu tiên chắc chắn quá tải trong lúc chờ cold start ([ADR-005](../adr/005-sua-thiet-ke-sau-review.md) T11).
 
@@ -489,7 +489,7 @@ Mỗi kịch bản có một mục trong `docs/nhat-ky/van-hanh.md`: ngày, môi
 
 ![Hình 17 – Quy trình một phiên đánh giá](../images/17-quy-trinh-danh-gia.svg)
 
-*Hình 17. Quy trình của phiên đánh giá chính trên GPU thuê: thuê và dựng từ máy trắng, đo năng lực, vòng lặp 17 lượt, cold start và kịch bản vận hành, sao lưu, huỷ máy và phân tích.*
+*Hình 17. Quy trình phiên đánh giá chính V2 trên VM thuê, như đã chạy ngày 18–19/11/2026: thuê và kiểm máy, dựng từ máy trắng (không có Argo CD), đo năng lực, vòng lặp 17 lượt, kịch bản vận hành và cold start, kéo dữ liệu về rồi tắt máy, phân tích. Khác kế hoạch ở §3.4, §3.6, §3.8, §6.2 và §12: chỉ chạy `make probe`, không chạy `vllm bench serve` từng GPU; ĐG1 chạy runner từ PC qua tunnel, ĐG2 chạy runner trong tmux trên VM thay cho `systemd`; dữ liệu được kéo về PC và đối chiếu sha256 thay cho sao lưu lên R2; ĐG3 L0 đo 0 → 1 thay cho 1 → 2; GPU là 4 × RTX 4060 Ti thay cho 4 × A4000 (ADR-006 C2) ([nhật ký Quang tuần 07](../nhat-ky/lam-viec/quang/tuan-07.md)).*
 
 ### 14.1. Các bước của một lượt
 
