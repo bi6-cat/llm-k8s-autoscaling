@@ -360,3 +360,138 @@
 - **Deviations:** chương 3 có thể vượt định hướng 13–15 tr (ước tính); chưa cắt, chờ số đo khuôn T.
 - **Links:** nhánh `docs/tr8-thesis-ch3`; PR chương 3; các PR mục đã đóng #62, #63, #64, #66, #67, #68.
 - **Thesis:** chương 3 đủ các mục theo dàn ý §11.1. Còn lại: đo khuôn T; vẽ lại Hình 3.1 (Hình 2 cũ) trước khi chèn; sửa câu Argo CD ở 3.2.2 khi #75, #78 merge.
+
+## 2026-11-25 – Ghi máy V2 thật (4 × RTX 4060 Ti) vào tài liệu thiết kế
+
+- **Task:** TR8 (phần Q2 của Quang, D115 mục 1) · **Environment:** none
+- **Done:**
+  1. Grep 37 dòng nhắc A4000 trong `docs/chi-tiet/`, đọc từng chỗ, chia hai nhóm: chỗ nói phiên V0+V1 ngày 08/11 hoặc kế hoạch, lựa chọn của ADR-006 C2 (giữ nguyên), và chỗ nói phiên V2 đã chạy (sửa).
+  2. Sửa 30 chỗ ở 6 file: Thông số §2, §9.1, §10.2 (thêm đoạn "Máy V2 thực tế"), §11; Bài toán §1.2, §1.3, G2 (§12.2), hạn chế 1 (§12.3); Kiến thức nền §1.4 (ngân sách VRAM), §1.5 (bảng băng thông, đoạn decode 3B); Kiến trúc A1′; Môi trường tóm tắt, §1, §3.1 (thêm dòng RTX 4060 Ti), §6.1 (dòng V2: ngày và máy thật), bảng lớp đánh giá, câu hỏi "vì sao dùng A4000"; Kế hoạch M1 (checklist), §4 phụ thuộc, bảng rủi ro và R2.
+- **Decision:**
+  - Trình giữ nguyên các câu về A4000 của V0+V1 và về lựa chọn ADR-006 C2, chỉ thêm câu "thực tế V2 chạy trên 4 × RTX 4060 Ti": các số 08/11 (TPOT 17,2 ms, KV-cache 211.936 token, tải model 27 s) đúng là đo trên A4000. ADR-006 không sửa, vì ADR ghi quyết định tại thời điểm đó.
+  - Thêm số KV-cache của V2 (211.584–224.336 token, đọc từ log vLLM trong `runs/dg1-v2-4060ti/` và `runs/v2-vm/dg3-v2-4060ti/`) để chứng minh phân bổ VRAM của §1.2 vẫn đúng trên máy V2. Không thêm TPOT ở 1 request cho V2, vì V2 không đo; bước decode tối thiểu 21,4 ms chỉ là tính từ băng thông 288 GB/s.
+  - Chi phí V2 ghi "chưa có số": giá 1,5 USD/giờ và ước 14–15 USD là số Quang báo ngày 18/11, chi phí thực đang chờ Quang.
+  3. `/code-review high` trên diff: 9 điểm, đã sửa cả 9: câu "băng thông thấp nên C = 3,5" sai với nhật ký (tỉ lệ băng thông thuần dự đoán 2,9 req/s, số đo cao hơn), nay ghi băng thông chỉ giải thích một phần; ngày V2 14–15/11 còn sót ở Kế hoạch (tóm tắt, bảng tuần, §1.1, đường găng) và lịch theo giờ Môi trường §6.2, nay thêm "thực tế 18–19/11"; dòng 4060 Ti ở Môi trường §3.1 để C (req/s) vào cột token/s; câu hỏi "vì sao" trỏ hạn chế về ADR-006 thay vì Bài toán §12.3; tiêu chí GPU ở Thông số §10.2 chưa nhắc máy thật; đoạn DCGM ở Kiến thức nền thiếu 4060 Ti; giá 1,5 USD/giờ ở Môi trường thiếu chú thích "Quang báo theo trang Vast"; số mục sai trong chính mục nhật ký này.
+- **Results:** `lychee --offline --include-fragments` trên `docs/chi-tiet/*.md` đạt; trên toàn bộ `docs/` chỉ còn lỗi có sẵn ở `docs/huong-dan/w2.md` (link tới thư mục chưa có trên main, CI loại trừ).
+- **Links:** `docs/chi-tiet/00-thong-so.md`, `01-bai-toan-yeu-cau.md`, `02-kien-thuc-nen.md`, `03-kien-truc-autoscaling.md`, `05-moi-truong-danh-gia.md`, `06-ke-hoach-quan-ly.md`; nguồn: nhật ký của Quang tuần 07 (18/11), `docs/nhat-ky/van-hanh.md` (18/11).
+- **Thesis:** 5.1 (môi trường đo: máy 4060 Ti thay A4000), 5.7 Hạn chế (C = 3,5 chỉ đúng cho máy V2), 2.x (bảng băng thông GPU).
+## 2026-11-24 – VH2 trên kind, bước 1: thêm Argo CD vào simulator
+
+- **Task:** TR8 (F3, VH2 theo D113) · **Environment:** sim
+- **Done:**
+  1. Thêm `envs/sim/argocd/apps.yaml`: hai Application `serving` (path `envs/sim/serving`) và `autoscaling` (path `envs/sim/autoscaling`), cùng syncPolicy với nhà (automated, prune, selfHeal, retry).
+  2. Thêm `make sim-argocd ARGOCD_REV=<nhánh>`: cài Argo CD core `v3.5.4` (server-side apply như role `argocd-bootstrap`), áp AppProject `default` của nhà, áp hai app với `targetRevision` đổi sang `ARGOCD_REV` bằng `sed`, rồi chờ cả hai `Synced Healthy`; thêm `make sim-argocd-down` để gỡ. `ARGOCD_VERSION` ghim trong Makefile, thêm vào `docs/phien-ban.md`.
+  3. Thêm mục "VH2 qua Git" vào `envs/sim/README.md`: cách cài, chu kỳ đọc Git, self-heal, runner bị `guard_argocd` chặn, cách gỡ.
+  4. Chạy thử trên cụm `llm-sim` với `REV=main`, kiểm self-heal, rồi gỡ đúng theo README.
+- **Decision:** Tên app trùng nhà (`serving`, `autoscaling`), để `guard_argocd` của runner và cách tắt auto-sync có cùng ý nghĩa trên kind. Không dựng root App-of-Apps như nhà: VH2 chỉ cần hai app. Nhánh truyền qua `ARGOCD_REV` lúc áp, file trong Git giữ `targetRevision: main`, vì quên biến thì app chỉ theo `main` (an toàn), còn ghi cứng nhánh thử vào Git thì nhánh đó bị xoá là app lỗi.
+- **Results:**
+  - `make sim-argocd` (nhánh `main`): 142 s tới khi cả hai app `Synced Healthy`, revision `7787de0` (= `origin/main`). Pod simulator giữ nguyên (cùng tên, restarts 0): Argo CD nhận lại tài nguyên `make sim-up` đã tạo, không tạo lại.
+  - Log controller: `appResyncPeriod=2m0s, appResyncJitter=1m0s`, tức Argo CD đọc Git mỗi 2–3 phút.
+  - Self-heal: patch tay threshold ScaledObject 10 → 11, Argo CD đưa về 10 sau 2 s.
+  - Gỡ bằng ba lệnh (nay là `make sim-argocd-down`): 13 s, còn 0 CRD `argoproj.io`; pod simulator và ScaledObject (max 3, threshold 10) giữ nguyên.
+  - `/code-review high`: 9 điểm. Đã sửa: (1) runner để ScaledObject tạm dừng thì app `autoscaling` là `Suspended`, vòng chờ không bao giờ thấy `Healthy`: nay nhận `Suspended` và in lệnh gỡ annotation; (2) header gợi ý `make home-eval-begin`, mà target đó mặc định nhắm cluster nhà: bỏ, ghi rõ không dùng; (3) hết hạn thì in condition của app (ví dụ nhánh chưa push); (4, 5) ba lệnh gỡ thành `make sim-argocd-down`, dùng chung `ARGOCD_VERSION`; (6) kiểm dạng tên nhánh trước `sed`; (7) đổi `REV` thành `ARGOCD_REV` để biến `REV` có sẵn trong shell không đổi nhánh; (9) hạn chờ tính bằng `$SECONDS`. Điểm (8), dùng chung AppProject của nhà, giữ nguyên và ghi chú trong Makefile.
+  - Chạy lại sau sửa: đặt `paused-replicas=1` rồi `make sim-argocd` → báo "Synced ở main, nhưng ScaledObject vllm-a2 đang tạm dừng" kèm lệnh gỡ; gỡ annotation → `Synced Healthy` trong ≤ 20 s; `make sim-argocd-down` 12 s, còn 0 CRD, pod simulator giữ nguyên; `ARGOCD_REV='a|b'` bị từ chối trước khi cài gì.
+  - Kiểm cục bộ: `yamllint -s` đạt; `kubeconform -strict` 2/2 Application hợp lệ (schema CRDs-catalog ở commit ghim của CI); `make -n sim-argocd` thay đúng nhánh; lychee đạt.
+- **Incidents:** Việc F6 (cảnh báo thật qua bot Telegram trên kind) dừng ở bước đầu: trong lượt tự chạy, lệnh nạp Secret bot thật từ `.env` vào kind bị chặn. F6 chờ Trình nạp Secret, nên vòng này chuyển sang VH2.
+- **Links:** `envs/sim/argocd/apps.yaml`, `Makefile` (`sim-argocd`), `envs/sim/README.md`, `docs/phien-ban.md`.
+- **Thesis:** 4.5 (triển khai qua Git); 5.5.1 (VH2 qua Git trên kind, số đo ở bước 2).
+
+## 2026-11-25 – VH2 trên kind, bước 2: cập nhật và `git revert` qua Argo CD dưới tải
+
+- **Task:** TR8 (F3, N4, VH2 theo D113 / ADR-007 D2) · **Environment:** sim
+- **Done:**
+  1. Thêm kịch bản `vh2-git` vào `experiments/ops/vh.py`, theo đúng Vận hành §5.3, §5.4. Kịch bản push 4 commit lên nhánh thử `feat/tr8-vh2-git-target` từ một git worktree riêng: nâng `minReplicaCount` lên 2; đổi `--time-to-first-token` của simulator 200 → 300 ms; `git revert` commit đổi tham số; `git revert` commit nâng min. Mỗi bước, script chờ Argo CD tự sync đúng commit đó (`operationState.syncResult.revision`), không bấm refresh. Tải do loadgen tạo trong cluster và gọi Service, như các kịch bản VH khác.
+  2. Script kiểm trước khi chạy: không chạy trên `main`; worktree sạch và trùng `origin/<nhánh>`; hai Application đọc đúng repo và nhánh, auto-sync bật; ScaledObject không tạm dừng. Một bước lỗi thì revert các commit đã push. Chấm đạt khi có 0 lỗi, bắt đầu từ 1 replica, Argo CD sync cả 4 commit, thấy tham số mới sau cập nhật và đúng tham số cũ sau rollback, và kịch bản xong khi tải còn chạy.
+  3. `make sim-argocd ARGOCD_REV=feat/tr8-vh2-git-target` (33 s tới `Synced Healthy`), chạy 2 lượt, rồi `make sim-argocd-down` (13 s).
+  4. Ghi cách chạy và số đo vào `envs/sim/README.md`.
+- **Decision:** D117. Đo bằng kịch bản trong runner thay vì làm tay theo runbook, để có timeline, `requests.csv` và lặp lại được. Không dùng `hey` qua port-forward, vì port-forward dồn mọi request vào một pod (đo 04/11) nên không thấy được rolling update. Tham số đổi là TTFT giả của simulator, vì nó hiện ra trên TTFT đo được: đó là bằng chứng bản mới thật sự chạy, rồi bản cũ thật sự quay lại. Từ WSL, script gọi `git.exe` của Windows để push bằng credential sẵn có. Bảng nghiệm thu F3 (Môi trường §16) để PR sau, vì PR #75 đang sửa đúng dòng đó.
+- **Results:**
+  - Lượt chính `runs/ops-vh2-git-20261124-171557` (0,3 req/s, 2.100 s): **đạt**, 615 request, **0 lỗi**, trước đó 1 replica.
+
+    | Bước | Push → Argo CD sync xong | Cả bước |
+    |---|---|---|
+    | Nâng min lên 2 | 138 s | 146 s (2 pod Ready) |
+    | Đổi TTFT 200 → 300 ms | 247 s | 261 s (rollout xong) |
+    | `git revert` đổi TTFT | 231 s | 244 s (rollout xong) |
+    | `git revert` nâng min | 242 s | 244 s |
+
+    TTFT p50 của request gửi trong từng khoảng: 206 ms trước cập nhật, 306 ms từ lúc rollout tới lúc sync rollback, 206 ms sau rollback (397 request). A2 hạ 2 → 1 replica vài phút sau khi Argo CD sync commit cuối (cửa sổ scale-down 300 s), lúc tải vẫn chạy, không có lỗi.
+  - Lượt thử `runs/ops-vh2-git-20261124-164415` (0,5 req/s, 1.800 s): 886 request, 0 lỗi, TTFT 207 → 305 → 206 ms. Script chấm **không đạt**, và chấm đúng: A2 đã tự lên 2 replica lúc 16:45:54, trước commit nâng min lúc 16:46:18, nên lượt này không phải ca 1 replica. Push → sync: 114 / 367 / 115 / 315 s.
+  - Push → sync có thể tới khoảng 6 phút. Argo CD so lại với Git mỗi 2–3 phút (`appResyncPeriod=2m0s`, jitter 1 phút), còn repo-server giữ commit của nhánh trong cache 3 phút (`argocd-repo-server --help`: `--revision-cache-expiration` mặc định `3m0s`). Log controller của bước 367 s: lần so lúc 16:50:20 (2 phút sau push) vẫn `Synced` với commit cũ; tới lần so lúc 16:54:24 mới `Initiated automated sync`.
+  - Nhánh thử còn trên origin làm bằng chứng: `ae7f31f`, `a100eee`, `b018e12`, `310e172` (lượt thử), rồi `f3e0a44`, `0dd739a`, `34651bf`, `9bc66d0` (lượt chính).
+  - Kiểm cục bộ: `ruff check`, `ruff format --check` đạt; `pytest experiments` 168 đạt, 4 hỏng ở `test_backup_notify.py`. 4 test này hỏng cả trước thay đổi, vì `rclone` giả là shell script, không chạy được trên Windows; CI Linux xanh. `/code-review high`: 9 điểm, đã sửa 8 điểm trong code: revert khi lỗi giữa chừng; kiểm worktree trùng origin; bắt lỗi không có lệnh git; chấm không đạt khi kịch bản xong sau lúc tải ngừng; nhận cả annotation `paused`; so đúng giá trị TTFT cũ; kiểm repoURL; ghi rõ `sync_s` tính từ lúc push xong. Điểm thứ 9 (thiếu nhật ký) xử lý bằng mục này. Lượt chính chạy bằng code đã sửa, lượt thử chạy bằng code trước khi sửa.
+- **Deviations:** Kịch bản chỉ đổi tham số của simulator; không có GPU, cold start, cache model. Rollout 2 pod xong 10–11 s sau sync, trong khi vLLM thật mất vài phút (ADR-007 §4). Môi trường §13 ghi VH2 "qua PR"; ở đây commit được push thẳng lên nhánh thử, coi như PR đã merge, và không qua CI.
+- **Links:** `experiments/ops/vh.py` (`vh2_git`, `GitTarget`, `argocd_problem`), `experiments/tests/test_ops_vh.py`, `envs/sim/README.md`; nhánh `feat/tr8-vh2-git-target`; PR xếp chồng trên #77.
+- **Thesis:** 5.5.1 (VH2 qua Git: bảng 4 bước, TTFT 206 → 306 → 206 ms, 0 lỗi); 4.5 (triển khai qua Git: độ trễ push → sync gồm chu kỳ so và cache của repo-server); 5.7 (simulator không có cold start thật; commit không qua PR, CI). Hình C6 có thể vẽ từ `timeline.json` + `requests.csv` của lượt chính.
+## 2026-11-24 – N8: dựng lại kind + simulator từ đầu theo README
+
+- **Task:** TR8 (N8) · **Environment:** sim
+- **Done:**
+  1. `make sim-down` xoá cụm `llm-sim` cũ, rồi làm đúng theo `envs/sim/README.md`: `make sim-up`, kiểm trạng thái, `make sim-test`. Bấm giờ từng bước bằng dấu giờ trên từng dòng output.
+  2. Dựng với hai biến Telegram giả trong môi trường, để Alertmanager không gửi tin thật trong lúc thử (`.env` đã có bot thật từ 24/11).
+  3. Sửa README ở những chỗ người mới phải tìm ở tài liệu khác: thêm mục "Cần có" (máy, công cụ, mạng, Telegram tuỳ chọn, cách dựng mà không gửi tin), phần kiểm tra sau `make sim-up` (kết quả mong đợi, mở Grafana), mục "Trên Windows (WSL2)", và thời gian `make sim-up` theo số đo.
+- **Results:**
+  - `make sim-down`: 9,5 s. `make sim-up`: 343 s, mã thoát 0. Theo bước: tạo cluster kind 30 s; khai báo repo Helm 5 s; kube-prometheus-stack 206 s; rule và dashboard dưới 1 s; KEDA 81 s; simulator rollout 16 s; ScaledObject dưới 1 s.
+  - Sau `make sim-up`: 1 pod `vllm` 1/1 Running, `vllm-a2` READY=True, HPA `0/10 (avg)`; không pod nào ngoài Running/Completed. Ba node dùng 2,9 GB RAM lúc nghỉ và 3,1 GB khi bơm C=25 với 3 replica (`docker stats`).
+  - `make sim-test`: 1.128 s, T1–T5 đều đạt. T2 desired=3 sau 3 s (tiêu chí ≤ 15 s); T3 giữ 3 replica 304 s rồi về 2, về 1 sau thêm 61 s; T4 fallback sau 18 s (tiêu chí ≤ 30 s); T5 giữ 1 replica khi A2 lên 25. Log: `runs/sim/20261124-222049-t1-t5.log`.
+  - Tổng từ `make sim-down` đến khi T1–T5 đạt: 1.481 s (khoảng 25 phút), dưới ngưỡng 1 giờ của N8.
+  - Log Alertmanager không có lần gửi nào trong lúc T1–T5, nên F6 phải tự kích một cảnh báo.
+  - `/code-review high`: 7 điểm, đã sửa cả 7 (README thiếu `jq`, `curl`; W1 không cài `uv`; khối Grafana đặt port-forward trước lệnh lấy mật khẩu; "~6 phút" chưa nói là đã có node image; RAM chưa đo lúc có tải; chưa nói Secret giả ở lại cluster; ô T2 của van-hanh.md dễ đọc nhầm).
+- **Deviations:** chưa đúng "người thứ hai" như N8 viết: agent chạy trên máy của Trình, công cụ đã cài sẵn, và node image của kind (1,3 GB) đã có trong cache Docker. Image của chart và simulator thì tải lại. Thời gian cài công cụ theo W1 §4.2 chưa đo.
+- **Links:** `envs/sim/README.md`; `docs/nhat-ky/van-hanh.md`.
+- **Thesis:** §4 (tái lập môi trường), §5 bảng nghiệm thu N8.
+## 2026-11-24 – Nghiệm thu: soát các việc Must còn phụ thuộc cluster nhà
+
+- **Task:** TR8, chung · **Environment:** none
+- **Done:** Đối chiếu danh sách Must ([Thông số §5](../../../chi-tiet/00-thong-so.md#5-mức-độ-thành-công)) với bảng nghiệm thu ngày 21/11 ([Môi trường §16](../../../chi-tiet/05-moi-truong-danh-gia.md)) và dữ liệu `runs/ops-vh2a-*`, nhật ký vận hành 19/11. Ước lượng: 10/16 mục Must đạt, 4 đạt một phần (F3, F5, F6, N4), 2 chưa chạy (VH1, VH2 ở nhà). Với từng việc còn lại, xét việc đó có thật sự cần cluster nhà hay không.
+- **Decision:**
+  - VH1 không chạy lại ở nhà. Bằng chứng scale-down an toàn lấy từ pha `drop` của 3 lượt A2 × KB2 trên V2 (N = 4, 0 lỗi): cùng cơ chế preStop và graceful shutdown, đo trên nhiều GPU hơn KB2-mini ở nhà.
+  - VH2 chạy trên kind + simulator có cài Argo CD. Phần F3 còn thiếu chỉ là vòng Git → Argo CD sync → `git revert`, không phụ thuộc GPU. Các ràng buộc GPU của VH2 (ca 1 replica, `maxSurge: 0`, ca kẹt Pending) đã đo trên V2 với 0 lỗi. Application trên kind theo dõi một nhánh riêng, nên không đổi `main` hay cluster nhà.
+  - F6 (tin cảnh báo tới Telegram thật) và N8 (người thứ hai dựng lại theo README) làm trên kind + simulator; định nghĩa VH5 ở Môi trường §13 đã cho phép cách này.
+  - Ảnh chụp dashboard trên GPU thật (F5) làm trên cluster nhà; nếu không có trước 28/11 thì dùng ảnh trên simulator cộng Hình C3 (GPU từ dữ liệu V2) và ghi vào Hạn chế. Tổng chi phí thuê lấy từ trang thanh toán của Vast.
+  - Không sửa `vh3_kill` (thiếu bước bảo đảm ≥ 2 pod), vì dữ liệu đã đóng băng 22/11; nêu ở mục 5.5 và 5.7.
+- **Deviations:** Must ở Thông số §5 ghi "VH1, VH2 ở nhà"; nay VH1 dùng kết quả trên GPU thuê và VH2 chạy trên kind. Sửa Thông số §5 và Môi trường §13 trong PR này.
+- **Thesis:** 5.5 (VH1, VH2), 5.6 (bảng nghiệm thu), 5.7 (Hạn chế).
+
+## 2026-11-24 – Nghiệm thu: ghi phạm vi Must mới vào ADR-007 và tài liệu thiết kế
+
+- **Task:** TR8, chung · **Environment:** none
+- **Done:** Viết [ADR-007](../../../adr/007-doi-vh1-vh2-f6-n8-khoi-cluster-nha.md) cho các quyết định ở mục trước (VH1, VH2, F6, N8 không còn chờ cluster nhà). Sửa theo ADR: Thông số §3 (cách kiểm chứng F3, F6), §5 (dòng Must và Should); Môi trường §13 (cột "Ở đâu" của VH1, VH2, VH6) và ghi chú của N4, N8, F3, F6 trong bảng nghiệm thu §16; ghi chú ngày 24/11 ở mốc M2, mục học chéo và rủi ro R7 của Kế hoạch; bảng ADR.
+- **Decision:** Ghi thành ADR mới thay vì thêm mục vào ADR-006, vì README của `docs/adr/` quy định không sửa nội dung ADR cũ. Bảng nghiệm thu chỉ đổi cột ghi chú; cột "Đạt?" giữ nguyên cho tới khi có kết quả trên kind.
+- **Results:** lychee offline: không lỗi ngoài các đường dẫn cũ mà CI cũng bỏ qua. `/code-review high`: 10 điểm, đã sửa 9. (1) Ca (c) của VH2 chưa có bằng chứng `LLMPodPending` kêu: `runs/v2-vm/ops-vh2c-20261118-174729/summary.json` chỉ ghi `rollout_stuck: true`, 0 lỗi trên 2.077 request, còn quy tắc có `for: 10m` trong khi lượt chỉ chờ kẹt khoảng 300 s; ADR-007 ghi rõ. (2) Ca (c) không thuộc mức nào, nay xếp vào Should. (3) Trình đã dùng cụm simulator từ 07/11, nên N8 không phải lần dựng của người chưa từng thấy repo; ghi vào Hệ quả và Hạn chế. Các điểm còn lại là câu chữ và danh sách mục bị thay thế. Không sửa mốc M2 (01/11, đã qua), chỉ thêm ghi chú ngày 24/11. Mục trước xếp N4 vào "đạt một phần", còn bảng Môi trường §16 ghi Đạt; theo ADR-007, N4 dùng số đo V2 nên lấy mức Đạt của bảng.
+- **Deviations:** Must ở Thông số §5 trước đây ghi "VH1, VH2 ở nhà".
+- **Links:** `docs/adr/007-doi-vh1-vh2-f6-n8-khoi-cluster-nha.md`, `docs/chi-tiet/00-thong-so.md`, `docs/chi-tiet/05-moi-truong-danh-gia.md`, `docs/chi-tiet/06-ke-hoach-quan-ly.md`.
+- **Thesis:** 5.5 (VH1, VH2), 5.6 (bảng nghiệm thu), 5.7 (Hạn chế: chưa có vòng Git trọn vẹn trên GPU thật).
+## 2026-11-24 – Luận văn: soát cách trình bày theo luận văn ngoài cùng đề tài
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** Trình đề nghị tìm đồ án được đánh giá cao, cùng chủ đề, để học cách trình bày. Tìm 18 lượt trên web, cả tiếng Anh và tiếng Việt. Tải ba luận văn thạc sĩ công khai, đọc tóm tắt, chương mở đầu, chương đánh giá và kết luận: Henschel (Aalto 2021, autoscaling trên Kubernetes theo hiệu năng và chi phí), Mitra (ĐH Groningen 2021, scale GPU inference theo GPU utilization so với in-flight request), Lim (Aalto 2025, LLM inference qua RabbitMQ và KEDA). Đối chiếu với `docs/luan-van/quy-tac-viet.md` và bản nháp chương 3, 5.
+- **Decision:**
+  - Chỉ nhận dấu hiệu chất lượng kiểm được (giải thưởng, điểm công khai), vì điểm luận văn gần như không được công bố. Bài duy nhất thoả là van der Wiel (VU Amsterdam 2022, HPA và năng lượng trên Kubernetes), giải nhất VERSEN Best MSc Thesis in Software Engineering 2023. Ba bài đã đọc được chọn vì đề tài gần, không có bằng chứng về điểm.
+  - Quy tắc văn phong hiện có đã chặt hơn cả ba bài: cả ba viết kết luận không kèm số, một bài dùng nhiều cụm sáo ở mở bài. Nhóm nhận năm điểm trình bày: đưa hình đánh đổi GPU-giờ và SLO attainment (C4) trở lại thân bài 5.3; đoạn mở chương 3–5 nêu luôn câu trả lời; chỉ số tự định nghĩa kèm một ví dụ số; khuyến nghị viết theo điều kiện, lựa chọn và căn cứ; hạn chế nêu kết luận bị ảnh hưởng và hướng lệch. Thêm một điểm: kết luận chương 6 kèm số.
+  - Không lấy khung câu hỏi nghiên cứu (Q1–Q3) của Mitra. Bố cục giữ yêu cầu F/N, bảng nghiệm thu và ba thông điệp TĐ1–TĐ3.
+  - Để sau M4, không bắt buộc: tính chỉ số elasticity của SPEC Research Group (θU, θO, τU, τO; Herbst và cộng sự, 2016) từ dữ liệu V2 đã có.
+- **Incidents:** bản PDF của van der Wiel trên `research.vu.nl` trả về trang kiểm tra của Cloudflare khi tải bằng `curl`, và lỗi 403 khi tải bằng công cụ fetch; chưa đọc được. Không tìm thấy đồ án tiếng Việt cùng chủ đề nào có công bố điểm hay giải.
+- **Links:** [Henschel](https://aaltodoc.aalto.fi/items/6d0f685e-be6f-4bd4-80ea-e2b678651261) · [Mitra](https://fse.studenttheses.ub.rug.nl/26121) · [Lim](https://aaltodoc.aalto.fi/items/bd6736dd-0acb-47ec-b825-2d20db21cb35) · [van der Wiel](https://research.vu.nl/en/publications/the-impact-of-scalability-on-energy-consumption-in-the-cloud/) · [tin giải VERSEN](https://vu.nl/en/news/2023/r-van-der-wiel-receives-the-best-master-thesis-award-in-software-engineering).
+- **Thesis:** quy tắc viết §2, §5; mục 3.6 (ví dụ số cho chỉ số), 5.3 (Hình C4), 5.6 (khuyến nghị), 5.7 và 6.2 (hạn chế), chương 6.
+
+## 2026-11-24 – Luận văn: quy tắc viết theo luận văn ngoài, bỏ trần cứng câu và đoạn
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  - Sửa `docs/luan-van/quy-tac-viet.md` theo mục trên. §2: đoạn mở chương 3–5 nêu luôn câu trả lời, chương 5 kèm số chính; dòng chương 6 đòi mỗi kết luận kèm một số, điều kiện đo và dẫn chéo tới chương 5. §5: chỉ số tự định nghĩa kèm một ví dụ tính (ví dụ 2 GPU replica trong 30 phút là 1,00 GPU-giờ); khuyến nghị theo khuôn điều kiện, lựa chọn, căn cứ; mỗi hạn chế nêu kết luận bị ảnh hưởng và hướng lệch, không biết thì ghi "chưa đo, không suy ra được chiều lệch".
+  - Đo 14 bản nháp (3.1–3.6, 4.3, 5.1–5.7, lấy từ các nhánh `docs/tr8-thesis-*`) và so với đồ án mẫu tiếng Việt của khoa (trang 12–48). Phép đo dùng script cục bộ của Trình, chưa đưa vào repo; số dưới chỉ để chẩn đoán, không dùng làm số liệu của luận văn. Văn của nhóm đều hơn: hệ số biến thiên độ dài câu 0,34 so với 0,51; 69,5% số câu dài 15–30 chữ, so với 34,0%; 43/106 đoạn dài đúng 3 câu; ", nên" xuất hiện 12,7 lần trên 100 câu, so với 1,3. Từ đó sửa §3: §3.2 bỏ trần 35 chữ mỗi câu, bỏ mục tiêu trung bình 18–25 chữ và bỏ khoảng 3–7 câu mỗi đoạn, thay bằng tiêu chí "đọc một lần hiểu ngay"; đoạn 1–2 câu được dùng khi mở mục, dẫn vào danh sách, chuyển ý hoặc nhấn một kết luận. §3.1 miễn phần nhắc lại có chủ đích (Mở đầu, mục 1.3, mở chương, Kết chương, chương 6). §3.4 thêm dấu hiệu "lặp một kiểu nối câu". Việc này cũng gỡ mâu thuẫn cũ giữa §2 (mở mục 1–2 câu) và §3.2 (đoạn 3–7 câu).
+  - Nhánh của PR #61 (`analysis/kiem_van.py`, có mục nhật ký riêng trên nhánh đó): bỏ hai luật "câu > 35 chữ" và "đoạn ngoài 3–7 câu". Thêm bốn luật gợi ý đọc lại, in ở phần riêng và không tính vào mã thoát: câu > 45 chữ, đoạn > 8 câu, 3 đoạn ≤ 2 câu liền nhau (chuỗi ngắt ở tiêu đề, bảng và danh sách), ", nên" hơn một lần trong đoạn. §10 của quy tắc viết trên nhánh đó ghi phần gợi ý không cần về 0.
+- **Decision:** độ dài câu và đoạn chỉ là gợi ý, vì khi luật trả mã thoát 1 thì người viết sửa cho về 0, và văn bị dài đều nhau. Nhóm không đặt chỉ tiêu mới cho độ biến thiên; số đo ở trên chỉ dùng để chẩn đoán. Phương án không chọn: giữ nguyên ngưỡng, vì văn đều dễ bị đọc như văn do máy sinh; bỏ hết luật về độ dài, vì như vậy mất tín hiệu ở câu quá dài. Các bản nháp không viết lại hàng loạt, mà sửa ", nên", gộp hoặc tách đoạn khi làm PR của từng chương.
+- **Results:** `pytest analysis` 212 passed (Python 3.15); test `kiem_van` 61 passed (Python 3.11); `ruff check`, `ruff format --check` đạt. Chạy trên nháp 5.7: 0 điểm, 1 gợi ý (đoạn đầu có 3 lần ", nên"), mã thoát 0.
+- **Deviations:** chưa đọc được luận văn của van der Wiel (Cloudflare chặn); quy tắc chỉ dựa trên ba bài đã đọc. Điểm "Hình C4 trở lại 5.3" của mục trên chưa làm ở PR này: sẽ sửa dàn ý (Kế hoạch §11.1) và 5.3 trong PR chương 5.
+- **Links:** `docs/luan-van/quy-tac-viet.md` §2, §3.1, §3.2, §3.4, §5; PR #61 (`analysis/kiem_van.py`, `analysis/tests/test_kiem_van.py`).
+- **Thesis:** áp dụng cho mọi chương khi làm PR chương; mục 3.6, 5.6, 5.7, 6.2.
+
+## 2026-11-27 – Merge PR #74–#78 (quy tắc viết, ADR-007, README simulator, `sim-argocd`, VH2 qua Git)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** lượt tự chạy có cho merge, gỡ hàng đợi PR theo thứ tự phụ thuộc. Mỗi PR kiểm đủ 5 điều kiện merge: CI 6/6 xanh, đã chạy `/code-review high` lúc mở PR, `MERGEABLE`, không có review hay bình luận, không đụng `envs/home/argocd/apps` (thư mục root-app ở nhà theo dõi), base `main`. Merge commit, xoá nhánh head. #78 được đổi base từ `feat/tr8-vh2-sim-argocd` về `main` trước khi merge #77.
+- **Results:** #74 `46c17bb`, #75 `2ec55f3`, #76 `2f500f7`, #77 `97213e6`, #78 `5e3c621`. #75, #76, #78 chỉ xung đột ở nhật ký, `git merge origin/main` tự gộp (merge=union), không trùng tiêu đề mục.
+- **Incidents:** #77 xung đột thật với #76 ở `docs/nhat-ky/van-hanh.md` và `envs/sim/README.md` (cả hai thêm mục cùng chỗ). Giữ cả hai phía: van-hanh.md xếp mục N8 trước mục Argo CD theo thứ tự đã làm; README đặt mục "VH2 qua Git" trước "Trên Windows (WSL2)", và sửa chú thích "(mục cuối)" ở bảng đầu thành link tới mục đó (`0fbd6e1`). Lệnh mẫu `vh2-git` trong README ghi `--rate 0.5` trong khi câu dưới khuyên dùng 0,3; sửa thành `--rate 0.3` trên nhánh #78 trước khi merge (`012d269`).
+- **Links:** PR #74, #75, #76, #77, #78.

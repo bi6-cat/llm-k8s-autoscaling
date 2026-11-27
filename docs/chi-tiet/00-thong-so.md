@@ -1,6 +1,6 @@
 # Thông số và chỉ tiêu (nguồn sự thật duy nhất)
 
-> Thuộc [bộ tài liệu đồ án](../mo-ta-chi-tiet-do-an.md#bộ-tài-liệu) · Quyết định liên quan: [ADR-004](../adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md), [ADR-005](../adr/005-sua-thiet-ke-sau-review.md), [ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) (chốt trước V2, 10/11)
+> Thuộc [bộ tài liệu đồ án](../mo-ta-chi-tiet-do-an.md#bộ-tài-liệu) · Quyết định liên quan: [ADR-004](../adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md), [ADR-005](../adr/005-sua-thiet-ke-sau-review.md), [ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) (chốt trước V2, 10/11), [ADR-007](../adr/007-doi-vh1-vh2-f6-n8-khoi-cluster-nha.md) (dời VH1, VH2, F6, N8 khỏi cluster nhà, 24/11)
 
 **Tóm tắt nhanh**
 - Mọi yêu cầu (F1–F7), chỉ tiêu (N1–N8), SLO, kịch bản tải (KB1–KB3), cấu hình đánh giá, tham số triển khai, cấu hình máy và ngân sách được **định nghĩa ở đúng một chỗ: tài liệu này**.
@@ -25,7 +25,7 @@
 | Quỹ giờ | 2 người × 8–15 giờ/tuần, tổng ~135–270 người-giờ đến hạn nộp |
 | Phân công | Quang: hạ tầng, serving, vòng đời pod, runner, năng lực; Trình: GitOps, autoscaling, giám sát, cảnh báo, tải, phân tích ([Kế hoạch §5.1](06-ke-hoach-quan-ly.md#51-phân-công)) |
 | Máy nhà | Xem [§10.1](#101-máy-nhà) |
-| Cloud | **Chỉ Vast.ai chế độ VM** (GCP bị từ chối quota 05/11). V0+V1 (08/11) chạy trên VM **4 × RTX A4000 16 GB**; máy V2 cùng loại, ≥ 20 vCPU, N = 4. Dự phòng: máy Vast khác ([§10.2](#102-gpu-thuê)). Model cloud 3B (§9.1). [ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C1–C4 |
+| Cloud | **Chỉ Vast.ai chế độ VM** (GCP bị từ chối quota 05/11). V0+V1 (08/11) chạy trên VM 4 × RTX A4000 16 GB; **V2 (18–19/11) chạy trên VM 4 × RTX 4060 Ti 16 GB**, 61 vCPU, N = 4, vì hôm đó không có máy A4000 ([§10.2](#102-gpu-thuê)). Model cloud 3B (§9.1). [ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C1–C4 |
 | Tiền | Xem [§11](#11-ngân-sách) |
 | Demo khi bảo vệ | Chốt sau; định hướng là video, cộng phần live nhỏ bằng simulator |
 
@@ -37,10 +37,10 @@
 |---|---|---|---|---|
 | **F1** | Phục vụ **một model mở cỡ 3–8B** qua API tương thích OpenAI (`/v1/chat/completions`), có streaming | vLLM, Traefik | Gọi API có streaming; chạy được ĐG1–ĐG3 | Must |
 | **F2** | Tự điều chỉnh số replica trong khoảng [1, N] theo tải (N = số GPU) | KEDA + HPA, cấu hình A2 | Bài kiểm thử T1–T7; ĐG2 | Must |
-| **F3** | Triển khai, cập nhật và rollback qua Git, không thao tác tay trên cluster | Argo CD (bản core, một App-of-Apps), Kustomize | VH2: cập nhật và rollback bằng `git revert` | Must |
+| **F3** | Triển khai, cập nhật và rollback qua Git, không thao tác tay trên cluster | Argo CD (bản core, một App-of-Apps), Kustomize | VH2: cập nhật và rollback bằng `git revert`. **Sửa 24/11:** vòng Git chạy trên kind + simulator có Argo CD ([ADR-007](../adr/007-doi-vh1-vh2-f6-n8-khoi-cluster-nha.md)) | Must |
 | **F4** | Dựng toàn bộ từ máy trắng bằng vài lệnh `make` | Ansible; `vast.sh`; Argo CD ở nhà, `make cloud-platform` (helm) trên VM thuê ([ADR-006 §3.1](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md#31-quyết-định-ngày-12112026)) | VH5 | Must |
 | **F5** | **3 dashboard**: Serving + GPU; Autoscaling; SLO + chi phí | Prometheus, Grafana | Kiểm tra trong mọi lượt; ảnh chụp đưa vào luận văn | Must |
-| **F6** | **6 cảnh báo** theo SLO và sức khoẻ nền tảng, gửi tới Telegram; **mỗi cảnh báo có runbook** | Alertmanager, `docs/runbooks/` | VH6 | Must |
+| **F6** | **6 cảnh báo** theo SLO và sức khoẻ nền tảng, gửi tới Telegram; **mỗi cảnh báo có runbook** | Alertmanager, `docs/runbooks/` | VH6; tin tới Telegram thật kiểm trên kind + simulator ([ADR-007](../adr/007-doi-vh1-vh2-f6-n8-khoi-cluster-nha.md)) | Must |
 | **F7** | Bảo vệ tối thiểu: API key, giới hạn tốc độ, một NetworkPolicy, bí mật mã hoá trong Git | `--api-key` của vLLM, Traefik `rateLimit`, NetworkPolicy, Sealed Secrets. **Sửa 12/11:** chỉ làm API key và mạng riêng; rate limit, NetworkPolicy thường trực, Sealed Secrets bị lược ([ADR-006 §3.1](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md#31-quyết-định-ngày-12112026)) | Checklist ở [Vận hành](04-van-hanh.md#8-bảo-mật-tối-thiểu) | Should |
 
 Danh sách 6 cảnh báo nằm ở [Vận hành §3.2](04-van-hanh.md#32-danh-sách-cảnh-báo).
@@ -74,8 +74,8 @@ Danh sách 6 cảnh báo nằm ở [Vận hành §3.2](04-van-hanh.md#32-danh-s�
 
 | Mức | Nội dung | Ý nghĩa |
 |---|---|---|
-| **Must** | F1–F6 (F3–F6 ở bản rút gọn); N1, N2a, N4, N6; ĐG1; ĐG2 17 lượt; VH1, VH2 ở nhà (gồm ca 1 replica), VH4, VH5 | Đủ điều kiện bảo vệ |
-| **Should** | F7; N2b, N3, N5, N7, N8; ĐG3; VH2 trên GPU thuê, VH3, VH6; dashboard chi phí | Đồ án tốt |
+| **Must** | F1–F6 (F3–F6 ở bản rút gọn); N1, N2a, N4, N6; ĐG1; ĐG2 17 lượt; VH1 (pha `drop` của KB2 trên GPU thuê); VH2 gồm vòng Git trên kind + simulator và ca 1 replica trên GPU thuê; VH4, VH5. **Sửa 24/11** (trước đó: "VH1, VH2 ở nhà"), [ADR-007](../adr/007-doi-vh1-vh2-f6-n8-khoi-cluster-nha.md) | Đủ điều kiện bảo vệ |
+| **Should** | F7; N2b, N3, N5, N7, N8; ĐG3; VH2 ca mọi GPU có pod và ca kiểu web (GPU thuê), VH3, VH6; dashboard chi phí | Đồ án tốt |
 | **Could** | A3 (KV-cache); A4 (flapping) trên simulator; cảnh báo phụ (`LLMSLOBurnSlow`, `LLMPreemptions`, `GPUTemperatureHigh`, `GPUXidError`); `gitleaks`; trigger theo TTFT (E6); `pod-deletion-cost` (E11); warm pool | Đồ án xuất sắc |
 
 Nếu chậm tiến độ thì cắt từ dưới lên theo thứ tự trên ([Kế hoạch §8](06-ke-hoach-quan-ly.md#8-dự-phòng-và-cắt-giảm-phạm-vi)).
@@ -182,7 +182,7 @@ B\* và KV\* là số request đồng thời trung bình và mức KV-cache trê
 | Prefix caching | **Tắt** khi đánh giá (`--no-enable-prefix-caching`); bật khi vận hành thật | như cloud |
 | `--shutdown-timeout` | **150** (s). Cờ có trên bản ghim, nhưng vLLM 0.31.0 **không dừng khi nhận SIGTERM** (đo 06/11): request an toàn là nhờ grace period 180 s, pod giữ GPU đủ 180 s mỗi lần tắt ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C8) | như cloud |
 | `--api-key` | Lấy từ Secret | như cloud |
-| Image | `vllm/vllm-openai@sha256:…`, ghim theo digest ([phiên bản](../phien-ban.md)); đã chạy trên A4000 (08/11) | như cloud; đã chạy trên RTX 5060 sm_120 (23/10, bản `v0.31.0` CUDA 13) |
+| Image | `vllm/vllm-openai@sha256:…`, ghim theo digest ([phiên bản](../phien-ban.md)); đã chạy trên A4000 (08/11) và RTX 4060 Ti (V2, 18–19/11) | như cloud; đã chạy trên RTX 5060 sm_120 (23/10, bản `v0.31.0` CUDA 13) |
 
 ### 9.2. Deployment vLLM
 
@@ -243,12 +243,12 @@ Máy nhà là **môi trường chức năng**: không dùng số liệu hiệu n
 
 ### 10.2. GPU thuê
 
-**Vast.ai chế độ VM, 4 × RTX A4000 16 GB, thuê trọn máy** ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C2; bản mô tả 3.0 chọn 4 × RTX 4090, nhưng tới 06/11 không có máy 4 × 4090 VM verified ≤ 2 USD/giờ cả máy, còn A4000 đã chạy trọn V0+V1 ngày 08/11). Tiêu chí lọc máy, cũng là mặc định của `make find MODE=v2` (`envs/cloud/provision/vast.sh`):
+**Vast.ai chế độ VM, 4 × RTX A4000 16 GB, thuê trọn máy** ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C2; bản mô tả 3.0 chọn 4 × RTX 4090, nhưng tới 06/11 không có máy 4 × 4090 VM verified ≤ 2 USD/giờ cả máy, còn A4000 đã chạy trọn V0+V1 ngày 08/11; V2 thực tế chạy trên 4 × RTX 4060 Ti, xem đoạn "Máy V2 thực tế" dưới bảng). Tiêu chí lọc máy, cũng là mặc định của `make find MODE=v2` (`envs/cloud/provision/vast.sh`):
 
 | Tiêu chí | Ngưỡng |
 |---|---|
 | Chế độ | VM (`vms_enabled=true`), on-demand, **verified** (không `is_vm_deverified`), ngoài Trung Quốc |
-| GPU | Máy có **đúng 4** RTX A4000, thuê cả 4 |
+| GPU | Máy có **đúng 4** RTX A4000, thuê cả 4 (V2 thực tế: 4 × RTX 4060 Ti) |
 | Độ tin cậy | ≥ 0,98 |
 | CPU / RAM | ≥ 8 + 3N = **20 vCPU** (4 pod vLLM × 3 lõi + máy tạo tải 3 lõi + hệ thống; máy V1 15 vCPU không đủ) / ≥ 24 GB mỗi GPU |
 | Ổ đĩa | ≥ 130 GB (image 9 GB + model 6 GB + TSDB), đọc tuần tự ≥ 500 MB/s, đo bằng `make probe` |
@@ -257,6 +257,8 @@ Máy nhà là **môi trường chức năng**: không dùng số liệu hiệu n
 
 **Dự phòng** (không còn GCP: quota bị từ chối 05/11): (a) 4 × RTX 4090 VM, khoảng 2,4–2,7 USD/giờ cả máy, vẫn dưới trần ngân sách; (b) máy 2 GPU (2 × A4000 hoặc 2 × 5060 Ti) với N = 2 và N3 viết lại theo N ở ADR-003. Kế hoạch Z (không thuê được gì): [Môi trường §5](05-moi-truong-danh-gia.md#5-dự-phòng-và-kế-hoạch-z).
 
+**Máy V2 thực tế (18–19/11):** VM **4 × RTX 4060 Ti 16 GB** ở Canada, thay cho A4000 vì hôm đó không có máy A4000 và máy 4 × 4090 thuê trước không lên SSH ([nhật ký của Quang](../nhat-ky/lam-viec/quang/tuan-07.md), 18/11). `make probe`: 61 vCPU (EPYC 7713), RAM 197 GB, ổ còn trống 120 GB, ghi tuần tự 972 MB/s, tải Hugging Face 222,3 MB/s; giá 1,5 USD/giờ cả máy theo trang Vast. ĐG1 trên máy này cho C = 3,5 req/s, thấp hơn 4,5 req/s của ĐG1 thử trên A4000. Băng thông bộ nhớ của 4060 Ti (khoảng 288 GB/s, so với 448 GB/s) chỉ giải thích một phần: tỉ lệ băng thông thuần dự đoán 4,5 × 288/448 ≈ 2,9 req/s, còn số đo cao hơn. Mọi số đo V2 gắn với máy này.
+
 ---
 
 ## 11. Ngân sách
@@ -264,7 +266,7 @@ Máy nhà là **môi trường chức năng**: không dùng số liệu hiệu n
 | Hạng mục | Giá trị |
 |---|---|
 | Trần tiền thật cho GPU thuê | **≤ 150 USD** |
-| Dự toán (phương án Vast) | ~15–65 USD: V0+V1 đã tốn ≈ 1,5 USD; V2 trên 4 × A4000 ≈ 13–15 USD, nếu phải dùng 4 × 4090 ≈ 55–60 USD ([các phiên thuê](05-moi-truong-danh-gia.md#6-các-phiên-thuê-gpu)) |
+| Dự toán (phương án Vast) | ~15–65 USD: V0+V1 đã tốn ≈ 1,5 USD; V2 trên 4 × A4000 ≈ 13–15 USD, nếu phải dùng 4 × 4090 ≈ 55–60 USD. Thực tế V2 chạy trên 4 × RTX 4060 Ti, 1,5 USD/giờ cả máy, ĐG1 cộng ma trận ước 9–10 giờ ≈ 14–15 USD (ước 18/11); chi phí thực: chưa có số ([các phiên thuê](05-moi-truong-danh-gia.md#6-các-phiên-thuê-gpu)) |
 | Đã nạp | 800.000 VND (~30 USD, tỷ giá ~26.000 VND/USD) vào **GCP** (Quang xác nhận 08/11), nên không dùng được cho Vast. Tiền Vast nạp riêng trước V2 |
 | Credit GCP | 200 USD, nhưng **không dùng được**: GCP từ chối tăng quota GPU ngày 05/11 (ADR-004 §7, ADR-006 C1) |
 | Số dư tối thiểu trước phiên V2 | ≥ 1,3 × chi phí dự kiến của V2; runner báo động khi số dư < 30 USD |
