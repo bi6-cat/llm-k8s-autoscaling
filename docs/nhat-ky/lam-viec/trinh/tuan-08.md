@@ -856,3 +856,11 @@
 - **Results:** #74 `46c17bb`, #75 `2ec55f3`, #76 `2f500f7`, #77 `97213e6`, #78 `5e3c621`. #75, #76, #78 chỉ xung đột ở nhật ký, `git merge origin/main` tự gộp (merge=union), không trùng tiêu đề mục.
 - **Incidents:** #77 xung đột thật với #76 ở `docs/nhat-ky/van-hanh.md` và `envs/sim/README.md` (cả hai thêm mục cùng chỗ). Giữ cả hai phía: van-hanh.md xếp mục N8 trước mục Argo CD theo thứ tự đã làm; README đặt mục "VH2 qua Git" trước "Trên Windows (WSL2)", và sửa chú thích "(mục cuối)" ở bảng đầu thành link tới mục đó (`0fbd6e1`). Lệnh mẫu `vh2-git` trong README ghi `--rate 0.5` trong khi câu dưới khuyên dùng 0,3; sửa thành `--rate 0.3` trên nhánh #78 trước khi merge (`012d269`).
 - **Links:** PR #74, #75, #76, #77, #78.
+
+## 2026-11-27 – Merge PR #79–#83 (tên máy V2, chương 3, 4, 5, 2 của luận văn)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** lượt tự chạy có cho merge, vòng 2, gỡ tiếp hàng đợi theo thứ tự ở STATE. Mỗi PR kiểm đủ 5 điều kiện merge: CI 6/6 xanh, đã chạy `/code-review high` lúc mở PR, `MERGEABLE`, không có review hay bình luận, chỉ sửa `docs/` (không đụng manifest Argo CD theo dõi), base `main`. Merge commit, xoá nhánh head.
+- **Results:** #79 `7942c77`, #80 `d19b3d0`, #81 `eec0222`, #82 `c0a88ab`, #83 `114df6c`. #80 và #83 chỉ xung đột ở nhật ký, `git merge origin/main` tự gộp (merge=union), không trùng tiêu đề mục.
+- **Incidents:** #81 xung đột thật ở bảng bố cục luận văn (Kế hoạch §11.1): nhánh ch. 4 đổi tên 4.3.2 thành "Thử autoscaling và fallback trên simulator trước khi thuê GPU", còn main (#75) sửa 5.5.1 thành "thay cho VH1 ở nhà theo ADR-007". Giữ cả hai (`18996b2`). #82 xung đột ở `tai-lieu.bib`: nhánh ch. 5 thêm hai nguồn băng thông bộ nhớ NVIDIA, main thêm nguồn Argo CD Cluster Bootstrapping; giữ cả ba mục, kiểm không trùng khoá (`29225b6`).
+- **Links:** PR #79, #80, #81, #82, #83.
