@@ -911,3 +911,10 @@
 - **Results:** #79 `7942c77`, #80 `d19b3d0`, #81 `eec0222`, #82 `c0a88ab`, #83 `114df6c`. #80 và #83 chỉ xung đột ở nhật ký, `git merge origin/main` tự gộp (merge=union), không trùng tiêu đề mục.
 - **Incidents:** #81 xung đột thật ở bảng bố cục luận văn (Kế hoạch §11.1): nhánh ch. 4 đổi tên 4.3.2 thành "Thử autoscaling và fallback trên simulator trước khi thuê GPU", còn main (#75) sửa 5.5.1 thành "thay cho VH1 ở nhà theo ADR-007". Giữ cả hai (`18996b2`). #82 xung đột ở `tai-lieu.bib`: nhánh ch. 5 thêm hai nguồn băng thông bộ nhớ NVIDIA, main thêm nguồn Argo CD Cluster Bootstrapping; giữ cả ba mục, kiểm không trùng khoá (`29225b6`).
 - **Links:** PR #79, #80, #81, #82, #83.
+
+## 2026-11-27 – Merge PR #84–#88 (chương 1, fallback KEDA, CPU pod cloud, chương 6, mở đầu)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** lượt tự chạy có cho merge, vòng 3, gỡ tiếp hàng đợi theo thứ tự ở STATE. Mỗi PR kiểm đủ 5 điều kiện merge: CI 6/6 xanh, đã chạy `/code-review high` lúc mở PR, `MERGEABLE`, không có review hay bình luận, chỉ sửa `docs/` (không đụng manifest Argo CD theo dõi), base `main`. Merge commit, xoá nhánh head.
+- **Results:** #84 `98aa53b`, #85 `a05f52f`, #86 `0718d30`, #87 `05699bb`, #88 `6254844`. #85–#88 chỉ xung đột ở nhật ký tuần 08, `git merge origin/main` tự gộp (merge=union), không trùng tiêu đề mục; push nhánh rồi chờ CI xanh lại trước khi merge.
+- **Links:** PR #84, #85, #86, #87, #88.
