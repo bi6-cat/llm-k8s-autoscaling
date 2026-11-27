@@ -190,7 +190,7 @@ B\* và KV\* là số request đồng thời trung bình và mức KV-cache trê
 |---|---|
 | `replicas` | **Không đặt** (HPA quản lý) |
 | GPU | `nvidia.com/gpu: 1` mỗi pod (ở nhà là 1 trong 2 GPU replica của RTX 5060) |
-| CPU, RAM | Cloud: requests = limits, `cpu: 6`, `memory: 24Gi` (QoS Guaranteed). Nhà: request `cpu: 1`, `memory: 3584Mi`; limit `memory: 5Gi` (đo 06/11: ~3,4 GiB mỗi pod) |
+| CPU, RAM | Cloud: requests = limits, `cpu: "3"`, `memory: 16Gi` (QoS Guaranteed; RAM gồm cả `/dev/shm` 8Gi); lý do chọn 3 lõi ở [Môi trường §3.5](05-moi-truong-danh-gia.md#35-cấu-hình-k3s-và-phân-bổ-cpu-trên-vm-thuê). V2 chạy ở commit `10c0527`, manifest khi đó đặt giá trị này. *(Sửa 27/11: bản trước ghi `cpu: 6`, `memory: 24Gi` theo thiết kế 08/10, ADR-001, nhưng `envs/cloud/serving/patch-vllm.yaml` đặt 3 lõi, 16Gi)* Nhà: request `cpu: 1`, `memory: 3584Mi`; limit `memory: 5Gi` (đo 06/11: ~3,4 GiB mỗi pod) |
 | `/dev/shm` | `emptyDir: {medium: Memory}`; `sizeLimit` cloud `8Gi`, nhà `512Mi` (tính vào giới hạn RAM của pod) |
 | `startupProbe` | `/health`, chu kỳ 5 s, `failureThreshold: 120` (tối đa 10 phút) |
 | `readinessProbe` | `/health`, chu kỳ 5 s |
