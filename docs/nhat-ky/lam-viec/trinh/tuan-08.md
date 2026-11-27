@@ -328,3 +328,15 @@
 - **Deviations:** 00-thong-so §9.1 ghi `cpu: 6`, `memory: 24Gi` cho pod vLLM trên cloud, khác cấu hình đã chạy ở V2 (3 lõi, 16Gi); chưa sửa ở PR này.
 - **Links:** `docs/luan-van/05-0*.md`; nhánh `docs/tr8-thesis-ch5-drafts`.
 - **Thesis:** chương 5.
+
+## 2026-11-27 – Chốt ba số còn mở ở 4.5, 4.6 và 5.5
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** tra `runs/v2-vm/`, `analysis/figures/v2-dg2/tables/runs.csv`, `experiments/ops/vh.py`, `experiments/runner/collect.py`, `analysis/build_tables.py`, `van-hanh.md` mục LT8 để chốt ba số; sửa 4.5, 4.6 (PR #81) và 5.5, 5.7 (PR #82).
+- **Decision:**
+  1. Thời gian pod cũ trên V2 giữ GPU khi rolling update: giữ "chưa đo". Thư mục `ops-vh2b-20261118-170715` chỉ có `timeline.json` 4 mốc, `summary.json` và `load/`; không có log pod, sự kiện pod hay dữ liệu Prometheus. 371,6 s tính từ lúc patch annotation tới lúc `kubectl rollout status` xong. Vì cả 4 GPU đã có pod và chiến lược là `maxSurge: 0` / `maxUnavailable: 1`, pod được thay lần lượt, nên trung bình mỗi pod cũ giữ GPU dưới 93 s (cận trên, gồm cả cold start). Thân bài 4.5, 5.5.1, 5.7 nay nêu đúng lý do "phiên đo không lưu log hay mốc từng pod" thay cho "chưa đọc log".
+  2. Số lượt có pha giảm tải ở KB2: cả hai nguồn đều đúng. 5 lượt A1/A2 × KB2 có pha drop với 0 lỗi, nhưng chỉ 3 lượt A2 bớt pod dưới tải (`scale_downs` 3 mỗi lượt); 2 lượt A1 có `scale_downs` 0.
+  3. Mốc tính LT8 cho N7: từ lúc vi phạm theo log client tới lúc `ALERTS` chuyển firing, giống VH6 (`time_to_alert_s`); LT8 cho 159–242 s. Bộ số tính từ lúc bơm (firing 173–286 s) không dùng cho N7. 5.5.3 đổi "page đến sau" thành "chuyển sang firing sau", và ghi rõ số chưa gồm thời gian Alertmanager gom nhóm và gửi tin.
+- **Results:** kiem_van 0 điểm ở 4 file; lychee 0 lỗi; `/code-review high` trên phần sửa ch. 5: 8 điểm, 7 điểm đã sửa (câu "chờ thêm ít nhất 30 s" sai vì `group_interval` áp dụng khi nhóm còn tồn tại, nên bỏ; comment nguồn còn lời cũ; 15–20 s sửa thành 12–17 s; thêm nguồn `common/serving/deployment.yaml`), 1 điểm không sửa (đưa cận trên 93 s vào thân bài: 5.5.1 đã nêu "khoảng 93 s mỗi pod").
+- **Links:** PR #81 (`0110e59`), PR #82; `docs/luan-van/04-05-scale-down-cap-nhat.md`, `04-06-giam-sat-canh-bao.md`, `05-05-kich-ban-van-hanh.md`, `05-07-han-che-phep-do.md`.
+- **Thesis:** §4.5, §5.5.1, §5.5.3, §5.7.
