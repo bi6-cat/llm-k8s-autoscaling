@@ -501,3 +501,9 @@ Máy của Trình, WSL2 Ubuntu 24.04, kind v0.33.0. Làm theo `envs/sim/README.m
 | Tổng | 1.481 s | dưới 1 giờ (N8) |
 
 - README được bổ sung các bước còn thiếu (công cụ, kiểm tra sau khi dựng, Grafana, WSL2). Chi tiết ở [nhật ký Trình tuần 08](lam-viec/trinh/tuan-08.md).
+
+## 2026-11-24 – kind `llm-sim`: thêm rồi gỡ Argo CD (chuẩn bị VH2 qua Git)
+
+- **Môi trường:** kind `llm-sim` trên laptop của Trình (WSL2), không đụng cluster nhà hay máy thuê.
+- **Thao tác:** `make sim-argocd` (Argo CD core `v3.5.4`, app `serving`, `autoscaling` theo `main`) 142 s tới `Synced Healthy`; self-heal đưa sửa tay về Git sau 2 s; gỡ bằng ba lệnh của `make sim-argocd-down` 13 s. Simulator và A2 chạy suốt, không tạo lại pod.
+- **Trạng thái sau:** không còn Argo CD trên kind. VH2 (commit, sync, `git revert` dưới tải) làm ở bước sau. Chi tiết ở [nhật ký Trình tuần 08](lam-viec/trinh/tuan-08.md).
