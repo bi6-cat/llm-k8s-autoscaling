@@ -215,7 +215,9 @@ class Svg:
             f'<defs>{"".join(self.defs)}</defs>\n'
             f'<rect x="0.5" y="0.5" width="{self.w - 1}" height="{self.h - 1}" rx="14" '
             f'fill="{SURFACE}" stroke="{CARD_BORDER}"/>\n' + "\n".join(self.body) + "\n</svg>\n")
-        with open(os.path.join(OUT, name), "w", encoding="utf-8") as fh:
+        # newline="\n": SVG trong Git dùng LF; mặc định của Python trên Windows ghi CRLF, làm mọi SVG
+        # đổi theo mỗi lần chạy lại dù nội dung giữ nguyên.
+        with open(os.path.join(OUT, name), "w", encoding="utf-8", newline="\n") as fh:
             fh.write(svg)
         print("wrote", name)
 
