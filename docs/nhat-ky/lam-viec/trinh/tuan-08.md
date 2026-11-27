@@ -353,6 +353,49 @@
 - **Links:** `docs/luan-van/quy-tac-viet.md` (§1, §3.5, §9); `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§5.1, §11.1).
 - **Thesis:** phần đầu quyển (không có Tóm tắt, không có Lời cam đoan); Mở đầu; mục 1.3 Đóng góp.
 
+## 2026-11-27 – Luận văn: chương 2 phần 1, mục 2.1 và 2.2
+
+- **Task:** TR8 (luận văn, bản base chương 2) · **Environment:** none
+- **Done:**
+  1. Tạo nhánh `docs/tr8-thesis-ch2` từ `origin/main`.
+  2. Viết `02-00` (mở chương), `02-01` (2.1.1 Sinh token và bộ nhớ GPU, 2.1.2 vLLM: continuous batching và các chỉ số TTFT, TPOT, Bảng 2.1 metric của vLLM, Hình 2.1 batching) và `02-02` (2.2 Hàng đợi và năng lực phục vụ: tải mở và tải đóng, định luật Little áp cho một replica, M/M/1, năng lực dùng được C và B\*, Hình 2.2 độ trễ theo mức tải). Nguồn: Kiến thức nền §1–§2, Bài toán §1, §3, phần lý thuyết LT1–LT6 trong `van-hanh.md`.
+  3. Thêm 8 tài liệu vào `tai-lieu.bib`: Vaswani 2017, GQA 2023, Sarathi-Serve 2024, PagedAttention 2023, Orca 2022, Little 1961, Harchol-Balter 2013, Schroeder NSDI 2006. Tên tác giả đối chiếu trên trang arXiv và USENIX, tóm tắt đọc ngày 27/11; Little kiểm qua Crossref.
+- **Decision:** chương 2 chỉ dùng số minh hoạ tròn (model 3 tỷ tham số ≈ 6 GB, GPU 300 GB/s), không dùng số đo của đồ án, để không trùng mục 5.2 (quy-tac-viet §2, §5). Mục mới trong `tai-lieu.bib` đặt ở đầu file để tránh xung đột với các nhánh chương 3, 5 (thêm ở cuối). Không đưa mức ρ 0,7–0,85 của Bài toán §3, vì không có nguồn chung; hệ số dư do chương 3 chọn.
+- **Results:** đo bằng Word theo khuôn T: mở chương 0,3 tr, 2.1 3,9 tr (1.838 chữ văn xuôi, 1 bảng, 1 hình), 2.2 2,3 tr (1.155 chữ, 1 hình); cộng 6,5 tr. Còn 3,5–6,5 tr cho 2.3–2.6 và kết chương để nằm trong 10–13 tr. `kiem_van` 0 điểm cả ba file; `pandoc --citeproc` không cảnh báo; `lychee --offline` thư mục `docs/luan-van/` 0 lỗi.
+- **Deviations:** Harchol-Balter 2013 là giáo trình, chưa đọc trực tiếp trong lần viết này (dẫn cho công thức M/M/1); comment trong bib ghi để người soát đối chiếu trước khi chốt.
+- **Links:** `docs/luan-van/02-00-co-so-ly-thuyet.md`, `02-01-phuc-vu-llm-vllm.md`, `02-02-hang-doi-nang-luc.md`, `tai-lieu.bib`.
+- **Thesis:** chương 2, mục 2.1, 2.2; Hình 2.1 (`11-batching.png`), Hình 2.2 (`10-do-tre-theo-muc-tai.png`).
+
+## 2026-11-27 – Luận văn: chương 2 phần 2, mục 2.3–2.6 và kết chương
+
+- **Task:** TR8 (luận văn, bản base chương 2) · **Environment:** none
+- **Done:**
+  1. Viết `02-03` (GPU trên Kubernetes: khái niệm cluster, node, pod, Deployment, Service, readiness probe, controller; device plugin và `nvidia.com/gpu`; time-slicing; vì sao GPU utilization bão hoà, util ≈ 1 − e^(−L)), `02-04` (thuật toán HPA, behavior mặc định, năm loại metric, KEDA, fallback, trễ phản ứng), `02-05` (SLI, SLO, burn rate, page và ticket; Prometheus và Alertmanager; Argo CD; rolling update và graceful shutdown khi GPU đã dùng hết), `02-06` (Bảng 2.2 năm nền tảng, các nghiên cứu, vị trí của đồ án, Kết chương). Rút đoạn mở chương ở `02-00` còn 5 câu.
+  2. Đối chiếu giá trị mặc định với tài liệu gốc ở bản ghim: Kubernetes v1.36 (HPA sync 15 s, tolerance 0,1, scale-down stabilization 300 s, scale-up 100% hoặc 4 pod mỗi 15 s; extended resource chỉ nhận số nguyên, không cấp vượt; maxSurge, maxUnavailable 25%; progressDeadlineSeconds 600; thời gian tắt mặc định 30 s), KEDA 2.21 (pollingInterval 30 s, cooldownPeriod 300 s chỉ khi về 0, fallback), Argo CD v3.5.4, NVIDIA device plugin v0.20.1 (time-slicing không cô lập bộ nhớ và lỗi), Prometheus v3.15.0, Alertmanager v0.34.1. Tóm tắt arXiv của DistServe, Splitwise, Llumnix, ServerlessLLM, BurstGPT, AIBrix; README của Production Stack, llm-d; tài liệu KServe KPA, Ray Serve.
+  3. Thêm 19 tài liệu vào đầu `tai-lieu.bib` (sau 8 mục của phần 1).
+- **Decision:** 2.4, 2.5 viết thành đoạn có cụm in đậm, không chia 2.4.1–2.5.3, vì mỗi mục dưới 2 trang; dẫn chéo ở 2.1, 2.2 đổi thành "mục 2.5". SLI, SLO gọi là "chỉ số/mục tiêu mức dịch vụ" như mục 3.5. Bảng 2.2 bỏ NVIDIA Dynamo vì chưa đọc nguồn gốc. Không viết "các nền tảng đều dựa trên HPA, KEDA" (Kiến thức nền §6) vì chỉ kiểm được KServe dùng Knative; README Production Stack ghi autoscaling theo metric vLLM còn ở lộ trình.
+- **Results:** đo bằng Word theo khuôn T: 2.3 1,6 tr, 2.4 1,5 tr, 2.5 1,9 tr, 2.6 và Kết chương khoảng 1,5 tr; cả chương khoảng 12,9 tr (định hướng 10–13), chưa tính danh mục tài liệu. `kiem_van` 0 điểm mọi file `02-*`; `pandoc --citeproc` không cảnh báo trích dẫn; `lychee --offline` thư mục `docs/luan-van/` 0 lỗi. `/code-review high` trên diff so với main: 10 điểm. Đã sửa 8: `maxUnavailable: 1` phải kèm `maxSurge: 0`; SIGTERM và việc bỏ pod khỏi Service chạy song song chứ không nối tiếp; HPA có năm loại metric (thêm ContainerResource); mô hình đóng vẫn có hàng đợi, chỉ không dài quá số người dùng ảo; trích dẫn mô hình kéo và recording rule sang đúng trang tài liệu; ví dụ HPA và trễ phản ứng bỏ số cấu hình của đồ án; "Mục này trình bày", đoạn mở chương 7 câu, "instance", hai cách gọi SLO; dẫn chéo 2.5.1 không tồn tại. Chưa sửa 2 điểm, ghi dưới đây.
+- **Deviations:** Tài liệu KEDA 2.21 ghi fallback hỗ trợ cả `Value` và `AverageValue`, khác Kiến thức nền §3.3 ("chỉ hỗ trợ AverageValue") và lý do ở Kiến trúc dòng `metricType: AverageValue … để fallback hoạt động`; mục 2.4 viết theo tài liệu 2.21, hai tài liệu thiết kế chưa sửa. Harchol-Balter 2013 (dẫn ở 2.2 cho công thức M/M/1) vẫn chưa đọc trực tiếp; trang của tác giả chỉ có chương 1. Hình 2.2 (ảnh có sẵn) có thể ghi ngưỡng TTFT của đồ án, chưa kiểm.
+- **Links:** `docs/luan-van/02-00-co-so-ly-thuyet.md`, `02-03-gpu-kubernetes.md`, `02-04-autoscaling-kubernetes.md`, `02-05-slo-gitops.md`, `02-06-giai-phap-lien-quan.md`, `tai-lieu.bib`.
+- **Thesis:** chương 2, mục 2.3–2.6 và Kết chương; Bảng 2.2.
+
+## 2026-11-27 – Kiểm Hình 2.2 và sửa chú thích
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** kiểm ảnh `docs/images/png/10-do-tre-theo-muc-tai.png` dùng làm Hình 2.2 (mục 2.2): ảnh có vẽ đường "SLO: TTFT p95 ≤ 2,5 s", μ = 2,4, C ≈ 2,1 req/s và tiêu đề trong hình "Vì sao không thể cho GPU chạy sát 100% tải". Sửa chú thích: nói đường cong vẽ phác theo dạng trung bình T ≈ T0 + k·ρ/(1 − ρ) và mọi số trên hình chỉ để minh hoạ; comment nguồn ghi cách tính lại C.
+- **Decision:** chú thích không dẫn sang mục 3.1 hay 5.2, vì quy-tac-viet §2 không cho chương 2 nói về hệ thống của nhóm. Cách sửa gốc là vẽ lại hình cho luận văn (bỏ tiêu đề trong hình, đường ngưỡng không ghi số); để sau vì lượt tự chạy sắp hết giờ.
+- **Results:** tính lại từ dòng chân hình: T0 = 0,3 s, k = 0,35 s, C ≈ 2,07 req/s, khớp nhãn "C ≈ 2,1". `kiem_van` 0 điểm; lychee `docs/luan-van` 0 lỗi. `/code-review high` 8 điểm: sửa 5 (dẫn chéo sang chương 3, nhánh khác, cách tính, dạng trung bình, nhật ký); 2 điểm (vẽ lại hình, tiêu đề "GPU 100% tải" trái với đoạn nói ρ khác GPU utilization) để việc vẽ lại; 1 điểm (SLO theo request khác TTFT p95) hết áp dụng khi bỏ dẫn sang 3.1.
+- **Links:** PR #83, `docs/luan-van/02-02-hang-doi-nang-luc.md`.
+- **Thesis:** chương 2, Hình 2.2.
+
+## 2026-11-27 – Vẽ lại Hình 2.2 cho luận văn
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** thêm `fig_knee_thesis()` vào `docs/diagrams/chuyen_sau.py`, sinh `docs/images/10-do-tre-theo-muc-tai-luan-van.svg`: cùng đường cong và ba vùng như Hình 10 (tham số chung `KNEE_MU`, `KNEE_C`, `knee_ttft`), không tiêu đề trong hình, không lưới, không số trên trục, C, μ; đường ngưỡng ghi "ngưỡng TTFT"; nhãn vùng "dưới ngưỡng", "vượt ngưỡng", "quá tải"; trục ghi "TTFT (s)" và "tốc độ request đến λ (req/s)"; khổ 760 × 392, chữ 14–16 px. Xuất PNG bằng Chrome headless (cùng cờ với `export_png.sh`, chỉ cho file mới). Hình 2.2 ở 02-02 trỏ sang PNG mới; chú thích bỏ câu liệt kê số và chữ SLO. `Svg.save` ghi SVG với `newline="\n"`.
+- **Decision:** D135: làm hình riêng thay vì sửa Hình 10, vì Hình 10 phục vụ Bài toán §3 (cần số và SLO của đồ án), còn chương 2 không nói SLO của nhóm (quy-tac-viet §2). Bỏ cả số trên trục, vì giữ trục số thì vẫn đọc được ngưỡng 2,5 s; giữ đơn vị trục theo quy-tac-viet §6. Nhãn vùng nói "ngưỡng" vì mục 2.2 đứng trước chỗ định nghĩa SLO (2.5). Trục ghi TTFT, không ghi p95, vì đường cong là dạng trung bình.
+- **Results:** chạy lại `build_diagrams.py`: 19 SVG cũ giữ nguyên từng byte (kể cả Hình 10 sau khi tách tham số chung); trước khi thêm `newline="\n"`, cả 19 file bị ghi CRLF. `kiem_van` 02-02: 0 điểm; lychee `docs/luan-van`: 0 lỗi; ruff trên `chuyen_sau.py` không thêm lỗi so với trước. `/code-review high` 7 điểm, sửa cả 7 (đơn vị trục, chữ SLO trước 2.5, CRLF, chữ quá nhỏ khi thu về bề rộng trang, lưới không số, p95 với đường trung bình, docstring).
+- **Links:** PR #83, `docs/diagrams/chuyen_sau.py`, `docs/diagrams/build_diagrams.py`, `docs/images/10-do-tre-theo-muc-tai-luan-van.svg`, `docs/images/png/10-do-tre-theo-muc-tai-luan-van.png`, `docs/luan-van/02-02-hang-doi-nang-luc.md`.
+- **Thesis:** chương 2, Hình 2.2.
 ## 2026-11-26 – Luận văn: chương 5 bước 1, merge main và đổi đề mục theo D101
 
 - **Task:** TR8 · **Environment:** none
