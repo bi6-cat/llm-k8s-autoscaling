@@ -96,7 +96,7 @@ Kết quả của đồ án được tổng hợp thành một **bảng nghiệm
 
 ![Hình 2 – Kiến trúc tổng thể](images/02-kien-truc-tong-the.svg)
 
-*Hình 2. Kiến trúc tổng thể. Request đi từ client qua Traefik (giới hạn tốc độ) và Service tới các pod vLLM (kiểm API key), mỗi pod gắn một GPU. Prometheus thu metric; KEDA chạy PromQL và cung cấp external metric cho HPA; HPA cập nhật số replica của Deployment.*
+*Hình 2. Kiến trúc tổng thể. Người dùng gọi API qua Traefik, còn máy tạo tải gọi thẳng Service; Service chia request cho các pod vLLM (kiểm API key), mỗi pod gắn một GPU. Prometheus thu metric; KEDA chạy PromQL và cung cấp external metric cho HPA; HPA cập nhật số replica của Deployment. Argo CD đồng bộ cluster ở nhà theo Git.*
 
 ![Hình 4 – Vòng lặp autoscaling](images/04-vong-lap-autoscaling.svg)
 
@@ -150,7 +150,7 @@ Mỗi khó khăn riêng của GPU có một cách xử lý trong thiết kế:
 
 ![Hình 8 – Ba kịch bản tải](images/08-kich-ban-tai.svg)
 
-*Hình 8. Ba kịch bản tải theo đề cương, đơn vị là C (năng lực của một replica).*
+*Hình 8. Ba kịch bản tải theo đề cương (12, 24 và 17 phút), đơn vị là C (năng lực của một replica), vẽ với N = 4 GPU; vạch chấm là ranh giới các pha khi phân tích.*
 
 ---
 

@@ -62,7 +62,7 @@ Kiểm bằng số đo: trên RTX A4000 ngày 08/11/2026, vLLM báo KV-cache c�
 
 vLLM in con số thật khi khởi động (`GPU KV cache size: … tokens`, `Maximum concurrency …`). **Hãy ghi lại con số này** vào `metadata.json`.
 
-Cấu hình thật của V2 (Qwen2.5-3B trên RTX A4000 16 GB, cùng `gpu-memory-utilization` 0,90), số lấy từ phiên V0+V1 ngày 08/11/2026:
+Cấu hình model của V2 (Qwen2.5-3B, `gpu-memory-utilization` 0,90, GPU 16 GB), số lấy từ phiên V0+V1 ngày 08/11/2026 trên RTX A4000. V2 chạy trên RTX 4060 Ti, cũng 16 GB; log vLLM của V2 báo KV-cache 211.584–224.336 token tuỳ lượt:
 
 ```text
 16 GiB × 0,90 (gpu-memory-utilization)         ≈ 14,4 GiB được phép dùng
@@ -74,7 +74,7 @@ Cấu hình thật của V2 (Qwen2.5-3B trên RTX A4000 16 GB, cùng `gpu-memory
 
 nvidia-smi báo mỗi GPU dùng 14.416 MiB (≈ 14,1 GiB) khi chạy, dưới mức 14,4 GiB cho phép.
 
-Vì vậy trên máy V2, giới hạn số request đồng thời là `--max-num-seqs` 64 chứ không phải KV-cache: lúc tải cao nhất của ĐG1 thử, KV-cache mới dùng 18,5 %.
+Vì vậy với model 3B trên GPU 16 GB, giới hạn số request đồng thời là `--max-num-seqs` 64 chứ không phải KV-cache: lúc tải cao nhất của ĐG1 thử (A4000), KV-cache mới dùng 18,5 %.
 
 Trên GPU nhà, model 1,5B ở BF16 chiếm khoảng 3,1 GB. Với `gpu-memory-utilization` 0,85 trên GPU 6 GB, KV-cache còn khoảng 1–1,5 GB, tức 40–50 nghìn token, đủ cho 32 request song song [ước lượng, cần kiểm bằng log khởi động].
 
@@ -87,6 +87,7 @@ Với batch nhỏ, thời gian một bước decode ≳ kích thước weights �
 | RTX 4050 Laptop | 6 GB | ~192 GB/s | (7B không vừa) | – |
 | RTX 5060 | 8 GB | ~448 GB/s | (7B không vừa) | – |
 | RTX A4000 | 16 GB | ~448 GB/s | (7B không vừa: weights 15,2 GB đã bằng cả phần 0,90 VRAM) | – |
+| RTX 4060 Ti | 16 GB | ~288 GB/s | (7B không vừa) | – |
 | L4 | 24 GB | ~300 GB/s | ~51 ms | ~20 |
 | A10 | 24 GB | ~600 GB/s | ~25 ms | ~40 |
 | RTX A5000 | 24 GB | ~768 GB/s | ~20 ms | ~50 |
@@ -96,7 +97,7 @@ Với batch nhỏ, thời gian một bước decode ≳ kích thước weights �
 
 Đây là giới hạn lý thuyết; thực tế chậm hơn khoảng 20–40%. Băng thông của hai GPU nhà là số theo thông số nhà sản xuất [cần kiểm chứng]. Bảng này là lý do nên **ưu tiên GPU có băng thông cao** khi thuê (xem [Môi trường §3.1](05-moi-truong-danh-gia.md#31-chọn-loại-gpu)).
 
-**Với model 3B dùng ở V2** (≈ 6,17 GB ở BF16) trên RTX A4000 (~448 GB/s): bước decode tối thiểu ≈ 6,17 ÷ 448 ≈ **13,8 ms**, tức ≤ ~72 token/s cho 1 request. Đo ngày 08/11/2026 (`vllm bench serve`, 1 request đồng thời, input 512 / output 256): TPOT **17,2 ms** (57 token/s), băng thông hiệu dụng ≈ 6,17 GB ÷ 17,2 ms ≈ 359 GB/s ≈ **80 %** lý thuyết. Model 1,5B trên RTX 5060 cho 79 % ([nhật ký vận hành](../nhat-ky/van-hanh.md), LT1), nên mức "chậm hơn 20–40 %" ở trên khớp ở cả hai máy.
+**Với model 3B dùng ở V2** (≈ 6,17 GB ở BF16) trên RTX A4000 của V0+V1 (~448 GB/s): bước decode tối thiểu ≈ 6,17 ÷ 448 ≈ **13,8 ms**, tức ≤ ~72 token/s cho 1 request. Đo ngày 08/11/2026 (`vllm bench serve`, 1 request đồng thời, input 512 / output 256): TPOT **17,2 ms** (57 token/s), băng thông hiệu dụng ≈ 6,17 GB ÷ 17,2 ms ≈ 359 GB/s ≈ **80 %** lý thuyết. Model 1,5B trên RTX 5060 cho 79 % ([nhật ký vận hành](../nhat-ky/van-hanh.md), LT1), nên mức "chậm hơn 20–40 %" ở trên khớp ở cả hai máy. Trên RTX 4060 Ti của V2 (~288 GB/s), bước tối thiểu ≈ 6,17 ÷ 288 ≈ 21,4 ms, tức ≤ ~47 token/s cho 1 request; V2 không đo TPOT ở 1 request.
 
 ---
 
@@ -241,7 +242,7 @@ KEDA gồm *operator*, đọc `ScaledObject` và tạo HPA tương ứng, và *m
 - **`pollingInterval` (mặc định 30 s) chủ yếu dùng cho việc kích hoạt 0 ↔ 1.** Khi scale từ 1 lên N, **HPA** mới là bên hỏi metric theo chu kỳ sync của nó (15 s), và KEDA metrics server chạy truy vấn đúng lúc được hỏi. Tuỳ chọn `useCachedMetrics: true` cho phép trả kết quả đã cache theo `pollingInterval`.
   → Muốn phát hiện tải nhanh hơn khi đã có ít nhất 1 replica, phải **giảm chu kỳ sync của HPA**. Trên k3s làm được bằng `--kube-controller-manager-arg=horizontal-pod-autoscaler-sync-period=5s`.
 - `cooldownPeriod` (mặc định 300 s) chỉ áp dụng khi scale **về 0**.
-- `fallback`: số replica dự phòng khi scaler lỗi liên tục, ví dụ khi Prometheus sập. Fallback **chỉ hỗ trợ** `metricType: AverageValue`.
+- `fallback`: số replica dự phòng khi scaler lỗi liên tục, ví dụ khi Prometheus sập. KEDA v2.21 hỗ trợ fallback cho cả `metricType: AverageValue` và `Value`, trừ trigger CPU và memory. Với `fallback.behavior` mặc định (`static`, đồ án dùng) và `AverageValue`, KEDA trả cho HPA giá trị giả `threshold × fallback.replicas`. Với `Value`, giá trị đó còn chia cho số replica đang Ready; khi số này bằng 0, KEDA không tính được fallback và trả lỗi, nên HPA không nhận metric và **giữ nguyên số replica** suốt lúc mất tín hiệu (`pkg/fallback/fallback.go`).
 - `activationThreshold`: ngưỡng để "thức dậy" từ 0 replica. KEDA hỗ trợ scale về 0, nhưng đồ án không dùng vì cold start dài không hợp với dịch vụ tương tác.
 - Annotation `autoscaling.keda.sh/paused-replicas: "N"` **tạm dừng** autoscaling và giữ nguyên N replica. Runner đánh giá dùng annotation này để reset giữa các lượt chạy.
 
@@ -293,7 +294,7 @@ KEDA gồm *operator*, đọc `ScaledObject` và tạo HPA tương ứng, và *m
 
 DCGM exporter có thể mặc định thu metric **30 s một lần** (tham số collect interval). Cần chỉnh về 5 s để so sánh công bằng với metric của vLLM.
 
-Trên GPU GeForce (RTX 4090, 5060, 4050), DCGM có thể không chạy đầy đủ và **không có** metric `DCGM_FI_PROF_*`. Khi đó dùng `nvidia_gpu_exporter` (đọc qua `nvidia-smi`, metric kiểu `nvidia_smi_utilization_gpu_ratio`). Exporter này **không gắn label pod hay namespace**, nên truy vấn phải cộng trên cả node. Đồ án dùng exporter này cả ở nhà lẫn trên VM RTX A4000 (card workstation, không phải GeForce): DCGM chưa được thử trên A4000 nên không biết `DCGM_FI_PROF_*` có dùng được không.
+Trên GPU GeForce (RTX 4090, 4060 Ti của V2, 5060, 4050), DCGM có thể không chạy đầy đủ và **không có** metric `DCGM_FI_PROF_*`. Khi đó dùng `nvidia_gpu_exporter` (đọc qua `nvidia-smi`, metric kiểu `nvidia_smi_utilization_gpu_ratio`). Exporter này **không gắn label pod hay namespace**, nên truy vấn phải cộng trên cả node. Đồ án dùng exporter này cả ở nhà lẫn trên VM RTX A4000 (card workstation, không phải GeForce): DCGM chưa được thử trên A4000 nên không biết `DCGM_FI_PROF_*` có dùng được không.
 
 ### 4.4. Vì sao GPU_UTIL bão hoà
 

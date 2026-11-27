@@ -4,8 +4,8 @@
 
 **Tóm tắt nhanh**
 - **Tầng 1 (máy nhà và simulator):** PC RTX 5060 chia thành 2 GPU replica (time-slicing) để chạy 2 pod vLLM model 0,5B, dựng k3s có GPU; máy không GPU dùng `llm-d-inference-sim`. Đây là **môi trường chức năng**: phát triển, kiểm thử, kịch bản vận hành; không dùng số liệu hiệu năng.
-- **Tầng 2 (GPU thuê):** **Vast.ai chế độ VM, 4 × RTX A4000 16 GB, thuê trọn máy** ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md); bản 08/10 chọn 4 × RTX 4090 nhưng không có máy VM verified vừa giá). Toàn bộ ĐG1–ĐG3 đo trong **một lần thuê liền** cuối tuần 14–15/11 (dời từ 07–08/11; khoảng 20–22 giờ), runner chạy qua đêm. Dự phòng: máy Vast khác (4 × 4090, hoặc 2 GPU với N = 2); GCP không dùng được.
-- **Chi phí:** V0+V1 đã tốn ≈ 1,5 USD (08/11); V2 ước tính 13–15 USD trên A4000, tối đa ≈ 60 USD nếu phải dùng 4 × 4090; dưới trần 150 USD.
+- **Tầng 2 (GPU thuê):** **Vast.ai chế độ VM, thuê trọn máy 4 GPU.** Chốt 4 × RTX A4000 16 GB ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md); bản 08/10 chọn 4 × RTX 4090 nhưng không có máy VM verified vừa giá); thực tế **V2 chạy trên 4 × RTX 4060 Ti 16 GB** vì hôm đó không có máy A4000 ([Thông số §10.2](00-thong-so.md#102-gpu-thuê)). Toàn bộ ĐG1–ĐG3 đo trong **một lần thuê liền** (kế hoạch 14–15/11, dời từ 07–08/11; thực tế 18–19/11), runner chạy qua đêm. Dự phòng: máy Vast khác (4 × 4090, hoặc 2 GPU với N = 2); GCP không dùng được.
+- **Chi phí:** V0+V1 đã tốn ≈ 1,5 USD (08/11); V2 dự toán 13–15 USD trên A4000, tối đa ≈ 60 USD nếu phải dùng 4 × 4090, dưới trần 150 USD. Máy 4060 Ti của V2 giá 1,5 USD/giờ cả máy (Quang báo theo trang Vast); chi phí thực: chưa có số.
 - **Đánh giá để nghiệm thu**, không phải nghiên cứu thống kê. Ba lớp: kiểm thử chức năng, **kịch bản vận hành VH1–VH6**, và **ĐG1–ĐG3** trên GPU thuê. ĐG2 so sánh S1, S4, A1, A2 dưới **3 kịch bản tải của đề cương**, tổng **17 lượt**.
 - **Kiểm chứng lý thuyết LT1–LT8** (§19): dự đoán bằng công thức có sẵn rồi đo ở nhà hoặc trên simulator, để phần xây dựng có chiều sâu phân tích mà không tốn máy thuê.
 - Số liệu báo cáo dạng **trung bình kèm min–max**, có vẽ từng lượt. Sản phẩm cuối cùng là **bảng nghiệm thu**.
@@ -23,7 +23,7 @@
 | | Tầng 1: máy nhà và simulator | Tầng 2: GPU thuê |
 |---|---|---|
 | Mục đích | Phát triển; kiểm thử chức năng; kịch bản vận hành (rolling update, cảnh báo, sự cố); ĐG1-mini để lấy target tạm | Đo năng lực, đánh giá autoscaling, cold start, kịch bản vận hành trên GPU thật |
-| GPU | PC RTX 5060 8 GB, time-slicing 2 GPU replica; simulator không cần GPU | 4 × RTX A4000 16 GB (Vast.ai, chế độ VM), đã dùng cho V0+V1 ngày 08/11 và chốt cho V2 ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C2) |
+| GPU | PC RTX 5060 8 GB, time-slicing 2 GPU replica; simulator không cần GPU | 4 × RTX A4000 16 GB (Vast.ai, chế độ VM), đã dùng cho V0+V1 ngày 08/11 và chốt cho V2 ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C2); V2 thực tế chạy trên 4 × RTX 4060 Ti 16 GB (18–19/11) |
 | Model | Qwen2.5-0.5B-Instruct (trước 06/11: 1,5B) | Qwen2.5-3B-Instruct (chốt 08/11; trước đó 7B) |
 | Chi phí | ≈ 0 (tiền điện) | Theo giờ |
 | Số liệu dùng trong chương đánh giá? | Chỉ kết quả đạt/không đạt của kiểm thử và kịch bản vận hành | **Có** |
@@ -138,7 +138,8 @@ Thành viên ở xa truy cập cluster nhà (có GPU thật) qua Tailscale khi c
 
 | GPU | VRAM | Băng thông | Decode tối đa với 7B BF16 | Nhận xét |
 |---|---|---|---|---|
-| **RTX A4000** | 16 GB | ~448 GB/s | (7B không vừa; 3B: đo 57 token/s ở batch 1, 08/11) | **Lựa chọn thực tế** (ADR-006 C2): card workstation Ampere, máy 4 GPU VM verified ~0,6 USD/giờ cả máy; chạy model 3B |
+| **RTX A4000** | 16 GB | ~448 GB/s | (7B không vừa; 3B: đo 57 token/s ở batch 1, 08/11) | **Lựa chọn đã chốt** (ADR-006 C2), dùng cho V0+V1: card workstation Ampere, máy 4 GPU VM verified ~0,6 USD/giờ cả máy; chạy model 3B |
+| **RTX 4060 Ti** | 16 GB | ~288 GB/s | (7B không vừa; 3B: ≤ ~47 token/s lý thuyết ở batch 1, chưa đo) | **Máy V2 thực tế** (18–19/11): card GeForce Ada Lovelace, máy 4 GPU VM 1,5 USD/giờ cả máy (Quang báo theo trang Vast); thay A4000 vì hôm đó không có máy A4000; ĐG1 cho C = 3,5 req/s |
 | RTX 4090 | 24 GB | ~1.008 GB/s | ~66 token/s | Lựa chọn ban đầu (ADR-004): tới 06/11 không có máy 4 × 4090 VM verified ≤ 2 USD/giờ cả máy; nay là dự phòng (2,4–2,7 USD/giờ) |
 | RTX 3090 | 24 GB | ~936 GB/s | ~61 token/s | Dự phòng rẻ hơn; Ampere, có BF16 |
 | RTX A5000 | 24 GB | ~768 GB/s | ~50 token/s | Dự phòng; card workstation, nhiệt độ và xung nhịp ổn định hơn |
@@ -209,16 +210,16 @@ curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=v1.xx.y+k3s1 sh -s - server \
   --write-kubeconfig-mode=644
 ```
 
-Với `cpu-manager-policy=static`, pod có QoS **Guaranteed** (requests = limits, CPU là số nguyên) được cấp **lõi CPU riêng**, không bị pod khác chen vào. CPU manager chỉ bật trên VM thuê. Ví dụ với máy 48 vCPU:
+Với `cpu-manager-policy=static`, pod có QoS **Guaranteed** (requests = limits, CPU là số nguyên) được cấp **lõi CPU riêng**, không bị pod khác chen vào. CPU manager chỉ bật trên VM thuê. Phân bổ theo [ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C2, dùng cho V2 (máy ≥ 20 vCPU):
 
 | Nhóm | Lõi CPU | Ghi chú |
 |---|---|---|
 | Hệ thống, k3s (`reserved-cpus`) | 0–3 | Không cấp riêng cho pod nào |
-| 4 pod vLLM | 4 × 6 lõi riêng | Theo [Thông số §9.2](00-thong-so.md#92-deployment-vllm) |
+| 4 pod vLLM | 4 × 3 lõi riêng | Theo [Thông số §9.2](00-thong-so.md#92-deployment-vllm) |
 | Pod máy tạo tải | 3 lõi riêng | Mỗi lõi một tiến trình gửi tải (§9); memory 256Mi × (số lõi + 1) |
 | Các pod còn lại (Prometheus, Grafana, KEDA, Argo CD, Traefik) | Vùng CPU dùng chung | Không đòi lõi riêng |
 
-Nếu máy chỉ có 32 vCPU: dùng 5 lõi cho mỗi pod vLLM; máy tạo tải giữ 3 lõi. Vì sao 3 lõi: đo trên kind (07/11), một tiến trình gửi tải ở 10 req/s tốn 53–58% một lõi, ở 20 req/s lên 87–88%. Ước tính một tiến trình chạm ngưỡng 70% ở khoảng 12–14 req/s, nên 3 tiến trình chịu khoảng 36–42 req/s, gấp đôi đỉnh KB3 ước tính 12–18 req/s (C chưa đo; §9).
+Tổng phần cấp riêng là 4 × 3 + 3 = 15 lõi, cộng phần nhỏ cho các pod còn lại (ước tính khoảng 0,4 lõi trong `envs/cloud/serving/patch-vllm.yaml`), nên cần khoảng 16 lõi allocatable, tức máy ≥ 20 vCPU vì 4 lõi `reserved-cpus` không tính vào allocatable. Con số 3 lõi mỗi pod vLLM đến từ ràng buộc vừa máy này, thấp hơn mức 4–6 vCPU khuyến nghị ở [Kiến thức nền §2.6](02-kien-thuc-nen.md#26-kiến-trúc-tiến-trình-của-vllm-v1). Máy V1 (15 vCPU) không đủ ràng buộc này. Máy V2 thực tế (4 × RTX 4060 Ti, 61 vCPU, [Nhật ký vận hành](../nhat-ky/van-hanh.md)) còn 57 lõi allocatable sau `reserved-cpus`, dư nhiều lõi, nhưng vẫn chạy 3 lõi mỗi pod vLLM như manifest. Mức đó đủ: trên mọi lượt V2 (ĐG1, ĐG2, ĐG3, VH), CPU của container vLLM (`container_cpu_usage_seconds_total`, rate 1 phút, runner ghi vào `metrics.csv.gz`) cao nhất 1,26 lõi, p99 1,00 lõi. Rate 1 phút làm phẳng các đỉnh ngắn, còn throttle của pod vLLM chưa đo. *(Sửa 27/11: bản trước lấy ví dụ máy 48 vCPU với 6 lõi mỗi pod vLLM, 5 lõi nếu máy 32 vCPU, theo ADR-001.)* Vì sao máy tạo tải 3 lõi: đo trên kind (07/11), một tiến trình gửi tải ở 10 req/s tốn 53–58% một lõi, ở 20 req/s lên 87–88%. Ước tính một tiến trình chạm ngưỡng 70% ở khoảng 12–14 req/s, nên 3 tiến trình chịu khoảng 36–42 req/s, gấp đôi đỉnh KB3 ước tính 12–18 req/s (C chưa đo; §9).
 
 ### 3.6. Máy tạo tải chạy cùng VM
 
@@ -305,14 +306,16 @@ Trên Vast.ai, giá hiển thị cho mỗi máy thường đã gồm CPU và RAM
 |---|---|---|---|---|---|---|
 | V0 smoke | ~~17–18/10~~ gộp với V1, **làm 08/11** ([Kế hoạch §1.1](06-ke-hoach-quan-ly.md#11-điều-chỉnh-ngày-04112026)); thực tế: VM 2 × 5060 Ti rồi VM 4 × A4000, model 3B, ~$1,5 cho máy thứ hai ([log phiên](../nhat-ky/lam-viec/quang/phien-2026-11-08-a4000.md)) | ~~VM 1 × 4090~~ VM 4 × A4000 | k3s trong VM, GPU, vLLM 7B, `fio`, TPOT ở batch 1/16/32, thử `make bootstrap` | 3–4 | 4 | 1–2 |
 | V1 phát triển | ~~31/10–01/11~~ gộp với V0, **làm 08/11** (ĐG1 thử C = 4,5 req/s; runner 2 lượt có KEDA) | ~~VM 1 × 4090~~ VM 4 × A4000 | L2 (pre-pull, compile cache); runner chạy 2 lượt không cần can thiệp; ĐG1 thử (không dùng làm số liệu chính) | 6–8 | 6–8 | 2–4 |
-| **V2 đợt chính** | ~~07–08/11~~ **T7 14/11 08:00 → CN 15/11 ~06:00** | VM 4 × A4000, ≥ 20 vCPU (dự phòng 4 × 4090) | Burn-in rút gọn; VH5 từ VM trắng; **ĐG1 → ADR-003**; ĐG3; ma trận 17 lượt; VH2–VH4 trên GPU thật; quay video thô | 20–22 | 80–88 | 24–44 |
+| **V2 đợt chính** | ~~07–08/11~~ ~~T7 14/11 08:00 → CN 15/11 ~06:00~~ **thực tế 18–19/11** | ~~VM 4 × A4000~~ VM 4 × RTX 4060 Ti, 61 vCPU (không có máy A4000; máy 4090 không lên SSH) | Burn-in rút gọn; VH5 từ VM trắng; **ĐG1 → ADR-003**; ĐG3; ma trận 17 lượt; VH2–VH4 trên GPU thật; quay video thô | 20–22 | 80–88 | 24–44 |
 | V3 dự phòng | ~~14–15/11~~ bỏ (đã dùng cho V2) | – | Chỉ khi V2 hỏng: chạy lại trọn bộ cấu hình của kịch bản hỏng + ĐG1 | ≤ 10 | ≤ 40 | ≤ 20 |
 | Đĩa, băng thông | – | – | – | – | – | ~3–6 |
 | **Tổng** | | | | | ~90–140 | **~30–75** |
 
-Cột giờ và USD là dự toán ngày 08/10 cho 4 × 4090 ở 0,30–0,50 USD/GPU-giờ. Thực tế: máy 4 × A4000 ngày 08/11 giá **0,611 USD/giờ cả máy** (GPU 0,587 + ổ 0,025), V0+V1 ≈ 1,5 USD; V2 22 giờ trên máy cùng giá ≈ 13–15 USD, hoặc ≈ 55–60 USD nếu phải dùng 4 × 4090 (2,4–2,7 USD/giờ). Tổng dự kiến **15–65 USD** ([Thông số §11](00-thong-so.md#11-ngân-sách)).
+Cột giờ và USD là dự toán ngày 08/10 cho 4 × 4090 ở 0,30–0,50 USD/GPU-giờ. Thực tế: máy 4 × A4000 ngày 08/11 giá **0,611 USD/giờ cả máy** (GPU 0,587 + ổ 0,025), V0+V1 ≈ 1,5 USD; V2 22 giờ trên máy cùng giá ≈ 13–15 USD, hoặc ≈ 55–60 USD nếu phải dùng 4 × 4090 (2,4–2,7 USD/giờ). Thực tế V2 chạy trên 4 × RTX 4060 Ti, 1,5 USD/giờ cả máy theo trang Vast; ĐG1 cộng ma trận ước 9–10 giờ ≈ 14–15 USD (ước 18/11); chi phí thực: chưa có số. Tổng dự kiến **15–65 USD** ([Thông số §11](00-thong-so.md#11-ngân-sách)).
 
 ### 6.2. Tiến trình phiên V2 theo giờ
+
+Đây là lịch dự kiến cho 14–15/11. Thực tế V2 chạy 18–19/11 trên 4 × RTX 4060 Ti; tiến trình thật ghi ở [nhật ký vận hành](../nhat-ky/van-hanh.md) từ ngày 18/11.
 
 ```text
 Thứ Bảy 14/11
@@ -353,7 +356,7 @@ Chủ nhật 15/11
 |---|---|---|---|
 | **Kiểm thử chức năng** | Simulator và máy nhà, từ W2 | API, probe, preStop, graceful shutdown; bài kiểm thử T1–T7 ([Kiến trúc §15](03-kien-truc-autoscaling.md#15-kiểm-thử-nhanh-cấu-hình-autoscaling)); quy tắc cảnh báo (`promtool test rules`); checklist bảo mật | Đạt / không đạt; chạy lại trong CI nếu tự động hoá được |
 | **Kịch bản vận hành VH1–VH6** | Máy nhà và simulator trước (W3–W5), lặp lại trên GPU thuê những gì cần GPU thật (V2) | §13 | Đạt / không đạt, kèm số đo |
-| **Đánh giá trên GPU thuê ĐG1–ĐG3** | VM 4 × RTX A4000, phiên V2 | §8, §11, §12 | Số liệu cho chương 5 |
+| **Đánh giá trên GPU thuê ĐG1–ĐG3** | VM 4 × RTX 4060 Ti, phiên V2 | §8, §11, §12 | Số liệu cho chương 5 |
 
 ---
 
@@ -423,11 +426,11 @@ Không đạt thì lượt đó không hợp lệ (§17).
 
 ![Hình 8 – Ba kịch bản tải](../images/08-kich-ban-tai.svg)
 
-*Hình 8. Ba kịch bản tải theo đề cương, đơn vị là C (năng lực của một replica).*
+*Hình 8. Ba kịch bản tải theo đề cương (12, 24 và 17 phút), đơn vị là C (năng lực của một replica), vẽ với N = 4 GPU; vạch chấm là ranh giới các pha khi phân tích.*
 
 Định nghĩa λ(t), thời lượng và các pha nằm ở [Thông số §7](00-thong-so.md#7-kịch-bản-tải).
 
-**Vì sao ba kịch bản này?** Đây đúng là ba kịch bản trong đề cương. Gộp lại, chúng tái hiện các pha của một ngày tải ở bối cảnh của [Bài toán §4](01-bai-toan-yeu-cau.md#4-bối-cảnh-giả-định-và-ba-cách-cấp-phát): ban đêm (KB1), 9 giờ sáng (KB2) và giờ cao điểm kéo dài (KB3). KB2 được cho **giảm tải trở lại** ở phút 15, để cùng một lượt kiểm tra được cả scale-up lẫn scale-down an toàn.
+**Vì sao ba kịch bản này?** Đây đúng là ba kịch bản trong đề cương. Gộp lại, chúng tái hiện các pha của một ngày tải ở bối cảnh của [Bài toán §4](01-bai-toan-yeu-cau.md#4-bối-cảnh-giả-định-và-ba-cách-cấp-phát): ban đêm (KB1), 9 giờ sáng (KB2) và giờ cao điểm kéo dài (KB3). KB2 được cho **giảm tải trở lại** ở phút 14, để cùng một lượt kiểm tra được cả scale-up lẫn scale-down an toàn.
 
 **Vì sao KB3 dừng ở 0,75 × N × C.** Với target 0,8 × B\*, tải 3,5C cần ⌈3,5 ÷ 0,8⌉ = 5 replica, vượt 4 GPU: A2 sẽ chạy sát trần, `LLMAtMaxReplicas` kêu, và N1 trở nên sát biên vì hệ thống thiếu năng lực chứ không vì autoscaling kém. Ở 3C, HPA cần đúng 4 replica. N1 ở KB3 chỉ tính trên pha `sustain`, vì trong pha `ramp` pod đầu tiên chắc chắn quá tải trong lúc chờ cold start ([ADR-005](../adr/005-sua-thiet-ke-sau-review.md) T11).
 
@@ -469,12 +472,12 @@ Ma trận 17 lượt và lý do phân bổ nằm ở [Thông số §8.2](00-thon
 
 | # | Kịch bản | Ở đâu | Cách làm | Tiêu chí đạt | Yêu cầu |
 |---|---|---|---|---|---|
-| **VH1** | Scale-down an toàn | Nhà (KB2-mini); GPU thuê (pha `drop` của KB2) | Tắt tải đột ngột khi đang có nhiều replica; đếm request lỗi hoặc bị cắt stream trong cửa sổ scale-down | 0 request lỗi | N4 |
-| **VH2** | Cập nhật phiên bản | Nhà (Must); GPU thuê, 1 lần ở 4/4 GPU (Should) | Đổi tham số hoặc digest qua PR → Argo CD. (a) Ca **1 replica**, làm theo quy trình có bước nâng `minReplicaCount` lên 2 ([Vận hành §5.3](04-van-hanh.md#53-quy-trình-cập-nhật-qua-gitops)); (b) mọi GPU đều có pod, phương án `maxSurge: 0`; (c) thử phương án kiểu web để thấy bị kẹt và `LLMPodPending` kêu. Sau đó rollback bằng `git revert` | (a), (b) hoàn tất, 0 request lỗi; ghi thời gian và SLO trong lúc cập nhật. (c) bị kẹt và có cảnh báo, đúng như phân tích | F3, N4 |
+| **VH1** | Scale-down an toàn | GPU thuê (pha `drop` của KB2). KB2-mini ở nhà bỏ ngày 24/11 ([ADR-007](../adr/007-doi-vh1-vh2-f6-n8-khoi-cluster-nha.md)) | Tắt tải đột ngột khi đang có nhiều replica; đếm request lỗi hoặc bị cắt stream trong cửa sổ scale-down | 0 request lỗi | N4 |
+| **VH2** | Cập nhật phiên bản | Vòng Git: kind + simulator có Argo CD (Must, từ 24/11 thay cho nhà, [ADR-007](../adr/007-doi-vh1-vh2-f6-n8-khoi-cluster-nha.md)). (a)–(c): GPU thuê, đã chạy ở V2; ca (a) thuộc Must, ca (b) ở 4/4 GPU và ca (c) thuộc Should | Đổi tham số hoặc digest qua PR → Argo CD; trên kind, Application theo dõi một nhánh riêng nên commit và `git revert` không đổi `main`. Trên GPU thuê, rollout kích hoạt bằng annotation vì VM không dùng Argo CD. (a) Ca **1 replica**, làm theo quy trình có bước nâng `minReplicaCount` lên 2 ([Vận hành §5.3](04-van-hanh.md#53-quy-trình-cập-nhật-qua-gitops)); (b) mọi GPU đều có pod, phương án `maxSurge: 0`; (c) thử phương án kiểu web để thấy bị kẹt và `LLMPodPending` kêu. Trên kind: sau đó rollback bằng `git revert` | (a), (b) hoàn tất, 0 request lỗi; ghi thời gian và SLO trong lúc cập nhật. (c) bị kẹt và có cảnh báo, đúng như phân tích | F3, N4 |
 | **VH3** | Sự cố pod và node | Nhà và GPU thuê (xoá pod, kill tiến trình); nhà 2 node hoặc simulator (drain node) | Khi đang có tải: `kubectl delete pod`; `kill -9` tiến trình vLLM; `kubectl drain` một node | Pod mới Ready tự động; xoá êm thì 0 lỗi; kill thì chỉ lỗi các request đang chạy trên pod đó; có cảnh báo tương ứng | N6 |
 | **VH4** | Mất nguồn metric | Nhà; GPU thuê | Khi đang có tải, áp NetworkPolicy chặn KEDA → Prometheus ([ADR-005](../adr/005-sua-thiet-ke-sau-review.md) T6); sau 5 phút gỡ bỏ | KEDA fallback lên max replica trong thời gian ở [N6](00-thong-so.md#4-chỉ-tiêu-nghiệm-thu); SLO không bị ảnh hưởng; gỡ chặn thì trở về bình thường | N6 |
 | **VH5** | Dựng lại từ máy trắng | GPU thuê (đầu phiên V2); nhà | `make bootstrap prefetch` trên VM trắng; người thứ hai dựng lại cluster nhà qua Tailscale, hoặc cluster kind + simulator, chỉ theo README | Theo [N6, N8](00-thong-so.md#4-chỉ-tiêu-nghiệm-thu) | F4, N6, N8 |
-| **VH6** | Cảnh báo đúng, không báo giả | Ghi lại trong mọi lượt ĐG2; nhà | So sánh thời điểm vi phạm SLO (từ log client) với thời điểm cảnh báo chuyển sang firing (truy vấn `ALERTS`) | Theo [N7](00-thong-so.md#4-chỉ-tiêu-nghiệm-thu), gồm định nghĩa "page giả" | F6, N7 |
+| **VH6** | Cảnh báo đúng, không báo giả | Ghi lại trong mọi lượt ĐG2; tin tới Telegram thật trên kind + simulator (F6, [ADR-007](../adr/007-doi-vh1-vh2-f6-n8-khoi-cluster-nha.md)) | So sánh thời điểm vi phạm SLO (từ log client) với thời điểm cảnh báo chuyển sang firing (truy vấn `ALERTS`) | Theo [N7](00-thong-so.md#4-chỉ-tiêu-nghiệm-thu), gồm định nghĩa "page giả" | F6, N7 |
 
 **Giới hạn của VH6** (ghi 21/11). Runner gọi thẳng Service `vllm.llm-serving.svc:8000` ở mọi môi trường (`envs/*/experiments/matrix*.yaml`), không qua Traefik ([Thông số §7](00-thong-so.md#7-kịch-bản-tải)); simulator và VM thuê còn không có Ingress. Vì vậy `llm:error_ratio:rate5m` không có dữ liệu trong các lượt đánh giá: VH6 trong V2 chỉ kiểm được `LLMSLOBurnFast`, còn `LLMErrorRateHigh` mới được kiểm bằng unit test. Muốn VH6 kiểm cả quy tắc này thì runner phải gọi qua Ingress của Traefik (ở nhà đã có `envs/home/serving/ingress.yaml`).
 
@@ -486,7 +489,7 @@ Mỗi kịch bản có một mục trong `docs/nhat-ky/van-hanh.md`: ngày, môi
 
 ![Hình 17 – Quy trình một phiên đánh giá](../images/17-quy-trinh-danh-gia.svg)
 
-*Hình 17. Quy trình của phiên đánh giá chính trên GPU thuê: thuê và dựng từ máy trắng, đo năng lực, vòng lặp 17 lượt, cold start và kịch bản vận hành, sao lưu, huỷ máy và phân tích.*
+*Hình 17. Quy trình phiên đánh giá chính V2 trên VM thuê, như đã chạy ngày 18–19/11/2026: thuê và kiểm máy, dựng từ máy trắng (không có Argo CD), đo năng lực, vòng lặp 17 lượt, kịch bản vận hành và cold start, kéo dữ liệu về rồi tắt máy, phân tích. Khác kế hoạch ở §3.4, §3.6, §3.8, §6.2 và §12: chỉ chạy `make probe`, không chạy `vllm bench serve` từng GPU; ĐG1 chạy runner từ PC qua tunnel, ĐG2 chạy runner trong tmux trên VM thay cho `systemd`; dữ liệu được kéo về PC và đối chiếu sha256 thay cho sao lưu lên R2; ĐG3 L0 đo 0 → 1 thay cho 1 → 2; GPU là 4 × RTX 4060 Ti thay cho 4 × A4000 (ADR-006 C2) ([nhật ký Quang tuần 07](../nhat-ky/lam-viec/quang/tuan-07.md)).*
 
 ### 14.1. Các bước của một lượt
 
@@ -598,15 +601,15 @@ Không dùng biểu đồ hai trục tung; màu gắn cố định với từng 
 | N2a | Replica mới Ready (KB2) | 79,7–81,5 s (3 lượt) | Đạt | Phát hiện 14,7–16,4 s; tạo pod tới Ready 65–66 s (mức L2) |
 | N2b | Hồi phục SLO (KB2) | 409–430 s (3 lượt) | Báo cáo | Dài hơn mức dự kiến 5 phút: hàng đợi dồn ở pod có sẵn không chuyển sang pod mới (luận văn mục 5.3) |
 | N3 | GPU-giờ A2 so với S4 ở KB1; chênh lệch SLO | 25% GPU-giờ của S4; SLO attainment chênh 0 điểm phần trăm (2 lượt) | Đạt | KB2: 71,8–75,2% GPU-giờ, SLO kém 19,3–20,6 điểm. KB3: 91,7–92,3%, chênh 0 điểm |
-| N4 | 0 lỗi khi scale-down và rolling update | Scale-down: 0 lỗi trong pha `drop` của 3 lượt A2 × KB2. Rolling update (VH2 trên VM thuê): 0 lỗi khi đi từ 1 replica và khi cả 4 GPU đều có pod | Đạt | Đo trên VM thuê. VH1, VH2 ở nhà là mục Must riêng ở [Thông số §5](00-thong-so.md#5-mức-độ-thành-công), chưa chạy |
+| N4 | 0 lỗi khi scale-down và rolling update | Scale-down: 0 lỗi trong pha `drop` của 3 lượt A2 × KB2. Rolling update (VH2 trên VM thuê): 0 lỗi khi đi từ 1 replica và khi cả 4 GPU đều có pod | Đạt | Đo trên VM thuê. Từ 24/11 đây cũng là bằng chứng VH1 của Must ([ADR-007](../adr/007-doi-vh1-vh2-f6-n8-khoi-cluster-nha.md)) |
 | N5 | Cold start L2 so với L0 | L2: 77,7 s (3 lượt). L0: 305,5 s (2 lượt). Tỷ lệ 25,4% | Đạt | L0 đo từ 0 lên 1 pod, L2 đo từ 1 lên 2 pod |
 | N6 | Tự phục hồi; fallback; dựng lại | Xoá pod: pod thay thế Ready sau 67,4 s, 0 lỗi. Kill tiến trình: Ready lại sau 67,4 s. Fallback (VH4) lên 4 replica sau 16,8 s, 0 lỗi. Dựng lại từ VM trắng: 8 phút 22 giây (1 lần, bấm tay) | Đạt | Ca kill có 129/1.041 request lỗi, lúc đó chỉ có 1 pod |
 | N7 | Thời gian tới cảnh báo; page giả | S1 × KB3: 104,5 s (1 lượt). Page giả: 0 trong 17 lượt | Đạt | Chỉ kiểm `LLMSLOBurnFast` (§13) |
-| N8 | Phiên bản ghim; dựng lại theo README; chi phí | Phiên bản: đã ghim. Người thứ hai dựng lại theo README: chưa đo. Tổng chi phí thuê: chưa có | Chưa đo | |
+| N8 | Phiên bản ghim; dựng lại theo README; chi phí | Phiên bản: đã ghim. Người thứ hai dựng lại theo README: chưa đo. Tổng chi phí thuê: chưa có | Chưa đo | Dựng lại: Trình dựng kind + simulator theo README ([ADR-007](../adr/007-doi-vh1-vh2-f6-n8-khoi-cluster-nha.md)) |
 | F1, F2, F4 | Theo cách kiểm chứng ở [Thông số §3](00-thong-so.md#3-yêu-cầu-chức-năng) | API có streaming, ĐG1–ĐG3 chạy đủ; A2 scale 1 → 4 → về lại; dựng VM trắng trong 8 phút 22 giây (1 lần, chạy tay từng lệnh `make`, chưa chạy `make vh5`) | Đạt | F2: T6 mới kiểm trên simulator; T7 (Could) chưa làm |
-| F3 | VH2: cập nhật và rollback qua Git | Triển khai qua Git: Argo CD quản lý cluster nhà (App-of-Apps, 7 app Synced). Rolling update trên VM thuê (không qua Git, vì VM không dùng Argo CD): 0 lỗi. Cập nhật rồi `git revert` qua Argo CD: chưa chạy | Đạt một phần | Thiếu bước cập nhật và rollback qua Git; VH2 ở nhà là mục Must ([Thông số §5](00-thong-so.md#5-mức-độ-thành-công)) |
+| F3 | VH2: cập nhật và rollback qua Git | Triển khai qua Git: Argo CD quản lý cluster nhà (App-of-Apps, 7 app Synced). Rolling update trên VM thuê (không qua Git, vì VM không dùng Argo CD): 0 lỗi. Cập nhật rồi `git revert` qua Argo CD: chưa chạy | Đạt một phần | Thiếu bước cập nhật và rollback qua Git; từ 24/11 bước này chạy trên kind + simulator có Argo CD ([ADR-007](../adr/007-doi-vh1-vh2-f6-n8-khoi-cluster-nha.md)) |
 | F5 | Ba dashboard, ảnh chụp | 3 dashboard cài cùng nền tảng; truy vấn chạy được trên simulator, CI kiểm PromQL | Đạt một phần | Chưa có ảnh chụp trên GPU thật |
-| F6 | Sáu cảnh báo tới Telegram, có runbook | 7 quy tắc, mỗi quy tắc có runbook và unit test. Alertmanager → Telegram kiểm với API giả trên simulator | Đạt một phần | Chưa gửi tới Telegram thật; trong V2 Alertmanager báo lỗi gửi ở cả 17 lượt |
+| F6 | Sáu cảnh báo tới Telegram, có runbook | 7 quy tắc, mỗi quy tắc có runbook và unit test. Alertmanager → Telegram kiểm với API giả trên simulator | Đạt một phần | Chưa gửi tới Telegram thật (từ 24/11 kiểm trên kind + simulator với bot thật, [ADR-007](../adr/007-doi-vh1-vh2-f6-n8-khoi-cluster-nha.md)); trong V2 Alertmanager báo lỗi gửi ở cả 17 lượt |
 | F7 | Checklist bảo mật | API key trong Secret; VM thuê chỉ mở SSH | Chưa đo | Checklist chưa chạy; phạm vi đã thu hẹp ngày 12/11 |
 
 Yêu cầu không đạt **không bị giấu đi**. Luận văn phân tích nguyên nhân và nêu cách khắc phục; nếu đã sửa thì đo lại và ghi cả hai lần.
@@ -657,8 +660,8 @@ Có, với năm biện pháp:
 4. Máy tạo tải nằm cùng VM với lõi CPU riêng, nên không có nhiễu mạng.
 5. Xáo trộn thứ tự các lượt, và chạy lại nhanh một mức tải giữa phiên để chắc năng lực không bị trôi ([Bài toán §12.5](01-bai-toan-yeu-cau.md#125-điều-kiện-để-so-sánh-công-bằng)).
 
-**Vì sao dùng RTX A4000 và model 3B mà không dùng GPU datacenter và model 7B?**
-Vì ngân sách và vì có máy. Máy 4 × 4090 chế độ VM verified gần như không có trên Vast vào tháng 11/2026 (≥ 2,4 USD/giờ), còn máy 4 × A4000 có ở 0,6 USD/giờ và đã dựng trọn ở V0+V1. A4000 16 GB vừa model 3B với KV-cache ~7 GB. Các cơ chế mà đồ án xử lý (metric bão hoà, cold start, scale-down, cập nhật khi hết GPU) không phụ thuộc dòng GPU hay cỡ model, vì mọi kịch bản tính theo C. Kết luận định lượng gắn với A4000 và 3B được ghi vào phần hạn chế ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md)).
+**Vì sao dùng GPU 16 GB (RTX A4000, rồi RTX 4060 Ti) và model 3B mà không dùng GPU datacenter và model 7B?**
+Vì ngân sách và vì có máy. Máy 4 × 4090 chế độ VM verified gần như không có trên Vast vào tháng 11/2026 (≥ 2,4 USD/giờ), còn máy 4 × A4000 có ở 0,6 USD/giờ và đã dựng trọn ở V0+V1. A4000 16 GB vừa model 3B với KV-cache ~7 GB. Ngày V2 (18/11) không có máy A4000 và máy 4090 không lên SSH, nên nhóm dùng 4 × RTX 4060 Ti 16 GB: cùng VRAM, băng thông thấp hơn (288 so với 448 GB/s). C giảm từ 4,5 (ĐG1 thử, A4000) xuống 3,5 req/s, vẫn cao hơn mức 2,9 req/s mà tỉ lệ băng thông thuần dự đoán. Các cơ chế mà đồ án xử lý (metric bão hoà, cold start, scale-down, cập nhật khi hết GPU) không phụ thuộc dòng GPU hay cỡ model, vì mọi kịch bản tính theo C. Kết luận định lượng gắn với RTX 4060 Ti và 3B được ghi vào phần hạn chế ([Bài toán §12.3](01-bai-toan-yeu-cau.md#123-hạn-chế-sẽ-ghi-trong-luận-văn); lựa chọn ban đầu ở [ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md)).
 
 **Hết ngân sách hoặc không thuê được máy thì sao?**
 Dự toán dưới một nửa trần ngân sách; dự phòng là máy Vast khác (4 × 4090 đắt hơn nhưng vẫn trong trần, hoặc máy 2 GPU với N = 2). Nếu vẫn không được thì dùng kế hoạch Z (§5) và cắt giảm theo thứ tự Must/Should/Could ([Thông số §5](00-thong-so.md#5-mức-độ-thành-công)).
