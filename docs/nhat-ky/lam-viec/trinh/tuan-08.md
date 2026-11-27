@@ -68,6 +68,22 @@
 - **Links:** PR #59, merge commit `31a3ae5` (CI 6/6 xanh, MERGEABLE, không có review); sau đó merge `origin/main` vào `docs/tr8-thesis-ch5-drafts`, nhật ký tuần 08 gộp đúng thứ tự. `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§3 M4, M5; §5.1; §11.1; §11.4); `docs/chi-tiet/01`, `03`, `04`, `05` (phần đầu; 05 dòng F4); `docs/luan-van/quy-tac-viet.md`, `nguon-tu-lieu.md`, `README.md`, `03-05-giam-sat-slo-canh-bao.md`.
 - **Thesis:** dàn ý toàn bộ; 1.4 (cách trình bày quy trình); Lời cam đoan (khai báo công cụ AI).
 
+## 2026-11-23 – TR8: sửa Hình 7 (SLO → cảnh báo → runbook) cho khớp cái đã làm
+
+- **Task:** TR8 (luận văn), TR4 · **Environment:** none
+- **Done:**
+  1. Đối chiếu `fig_slo_alert()` ở `docs/diagrams/build_diagrams.py` với `common/observability/alerts/llm.yaml`, `rules/slo.yaml`, `common/platform/alertmanager-values.yaml`, `common/platform/gpu-exporter/`, `docs/runbooks/` và `envs/cloud/README.md`, theo 6 điểm lệch ghi ngày 18/11.
+  2. Sửa hình: nguồn GPU là `nvidia_gpu_exporter` (đọc nvidia-smi), chỉ vẽ dashboard; bỏ cảnh báo nhiệt độ và XID; ô Alert rule ghi 7 quy tắc (SLO, pod, HPA, KEDA); kube-state-metrics có thêm condition của ScaledObject (nguồn của `KedaScalerErrors`); hành động bỏ "thắt giới hạn tốc độ", thêm "xoá pod chậm" và "đề xuất thêm GPU" theo runbook; ô Git ghi Argo CD chỉ sync ở nhà, VM thuê áp lại bằng `make cloud-platform`.
+  3. Sinh lại SVG, xuất PNG, tự xem ảnh PNG để kiểm cả 6 điểm.
+  4. `/code-review high`: 8 điểm, sửa cả 8. Đáng kể nhất: nhãn "inhibit mặc định của chart" đặt giữa page và ticket vẫn gợi ý sai, vì inhibit mặc định (critical chặn warning/info) không chạm tới page và ticket, nên bỏ hẳn; ticket ghi "không nhắc lại trong 24 h" thay cho "báo một lần" (cảnh báo mới vào cùng nhóm vẫn có tin sau `group_interval` 5 phút); critical của chart chuyển thành chú thích riêng dưới khung Alertmanager; ô Recording rule tách TTFT (1, 5, 30 phút) và lỗi 5xx (5 phút); script xuất PNG ghi ra file tạm rồi mới thay, để lần xuất hỏng không xoá PNG đã commit.
+- **Results:** chỉ `07-slo-canh-bao-runbook.svg` và `.png` đổi; các hình khác sinh lại giống hệt (khác duy nhất ở CRLF, đã đổi về LF). shellcheck đạt. ruff trên `build_diagrams.py` báo 8 lỗi, đúng bằng số lỗi trước khi sửa (thư mục `docs/diagrams/` không nằm trong CI).
+- **Incidents:**
+  - `export_png.sh` báo xuất xong nhưng không ghi PNG nào: trong Git Bash, `file://$PWD/...` thành `file:///d/Data/...`, Chrome trên Windows không mở được; thêm nữa, `--screenshot` với đường dẫn tương đối không ghi vào thư mục hiện tại; script giấu output của Chrome nên không thấy lỗi. Sửa: đổi đường dẫn bằng `cygpath -m`, ghi `--screenshot` bằng đường dẫn tuyệt đối, tự chọn Chrome của Windows khi có `cygpath`, báo lỗi khi Chrome không ghi được file.
+  - `python -I build_diagrams.py` lỗi `No module named 'chuyen_sau'`, vì `-I` bỏ thư mục của script khỏi `sys.path`; chạy không kèm `-I` (code trong repo).
+  - Python trên Windows ghi SVG bằng CRLF; chạy `sed -i 's/\r$//'` sau khi sinh.
+- **Deviations:** PNG của Hình 7 nay xuất bằng Chrome trên Windows (font Segoe UI), các PNG khác vẫn là bản Quang xuất trên macOS; khác font nhẹ khi đặt cạnh nhau.
+- **Links:** nhánh `docs/tr8-fig7-slo-alerts`; `docs/diagrams/build_diagrams.py`, `docs/diagrams/export_png.sh`, `docs/images/07-slo-canh-bao-runbook.svg`, `docs/images/png/07-slo-canh-bao-runbook.png`.
+- **Thesis:** Hình 7 dùng được cho §3.5 (chưa chèn vào bản mẫu 3.5, vì bản mẫu đang chờ Trình duyệt).
 ## 2026-11-23 – Đưa bộ soát văn phong luận văn vào repo (`analysis/kiem_van.py`)
 
 - **Task:** TR8 · **Environment:** none
@@ -1043,3 +1059,10 @@
 - **Results:** #89 `eeb1930`, #90 `b1b1b43`, #91 `bc998f5`, #92 `a93fc0f`, #93 `5eaae78`. #90 và #92 chỉ xung đột ở nhật ký tuần 08 (merge=union tự gộp). #91 xung đột bảng `docs/adr/README.md`: giữ trạng thái ADR-006 "C2 bị thay một phần bởi 003" của #91 và thêm dòng ADR-007 từ main. #93 xung đột lệnh pandoc trong `docs/luan-van/README.md` với #92: gộp thành `phan-dau/[0-9]*`, `[0-9]*`, `phu-luc/*` cùng biến `SEP`, giữ cả ghi chú danh mục hình và bảng của #92; chạy thử lệnh gộp ra `.docx` được (chỉ cảnh báo thiếu `rsvg-convert` cho hình SVG). Gộp main vào nhánh #94 xung đột ở Môi trường §6.1–6.2 (main có câu V2 thật từ #91): giữ bản chi tiết của #94, chuyển số ước 18/11 (9–10 giờ ≈ 14–15 USD) vào đoạn "V2 thực tế" để không lặp.
 - **Incidents:** job `yaml` của #89 và job `manifests` của #91 kết thúc `success` nhưng GitHub vẫn để trạng thái `in_progress`, nên `gh pr checks` báo pending mãi → chạy lại riêng job đó (`gh run rerun --job`), lần sau xanh.
 - **Links:** PR #89, #90, #91, #92, #93; `docs/adr/README.md`, `docs/luan-van/README.md`, `docs/chi-tiet/05-moi-truong-danh-gia.md`.
+
+## 2026-11-27 – Merge PR #94 và #61 (Môi trường theo V2 thật, kiem_van)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** lượt tự chạy có cho merge (lượt 20261127-2241, vòng 1), gỡ nốt hàng đợi #94 → #61 → #60. Mỗi PR kiểm đủ 5 điều kiện merge: CI 6/6 xanh, đã chạy `/code-review high` lúc mở PR, `MERGEABLE`, không có review hay bình luận, không đụng manifest Argo CD theo dõi, base `main`. Merge commit, xoá nhánh head.
+- **Results:** #94 `5b74c02` (bản gộp xung đột §6.1–6.2 ở `6c24979` đọc lại trước khi merge). #61 xung đột với main ở nhật ký tuần 08 (merge=union tự gộp); sau khi gộp, `uv run --project analysis pytest analysis` 212 test đạt, `ruff check` sạch; merge `dbdbd1d`. Gộp main vào nhánh #60 không còn xung đột ở `build_diagrams.py` (main đã có `Svg.save` ghi LF); dựng lại Hình 7 bằng `fig_slo_alert()` cho SVG giống hệt bản đã commit.
+- **Links:** PR #94, #61, #60; `analysis/kiem_van.py`, `docs/diagrams/build_diagrams.py`.

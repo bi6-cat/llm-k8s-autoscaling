@@ -554,46 +554,59 @@ def fig_coldstart():
 # ======================================================================
 # Hình 7 — Vận hành theo SLO: metric → cảnh báo → runbook
 # ======================================================================
+# Nội dung bám theo cái đã làm (sửa 23/11): quy tắc ở common/observability/alerts/llm.yaml và rules/slo.yaml,
+# định tuyến ở common/platform/alertmanager-values.yaml, metric GPU từ common/platform/gpu-exporter/ (đọc
+# nvidia-smi, không phải DCGM; chỉ vẽ dashboard, không có cảnh báo GPU), hành động theo docs/runbooks/.
 def fig_slo_alert():
     W, H = 1240, 578
-    s = Svg(W, H, "Vận hành theo SLO: Prometheus tính SLI từ metric của vLLM, Traefik, kube-state-metrics và GPU; "
-                  "cảnh báo theo burn rate qua Alertmanager tới người trực; người trực làm theo runbook; "
-                  "mọi thay đổi đi qua Git và Argo CD")
+    s = Svg(W, H, "Vận hành theo SLO: Prometheus thu metric của vLLM, Traefik, kube-state-metrics và GPU, tính SLI "
+                  "bằng recording rule; cảnh báo theo burn rate và sức khoẻ nền tảng qua Alertmanager tới người trực; "
+                  "người trực làm theo runbook; mọi thay đổi đi qua Git, ở nhà Argo CD sync, VM thuê áp bằng script")
     s.header("Vận hành theo SLO: từ metric tới cảnh báo và hành động",
              "Mỗi cảnh báo trả lời ba câu: người dùng có bị ảnh hưởng không, gấp tới đâu, và làm gì tiếp theo")
     x = 32
     x = s.legend_line(x, 88, "Metric", VIOLET, dash="5 4")
     x = s.legend_line(x, 88, "Cảnh báo", ORANGE, sw=2)
     s.legend_line(x, 88, "Xử lý và thay đổi", BLUE, sw=2)
-    for xx, lab in ((32, "NGUỒN SLI"), (300, "PROMETHEUS"), (608, "ALERTMANAGER"), (906, "XỬ LÝ")):
+    for xx, lab in ((32, "NGUỒN METRIC"), (300, "PROMETHEUS"), (608, "ALERTMANAGER"), (906, "XỬ LÝ")):
         s.text(xx, 122, lab, size=12, weight=700, fill=INK2)
 
+    # KedaScalerErrors đọc condition Fallback/Ready của ScaledObject qua kube-state-metrics, nên KEDA không
+    # là một nguồn riêng ở đây.
     srcs = [("vLLM /metrics", "TTFT, TPOT, hàng đợi"),
             ("Traefik", "số request, mã lỗi 5xx"),
-            ("kube-state-metrics", "replicas, pod, HPA"),
-            ("DCGM · KEDA", "nhiệt độ, XID, lỗi scaler")]
+            ("kube-state-metrics", "pod, HPA, condition ScaledObject"),
+            ("nvidia_gpu_exporter", "util, VRAM, nhiệt độ (dashboard)")]
     for k, (t, ln) in enumerate(srcs):
         y = 134 + k * 66
         s.box(32, y, 220, 54, t, [ln], tsize=13, align="start")
         s.arrow([(252, y + 27), (300, y + 27)], VIOLET, sw=1.5, dash="5 4")
 
     s.rect(300, 134, 260, 252, fill=VIOLET_T, stroke="#d6d1ef", rx=12)
-    s.box(316, 150, 228, 92, "Recording rule", ["tỷ lệ request xấu", "theo cửa sổ 1, 5, 30 phút"], tsize=13)
-    s.box(316, 278, 228, 92, "Alert rule", ["burn rate · năng lực · nền tảng", "có unit test (promtool)"], tsize=13)
+    s.box(316, 150, 228, 92, "Recording rule", ["tỷ lệ TTFT xấu: 1, 5, 30 phút", "tỷ lệ lỗi 5xx: 5 phút"], tsize=13)
+    s.box(316, 278, 228, 92, "Alert rule", ["7 quy tắc: SLO · pod · HPA · KEDA", "có unit test (promtool)"],
+          tsize=13)
     s.arrow([(430, 242), (430, 278)], INK2, sw=1.5)
 
+    # Không ghi inhibit: nhóm giữ inhibit_rules mặc định của chart (critical chặn warning/info), không chạm
+    # tới page và ticket. Ticket không nhắc lại trong 24 h (repeat_interval), nhưng cảnh báo mới vào cùng
+    # nhóm vẫn có tin sau group_interval 5 phút.
     s.rect(608, 134, 250, 252, fill=ORANGE_T, stroke="#f3cdb9", rx=12)
-    s.box(624, 150, 218, 92, "page", ["người dùng đang bị ảnh hưởng", "→ Telegram của người trực"], tsize=13,
+    s.box(624, 150, 218, 92, "page", ["người dùng đang bị ảnh hưởng", "→ Telegram, nhắc lại mỗi giờ"], tsize=13,
           stroke=CRIT)
-    s.box(624, 278, 218, 92, "ticket", ["xử lý trong giờ làm việc", "→ Telegram, không nhắc lại"], tsize=13, stroke=WARN)
-    s.text(733, 264, "gom nhóm · chặn trùng · silence", size=11, fill=INK2, anchor="middle")
+    s.box(624, 278, 218, 92, "ticket", ["xử lý trong giờ làm việc", "→ Telegram, không nhắc lại trong 24 h"],
+          tsize=13, stroke=WARN)
+    s.text(733, 264, "gom theo tên cảnh báo: mỗi nhóm một tin", size=11, fill=INK2, anchor="middle")
+    # Cảnh báo có sẵn của chart kube-prometheus-stack: critical đi chung route với ticket
+    s.text(733, 403, "cảnh báo có sẵn của chart:", size=11, fill=INK2, anchor="middle")
+    s.text(733, 419, "critical → ticket · warning, info: không gửi", size=11, fill=INK2, anchor="middle")
     s.arrow([(544, 312), (584, 312), (584, 196), (624, 196)], ORANGE, sw=2)
     s.arrow([(544, 336), (624, 336)], ORANGE, sw=2)
 
     s.box(906, 134, 302, 62, "Người trực", ["mở runbook từ link trong cảnh báo"], tsize=13)
     s.box(906, 222, 302, 76, "Runbook", ["docs/runbooks/<cảnh báo>.md:", "ý nghĩa · chẩn đoán · xử lý · leo thang"],
           tsize=13)
-    s.box(906, 322, 302, 64, "Hành động", ["chờ pod Ready · thắt giới hạn tốc độ", "xoá pod · rollback bằng git revert"],
+    s.box(906, 322, 302, 64, "Hành động", ["chờ pod Ready · xoá pod chậm", "rollback bằng git revert · đề xuất thêm GPU"],
           tsize=13)
     s.arrow([(842, 180), (874, 180), (874, 156), (906, 156)], ORANGE, sw=2)
     s.arrow([(842, 324), (888, 324), (888, 176), (906, 176)], ORANGE, sw=2)
@@ -601,16 +614,20 @@ def fig_slo_alert():
     s.arrow([(1057, 298), (1057, 322)], BLUE, sw=1.8)
     s.arrow([(1057, 386), (1057, 432)], BLUE, sw=1.8)
 
-    s.box(32, 432, 1176, 64, "Git + Argo CD",
+    # VM thuê không chạy Argo CD (envs/cloud/README.md): thay đổi áp lại bằng make cloud-platform
+    # (helm upgrade --install, kubectl apply; chạy lại được).
+    s.box(32, 432, 1176, 64, "Git (PR)",
           ["mọi thay đổi để xử lý đi qua PR: rollback, đổi ngưỡng cảnh báo, sửa runbook · "
-           "sau sự cố: ghi nhật ký vận hành"], tsize=13, align="start", fill=BLUE_T, stroke="#c9dcf3")
+           "sau sự cố: ghi nhật ký vận hành",
+           "áp vào cluster: ở nhà Argo CD tự sync từ main · VM thuê không chạy Argo CD, áp lại bằng make cloud-platform"],
+          tsize=13, align="start", fill=BLUE_T, stroke="#c9dcf3")
     s.arrow([(430, 432), (430, 386)], BLUE, sw=1.6, dash="5 4")
     s.label(440, 414, "đổi ngưỡng, sửa quy tắc", anchor="start")
     s.rich(32, 528, [("Ví dụ · LLMSLOBurnFast: ", 650, INK),
-                     ("hơn 20% request chờ token đầu quá ngưỡng trên cả 5 phút và 1 phút → page → Telegram",
+                     ("hơn 20% request chờ token đầu quá 2,5 s trên cả 5 phút và 1 phút → page → Telegram",
                       400, INK2)], size=12)
     s.rich(32, 552, [("Runbook: ", 650, INK),
-                     ("đang cold start? đã chạy tối đa replica? vừa cập nhật? → chờ pod Ready · thắt giới hạn tốc độ · "
+                     ("đang cold start? đã chạy tối đa replica? vừa cập nhật? → chờ pod Ready · đề xuất thêm GPU · "
                       "git revert", 400, INK2)], size=12)
     s.save("07-slo-canh-bao-runbook.svg")
 
