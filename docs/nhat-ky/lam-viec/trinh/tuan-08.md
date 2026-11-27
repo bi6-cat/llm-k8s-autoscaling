@@ -1098,8 +1098,9 @@
 - **Done:**
   1. Tìm nguồn công khai cho W = 1/(μ − λ) (mục 2.2 dẫn Harchol-Balter 2013, giáo trình chưa đọc trực tiếp; điểm còn để ngỏ từ code-review của #83).
   2. Đọc bản PDF arXiv:1307.2968v27 (M. Zukerman, *Introduction to Queueing Theory and Stochastic Teletraffic Models*, 15/03/2025): mục 6 giả định dòng đến Poisson, phục vụ IID phân phối mũ, một server; mục 6.3 phương trình (303) cho E[D] = E[Q]/λ = 1/(μ − λ), suy từ E[Q] = ρ/(1 − ρ) bằng định luật Little.
-  3. Đổi trích dẫn trong `02-02` thành `[@zukerman-queueing, mục 6.3]`, sửa hai comment nguồn; thay mục `harchol-balter-queueing` trong `tai-lieu.bib` bằng `zukerman-queueing` (`@misc`, URL arXiv, ngày đọc).
-- **Decision:** thay hẳn, không giữ Harchol-Balter song song: luận văn chỉ dẫn tài liệu đã đọc (quy-tac-viet), và giáo trình mở đủ cho khẳng định đang dẫn. Bỏ phương án dẫn Wikipedia (không phải nguồn học thuật) và bài giảng MIT 2.854 (bản tìm được không nêu trực tiếp 1/(μ − λ)). Tài liệu thiết kế `01-bai-toan-yeu-cau.md` vẫn ghi Harchol-Balter, không sửa (ngoài luận văn).
-- **Results:** `pandoc … --citeproc` cả quyển: không cảnh báo trích dẫn (chỉ cảnh báo SVG thiếu `rsvg-convert`, có từ trước); câu ra "(Zukerman 2025, mục 6.3)". `kiem_van.py` 02-02: 0 điểm.
+  3. Đổi trích dẫn trong `02-02` thành `[@zukerman-queueing]`, sửa hai comment nguồn; thay mục `harchol-balter-queueing` trong `tai-lieu.bib` bằng `zukerman-queueing` (`@online`, eprint arXiv, URL ghim v27, ngày đọc).
+  4. `/code-review high`: 5 điểm (URL chưa ghim v27, design doc còn dẫn sách cũ, locator, trường `howpublished`, comment gán câu λ ≥ μ cho phương trình 303); sửa cả 5.
+- **Decision:** thay hẳn, không giữ Harchol-Balter song song: luận văn chỉ dẫn tài liệu đã đọc (quy-tac-viet), và giáo trình mở đủ cho khẳng định đang dẫn. Bỏ phương án dẫn Wikipedia (không phải nguồn học thuật) và bài giảng MIT 2.854 (bản tìm được không nêu trực tiếp 1/(μ − λ)). Tài liệu thiết kế `01-bai-toan-yeu-cau.md` §3 cũng đổi phần đọc thêm sang Zukerman để hai nơi dẫn cùng một nguồn. Số mục để trong comment nguồn, không dùng locator trong `[@…]`, cho giống các trích dẫn khác.
+- **Results:** `pandoc … --citeproc` cả quyển: không cảnh báo trích dẫn (chỉ cảnh báo SVG thiếu `rsvg-convert`, có từ trước); câu ra "(Zukerman 2025)". `kiem_van.py` 02-02: 0 điểm.
 - **Links:** `docs/luan-van/02-02-hang-doi-nang-luc.md`, `docs/luan-van/tai-lieu.bib`.
 - **Thesis:** §2.2, danh mục tài liệu tham khảo.
