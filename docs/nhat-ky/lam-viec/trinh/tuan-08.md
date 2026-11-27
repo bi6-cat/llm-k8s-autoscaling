@@ -1,5 +1,38 @@
 # Nhật ký làm việc – Trình – Tuần 08 (23–29/11/2026)
 
+## 2026-11-23 – Luận văn: chốt bố cục
+
+- **Task:** chung (luận văn) · **Environment:** none
+- **Done:**
+  1. Đọc lại các nguồn quyết định giá trị của luận văn: Bài toán §5–§9, §12–§13; ADR-002; Thông số §3–§5; Môi trường §7–§19; Kế hoạch §11–§12 và R21; nguồn tư liệu §2–§6 (bản trong PR #52).
+  2. Đề xuất bố cục mới, rồi giao một agent độc lập soát với các nguồn đó. Agent trả 17 điểm (3 cao, 10 vừa, 4 thấp). Phiên chính kiểm lại các khẳng định chính với nguồn gốc (ADR-002 Q13, Bài toán §9, mô tả đồ án Phụ lục A, Kế hoạch §12.1, Môi trường §13, các cột của `runs.csv`). Áp 16 điểm, bác 1.
+- **Decision:** D87: bố cục dựng quanh ba thông điệp và năm hướng giải của Bài toán §6, mỗi hướng giải đi qua đủ thiết kế, triển khai, đánh giá, kết luận. Giữ khung yêu cầu F/N và bảng nghiệm thu của ADR-002, không quay lại câu hỏi nghiên cứu và giả thuyết.
+  - Ba thông điệp: (T1) scale theo tải đồng thời của vLLM, không theo GPU utilization; (T2) autoscaling tiết kiệm nhiều ở tải thấp ổn định, còn dưới tải tăng đột ngột có giới hạn với nguyên nhân đo được; (T3) nền tảng vận hành được.
+  - Chương 4 gom từ 11 mục còn 7, mỗi mục đủ dày cho khung sáu bước (rủi ro R21). Chương 3 có mục 3.6 Thiết kế đánh giá, kèm các chỉ số của đề cương; chương 2 có mục Hàng đợi và năng lực phục vụ; chương 5 có mục 5.7 Hạn chế và bảng tổng hợp LT1–LT8.
+  - Số trang: 4–5 / 8–10 / 10–12 / 16–20 / 12–14 / 2–3. Chương 5 nằm trong mức 12–15 trang của ADR-002 Q13.
+  - Bỏ: giữ 11 mục ở chương 4 (mỏng); viết mỗi hướng giải thành một chương (lệch chuẩn trình bày, hội đồng khó theo); tách mục 4.1 theo người viết (không còn áp dụng, vì Trình viết toàn bộ bản base).
+- **Results:** bản soát phát hiện các điểm có căn cứ:
+  - thiếu bảng ánh xạ bảy mục tiêu của đề cương và thiếu các chỉ số P95/P99, throughput, token/GPU-giờ (`runs.csv` đã có đủ các cột này);
+  - giá trị SLO được dùng ở 3.1 nhưng đến 3.5 mới định nghĩa;
+  - scale-down được đặt ở hai chỗ;
+  - chưa có chỗ cho ca đối chứng graceful shutdown và VH2c;
+  - ba số trong thông điệp lệch nguồn: A1 ở KB1 dùng khoảng 90% GPU-giờ của S4, không phải "chỉ tiết kiệm 5–10%"; thời gian phản ứng 79,7–81,5 s; câu "mọi thay đổi đi qua Git" chỉ đúng ở cluster nhà, vì trên VM thuê nền tảng được cài bằng Helm.
+- **Deviations:** mục 1.5 Đóng góp được nêu 2–3 số chính kèm dẫn chéo tới chương 5, lệch `quy-tac-viet.md` §2 (chương 1 không đặt số đo).
+- **Links:** nhánh `docs/tr8-thesis-ch5-drafts`.
+- **Thesis:** toàn bộ bố cục; cần sửa theo Kế hoạch §11.1, `quy-tac-viet.md` §2 và §8, `nguon-tu-lieu.md` §2.
+
+## 2026-11-23 – Merge PR #46, #52 của Quang; gộp xung đột nhật ký qua PR #58
+
+- **Task:** chung · **Environment:** none
+- **Done:**
+  - Trình merge PR #46 (Q6, `vh3-delete` giữ pod thứ hai trước khi xoá) bằng merge commit: CI 6/6 xanh, đã Approve 21/11, không có commit sau lần duyệt.
+  - Sau đó #52 chuyển sang `CONFLICTING`, vì #46 và #52 cùng thêm mục vào cuối `docs/nhat-ky/lam-viec/quang/tuan-07.md`.
+  - Tạo nhánh `fix/tr8-pr52-sync-main` từ đầu nhánh #52 (`72e83f5`), merge `origin/main`, gộp nhật ký theo thứ tự ngày: hai mục 16/11 của #46 đặt trước tám mục 18–20/11 của #52. Mở PR #58; CI 6/6 xanh; merge. GitHub tự đánh dấu #52 là merged.
+  - Merge `main` vào `docs/tr8-thesis-ch5-drafts`: không xung đột.
+- **Decision:** D88. Không đẩy commit lên nhánh của Quang; dùng PR thay thế bằng merge commit để giữ nguyên 15 commit và tác giả. Bỏ: chờ Quang tự merge `main` vào nhánh (chặn thêm), squash (mất lịch sử, #52 không tự thành merged).
+- **Results:** diff của #58 so với `main`: 11 file, +944 −16, khớp từng file với #52. Nhật ký sau gộp không còn marker; tập dòng khác rỗng bằng đúng hợp của hai phía (367 dòng). CI của `main` sau #46 (`adc80b1`) xanh.
+- **Incidents:** lệnh `git switch -c` thất bại khi đang merge dở ("cannot switch branch while merging"), nên commit gộp được tạo trên HEAD tách rời trước rồi mới đặt tên nhánh. Không có gì bị đẩy lên sai nhánh.
+- **Links:** PR #46, #52, #58 (merge commit `6482406`).
 ## 2026-11-23 – Luận văn: đưa bố cục mới vào Kế hoạch §11.1 và quy tắc viết
 
 - **Task:** TR8 · **Environment:** none
@@ -32,7 +65,7 @@
     - dòng F4 ở Môi trường §16 ghi "bằng `make`" trong khi nhật ký Quang 18/11 cho thấy chạy tay từng lệnh;
     - phần đầu các tài liệu thiết kế 01, 03, 04, 05 còn dẫn số mục cũ.
 - **Deviations:** phần "thay đổi so với dàn ý trước" ở Kế hoạch §11.1 chỉ giữ 6 ý chính, không chép đủ 8 ý của bản nháp bố cục.
-- **Links:** `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§3 M4, M5; §5.1; §11.1; §11.4); `docs/chi-tiet/01`, `03`, `04`, `05` (phần đầu; 05 dòng F4); `docs/luan-van/quy-tac-viet.md`, `nguon-tu-lieu.md`, `README.md`, `03-05-giam-sat-slo-canh-bao.md`.
+- **Links:** PR #59, merge commit `31a3ae5` (CI 6/6 xanh, MERGEABLE, không có review); sau đó merge `origin/main` vào `docs/tr8-thesis-ch5-drafts`, nhật ký tuần 08 gộp đúng thứ tự. `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§3 M4, M5; §5.1; §11.1; §11.4); `docs/chi-tiet/01`, `03`, `04`, `05` (phần đầu; 05 dòng F4); `docs/luan-van/quy-tac-viet.md`, `nguon-tu-lieu.md`, `README.md`, `03-05-giam-sat-slo-canh-bao.md`.
 - **Thesis:** dàn ý toàn bộ; 1.4 (cách trình bày quy trình); Lời cam đoan (khai báo công cụ AI).
 
 ## 2026-11-23 – TR8: bản base mục 3.1 (yêu cầu và chỉ tiêu nghiệm thu)
@@ -135,6 +168,119 @@
 - **Links:** `docs/luan-van/quy-tac-viet.md` (§1, §3.1, §6); `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§11.1).
 - **Thesis:** áp cho mọi mục; trước mắt là cắt 3.1, 3.3, 3.5, 3.6 về ngân sách, và viết 3.2, 3.4 theo ngân sách.
 
+## 2026-11-24 – Luận văn: đo ba nháp chương 5, chốt ngân sách chương 5, cắt 5.3
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Đo ba nháp chương 5 bằng dàn trang thử (`.work/tools/do_trang/run.sh`, khuôn B: 14 pt, lề 3,5/3/3,5/2 cm): 5.3 = 8 trang, 5.5b (VH4, VH6) = 8, 5.6 = 8; tổng ba nháp gấp khoảng 4 lần phần ngân sách tương ứng.
+  2. Chốt ngân sách chương 5 theo trang và ghi vào Kế hoạch §11.1 (đoạn Cân đối).
+  3. Cắt 5.3 (`docs/luan-van/05-03-autoscaling-so-voi-tinh.md`) từ 3.500 xuống khoảng 830 chữ văn xuôi: bảng 11 ô ghi khoảng thấp nhất–cao nhất thay cho số từng lượt; bỏ đoạn mô tả lại kịch bản KB2 (đã có ở 3.6), tốc độ xử lý của pod cũ, chi tiết pha tăng dần và pha duy trì của KB3, thời điểm A1 bớt pod; viết lại theo quy-tac-viet §4 (tối đa 4 mã mỗi đoạn, tên pha tiếng Việt). Các ý đã cắt ghi trong comment đầu file kèm nguồn (`analysis/dg2_a2.py` phần 1–4).
+- **Decision:** ngân sách chương 5 = 14 trang (mức trên của 12–14): 5.1 ≈ 1 · 5.2 ≈ 1,5 · 5.3 ≈ 4 · 5.4 ≈ 1,5 · 5.5 ≈ 3 (VH4 và VH6 khoảng 1,25) · 5.6 ≈ 2 · 5.7 ≈ 1. 5.3 tăng từ 3 lên 4 trang vì trả lời câu hỏi chính và hình diễn biến KB2 (518 × 619 pt) chiếm gần trọn một trang; hình SLO attainment theo GPU-giờ chuyển sang Phụ lục E. Phương án bỏ: giữ 5.3 = 3 trang (phải bỏ phân tích hàng đợi, là kết quả chính của mục); đo với hình trôi (lệch với cách đo của chương 3).
+- **Results:** 5.3 sau khi cắt: 3,61 trang khuôn A, 3,96 trang khuôn B (ngân sách 4); `kiem_van.py` 0 điểm; lychee 59/59 OK. Không đổi số liệu so với nguồn; hai chỗ diễn đạt lại có tính từ nguồn: A1 × KB2 tiết kiệm 4,6–4,9% GPU-giờ (1 − 0,9537 và 1 − 0,9514), A1 lên 4 replica sau 166–181 s.
+- **Deviations:** Kế hoạch §11.1 đổi ngân sách mục của chương 5 (5.1 1,5 → 1; 5.3 3 → 4); tổng chương 5 vẫn trong khoảng 12–14 trang.
+- **Links:** nhánh `docs/tr8-thesis-ch5-drafts` (chưa PR); `docs/chi-tiet/06-ke-hoach-quan-ly.md` §11.1.
+- **Thesis:** §5.3; chương 2 (mục 2.4) phải định nghĩa flapping, vì 5.3 dùng thẳng thuật ngữ này. Còn cắt: 5.6 (8 → 2 trang), 5.5b (8 → 1,25 trang).
+
+## 2026-11-24 – Luận văn: cắt nháp 5.6 về 2 trang
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Cắt `docs/luan-van/05-06-bang-nghiem-thu.md` từ 8 trang (khuôn B) về ngân sách 2 trang: gộp hai bảng F1–F7 và N1–N8 thành một Bảng 5.6a 4 cột (yêu cầu/chỉ tiêu, mức, kết quả hoặc phần còn thiếu, kết luận); ngưỡng dẫn chéo sang Bảng 3.1, bảng đầy đủ kèm số từng lượt dành cho Phụ lục E; bỏ đoạn điều kiện đo (đã ở 5.1) và danh sách năm mức kết luận (đưa vào chú thích bảng).
+  2. Viết lại văn xuôi theo quy-tac-viet §3–§5: khoảng giá trị kèm số lượt, tối đa 4 mã mỗi đoạn, mỗi đoạn có comment nguồn ngay sau. Ý đã cắt ghi trong comment đầu file kèm nguồn.
+  3. Soát độc lập (`/code-review high`): 10 điểm, sửa cả 10 (phạm vi KB1, KB3 của N1; N2b không có ngưỡng ở Bảng 3.1 nên bỏ "dự kiến 5 phút"; thêm bằng chứng phần đã đạt của F1, F5, F7; đủ hai điều kiện của N3 và ba phần của N6; giải thích page ở A2 × KB3 không phải page giả; ghi số lượt; gọi mốc so sánh nhất quán là cấu hình tĩnh; sửa comment số cột và dẫn chéo sang file có trong repo).
+- **Results:** 2.463 → 463 chữ văn xuôi, 2 → 1 bảng; đo 1,55 trang khuôn A, 1,95 trang khuôn B (ngân sách 2); `kiem_van.py` còn 1 điểm (đoạn mở mục 2 câu, mâu thuẫn §2 với §3.2 đã biết); lychee đạt. Không đổi số liệu so với nguồn; A2 × KB1 = 0,25 GPU-giờ của S4 đối chiếu lại `analysis/figures/v2-dg2/runs.csv`.
+- **Deviations:** mục 5.6 chưa có bảng kiểm chứng LT1–LT8 như Kế hoạch §11.1; 5.6 đã dùng gần hết 2 trang, nên khi thêm bảng LT phải đưa bảng vào Phụ lục E hoặc lấy chỗ từ mục khác của chương 5.
+- **Links:** nhánh `docs/tr8-thesis-ch5-drafts` (chưa PR).
+- **Thesis:** §5.6. Còn cắt: 5.5b (8 → 1,25 trang).
+
+## 2026-11-24 – Luận văn: cắt nháp 5.5b (VH4, VH6) về 1,25 trang
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Cắt `docs/luan-van/05-05b-vh4-vh6.md` từ 8 trang (khuôn B) về ngân sách 1,25 trang (D96): bỏ cả ba bảng (thời gian fallback ba lượt, SLO theo ba khoảng, mốc của 7 page), số từng lượt dành cho Phụ lục E; bỏ phần cách đo của VH6 (đã ở 3.6, PR #64), hai cấu hình quyết định fallback (để 4.3), chuỗi cảnh báo `KedaScalerErrors` trên simulator, danh sách cảnh báo khác và hai đoạn giới hạn.
+  2. Viết lại văn xuôi theo quy-tac-viet §3–§4: câu đầu đoạn là kết luận, tối đa 4 mã mỗi đoạn, mã N chỉ ở câu so với chỉ tiêu, tên pha tiếng Việt. Ý đã cắt ghi trong comment đầu file kèm nguồn; giới hạn của VH4, VH6 và lỗ hổng "cảnh báo lỗi gửi tin đi qua chính đường đang hỏng" chuyển sang `nguon-tu-lieu.md` §6 cho mục 5.7 và 6.2.
+  3. Soát độc lập (`/code-review high`): 10 điểm, sửa cả 10 (bỏ khẳng định "không tin nào tới Telegram", chỉ giữ "không có bằng chứng"; thêm số TPOT so sánh vì 5.3 không còn TPOT; "có cửa sổ 1 phút vi phạm SLO" để không mâu thuẫn với SLO attainment 100% của A2 × KB3; nêu đợt kêu sót từ lượt trước không chấm; mốc bắt đầu của thời gian fallback; "ở tải thấp" trong câu chủ đề; sửa dẫn chéo §3.5.5 và mục 4.3; ghi chi tiết cách chấm VH6 cho 3.6 hoặc Phụ lục E; ghi 300 s chờ scale-down là số tính từ cấu hình, chưa đo).
+- **Results:** 4.503 → 512 chữ văn xuôi (đếm của `kiem_van.py`), 3 → 0 bảng; đo 0,96 trang khuôn A, 1,25 trang khuôn B (ngân sách 1,25); `kiem_van.py` 0 điểm; lychee đạt. Không đổi số liệu so với nguồn.
+- **Links:** nhánh `docs/tr8-thesis-ch5-drafts` (chưa PR); `docs/luan-van/nguon-tu-lieu.md` §6.
+- **Thesis:** §5.5 (VH4, VH6), §5.7, §6.2; Phụ lục E (bảng từng lượt, lấy từ commit `bc49ff6`). Việc đo và cắt ba nháp chương 5 đã xong.
+
+## 2026-11-24 – Luận văn: bản base mục 5.4 Cold start (ĐG3, LT4)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Viết `docs/luan-van/05-04-cold-start.md` từ 5 lượt hợp lệ của ĐG3 (`runs/v2-vm/dg3-v2-4060ti/{L0-1,L0-2,L2-1,L2-2,L2-3}`: `summary.txt`, `vllm_log.json`). Bảng 5.4a chia thời gian theo tám pha (mốc kubelet cho pha 1–4, mốc vLLM cho pha 4–8), ghi khoảng giá trị; số từng lượt để trong comment cho Phụ lục E. Câu mở mục ghi rõ L0 đo 0 → 1, L2 đo 1 → 2.
+  2. Đọc thêm log vLLM của 9 pod mới trong ba lượt A2 × KB2 bằng `parse_vllm_log` để giải thích vì sao cold start trong ĐG2 (65–66 s) ngắn hơn ĐG3 L2.
+  3. Soát độc lập (`/code-review high`): 10 điểm. Sửa 8 điểm ở 5.4: pha 4 tách được bằng mốc `container_started`, `api_server_start`, `engine_init_start`; dòng "nạp weights" của bảng đổi thành "khởi tạo model và nạp weights", thêm dòng con theo log vLLM; hạ mức chắc chắn của giải thích page cache; chỉ dùng tên L0/L2; câu định nghĩa cold start; tổng tính chính xác tới 0,1 s; sửa ghi chú thứ tự lượt; đổi GiB/GB. Hai điểm ngoài 5.4 cũng sửa: câu bước scale-down đầu ở 5.3 thêm "nhiều khả năng" (lượt 2 không khớp với cửa sổ 300 s), Kế hoạch §11.1 "14–16 trang" thành "tối đa 16 trang". Thêm hai dòng hạn chế vào `nguon-tu-lieu.md` §6.
+- **Decision:** D97: tổng cold start lấy `ready_seen_unix − trigger_unix` (chính xác tới 0,1 s) thay cho `trigger_to_ready_s` nguyên giây, để bảng cộng đúng từng pha. N5 vì vậy đổi từ 25,4% thành 25,3% ở 5.4 và 5.6; số nguyên giây vẫn ghi trong comment nguồn. Phương án bỏ: giữ số nguyên giây, khi đó tỷ lệ và tổng các pha lệch nhau tới 0,7 s.
+- **Results:**
+  - Từ lệnh scale tới Ready: L2 75,7–80,8 s (3 lượt), L0 301–311 s (2 lượt). L2 bằng 25,3% L0 theo trung bình, 26,9% ở cặp lượt bất lợi nhất, nên N5 đạt.
+  - L0: kéo image 9,04 GB mất 154–156 s (khoảng một nửa), tải model 54,2–56,8 s, torch.compile 18,0–20,2 s (L2: 1,2–1,3 s nhờ compile cache).
+  - L2: pha khởi động tiến trình 42,6–43,0 s, chiếm 52,7–56,8%. Trong đó 28,3–28,7 s trôi qua trước dòng log đầu của vLLM. Tài liệu thiết kế ước tính 5–15 s cho pha này.
+  - LT4: vLLM báo nạp 5,75 GiB weights mất 7,7–7,8 s ở L2 (khoảng 0,8 GB/s) và 0,99–1,14 s ở L0. Tốc độ đĩa của VM chưa đo, nên chưa kiểm được phần định lượng. Nạp weights chiếm không quá 10,3% cold start.
+  - ĐG2 A2 × KB2: 9 pod mới nạp weights 1,01–1,04 s, phù hợp với page cache ấm; phần này giải thích khoảng 6,7 s trong khoảng chênh 10–16 s so với ĐG3.
+  - Đo trang: 1,21 trang khuôn A, 1,49 trang khuôn B (ngân sách 1,5); 472 chữ văn xuôi; `kiem_van.py` 0 điểm; lychee `docs/luan-van/` đạt. 5.3 sau khi sửa: 3,99 trang B (ngân sách 4).
+- **Incidents:** lần đo trang đầu chạy `run.sh` với biến thư mục rỗng, nên `cat` tạo file `all.md` rỗng ở gốc repo. File đã được xoá trước khi commit. Theo `trigger_unix`, thứ tự đo là L2-2 → L0-2 → L2-1 → L2-3 → L0-1, tức chỉ 2 trong 3 lượt L2 chạy sau L0-2; nhật ký Quang 19/11 ghi "ba lượt".
+- **Deviations:** phép so với cluster nhà (LT4 16/11, model 0,5B) bỏ khỏi thân bài để giữ ngân sách. Ý này ghi trong comment đầu file, để dùng cho bảng LT1–LT8 (5.6) hoặc Phụ lục E.
+- **Links:** nhánh `docs/tr8-thesis-ch5-drafts` (chưa PR); `docs/luan-van/05-04-cold-start.md`; `nguon-tu-lieu.md` §6.
+- **Thesis:** §5.4, §5.6 (N5, LT4), §5.7 (hạn chế ĐG3); Phụ lục E (số từng lượt trong comment đầu 5.4).
+
+## 2026-11-24 – Luận văn: bản base mục 5.1 và 5.2 (môi trường đo, năng lực một replica)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** viết `05-01-moi-truong-dieu-kien-do.md` (phiên V2: phần cứng, phần mềm, tham số request, lý do đổi máy, thứ tự đo, điều kiện hợp lệ, chi phí) và `05-02-nang-luc-mot-replica.md` (ĐG1, Bảng 5.2a, LT1–LT3). Nguồn: `capacity.json`, `matrix-dg1-v2.yaml`, nhật ký Quang tuần 06–07, `van-hanh.md` LT1–LT3, log vLLM và `checks.json` của 22 lượt. Soát số độc lập trên cả hai file, sửa 10 điểm, rồi cắt lại về ngân sách.
+- **Decision:** 5.1 chỉ nêu giá trị xấu nhất của các điều kiện hợp lệ, không lập bảng, vì bảng ngưỡng đã có ở 3.6. Chi phí thực tế V2 ghi là chưa có (chưa đối chiếu hoá đơn), so sánh chi phí dùng GPU-giờ theo giả định G1. Giả thuyết "C bám TPOT ở batch lớn" chỉ ghi ở mức "có thể": C ở hai máy chỉ biết với bước 0,5 req/s, nên tỷ lệ C thật nằm trong 1,13–1,43, và phiên A4000 chạy vLLM với 2 lõi CPU.
+- **Results:**
+  - ĐG1 (RTX 4060 Ti, model 3B): C = 3,5 req/s, B* = 46,3, threshold A2 = 37. Ở λ = 4: SLO attainment 28,5%, đang chờ TB 12,4.
+  - LT1: TPOT với 1 request chậm hơn cận dưới weights ÷ băng thông khoảng một phần tư (nhà 8,68 so với 6,9 ms; A4000 17,2 so với 13,8 ms). V2 đo C cao hơn tỷ lệ băng thông thuần (2,893 req/s) 21,0%.
+  - LT2: dự đoán 36.864 B/token, V2 đo 36.843 B/token (7,26 GiB cho 211.584 token), lệch 0,06%.
+  - LT3: điểm gãy giữa λ = 3,5 và 4, lúc số request đang chạy chạm 64 (63,5 ở λ = 4). Throughput bão hoà suy ra từ TPOT p50 62,6 ms khoảng 4,0 req/s. TPOT p50 tăng 53,6% khi B tăng từ 16 lên 46.
+  - Điều kiện hợp lệ, giá trị xấu nhất trên 22 lượt: send lag p99 5,98 ms, CPU máy tạo tải 43,6%, khoảng trống scrape 5,0 s.
+  - Đo trang (khuôn B, ngân sách D96): 5.1 0,99 trang (1), 5.2 1,49 trang (1,5). `kiem_van.py`: 5.2 0 điểm; 5.1 1 điểm ngày tháng ở đoạn đầu, chủ ý theo quy-tac-viet §5. lychee hai file đạt.
+- **Incidents:**
+  - Soát số tìm ra: LT1 ghi "chậm khoảng 20%" trong khi số trong câu cho 25–26%; 5.1 viết `--max-num-seqs` như giới hạn request nhận vào, trong khi đó là giới hạn batch; LT2 viết "lệch dưới 0,1% như ở nhà", nhưng ở nhà vLLM làm tròn tới 0,1 GiB; comment đầu file nêu tên công cụ soát, trái quy-tac-viet §9; thiếu comment thông điệp (§2). Đã sửa cả năm điểm.
+  - Hai lần lệnh Bash bị treo vì một lệnh `cat >` thừa chờ stdin. Đã dừng tác vụ và chạy lại.
+- **Deviations:** băng thông 288 và 448 GB/s là thông số của NVIDIA, chưa có mục trong `tai-lieu.bib`; ghi trong comment nguồn, thêm khi ghép chương. Các file 5.3–5.6 trên nhánh vẫn dùng dạng comment cũ (nêu tên công cụ soát, thiếu comment thông điệp).
+- **Links:** nhánh `docs/tr8-thesis-ch5-drafts` (chưa PR); `docs/luan-van/05-01-moi-truong-dieu-kien-do.md`, `docs/luan-van/05-02-nang-luc-mot-replica.md`.
+- **Thesis:** §5.1, §5.2, §5.6 (bảng LT), §5.7 (C thô do bước 0,5; V2 không đo TPOT 1 request; giả thuyết LT1 chưa kiểm).
+
+## 2026-11-24 – Luận văn: bản base đầy đủ mục 5.5 Kịch bản vận hành (VH1–VH6, graceful shutdown)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Gộp `05-05b-vh4-vh6.md` vào `05-05-kich-ban-van-hanh.md` (`git mv`), giữ nguyên chữ phần VH4, VH6, thêm đoạn mở mục, VH1 (dẫn chéo 5.3), VH2 kèm ca đối chứng VH2c, VH3, VH5 và tiểu mục 5.5.7 graceful shutdown kèm ca đối chứng grace 5 s. Số tiểu mục theo mã kịch bản (5.5.k = VHk).
+  2. Số lấy từ `runs/v2-vm/ops-vh*/summary.json` và `timeline.json`, `experiments/ops/vh.py`, nhật ký Quang tuần 07 (16/11, 18/11, 19/11), `van-hanh.md` (06/11, 09/11, 16/11). Bản nháp do agent soạn; một lượt soát độc lập đối chiếu từng số với nguồn.
+  3. Đo trang, cắt về ngân sách, soát văn bằng `kiem_van.py`, soát độc lập rồi sửa, đo lại.
+- **Decision:** bỏ bảng kết quả VH2/VH3 (5 dòng) khỏi thân bài, vì với bảng mục 5.5 đo 3,93 trang khuôn B so với ngân sách 3 (D96). Số của bảng đã có trong văn xuôi hoặc comment nguồn, nên bảng chuyển sang Phụ lục E. Số request của VH2, VH3 là của cả lượt tải (1.200–2.400 s), không phải của khoảng rolling update, nên không đặt cạnh thời gian rollout. Kết quả drain trên simulator (22,1 s) bỏ khỏi thân bài vì chỉ kiểm logic script.
+- **Results:**
+  - VH2 (V2, 1,75 req/s): ca 1 replica rolling update 141 s, ca 4/4 GPU `maxSurge: 0` 372 s, ca đối chứng `maxSurge: 1` kẹt sau 300 s với 1 pod Pending; cả ba 0 lỗi (2.077 / 4.229 / 2.077 request cả lượt).
+  - VH3: xoá pod khi có 2 pod, thay thế Ready sau 67,4 s, 0 lỗi / 1.351; kill tiến trình con: Ready lại sau 67,4 s nhưng 129 lỗi / 1.041 (117 lỗi kết nối).
+  - VH5: 8 phút 22 giây từ VM trắng (bấm tay, 1 lần). Graceful shutdown ở nhà: 144/144 stream, ca grace 5 s cắt 48/48.
+  - Đo trang: 2,41 trang khuôn A, 2,93 trang khuôn B (ngân sách 3); 1.171 chữ văn xuôi, không bảng. `kiem_van.py` 0 điểm; lychee `docs/luan-van/` 0 lỗi.
+- **Incidents:** soát độc lập báo 10 điểm, đều đã sửa. Nặng nhất: 5.5.7 khẳng định mỗi lần tắt pod giữ GPU tới 3 phút, trong khi VH2b trên V2 thay 4 pod (`maxSurge: 0`, pod mới phải chờ GPU của pod cũ) trong 371,6 s, khoảng 93 s mỗi pod, gần bằng cold start L2. Như vậy pod cũ trên V2 có lẽ đã thoát sau khoảng 15–20 s, khác với ở nhà. Câu đó giờ chỉ nói về máy nhà và nêu quan sát trên V2 như một suy luận chưa kiểm bằng log. Các điểm khác: rollout được kích hoạt bằng annotation trong pod template, không phải annotation của Deployment; làm tròn thời gian ≥ 100 s về số nguyên (sửa cả 104,5 → 104 s ở 5.6); câu lồng ", tức"; trộn số đo với suy luận trong một câu; đoạn mở mục dạng "Mục này…"; VH4 lặp điều kiện tải của đoạn mở; nhãn simulator cho drain; "mọi tiến trình" sửa thành tiến trình con.
+- **Deviations:** SLO trong lúc rolling update (tiêu chí VH2 ở Môi trường §13) chưa tính: chưa có script tính SLO theo mốc của VH2 (`vh4_windows.py` chỉ nhận mốc của VH4). Cảnh báo trong các lượt VH2–VH4 không được lưu, nên vế "có cảnh báo" của VH2c và VH3 chưa kiểm được.
+- **Links:** nhánh `docs/tr8-thesis-ch5-drafts` (chưa PR); `docs/luan-van/05-05-kich-ban-van-hanh.md`, `docs/luan-van/05-06-bang-nghiem-thu.md`, `docs/luan-van/nguon-tu-lieu.md`.
+- **Thesis:** §5.5; §5.7 (vh3-kill có lẽ chỉ 1 pod; hành vi SIGTERM của vLLM trên V2 khác ở nhà, chưa kiểm bằng log; không lưu cảnh báo trong VH2–VH4); §4.5 (VH2 trên VM kích hoạt qua annotation, không qua Git).
+
+## 2026-11-24 – Luận văn: bản base mục 5.7 Hạn chế của phép đo và kết chương 5
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Viết `docs/luan-van/05-07-han-che-phep-do.md` từ `nguon-tu-lieu.md` §6 (phần phép đo) và các chỗ ở 5.2, 5.4, 5.5, 5.6 dẫn "(mục 5.7)". Bản nháp do agent soạn; Trình chưa đọc lại.
+  2. Đo trang, cắt về ngân sách, soát văn bằng `kiem_van.py`, soát độc lập rồi sửa, đo lại cả mục và cả chương 5.
+- **Decision:** 5.7 chỉ nêu hạn chế chưa có ở mục khác: cỡ mẫu (1–3 lượt mỗi ô, 6/11 ô chỉ 1 lượt; hai kết luận chính vẫn giữ vì mọi lượt cùng chiều), bước tải ĐG1 0,5 thay vì 0,25, L0 đo từ 0 lên 1, LT1 chưa đo trên 4060 Ti, VH4 một lượt ở 0,5 C, VH6 chỉ chấm `LLMSLOBurnFast`, bản ghi thiếu của VH2–VH4, kịch bản vận hành chưa chạy ở nhà. Những ý mục khác đã nêu (máy 4060 Ti ở 5.1, page cache và tốc độ đĩa ở 5.4, Telegram ở 5.5.6) và các giới hạn nhỏ (metadata ghi commit khi tree dirty, không sao lưu R2, 2 lõi CPU ở phiên thử A4000) chuyển vào comment "Ý không đưa vào". Hạn chế của hệ thống để 6.2.
+- **Results:**
+  - 5.7: 405 chữ văn xuôi, không bảng; 0,75 trang khuôn A, 0,96 trang khuôn B (ngân sách 1, gồm kết chương). `kiem_van.py` 0 điểm; lychee 0 lỗi.
+  - Cả chương 5 (05-01 tới 05-07, bỏ comment): 11,61 trang khuôn A, 13,68 trang khuôn B, trong ngân sách 14 trang (D96).
+- **Incidents:** bản đầu dài 703 chữ (2 trang); cắt ba lần. Soát độc lập báo 10 điểm, đều đã sửa. Các điểm chính: bỏ sót giới hạn VH4, VH6 mà 05-05 hẹn đưa vào 5.7; kết chương chỉ nêu Service chia đều là nguyên nhân KB2, bỏ cold start mà 5.3 nêu ngang hàng; "cảnh báo kêu ở mọi lượt vi phạm" thiếu phạm vi "17 lượt so sánh cấu hình"; giải thích sai nguyên nhân C thô (do bước 0,5, không do mỗi mức 1 lượt); "LT1 chưa kiểm" mâu thuẫn 5.2 (đã kiểm ở nhà và A4000); câu mở "mọi số đo từ một phiên" sai vì chương có số ở nhà và simulator; "khâu gửi tin chưa kiểm" mâu thuẫn 5.5.6 (đã kiểm trên simulator).
+- **Links:** nhánh `docs/tr8-thesis-ch5-drafts` (chưa PR); `docs/luan-van/05-07-han-che-phep-do.md`.
+- **Thesis:** §5.7, kết chương 5; §6.2 nhận phần hạn chế của hệ thống (ghi trong comment đầu file).
+
+## 2026-11-24 – Luận văn: chuẩn hoá comment đầu các file chương 5, kết thúc lượt tự chạy 4 giờ
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** Lượt tự chạy 08:33 xong 7 vòng: cắt 5.3, 5.5b, 5.6 về ngân sách D96; viết base 5.1, 5.2, 5.4, 5.5, 5.7. Vòng 8 hết quota giữa lúc chuẩn hoá comment đầu file 5.3–5.7, để lại phần sửa chưa commit; script thoát mà không ghi dòng dừng. Phiên sau soát và commit phần đó: bỏ tên công cụ soát, thêm `<!-- Thông điệp -->` (5.3, 5.4, 5.6), đưa dòng soát về dạng `Soát số · Soát văn phong · Người viết đọc lại`, đổi câu mở 5.3 và 5.6 khỏi dạng "Mục này…" (quy-tac-viet §2).
+- **Results:** đo lại khuôn B: 5.3 = 3,99 trang (bản trước khi sửa cũng 3,99; ngân sách 4), 5.6 = 1,95 trang (ngân sách 2). kiem_van còn 1 điểm ở đoạn mở 5.6 (2 câu), có từ trước, do mâu thuẫn quy-tac-viet §2 (đoạn mở 1–2 câu) với §3.2 (đoạn 3–7 câu), chưa sửa.
+- **Links:** `docs/luan-van/05-03-…`, `05-04-…`, `05-06-…`, `05-07-…`; tổng kết lượt `.work/auto/runs/20261124-0833/` (cục bộ).
 ## 2026-11-24 – Luận văn: bỏ ngân sách trang từng mục, sửa dàn ý và quy tắc đề mục
 
 - **Task:** TR8 · **Environment:** none
@@ -207,6 +353,66 @@
 - **Links:** `docs/luan-van/quy-tac-viet.md` (§1, §3.5, §9); `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§5.1, §11.1).
 - **Thesis:** phần đầu quyển (không có Tóm tắt, không có Lời cam đoan); Mở đầu; mục 1.3 Đóng góp.
 
+## 2026-11-26 – Luận văn: chương 5 bước 1, merge main và đổi đề mục theo D101
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** trên nhánh `docs/tr8-thesis-ch5-drafts`: merge `origin/main` (xung đột ở Kế hoạch §11.1 lấy bản main, đoạn "Độ dài" thay "Cân đối"; xung đột ở `nguon-tu-lieu.md` lấy bản main theo đề mục mới, giữ lại con trỏ tới bảng từng lượt VH4, VH6 ở commit `bc49ff6`). Đổi đề mục 5.3: TĐ1 (GPU utilization so với tải đồng thời) lên 5.3.1, tải ổn định 5.3.2, tải tăng đột ngột 5.3.3; Bảng 5.3a ở đoạn dẫn. 5.5 gom 7 tiểu mục thành 3 theo N4 (VH1 kèm pha giảm tải KB2 chuyển từ 5.3, VH2, graceful shutdown), N6 (VH3, VH4, VH5), N7 (VH6). Thêm `05-00-danh-gia.md` với đoạn mở chương kèm số chính. Sửa dẫn chéo §5.5.x trong comment của 5.7.
+- **Decision:** D124: bảng 5.3a đặt trước 5.3.1 vì phục vụ cả ba tiểu mục; tiêu đề 5.5.x không mang mã VH (quy-tac-viet §2), mã nằm trong câu chủ đề.
+- **Results:** `kiem_van.py` 0 điểm cần xem ở 05-00, 05-02 tới 05-07; 05-01 còn 1 điểm "ngày tháng §5" có chủ ý (ngày phiên đo nêu một lần ở 5.1). lychee trên `docs/luan-van/*.md`: 0 lỗi. Chưa đo số trang (để bước 2, sau khi khôi phục phần lõi).
+- **Deviations:** nội dung 5.5 chưa theo ADR-007 (PR #75: VH1 lấy từ V2, VH2 qua Git trên kind ở PR #78, N8 ở PR #76), vì các PR đó chưa merge; sửa ở bước 2.
+- **Links:** nhánh `docs/tr8-thesis-ch5-drafts`; `docs/luan-van/05-00-danh-gia.md`, `05-03-autoscaling-so-voi-tinh.md`, `05-05-kich-ban-van-hanh.md`.
+- **Thesis:** chương 5.
+
+## 2026-11-27 – Luận văn: chương 5 bước 2a, đưa ADR-007, VH2 qua Git và N8 vào 5.5–5.7
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** trên nhánh `docs/tr8-thesis-ch5-drafts`, sửa 5.5 theo ADR-007 (PR #75): đoạn mở mục nêu phần nào chạy trên simulator và vì sao; 5.5.1 ghi VH1 lấy từ pha giảm tải của 3 lượt A2 × KB2, không phải lượt riêng; thêm vế chưa có bằng chứng `LLMPodPending` kêu ở ca kẹt Pending (`for: 10m` so với khoảng 300 s chờ); thêm đoạn kết quả vòng Git trên simulator (PR #78), phần cách làm dẫn sang 4.5 để không lặp; thời gian pod cũ giữ GPU trên V2 ghi "chưa đo". 5.5.2 thêm N8 trên simulator (PR #76). 5.5.3 nêu rõ LT8 và VH6 cùng mốc tính. 5.6: dòng F3, N8 và đoạn "phần còn thiếu" theo kết quả mới. 5.7: thêm đoạn hạn chế của phép đo trên simulator (không cold start, commit không qua PR và CI, người dựng lại đã quen hệ thống).
+- **Decision:** D125: bằng chứng VH1 chỉ gồm 3 lượt A2 × KB2. Hai lượt A1 × KB2 giữ 4 replica suốt pha giảm (`scale_downs` 0), nên không kiểm được scale-down. F3 chuyển sang "Đạt" (vòng Git kiểm trên simulator theo ADR-007 D2), N8 sang "Đạt một phần" (còn thiếu chi phí).
+- **Results:** `analysis/figures/v2-dg2/runs.csv`: 5 lượt KB2 của A1, A2; chỉ 3 lượt A2 có `scale_downs` = 3. Đo khuôn T bằng Word (pandoc → `do_trang_word_T.ps1`): chương 5 = 11,3 tr (5.1 0,8; 5.2 1,0; 5.3 2,1; 5.4 1,1; 5.5 3,0; 5.6 1,9; 5.7 + kết chương 1,0), chưa tính Hình 5.3b, dưới định hướng 14–17 tr. `kiem_van.py` 0 điểm cần xem ở 05-05, 05-06, 05-07. lychee `docs/luan-van/*.md` 0 lỗi.
+- **Deviations:** số và khẳng định trong các đoạn sửa dẫn từ nhánh của PR #75, #76, #78 (chưa merge); phần sửa chưa qua soát số độc lập (để bước 3).
+- **Links:** `docs/luan-van/05-05-kich-ban-van-hanh.md`, `05-06-bang-nghiem-thu.md`, `05-07-han-che-phep-do.md`.
+- **Thesis:** 5.5, 5.6, 5.7.
+
+## 2026-11-27 – Luận văn: chương 5 bước 2b, khôi phục lõi 5.1–5.4
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** trên nhánh `docs/tr8-thesis-ch5-drafts`, khôi phục phần lõi đã cắt ngày 24/11 từ các comment "Ý không đưa vào". 5.2: LT2 ở cluster nhà (1,5B) và trên A4000 khớp trong sai số làm tròn; đoạn LT3 ở cluster nhà (điểm gãy khi số request chạy chạm 32); giả thuyết C bám TPOT ở batch lớn ghi rõ "chưa kiểm chứng". 5.3.1 viết lại thành 4 đoạn: mô hình LT6 của GPU utilization, khoảng hở tín hiệu trên V2 (A2 4,6×, KV cache 3,9× nhưng đứng yên khi quá tải), A1 trong ma trận (97–98% GPU-giờ của S4 trong pha ổn định của KB1), pha tăng dần của KB3. 5.3.2: A1 × KB1 tiết kiệm 9,4% và 10,3% (một lượt dưới ngưỡng); vì sao A2 giữ 4 replica suốt pha duy trì của KB3 (mẫu đòi 4 replica cách nhau ≤ 120 s, ngắn hơn cửa sổ ổn định 300 s). 5.3.3: tốc độ xử lý và hàng đợi của pod cũ. 5.4: LT4 ở cluster nhà (pha 7 mất 107–109 s), compile cache của ba lượt L2. 5.7: so C giữa A4000 (2 lõi CPU mỗi pod) và V2 chỉ để tham khảo. Sửa ", nên" lặp ở 05-02, 05-04, 05-07; dòng "Soát văn phong" ở 05-01–05-04 ghi kiem_van. Thêm 2 mục NVIDIA vào `tai-lieu.bib` và dẫn ở 5.1.
+- **Decision:** D126: 448 GB/s dẫn datasheet A4000 của NVIDIA; 288 GB/s dẫn bài của NVIDIA về VRAM dòng RTX 40, vì trang sản phẩm 4060 Ti chỉ ghi bus 128-bit. Giữ số pha tăng dần của KB3 ở 5.3.1 dù pha này không được chấm, vì đây là một điểm yếu của A2 (quy-tac-viet §3.3).
+- **Results:** chạy lại `analysis.dg2_a2` trên `runs/v2-vm/v2-dg2`: số phần 1, 3, 4, 5 khớp comment nguồn. `phases.csv` pha ramp của KB3: SLO A1 1,0, A2 0,841 và 0,799. Thứ tự đo ĐG3 theo `trigger_unix`: L2-2, L0-2, L2-1, L2-3, L0-1; compile cache hit ở cả 3 lượt L2. Đo khuôn T bằng Word: chương 5 = 13,5 tr (5.1 0,8; 5.2 1,3; 5.3 3,8; 5.4 1,4; 5.5 3,0; 5.6 1,9; 5.7 + kết chương 1,0), chưa tính Hình 5.3b (pandoc thiếu rsvg-convert), cộng hình thì khoảng 14 tr, trong định hướng 14–17. `kiem_van.py`: 0 điểm ở mọi file 05-*, trừ 1 điểm ngày tháng có chủ ý ở 05-01. lychee `docs/luan-van/*.md` 0 lỗi; pandoc `--citeproc` dựng đủ 2 mục mới.
+- **Incidents:** trang sản phẩm 4060 Ti và trang A4000 không ghi băng thông; datasheet A4000 phải trích chữ bằng pypdf (bản quét, OCR đọc "4'8GB/s" cạnh "256-bit"). TechPowerUp trả 403.
+- **Deviations:** phần thêm chưa qua soát số độc lập (để bước 3).
+- **Links:** `docs/luan-van/05-01` đến `05-04`, `05-07`, `tai-lieu.bib`.
+- **Thesis:** 5.1–5.4, 5.7.
+
+## 2026-11-27 – Luận văn: chương 5 bước 3, soát số độc lập và soát diff
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Soát số độc lập 5.0–5.7 (quy-tac-viet §9, lượt khác lượt viết): đối chiếu khoảng 290 khẳng định với nguồn trong comment, `runs/`, `analysis/figures/v2-dg2/` và nhánh của PR #75–#81. Ra 3 lỗi xác nhận và 7 điểm nghi ngờ; đối chiếu lại từng lỗi với nguồn rồi sửa (commit `afeb261`), đánh dấu "Soát số: 27/11/2026" ở cả 8 file.
+  2. `/code-review high` trên diff so với `main`: 10 điểm, đều đúng; sửa 9 điểm ở văn bản và comment nguồn, điểm thiếu nhật ký là mục này.
+- **Decision:** D127: F2 → Đạt một phần (T7 chưa chạy) cho khớp chú thích Bảng 5.6a; hướng giảm cái giá của tải tăng đột ngột ở 5.3.3 viết cùng cách với 5.6.2 (nâng số replica tối thiểu theo khung giờ).
+- **Results:**
+  - Lỗi soát số: 5.7 ghi phiên V2 cấp 6 lõi CPU mỗi pod vLLM, cấu hình thật ở commit 10c0527 là 3 lõi (`requests` = `limits` `cpu: "3"`); 5.6.2 gán 100% SLO cho "khi tải tăng dần", trong khi KB3 chỉ chấm pha duy trì (pha tăng dần A2 84,1% và 79,9%); 5.5.1 nêu "máy nhà thiếu RAM" là lý do của ADR-007, trong khi ADR-007 nêu cluster nhà không sẵn sàng trước mốc nộp.
+  - Điểm nghi ngờ đã sửa: 93% GPU utilization là của S4 × KB1, không phải A1; A2 đòi 2, 3, 7 replica ở λ = 3,5, 4, 5; bốn commit của vòng Git là nâng min, đổi tham số, hai lần revert; 7 giờ 14 phút gồm cả thời gian chuyển giữa 17 lượt khoảng 24 phút.
+  - Lỗi `/code-review`: "3,66–3,73 replica Ready, tức 97–98% GPU-giờ" sai phép suy (GPU-giờ tính từ lúc pod được xếp lịch); TPOT p50 ở nhà tăng 16,7 → 18,1 ms qua điểm gãy rồi mới đứng yên; Bảng 5.6a chưa được nhắc trong bài; công thức chuyển sang `$…$`; các danh sách "Ý không đưa vào" và comment ngân sách cũ sau bước 2b.
+  - Đã khớp nguồn: VH1 3 lượt A2; vh2b 371,6 s; VH2 qua Git 0 lỗi / 615 request, sync 138–247 s; N8 1.481 s; Bảng 5.4a từng ô. Băng thông 288 và 448 GB/s chưa mở lại được trang NVIDIA trong lượt soát.
+  - Độ dài: 13,5 tr khuôn T (đo ở bước 2b, chưa tính Hình 5.3b); các sửa ở bước này chỉ thay vài câu, chưa đo lại.
+- **Incidents:** thứ tự đo ĐG3 theo `trigger_unix` (L2-2 trước L0-2) lệch với câu "ba lượt L2 đo sau L0-2" trong nhật ký Quang tuần 07 mục 19/11; thân bài theo dữ liệu, không đổi kết luận.
+- **Deviations:** 00-thong-so §9.1 ghi `cpu: 6`, `memory: 24Gi` cho pod vLLM trên cloud, khác cấu hình đã chạy ở V2 (3 lõi, 16Gi); chưa sửa ở PR này.
+- **Links:** `docs/luan-van/05-0*.md`; nhánh `docs/tr8-thesis-ch5-drafts`.
+- **Thesis:** chương 5.
+
+## 2026-11-27 – Chốt ba số còn mở ở 4.5, 4.6 và 5.5
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** tra `runs/v2-vm/`, `analysis/figures/v2-dg2/tables/runs.csv`, `experiments/ops/vh.py`, `experiments/runner/collect.py`, `analysis/build_tables.py`, `van-hanh.md` mục LT8 để chốt ba số; sửa 4.5, 4.6 (PR #81) và 5.5, 5.7 (PR #82).
+- **Decision:**
+  1. Thời gian pod cũ trên V2 giữ GPU khi rolling update: giữ "chưa đo". Thư mục `ops-vh2b-20261118-170715` chỉ có `timeline.json` 4 mốc, `summary.json` và `load/`; không có log pod, sự kiện pod hay dữ liệu Prometheus. 371,6 s tính từ lúc patch annotation tới lúc `kubectl rollout status` xong. Vì cả 4 GPU đã có pod và chiến lược là `maxSurge: 0` / `maxUnavailable: 1`, pod được thay lần lượt, nên trung bình mỗi pod cũ giữ GPU dưới 93 s (cận trên, gồm cả cold start). Thân bài 4.5, 5.5.1, 5.7 nay nêu đúng lý do "phiên đo không lưu log hay mốc từng pod" thay cho "chưa đọc log".
+  2. Số lượt có pha giảm tải ở KB2: cả hai nguồn đều đúng. 5 lượt A1/A2 × KB2 có pha drop với 0 lỗi, nhưng chỉ 3 lượt A2 bớt pod dưới tải (`scale_downs` 3 mỗi lượt); 2 lượt A1 có `scale_downs` 0.
+  3. Mốc tính LT8 cho N7: từ lúc vi phạm theo log client tới lúc `ALERTS` chuyển firing, giống VH6 (`time_to_alert_s`); LT8 cho 159–242 s. Bộ số tính từ lúc bơm (firing 173–286 s) không dùng cho N7. 5.5.3 đổi "page đến sau" thành "chuyển sang firing sau", và ghi rõ số chưa gồm thời gian Alertmanager gom nhóm và gửi tin.
+- **Results:** kiem_van 0 điểm ở 4 file; lychee 0 lỗi; `/code-review high` trên phần sửa ch. 5: 8 điểm, 7 điểm đã sửa (câu "chờ thêm ít nhất 30 s" sai vì `group_interval` áp dụng khi nhóm còn tồn tại, nên bỏ; comment nguồn còn lời cũ; 15–20 s sửa thành 12–17 s; thêm nguồn `common/serving/deployment.yaml`), 1 điểm không sửa (đưa cận trên 93 s vào thân bài: 5.5.1 đã nêu "khoảng 93 s mỗi pod").
+- **Links:** PR #81 (`0110e59`), PR #82; `docs/luan-van/04-05-scale-down-cap-nhat.md`, `04-06-giam-sat-canh-bao.md`, `05-05-kich-ban-van-hanh.md`, `05-07-han-che-phep-do.md`.
+- **Thesis:** §4.5, §5.5.1, §5.5.3, §5.7.
 ## 2026-11-25 – Luận văn: bản base mục 4.1 và 4.2, đo khuôn T chương 3
 
 - **Task:** TR8 · **Environment:** none
