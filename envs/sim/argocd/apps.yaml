@@ -1,0 +1,51 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# envs/sim/argocd/apps.yaml
+# Khái niệm: Application = object của Argo CD nói "thư mục X của repo Git, ở nhánh Y, phải có mặt trong
+#            namespace Z". Argo CD đọc Git định kỳ (mặc định khoảng 2–3 phút), thấy khác thì tự áp lại.
+# Mục đích:  Chỉ dùng cho VH2 trên kind (D113, ADR-007): giao simulator (envs/sim/serving) và A2 bản sim
+#            (envs/sim/autoscaling) cho Git, để cập nhật và rollback bằng commit, `git revert` như ở nhà.
+#            Bình thường kind KHÔNG dùng Argo CD (make sim-up cài thẳng bằng kubectl).
+#            Tên app trùng với nhà (`serving`, `autoscaling`), nên guard_argocd của runner chặn runner
+#            trên kind như ở nhà. Chạy runner trên kind thì gỡ Argo CD (make sim-argocd-down). Đừng dùng
+#            make home-eval-begin: target đó mặc định nhắm cluster nhà (context llm-home).
+# Dùng:      make sim-argocd ARGOCD_REV=<nhánh>. Makefile thay `targetRevision: main` bằng nhánh đó lúc áp,
+#            để commit thử và `git revert` nằm trên nhánh riêng, không đụng `main` hay cluster nhà.
+# Lưu ý:     Không có root App-of-Apps như nhà: chỉ 2 app, áp thẳng. Không có finalizer, nên xoá
+#            Application thì Argo CD bỏ quản lý nhưng giữ nguyên Deployment, ScaledObject đang chạy.
+# Tham khảo: envs/home/argocd/apps/serving.yaml, autoscaling.yaml (cùng syncPolicy); Vận hành §5.3, §5.4
+# ──────────────────────────────────────────────────────────────────────────────
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: serving
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/bi6-cat/llm-k8s-autoscaling.git
+    targetRevision: main
+    path: envs/sim/serving
+  destination: {server: https://kubernetes.default.svc, namespace: llm-serving}
+  syncPolicy:
+    # Giống nhà: tự sync khi Git đổi, xoá thứ đã bỏ khỏi Git, đưa sửa tay về đúng Git
+    automated: {prune: true, selfHeal: true}
+    syncOptions: [CreateNamespace=true, SkipDryRunOnMissingResource=true]
+    retry: {limit: 10, backoff: {duration: 15s, factor: 2, maxDuration: 5m}}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: autoscaling
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/bi6-cat/llm-k8s-autoscaling.git
+    targetRevision: main
+    path: envs/sim/autoscaling
+  destination: {server: https://kubernetes.default.svc, namespace: llm-serving}
+  syncPolicy:
+    automated: {prune: true, selfHeal: true}
+    # SkipDryRunOnMissingResource: ScaledObject là CRD của KEDA; nếu KEDA chưa cài thì vẫn sync được phần khác
+    syncOptions: [SkipDryRunOnMissingResource=true]
+    retry: {limit: 10, backoff: {duration: 15s, factor: 2, maxDuration: 5m}}

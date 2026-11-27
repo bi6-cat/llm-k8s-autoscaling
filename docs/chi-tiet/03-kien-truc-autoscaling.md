@@ -367,7 +367,7 @@ vLLM/GPU exporter ──scrape 5 s──► Prometheus ◄──PromQL── KED
 
 - Chu kỳ sync của HPA đặt **5 s** (tham số của k3s). Mặc định là 15 s, và đó mới là bên quyết định tốc độ phát hiện khi scale giữa 1 và N.
 - `pollingInterval` của KEDA vẫn đặt 5 s cho đồng bộ, nhưng tham số này chủ yếu ảnh hưởng việc kích hoạt 0 ↔ 1 (không dùng trong đồ án) và cache metric.
-- `metricType: AverageValue` cho mọi trigger, để công thức thống nhất là ⌈tổng ÷ threshold⌉ và để `fallback` hoạt động.
+- `metricType: AverageValue` cho mọi trigger, để công thức thống nhất là ⌈tổng ÷ threshold⌉ và để `fallback` không phụ thuộc số pod đang Ready. KEDA v2.21 cũng hỗ trợ fallback với `Value`, nhưng khi đó giá trị giả được chia cho số replica Ready, và khi không còn pod nào Ready thì fallback không chạy, HPA giữ nguyên số replica ([Kiến thức nền §3.3](02-kien-thuc-nen.md#33-keda)).
 - Danh sách cấu hình (S1, S4, A1–A4), PromQL và target nằm ở [Thông số §8.1](00-thong-so.md#81-các-cấu-hình). Ma trận đánh giá trên GPU thuê gồm S1, S4, A1 và A2 ([Thông số §8.2](00-thong-so.md#82-ma-trận-đg2-17-lượt)).
 
 ---
@@ -386,7 +386,7 @@ vLLM/GPU exporter ──scrape 5 s──► Prometheus ◄──PromQL── KED
 
 **Với `nvidia_gpu_exporter`** (GPU nhà và VM thuê, vì DCGM chưa thử): exporter không có label pod. A1 vẫn dùng được nếu node chỉ chạy vLLM, vì GPU rảnh cộng thêm 0. **Ngoại lệ đo được ở V1 (08/11):** GPU của pod **đang tắt** (sau scale-down) báo util 100 % trong một mẫu; tổng tăng lên 100 → desired = 2, và cửa sổ ổn định 300 s giữ con số đó, A1 không về được 1 replica. Exporter không có label pod nên không lọc được theo pod Ready; vì vậy từ 09/11 truy vấn A1 lấy trung bình 15 s trên từng GPU trước khi cộng, hạ mẫu đơn lẻ còn 33 %. Chạy lại trên dữ liệu V1: hết kẹt, các mốc scale-up trễ thêm 5–20 s (chưa kiểm trên cluster; chi tiết: [log phiên 08/11 §13](../nhat-ky/lam-viec/quang/phien-2026-11-08-a4000.md#13-v1-runner-chạy-2-lượt-đg2-có-keda)). Ở nhà, RTX 5060 còn chạy màn hình nên số liệu bị nhiễu; vì vậy chạy Ubuntu không giao diện đồ hoạ ([ADR-005](../adr/005-sua-thiet-ke-sau-review.md) T9).
 
-**Biến thể A1′ (không làm):** dùng `DCGM_FI_PROF_SM_ACTIVE` hoặc `DCGM_FI_PROF_DRAM_ACTIVE`, phản ánh mức làm việc thật tốt hơn. Cần dcgm-exporter với metric profiling; GeForce không có, còn trên A4000 nhóm chưa thử dcgm-exporter trước V2 nên không đưa vào ma trận.
+**Biến thể A1′ (không làm):** dùng `DCGM_FI_PROF_SM_ACTIVE` hoặc `DCGM_FI_PROF_DRAM_ACTIVE`, phản ánh mức làm việc thật tốt hơn. Cần dcgm-exporter với metric profiling; GeForce (gồm RTX 4060 Ti của V2) không có, còn trên A4000 nhóm chưa thử dcgm-exporter trước V2 nên không đưa vào ma trận.
 
 **Công bằng:** chu kỳ thu metric GPU phải là 5 s, giống vLLM (xem §6).
 
@@ -533,7 +533,7 @@ spec:
 
 ### 13.3. A1, A3, A4 chỉ khác phần `triggers`
 
-Chỉ thay `query` và `threshold`; mọi trigger giữ `serverAddress`, `metricType: AverageValue` và `timeout: "1000"` như A2, để fallback của mọi cấu hình đều kịp N6.
+Chỉ thay `query` và `threshold`; mọi trigger giữ `serverAddress`, `metricType: AverageValue` và `timeout: "1000"` như A2: `AverageValue` để công thức và fallback giống A2 (§9), `timeout` để fallback của mọi cấu hình đều kịp N6.
 
 ```yaml
 # A1: GPU utilization.
