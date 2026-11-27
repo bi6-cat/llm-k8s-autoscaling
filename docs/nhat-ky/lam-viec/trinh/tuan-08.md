@@ -133,3 +133,12 @@
 - **Results:** `/code-review high` trên diff: 5 điểm nhỏ (§3.5 và §9 nói khác nhau về chỗ ghi việc dùng AI; quy tắc "kết quả cụ thể có số" của Tóm tắt chưa chuyển sang mục 1.3; §1 chưa ghi chỗ đặt đoạn khai báo nếu được yêu cầu; "khuôn T" ở §5.1 chưa có link; thiếu dòng Thesis), đã sửa cả 5.
 - **Links:** `docs/luan-van/quy-tac-viet.md` (§1, §3.5, §9); `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§5.1, §11.1).
 - **Thesis:** phần đầu quyển (không có Tóm tắt, không có Lời cam đoan); Mở đầu; mục 1.3 Đóng góp.
+
+## 2026-11-27 – Vẽ lại Hình 2 (kiến trúc tổng thể) theo thiết kế hiện hành
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** viết lại `fig_architecture()` trong `docs/diagrams/build_diagrams.py` (chỉ chạy hàm này, không sinh lại các hình khác), xuất SVG và PNG 2x bằng Chrome headless như `export_png.sh`. Đối chiếu với Kiến trúc §2–§5, §18.1, ADR-006 §3.1, Môi trường §3.6, Thông số §7 và manifest `envs/home/serving/`. Sửa chú thích Hình 2 ở `03-kien-truc-autoscaling.md` và `mo-ta-chi-tiet-do-an.md`; sửa dòng "Lưu trữ model" của bảng thành phần (§2) từ "PVC (nhà); Job prefetch, DaemonSet pre-pull" thành `hostPath` ở cả hai môi trường và role Ansible `cloud-prefetch`, đúng như §3.3 và §4.
+- **Decision:** Traefik tách sang nhóm `kube-system` (đúng bảng namespace §2), bỏ dòng "giới hạn tốc độ, route riêng cho tải"; máy tạo tải là pod trong `llm-serving` gọi thẳng Service; thêm nhóm `argocd` (ghi "chỉ ở nhà") và hộp Git repository, mũi tên "áp manifest"; số replica ghi "N = số GPU" thay cho "N = 4" vì ở nhà N = 2. Không thêm hộp Telegram để hình không quá dày; chú thích và §17 đã nói cảnh báo đi Telegram.
+- **Results:** `lychee --offline --include-fragments` trên hai file đã sửa: 0 lỗi; `yamllint -s .` đạt. Canvas đổi từ 1280 × 730 sang 1440 × 730.
+- **Links:** nhánh `docs/tr8-fig2-architecture`; `docs/images/02-kien-truc-tong-the.{svg,png}`.
+- **Thesis:** hình kiến trúc cho 3.2 (chèn vào PR chương 3 sau khi PR này merge).
