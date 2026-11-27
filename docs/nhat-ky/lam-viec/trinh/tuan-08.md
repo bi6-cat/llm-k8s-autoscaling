@@ -353,6 +353,14 @@
 - **Links:** `docs/luan-van/quy-tac-viet.md` (§1, §3.5, §9); `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§5.1, §11.1).
 - **Thesis:** phần đầu quyển (không có Tóm tắt, không có Lời cam đoan); Mở đầu; mục 1.3 Đóng góp.
 
+## 2026-11-27 – Luận văn: phần Mở đầu (bản base)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** viết `docs/luan-van/00-00-mo-dau.md` theo Kế hoạch §11.1 (dòng Mở đầu) và quy tắc viết §1, §2: dẫn dắt vấn đề ở mức người không chuyên (GPU tính tiền theo giờ, tải thay đổi theo giờ, ba khác biệt của LLM so với web, yêu cầu vận hành hằng ngày), những gì đồ án làm, cách đánh giá; mỗi chương 2–3 câu, một câu về phụ lục. Không có số đo; "bốn GPU" là cấu hình máy.
+- **Decision:** Trình dùng thẳng các thuật ngữ replica, request, autoscaling, GPU-giờ và giải thích ở lần đầu, không đặt từ riêng "bản chạy", vì bảng thuật ngữ của quy tắc viết §4 chỉ cho một dạng. Định nghĩa ở mục 1.1 giữ nguyên để chương 1 đọc được độc lập.
+- **Results:** đo bằng Word theo khuôn T (`gop.py`): 1,97 trang (định hướng 1,5–2); thân bài cả bản ghép 71,2 trang. `kiem_van`: 0 điểm cần xem. `/code-review high`: 10 điểm, đã sửa cả 10. Ba điểm chính: tải là tải tổng hợp (Poisson), không phải phát lại tải thật; chỉ cluster nhà tự áp cấu hình từ Git (VM thuê dựng bằng helm); không phải tình huống vận hành nào cũng kiểm cả request rớt lẫn cảnh báo (VH5 đo thời gian dựng lại, cảnh báo kiểm riêng ở VH6). Các điểm còn lại: câu quá 35 chữ, "tự scale" là dạng bị cấm, GPU-giờ chưa giải thích, đường dẫn nguồn sai.
+- **Links:** `docs/luan-van/00-00-mo-dau.md`.
+- **Thesis:** Mở đầu (không đánh số).
 ## 2026-11-27 – Luận văn: chương 6, kết luận, hạn chế và hướng phát triển (bản base)
 
 - **Task:** TR8 · **Environment:** none
