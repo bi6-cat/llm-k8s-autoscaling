@@ -9,7 +9,7 @@ Tra ngày 09/10/2026; các dòng của CI tra ngày 01/11/2026. Đổi phiên b�
 | NVIDIA driver PC / laptop | PC: `595.99.02` (open) / laptop: (điền từ `nvidia-smi`). **Cần ≥ 580** cho image vLLM CUDA 13 | – |
 | NVIDIA Container Toolkit | PC: `1.20.1` / laptop: (điền từ `nvidia-ctk --version`) | role `nvidia` |
 | k3s | `v1.36.5+k3s1` (kênh stable) | `ansible/inventory/group_vars/all.yaml` |
-| Argo CD | `v3.5.4` (`core-install.yaml`) | `group_vars/all.yaml` |
+| Argo CD | `v3.5.4` (`core-install.yaml`) | `group_vars/all.yaml`, `Makefile` (sim-argocd, VH2 trên kind) |
 | kube-prometheus-stack (chart) | `92.1.1`; kèm chart con kube-state-metrics `8.6.0` (KSM `v2.20.0`) | `envs/home/argocd/apps/monitoring.yaml`, `Makefile`, `envs/cloud/provision/install-platform.sh` |
 | KEDA (chart) | `2.21.0` | `envs/home/argocd/apps/keda.yaml`, `Makefile`, `envs/cloud/provision/install-platform.sh` |
 | NVIDIA device plugin (chart) | `0.20.1`; ở nhà thêm time-slicing 2 GPU replica (`envs/home/platform/device-plugin-values.yaml`, từ 06/11) | `envs/home/argocd/apps/gpu-device-plugin.yaml`, `common/platform/device-plugin-values.yaml` |
