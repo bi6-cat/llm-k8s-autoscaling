@@ -231,7 +231,7 @@ Metric A2 và A3 là **gauge**, lấy giá trị tức thời, nên không có �
 
 ![Hình 5 – Phân rã cold start](../images/05-cold-start.svg)
 
-*Hình 5. Phân rã cold start. Số liệu chỉ để minh hoạ khung đo; kết quả thực tế sẽ thay vào ở chương đánh giá.*
+*Hình 5. Phân rã cold start đo ở ĐG3 trên V2 (VM 4 × RTX 4060 Ti, Qwen2.5-3B), mức L0 và L2, mỗi thanh một lượt. Số từng pha ở [luận văn 5.4](../luan-van/05-04-cold-start.md); mức L1 không đo.*
 
 | Mức | Kỹ thuật | Pha được rút ngắn |
 |---|---|---|
@@ -454,17 +454,17 @@ Diễn biến cụ thể: sau khi scale-up, 3 replica xử lý hết hàng đợ
 
 ![Hình 15 – Đo năng lực một replica](../images/15-hieu-chinh-nang-luc.svg)
 
-*Hình 15. Quét tốc độ request trên 1 replica. C là mức lớn nhất còn đạt SLO; B\* là số request đồng thời tại C (số liệu minh hoạ).*
+*Hình 15. Quét tốc độ request trên 1 replica, số đo ĐG1 trên V2 ([`capacity.json`](../../envs/cloud/experiments/capacity.json)). C là mức lớn nhất còn đạt SLO; B\* là số request đồng thời tại C.*
 
 | Cấu hình | Giá trị đo tại C | threshold | Lý do |
 |---|---|---|---|
-| A1 | GPU util tại C (có thể khoảng 95–100) | 70 (phổ biến) | Giữ đúng cách "mọi người hay làm" để thấy hành vi thật của nó |
-| A2 | B\* (ví dụ 30) | **0,8 × B\*** (ví dụ 24) | Chừa 20% để hấp thụ dao động trong lúc chờ cold start |
-| A3 | KV\* (ví dụ 0,55) | 0,8 × KV\* (≈ 0,44) | Như A2 |
+| A1 | GPU util tại C (V2: 100) | 70 (phổ biến) | Giữ đúng cách "mọi người hay làm" để thấy hành vi thật của nó |
+| A2 | B\* (V2: 46,3) | **0,8 × B\*** (V2: 37) | Chừa 20% để hấp thụ dao động trong lúc chờ cold start |
+| A3 | KV\* (V2: 0,175) | 0,8 × KV\* (V2: 0,14) | Như A2 |
 
 **Vì sao chọn hệ số 0,8?** Hệ số này giữ mỗi pod ở khoảng ρ ≈ 0,8 × (C/μ), dưới "đầu gối" của đường cong (Hình 10). Hệ số thấp hơn (0,6) thì an toàn hơn nhưng tốn GPU hơn; hệ số cao hơn (0,95) thì rẻ hơn nhưng dễ vi phạm SLO. Thử nhiều hệ số là hướng mở rộng ([E13](06-ke-hoach-quan-ly.md#e13-đánh-giá-mở-rộng-trace-thật-nhiều-lượt-độ-nhạy-tham-số)).
 
-**Trước khi có B\* trên GPU thuê:** kiểm thử ở nhà dùng target tạm từ ĐG1-mini trên GPU yếu nhất (`capacity-home.json`, [ADR-005](../adr/005-sua-thiet-ke-sau-review.md) T13). Con số 24 trong các ví dụ chỉ là minh hoạ.
+**Trước khi có B\* trên GPU thuê:** kiểm thử ở nhà dùng target tạm từ ĐG1-mini trên GPU yếu nhất (`capacity-home.json`, [ADR-005](../adr/005-sua-thiet-ke-sau-review.md) T13). Con số 24 trong các ví dụ chỉ là minh hoạ; số đo trên V2 ghi ở bảng trên và Hình 15 ([ADR-003](../adr/003-ket-qua-dg1-va-gia-tri-chot.md)).
 
 ---
 

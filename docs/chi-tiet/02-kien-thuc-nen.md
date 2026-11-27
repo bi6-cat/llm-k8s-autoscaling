@@ -421,7 +421,7 @@ Các công trình trên hoặc **xây hệ thống mới**, hoặc **tối ưu e
 CPU của pod vLLM chủ yếu phục vụ API server (tokenize, SSE), còn RAM gần như cố định. Cả hai đều không phản ánh tải trên GPU (xem §2.6 và §4.4).
 
 **Batch lớn hơn thì mỗi request có chậm đi không?**
-Có, nhưng ít. Decode bị giới hạn bởi băng thông, nên tăng batch chỉ làm mỗi bước chậm hơn một chút. Hình 15 cho thấy ITL tăng gần tuyến tính theo tải, trong khi TTFT tăng vọt do phải chờ trong hàng đợi.
+Có, nhưng chậm đi ít hơn nhiều so với mức tăng batch. Decode bị giới hạn bởi băng thông, nên mỗi bước decode phục vụ thêm request mà không tốn thêm tương ứng. Ở ĐG1 trên V2 (Hình 15), khi tải tăng từ 2 lên 4 req/s, số request đồng thời tăng khoảng 4 lần (16 → 64, chạm giới hạn `--max-num-seqs=64`) mà TPOT p95 chỉ tăng khoảng 1,8 lần (36 → 64 ms, vẫn dưới SLO 100 ms). Từ 4 lên 5 req/s, TPOT gần như không đổi vì batch không lớn thêm được: phần tải dư nằm chờ (trung bình 12 rồi 168 request), đẩy TTFT p95 từ 7,3 s lên khoảng 70 s.
 
 **Tại sao KEDA mà không phải prometheus-adapter?**
 Cả hai đều cấp external metric cho HPA. KEDA được chọn vì cấu hình khai báo gọn trong một `ScaledObject`, có sẵn các tính năng `fallback`, `paused-replicas`, kích hoạt từ 0, và phổ biến trong các giải pháp serving LLM.

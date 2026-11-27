@@ -558,7 +558,7 @@ Các cảnh dùng vLLM thật (model 3B) quay trong phiên V2 (phần ban ngày)
 ### 11.4. Checklist trước khi nộp
 
 - [ ] Mọi số liệu trong luận văn đều truy được về `analysis/` và tag `v1.0`.
-- [ ] Hình minh hoạ (Hình 5, 15) đã được thay bằng số đo thật, hoặc ghi rõ là minh hoạ.
+- [x] Hình minh hoạ (Hình 5, 15) đã được thay bằng số đo thật, hoặc ghi rõ là minh hoạ (27/11: cả hai vẽ lại từ số ĐG3, ĐG1 trên V2).
 - [ ] Mọi cảnh báo có runbook; runbook được review lần cuối sau phiên V2.
 - [ ] Không còn TODO hay placeholder (`vX.Y.Z`, `<org>`) trong repo công khai.
 - [ ] Link trong tài liệu không hỏng (CI `docs`).

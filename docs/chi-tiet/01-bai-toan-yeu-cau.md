@@ -239,7 +239,7 @@ Bảng đối chiếu nội dung đề cương với bản mô tả nằm ở [P
 | F3, N4 | VH1, VH2 | Số request lỗi, thời gian cập nhật | C6 | 5.5 |
 | F6, N7 | VH6 | Thời gian tới khi có cảnh báo, số page giả | Bảng cảnh báo | 5.5 |
 | F4, N6, N8 | VH3, VH4, VH5 | Thời gian hồi phục, thời gian dựng lại | Bảng vận hành | 5.5 |
-| (nền) | ĐG1 (đo năng lực) | C, B\*, đường cong TTFT/ITL | Hình 15 | 5.2 |
+| (nền) | ĐG1 (đo năng lực) | C, B\*, đường cong TTFT/TPOT | Hình 15 | 5.2 |
 | Tất cả | – | – | **Bảng nghiệm thu** | 5.6 |
 
 ---
