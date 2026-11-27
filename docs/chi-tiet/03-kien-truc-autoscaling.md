@@ -28,14 +28,14 @@
 
 ![Hình 2 – Kiến trúc tổng thể](../images/02-kien-truc-tong-the.svg)
 
-*Hình 2. Kiến trúc tổng thể. Request đi từ client qua Traefik (giới hạn tốc độ: đã lược ngày 12/11, [ADR-006 §3.1](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md#31-quyết-định-ngày-12112026)) và Service tới các pod vLLM (kiểm API key), mỗi pod gắn một GPU. Prometheus thu metric từ vLLM và exporter GPU; Alertmanager gửi cảnh báo. KEDA chạy PromQL và cung cấp external metric cho HPA; HPA cập nhật `spec.replicas` của Deployment. Pod mới chỉ nhận traffic sau khi đã Ready.*
+*Hình 2. Kiến trúc tổng thể. Người dùng gọi API qua Traefik (Ingress `llm.home`, chỉ có ở overlay nhà); máy tạo tải là pod trong `llm-serving` và gọi thẳng Service. Giới hạn tốc độ và route riêng cho máy tạo tải đã lược ngày 12/11 ([ADR-006 §3.1](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md#31-quyết-định-ngày-12112026)). Service chia request cho các pod vLLM (kiểm API key), mỗi pod gắn một GPU. Prometheus thu metric từ vLLM và exporter GPU; Alertmanager gửi cảnh báo. KEDA chạy PromQL và cung cấp external metric cho HPA; HPA cập nhật `spec.replicas` của Deployment. Pod mới chỉ nhận traffic sau khi đã Ready. Ở nhà, Argo CD đồng bộ cluster theo Git (§18); VM thuê không chạy Argo CD mà dựng bằng `make cloud-platform`.*
 
 | Thành phần | Vai trò | Ghi chú |
 |---|---|---|
 | Kubernetes (k3s) | Điều phối container | Một node trên VM thuê; 1–2 node ở nhà; dựng bằng Ansible |
 | NVIDIA device plugin, exporter GPU | Công bố `nvidia.com/gpu`; metric GPU | Driver cài sẵn trên máy; GPU Operator chỉ dùng nếu cần (`driver.enabled=false`) |
 | vLLM (Deployment) | Phục vụ model qua API OpenAI; kiểm API key | 1 GPU/pod; probe, preStop, `--shutdown-timeout`; rolling update `maxSurge: 0` |
-| Lưu trữ model | Lưu weights để không phải tải lại | NVMe cục bộ (VM thuê) hoặc PVC (nhà); Job prefetch, DaemonSet pre-pull |
+| Lưu trữ model | Lưu weights để không phải tải lại | `hostPath` trên NVMe (VM thuê) hoặc `/var/lib/llm-cache` (nhà) (§3.3); role Ansible `cloud-prefetch` tải sẵn model và image trên VM thuê (§4) |
 | Traefik (Ingress) | Điểm vào; giới hạn tốc độ đã lược ngày 12/11 ([ADR-006 §3.1](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md#31-quyết-định-ngày-12112026)) | Có sẵn trong k3s; không dùng ingress-nginx (đã ngừng bảo trì từ 3/2026); bật metric |
 | KEDA | Chuyển metric Prometheus thành external metric, tạo HPA | A2 là cấu hình chính thức |
 | Prometheus, Alertmanager (kube-prometheus-stack) | Thu metric, tính SLI, gửi cảnh báo | Recording rule; cảnh báo theo burn rate tới Telegram |
@@ -47,7 +47,7 @@
 
 | Namespace | Thành phần | Ghi chú |
 |---|---|---|
-| `llm-serving` | Deployment `vllm`, Service, PodMonitor, ScaledObject | Workload chính |
+| `llm-serving` | Deployment `vllm`, Service, PodMonitor, ScaledObject; Job máy tạo tải (runner tạo khi đánh giá) | Workload chính |
 | `keda` | KEDA operator, metrics API server, admission webhook | Helm chart `kedacore/keda` |
 | `monitoring` | Prometheus Operator, Prometheus, **Alertmanager**, Grafana, kube-state-metrics, node-exporter | Helm chart `kube-prometheus-stack` |
 | `gpu` | Device plugin, exporter GPU | Helm chart của NVIDIA |
@@ -110,7 +110,7 @@ Manifest thật nằm trong repo, mỗi dòng có comment giải thích: [common
 | Đóng model vào image | Image chứa luôn weights | Một artifact duy nhất | Image khoảng 25 GB, pull rất lâu | Không khuyến nghị |
 | Stream từ object storage | `--load-format runai_streamer` | Không cần ổ cục bộ | Phụ thuộc băng thông object storage | Hướng mở rộng |
 
-**Khuyến nghị:** ở nhà, dùng `hostPath` `/var/lib/llm-cache` trên **từng node** (chứa cả model lẫn compile cache). Không dùng PVC `local-path`, vì PVC này chỉ gắn được vào một node: pod vLLM thứ hai chạy trên laptop sẽ bị Pending. Trên VM thuê (một node), dùng L2: `hostPath` `/mnt/nvme/cache` trên ổ NVMe, và một Job `model-prefetch` (W4) tải model vào đó trước khi scale. Đồ án chỉ đo L0 và L2, vì trên một máy thuê không có ổ mạng tương đương để đo L1 một cách thực tế.
+**Khuyến nghị:** ở nhà, dùng `hostPath` `/var/lib/llm-cache` trên **từng node** (chứa cả model lẫn compile cache). Không dùng PVC `local-path`, vì PVC này chỉ gắn được vào một node: pod vLLM thứ hai chạy trên laptop sẽ bị Pending. Trên VM thuê (một node), dùng L2: `hostPath` `/mnt/nvme/cache` trên ổ NVMe, và role Ansible `cloud-prefetch` tải model vào đó trước khi scale (thiết kế ban đầu dùng Job `model-prefetch`, §4). Đồ án chỉ đo L0 và L2, vì trên một máy thuê không có ổ mạng tương đương để đo L1 một cách thực tế.
 
 ### 3.4. Service và cân bằng tải
 

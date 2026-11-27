@@ -353,6 +353,14 @@
 - **Links:** `docs/luan-van/quy-tac-viet.md` (§1, §3.5, §9); `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§5.1, §11.1).
 - **Thesis:** phần đầu quyển (không có Tóm tắt, không có Lời cam đoan); Mở đầu; mục 1.3 Đóng góp.
 
+## 2026-11-27 – Vẽ lại Hình 2 (kiến trúc tổng thể) theo thiết kế hiện hành
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** viết lại `fig_architecture()` trong `docs/diagrams/build_diagrams.py` (chỉ chạy hàm này, không sinh lại các hình khác), xuất SVG và PNG 2x bằng Chrome headless như `export_png.sh`. Đối chiếu với Kiến trúc §2–§5, §18.1, ADR-006 §3.1, Môi trường §3.6, Thông số §7 và manifest `envs/home/serving/`. Sửa chú thích Hình 2 ở `03-kien-truc-autoscaling.md` và `mo-ta-chi-tiet-do-an.md`; sửa dòng "Lưu trữ model" của bảng thành phần (§2) từ "PVC (nhà); Job prefetch, DaemonSet pre-pull" thành `hostPath` ở cả hai môi trường và role Ansible `cloud-prefetch`, đúng như §3.3 và §4.
+- **Decision:** Traefik tách sang nhóm `kube-system` (đúng bảng namespace §2), bỏ dòng "giới hạn tốc độ, route riêng cho tải"; máy tạo tải là pod trong `llm-serving` gọi thẳng Service; thêm nhóm `argocd` (ghi "chỉ ở nhà") và hộp Git repository, mũi tên "áp manifest"; số replica ghi "N = số GPU" thay cho "N = 4" vì ở nhà N = 2. Không thêm hộp Telegram để hình không quá dày; chú thích và §17 đã nói cảnh báo đi Telegram.
+- **Results:** `lychee --offline --include-fragments` trên hai file đã sửa: 0 lỗi; `yamllint -s .` đạt. Canvas đổi từ 1280 × 730 sang 1440 × 730. `/code-review high`: 6 điểm, đã sửa hết (khoảng hở giữa Service và Deployment cho mũi tên chia tải, "lõi CPU riêng" chỉ ở cloud, nhãn "áp manifest cho mọi namespace", bảng namespace §2 thêm Job máy tạo tải, §3.3 ghi role `cloud-prefetch` thay cho Job `model-prefetch`).
+- **Links:** nhánh `docs/tr8-fig2-architecture`; `docs/images/02-kien-truc-tong-the.{svg,png}`.
+- **Thesis:** hình kiến trúc cho 3.2 (chèn vào PR chương 3 sau khi PR này merge).
 ## 2026-11-27 – Luận văn: phần Mở đầu (bản base)
 
 - **Task:** TR8 · **Environment:** none
@@ -903,3 +911,10 @@
 - **Results:** #79 `7942c77`, #80 `d19b3d0`, #81 `eec0222`, #82 `c0a88ab`, #83 `114df6c`. #80 và #83 chỉ xung đột ở nhật ký, `git merge origin/main` tự gộp (merge=union), không trùng tiêu đề mục.
 - **Incidents:** #81 xung đột thật ở bảng bố cục luận văn (Kế hoạch §11.1): nhánh ch. 4 đổi tên 4.3.2 thành "Thử autoscaling và fallback trên simulator trước khi thuê GPU", còn main (#75) sửa 5.5.1 thành "thay cho VH1 ở nhà theo ADR-007". Giữ cả hai (`18996b2`). #82 xung đột ở `tai-lieu.bib`: nhánh ch. 5 thêm hai nguồn băng thông bộ nhớ NVIDIA, main thêm nguồn Argo CD Cluster Bootstrapping; giữ cả ba mục, kiểm không trùng khoá (`29225b6`).
 - **Links:** PR #79, #80, #81, #82, #83.
+
+## 2026-11-27 – Merge PR #84–#88 (chương 1, fallback KEDA, CPU pod cloud, chương 6, mở đầu)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** lượt tự chạy có cho merge, vòng 3, gỡ tiếp hàng đợi theo thứ tự ở STATE. Mỗi PR kiểm đủ 5 điều kiện merge: CI 6/6 xanh, đã chạy `/code-review high` lúc mở PR, `MERGEABLE`, không có review hay bình luận, chỉ sửa `docs/` (không đụng manifest Argo CD theo dõi), base `main`. Merge commit, xoá nhánh head.
+- **Results:** #84 `98aa53b`, #85 `a05f52f`, #86 `0718d30`, #87 `05699bb`, #88 `6254844`. #85–#88 chỉ xung đột ở nhật ký tuần 08, `git merge origin/main` tự gộp (merge=union), không trùng tiêu đề mục; push nhánh rồi chờ CI xanh lại trước khi merge.
+- **Links:** PR #84, #85, #86, #87, #88.
