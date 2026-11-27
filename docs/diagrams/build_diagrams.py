@@ -7,6 +7,7 @@ Kết quả: docs/images/*.svg  (xuất PNG: docs/diagrams/export_png.sh)
 import math
 import os
 from html import escape
+from itertools import pairwise
 
 OUT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "images"))
 
@@ -215,7 +216,9 @@ class Svg:
             f'<defs>{"".join(self.defs)}</defs>\n'
             f'<rect x="0.5" y="0.5" width="{self.w - 1}" height="{self.h - 1}" rx="14" '
             f'fill="{SURFACE}" stroke="{CARD_BORDER}"/>\n' + "\n".join(self.body) + "\n</svg>\n")
-        with open(os.path.join(OUT, name), "w", encoding="utf-8") as fh:
+        # newline="\n": SVG trong Git dùng LF; mặc định của Python trên Windows ghi CRLF, làm mọi SVG
+        # đổi theo mỗi lần chạy lại dù nội dung giữ nguyên.
+        with open(os.path.join(OUT, name), "w", encoding="utf-8", newline="\n") as fh:
             fh.write(svg)
         print("wrote", name)
 
@@ -306,81 +309,97 @@ def fig_tradeoff():
 # Hình 2 — Kiến trúc tổng thể
 # ======================================================================
 def fig_architecture():
-    W, H = 1280, 730
-    s = Svg(W, H, "Kiến trúc tổng thể: client gửi request qua Traefik và Service tới các pod vLLM "
-                  "(mỗi pod 1 GPU, kiểm API key); Prometheus thu metric, Alertmanager gửi cảnh báo; "
-                  "KEDA và HPA điều chỉnh số replica")
+    W, H = 1440, 730
+    s = Svg(W, H, "Kiến trúc tổng thể: người dùng gọi API qua Traefik, máy tạo tải gọi thẳng Service, "
+                  "Service chia request cho các pod vLLM (mỗi pod 1 GPU, kiểm API key); Prometheus thu metric, "
+                  "Alertmanager gửi cảnh báo; KEDA và HPA điều chỉnh số replica; Argo CD đồng bộ cluster theo Git")
     s.header("Kiến trúc tổng thể nền tảng LLM Serving có Autoscaling",
-             "Một Deployment vLLM, mỗi pod dùng 1 GPU; KEDA + HPA điều chỉnh số replica theo metric của chính vLLM")
+             "Một Deployment vLLM, mỗi pod dùng 1 GPU; KEDA + HPA điều chỉnh số replica theo metric của chính vLLM; "
+             "Argo CD đồng bộ cluster theo Git")
     x = 32
     x = s.legend_line(x, 86, "Luồng request / token", BLUE, sw=2.2)
     x = s.legend_line(x, 86, "Thu thập metric", VIOLET, dash="5 4")
     x = s.legend_line(x, 86, "Điều khiển scale", ORANGE, sw=2.2)
-    s.legend_line(x, 86, "Nạp image / model", INK2, dash="3 4", sw=1.5)
+    x = s.legend_line(x, 86, "Nạp image / model", INK2, dash="3 4", sw=1.5)
+    s.legend_line(x, 86, "Đồng bộ theo Git", MAGENTA, sw=2)
 
     # cụm Kubernetes
-    s.rect(232, 104, 820, 596, fill="#fbfbfa", stroke=INK2, sw=1.4, rx=16)
+    s.rect(232, 104, 960, 596, fill="#fbfbfa", stroke=INK2, sw=1.4, rx=16)
     s.rich(250, 126, [("Kubernetes cluster", 700, INK), ("  k3s", 400, INK2)], size=13.5)
 
-    # namespace llm-serving
-    s.group(252, 138, 780, 318, "namespace: llm-serving", fill=BLUE_T, stroke="#c9dcf3")
-    s.box(272, 269, 140, 64, "Traefik", ["giới hạn tốc độ", "route riêng cho tải"])
-    s.box(440, 269, 140, 64, "Service vllm", ["ClusterIP · chia tải"])
-    s.box(440, 172, 140, 56, "Lưu model", ["NVMe (cloud) · PVC (nhà)"], tsize=12.5, lsize=10.5)
+    # namespace kube-system: Traefik có sẵn trong k3s; Ingress llm.home chỉ có ở overlay nhà.
+    # Rate limit và route riêng cho máy tạo tải đã lược ngày 12/11 (ADR-006 §3.1).
+    s.group(252, 228, 170, 124, "namespace: kube-system", fill=GRAY_T, stroke=AXIS, tsize=12)
+    s.box(267, 269, 140, 64, "Traefik", ["Ingress (ở nhà)", "có sẵn trong k3s"])
 
-    s.rect(612, 168, 400, 252, fill=ORANGE_T, stroke=ORANGE, sw=1.4, dash="6 4", rx=12)
-    s.rich(628, 190, [("Deployment vllm", 650, INK), ("  replicas 1…N (N = 4)", 400, INK2)], size=12.5)
+    # namespace llm-serving
+    s.group(442, 138, 730, 318, "namespace: llm-serving", fill=BLUE_T, stroke="#c9dcf3")
+    s.box(462, 172, 140, 56, "Lưu model", ["hostPath: NVMe (cloud)", "ổ cục bộ (nhà)"], tsize=12.5, lsize=10.5)
+    s.box(462, 269, 140, 64, "Service vllm", ["ClusterIP · chia tải"])
+    s.box(462, 352, 140, 72, "Máy tạo tải", ["pod, gọi thẳng Service", "lõi CPU riêng (cloud)"])
+
+    s.rect(642, 168, 510, 252, fill=ORANGE_T, stroke=ORANGE, sw=1.4, dash="6 4", rx=12)
+    s.rich(658, 190, [("Deployment vllm", 650, INK), ("  replicas 1…N (N = số GPU)", 400, INK2)], size=12.5)
     pods = [("vLLM pod 1", "Ready", "API key · :8000 · /metrics"),
             ("vLLM pod 2", "Ready", "API key · :8000 · /metrics"),
             ("vLLM pod N", "Đang khởi động", "chưa nhận traffic tới khi Ready")]
     for k, (name, st, sub) in enumerate(pods):
         py = 204 + k * 70
-        s.rect(628, py, 262, 58, fill=WHITE, stroke=AXIS if k < 2 else INK2, dash=None if k < 2 else "5 4", rx=9)
-        s.text(642, py + 24, name, size=13.5, weight=650)
+        s.rect(658, py, 350, 58, fill=WHITE, stroke=AXIS if k < 2 else INK2, dash=None if k < 2 else "5 4", rx=9)
+        s.text(672, py + 24, name, size=13.5, weight=650)
         if k < 2:
-            s.status_pill(642 + text_width(name, 13.5, 650) + 10, py + 10, st, GOOD, GREEN_T)
+            s.status_pill(672 + text_width(name, 13.5, 650) + 10, py + 10, st, GOOD, GREEN_T)
         else:
-            s.status_pill(642 + text_width(name, 13.5, 650) + 10, py + 10, st, WARN, YELLOW_T)
-        s.text(642, py + 45, sub, size=11.5, fill=INK2)
-        s.line(890, py + 29, 906, py + 29, stroke=GREEN, sw=1.5)
-        s.gpu_chip(906, py + 10, 90, 38, f"GPU {k if k < 2 else 'N'}")
+            s.status_pill(672 + text_width(name, 13.5, 650) + 10, py + 10, st, WARN, YELLOW_T)
+        s.text(672, py + 45, sub, size=11.5, fill=INK2)
+        s.line(1008, py + 29, 1024, py + 29, stroke=GREEN, sw=1.5)
+        s.gpu_chip(1024, py + 10, 100, 38, f"GPU {k if k < 2 else 'N'}")
 
-    # dải dưới: keda / monitoring / gpu-operator
-    s.group(252, 496, 250, 176, "namespace: keda", fill=ORANGE_T, stroke="#f3cdb9")
-    s.box(266, 532, 222, 50, "KEDA metrics server", ["chạy PromQL, trả external metric"], tsize=13)
-    s.box(266, 606, 222, 50, "HPA controller", ["replicas = ceil(Σ metric ÷ target)"], tsize=13)
-    s.group(522, 496, 250, 176, "namespace: monitoring", fill=VIOLET_T, stroke="#d6d1ef")
-    s.box(536, 532, 222, 50, "Prometheus", ["TSDB · scrape mỗi 5 s"], tsize=13)
-    s.box(536, 606, 222, 50, "Grafana · Alertmanager", ["dashboard · cảnh báo → runbook"], tsize=13)
-    s.group(792, 496, 240, 176, "namespace: gpu", fill=GREEN_T, stroke="#c4dfc4")
-    s.box(806, 532, 212, 50, "Device plugin", ["cấp phát nvidia.com/gpu"], tsize=13)
-    s.box(806, 606, 212, 50, "Exporter GPU", ["GPU util · VRAM · nhiệt độ"], tsize=13)
+    # dải dưới: keda / monitoring / gpu / argocd
+    s.group(252, 496, 215, 176, "namespace: keda", fill=ORANGE_T, stroke="#f3cdb9")
+    s.box(266, 532, 187, 50, "KEDA metrics server", ["chạy PromQL, trả metric"], tsize=13)
+    s.box(266, 606, 187, 50, "HPA controller", ["ceil(Σ metric ÷ target)"], tsize=13)
+    s.group(487, 496, 215, 176, "namespace: monitoring", fill=VIOLET_T, stroke="#d6d1ef")
+    s.box(501, 532, 187, 50, "Prometheus", ["TSDB · scrape mỗi 5 s"], tsize=13)
+    s.box(501, 606, 187, 50, "Grafana · Alertmanager", ["dashboard · cảnh báo"], tsize=13)
+    s.group(722, 496, 215, 176, "namespace: gpu", fill=GREEN_T, stroke="#c4dfc4")
+    s.box(736, 532, 187, 50, "Device plugin", ["cấp phát nvidia.com/gpu"], tsize=13)
+    s.box(736, 606, 187, 50, "Exporter GPU", ["GPU util · VRAM · nhiệt độ"], tsize=13)
+    s.group(957, 496, 215, 176, "namespace: argocd", fill="#fcf1f5", stroke="#f2cddc")
+    s.box(971, 532, 187, 50, "Argo CD (chỉ ở nhà)", ["bản core · so Git với cluster"], tsize=13)
+    s.box(971, 606, 187, 50, "App-of-Apps", ["serving, autoscaling, …"], tsize=13)
 
     # ngoài cụm
-    s.box(32, 262, 176, 78, "Client", ["người dùng nội bộ (API)", "đánh giá: máy tạo tải"])
-    s.box(1084, 120, 168, 60, "Hugging Face Hub", ["tải weights lần đầu"], tsize=13)
-    s.box(1084, 341, 168, 60, "Container registry", ["image vllm-openai"], tsize=13)
+    s.box(32, 262, 176, 78, "Client", ["người dùng nội bộ", "gọi API có khoá"])
+    s.box(1224, 120, 184, 60, "Hugging Face Hub", ["tải weights lần đầu"], tsize=13)
+    s.box(1224, 341, 184, 60, "Container registry", ["image vllm-openai"], tsize=13)
+    s.box(1224, 527, 184, 60, "Git repository", ["manifest, overlay · qua PR"], tsize=13)
 
-    # luồng request
-    s.arrow([(208, 301), (272, 301)], BLUE, sw=2.2)
-    s.arrow([(412, 301), (440, 301)], BLUE, sw=2.2)
-    s.arrow([(580, 301), (598, 301), (598, 233), (628, 233)], BLUE, sw=2.2)
-    s.arrow([(580, 301), (628, 301)], BLUE, sw=2.2)
-    s.arrow([(580, 301), (598, 301), (598, 373), (628, 373)], BLUE, sw=2.2, dash="6 5")
+    # luồng request: người dùng qua Traefik; máy tạo tải gọi thẳng Service
+    s.arrow([(208, 301), (267, 301)], BLUE, sw=2.2)
+    s.arrow([(407, 301), (462, 301)], BLUE, sw=2.2)
+    s.arrow([(532, 352), (532, 333)], BLUE, sw=2.2)
+    s.arrow([(602, 301), (624, 301), (624, 233), (658, 233)], BLUE, sw=2.2, r=6)
+    s.arrow([(602, 301), (658, 301)], BLUE, sw=2.2)
+    s.arrow([(602, 301), (624, 301), (624, 373), (658, 373)], BLUE, sw=2.2, dash="6 5", r=6)
     # nạp image / model
-    s.arrow([(1084, 150), (510, 150), (510, 172)], INK2, sw=1.5, dash="3 4")
-    s.arrow([(580, 200), (612, 200)], INK2, sw=1.5, dash="3 4")
-    s.arrow([(1084, 371), (1012, 371)], INK2, sw=1.5, dash="3 4")
+    s.arrow([(1224, 150), (614, 150), (614, 186), (602, 186)], INK2, sw=1.5, dash="3 4", r=6)
+    s.arrow([(602, 212), (642, 212)], INK2, sw=1.5, dash="3 4")
+    s.arrow([(1224, 371), (1152, 371)], INK2, sw=1.5, dash="3 4")
     # metric
-    s.arrow([(700, 420), (700, 532)], VIOLET, sw=1.6, dash="5 4")
-    s.label(708, 486, "scrape /metrics mỗi 5 s", anchor="start", bg="#fbfbfa")
-    s.arrow([(806, 631), (782, 631), (782, 557), (758, 557)], VIOLET, sw=1.6, dash="5 4")
-    s.arrow([(647, 582), (647, 606)], INK2, sw=1.3)
+    s.arrow([(675, 420), (675, 532)], VIOLET, sw=1.6, dash="5 4")
+    s.label(683, 486, "scrape /metrics mỗi 5 s", anchor="start", bg="#fbfbfa")
+    s.arrow([(736, 631), (712, 631), (712, 557), (688, 557)], VIOLET, sw=1.6, dash="5 4")
+    s.arrow([(594, 582), (594, 606)], INK2, sw=1.3)
     # điều khiển scale
-    s.arrow([(488, 557), (536, 557)], ORANGE, sw=2)
-    s.arrow([(377, 582), (377, 606)], ORANGE, sw=2)
+    s.arrow([(453, 557), (501, 557)], ORANGE, sw=2)
+    s.arrow([(359, 582), (359, 606)], ORANGE, sw=2)
     s.arrow([(266, 631), (242, 631), (242, 476), (650, 476), (650, 420)], ORANGE, sw=2.2)
     s.text(446, 470, "cập nhật spec.replicas", size=11, fill=INK2, anchor="middle")
+    # GitOps: Argo CD kéo manifest từ Git rồi áp vào cluster (VM thuê dùng make cloud-platform)
+    s.arrow([(1224, 557), (1158, 557)], MAGENTA, sw=2)
+    s.arrow([(1140, 532), (1140, 456)], MAGENTA, sw=2)
+    s.label(1132, 486, "áp manifest cho mọi namespace", anchor="end", bg="#fbfbfa")
     s.save("02-kien-truc-tong-the.svg")
 
 
@@ -597,52 +616,70 @@ def fig_slo_alert():
 
 
 # ======================================================================
-# Hình 8 — Ba kịch bản tải
+# Hình 8 — Ba kịch bản tải (Thông số §7, bản 08/11: 12 / 24 / 17 phút)
 # ======================================================================
 def scenario(k, t):
+    """λ(t)/C của KB1–KB3 với N = 4, tuyến tính từng đoạn như loadgen/scenarios.py; None khi hết kịch bản."""
     if k == 1:
-        return 0.5 if t <= 20 else None
-    if k == 2:
-        return (0.5 + 2.5 * smooth((t - 5) / 0.5) - 2.5 * smooth((t - 15) / 0.5)) if t <= 25 else None
-    return (0.5 + 2.5 * smooth(t / 5)) if t <= 25 else None
+        pts = [(0, 0.5), (12, 0.5)]
+    elif k == 2:
+        pts = [(0, 0.5), (4, 0.5), (4.5, 3.0), (14, 3.0), (14.5, 0.5), (24, 0.5)]
+    else:
+        pts = [(0, 0.5), (5, 3.0), (17, 3.0)]
+    if t > pts[-1][0]:
+        return None
+    for (ta, va), (tb, vb) in pairwise(pts):
+        if ta <= t <= tb:
+            return va + (vb - va) * (t - ta) / (tb - ta)
+    raise ValueError(f"t = {t} nằm ngoài lịch của KB{k}")
 
 
 def fig_scenarios():
-    W, H = 1200, 528
-    s = Svg(W, H, "Ba kịch bản tải theo đề cương: thấp ổn định, tăng đột ngột rồi giảm, cao kéo dài; "
-                  "trục tung tính theo C là năng lực 1 replica")
-    s.header("Ba kịch bản tải theo đề cương",
-             "Tốc độ gửi request λ(t), đơn vị C = năng lực tối đa của 1 replica mà vẫn đạt SLO (đo ở bước đo năng lực)")
+    W, H = 1200, 548
+    s = Svg(W, H, "Ba kịch bản tải: KB1 thấp ổn định 12 phút, KB2 tăng đột ngột rồi giảm 24 phút, KB3 tăng dần rồi "
+                  "giữ cao 17 phút; trục tung tính theo C là năng lực 1 replica, vẽ với N = 4")
+    s.header("Ba kịch bản tải",
+             "Tốc độ gửi request λ(t), đơn vị C = năng lực của 1 replica mà vẫn đạt SLO (đo ở ĐG1); "
+             "vẽ với N = 4 GPU, đỉnh 0,75 × N × C = 3C")
+    # (k, tiêu đề, thời lượng, ghi chú [(t, độ cao nhãn theo C, chữ)], pha khi phân tích [(tên, bắt đầu, kết thúc)])
     meta = [
-        (1, "KB1 · Thấp, ổn định", "20 phút", [(10, 0.5, "như ban đêm: 1 replica là đủ")]),
-        (2, "KB2 · Tăng đột ngột rồi giảm", "25 phút",
-         [(10, 3.0, "0,5C → 3C trong 30 s"), (22.5, 0.5, "về 0,5C: scale-down")]),
-        (3, "KB3 · Cao, kéo dài", "25 phút", [(15, 3.0, "giữ 3C = 0,75 × N × C")]),
+        (1, "KB1 · Thấp, ổn định", "12 phút", [(9.5, 1.35, "0,5C suốt lượt: 1 replica là đủ")],
+         [("steady", 2, 12)]),
+        (2, "KB2 · Tăng đột ngột rồi giảm", "24 phút",
+         [(9.25, 3.0, "0,5C → 3C trong 30 s ở phút 4"), (19.5, 1.35, "về 0,5C ở phút 14")],
+         [("pre", 2, 4), ("spike", 4, 14), ("drop", 14, 24)]),
+        (3, "KB3 · Cao, kéo dài", "17 phút", [(11, 3.0, "giữ 3C từ phút 5 tới 17")],
+         [("ramp", 0, 5), ("sustain", 5, 17)]),
     ]
     pw, ph = 300, 168
-    ymax = 4.6
-    s.add(f'<line x1="32" y1="90" x2="58" y2="90" stroke="{MUTED}" stroke-width="1.1" stroke-dasharray="4 4"/>')
-    s.text(66, 94, "đường tham chiếu: 1C = năng lực 1 replica · 4C = năng lực tối đa (N = 4 replica)",
-           size=12, fill=INK2)
-    for col, (k, title, dur, notes) in enumerate(meta):
+    tmax, ymax = 25, 4.6
+    lx = s.legend_line(32, 92, "1C = năng lực 1 replica · 4C = năng lực tối đa (N = 4 replica)", MUTED, dash="4 4",
+                       sw=1.1)
+    lx = s.legend_swatch(lx, 92, "2 phút đầu, không tính", GRAY_T)
+    s.line(lx, 84, lx, 100, stroke=INK2, dash="2 3")
+    s.text(lx + 8, 96, "ranh giới pha khi phân tích", size=12, fill=INK2)
+    for col, (k, title, dur, notes, phases) in enumerate(meta):
         x0 = 76 + col * 384
-        top = 138
+        top = 148
         y1 = top + ph
-        X = lambda t, x0=x0: x0 + t / 30 * pw
+        X = lambda t, x0=x0: x0 + t / tmax * pw
         Y = lambda v, y1=y1: y1 - v / ymax * ph
-        s.text(x0 - 40, top - 14, title, size=13.5, weight=650)
-        s.text(x0 + pw, top - 14, dur, size=11.5, fill=INK2, anchor="end")
+        s.text(x0 - 40, top - 16, title, size=13.5, weight=650)
+        s.text(x0 + pw, top - 16, dur, size=11.5, fill=INK2, anchor="end")
+        # Hai phút đầu của KB1, KB2 là thời gian ổn định, không tính (Thông số §7).
+        if phases[0][1] > 0:
+            s.rect(X(0), top, X(phases[0][1]) - X(0), ph, fill=GRAY_T, stroke=None, rx=0)
         for v in range(1, 5):
             s.line(x0, Y(v), x0 + pw, Y(v), stroke=GRID)
         for v in range(0, 5):
             s.text(x0 - 8, Y(v) + 4, "0" if v == 0 else f"{v}C", size=11, fill=MUTED, anchor="end")
-        for t in (0, 10, 20, 30):
+        for t in range(0, tmax + 1, 5):
             s.text(X(t), y1 + 17, str(t), size=11, fill=MUTED, anchor="middle")
         s.text(x0 + pw, y1 + 33, "phút", size=11, fill=MUTED, anchor="end")
         s.line(x0, Y(1), x0 + pw, Y(1), stroke=MUTED, sw=1.1, dash="4 4")
         s.line(x0, Y(4), x0 + pw, Y(4), stroke=MUTED, sw=1.1, dash="4 4")
         pts = []
-        for i in range(0, 301):
+        for i in range(0, tmax * 10 + 1):
             t = i * 0.1
             v = scenario(k, t)
             if v is None:
@@ -650,23 +687,31 @@ def fig_scenarios():
             pts.append((X(t), Y(v)))
         s.polygon([(pts[0][0], y1)] + pts + [(pts[-1][0], y1)], fill="#cde2fb", opacity=0.55)
         s.polyline(pts, BLUE, sw=2.2)
+        # Hai pha liền nhau chung một ranh giới: vẽ mỗi ranh giới một lần.
+        for edge in sorted({e for _, a, b in phases for e in (a, b) if e > 0}):
+            s.line(X(edge), top, X(edge), y1, stroke=INK2, sw=1, dash="2 3")
+        for name, a, b in phases:
+            s.text((X(a) + X(b)) / 2, top + 12, name, size=10.5, fill=INK2, anchor="middle", family=MONO)
         s.line(x0, y1, x0 + pw, y1, stroke=AXIS)
         for at, av, note in notes:
             lab_y = Y(av) - 10 if av < 3.4 else Y(av) + 18
             s.label(X(at), lab_y, note, size=11, fill=INK)
-    ny = 360
+    ny = 378
     s.rect(32, ny, 1136, 140, fill=WHITE, stroke=AXIS, rx=10)
     s.text(48, ny + 28, "Cách sinh tải", size=13.5, weight=650)
     for i, ln in enumerate(["• Open-loop: request đến theo quá trình Poisson với tốc độ λ(t),",
                             "  không chờ request trước xong.",
-                            "• Seed cố định: mọi cấu hình nhận đúng cùng một chuỗi request.",
+                            "• Seed theo (kịch bản, số thứ tự lượt): mọi cấu hình nhận cùng chuỗi request.",
                             "• Prompt 256–1024 token, output cố định 256 token, có streaming."]):
-        s.text(48, ny + 54 + i * 20, ln, size=12, fill=INK2)
+        # SVG gộp dấu cách đầu dòng, nên dòng nối (bắt đầu bằng "  ") được lùi bằng toạ độ x.
+        s.text(48 + (10 if ln.startswith("  ") else 0), ny + 54 + i * 20, ln.strip(), size=12, fill=INK2)
     s.text(608, ny + 28, "Mỗi kịch bản kiểm chứng gì", size=13.5, weight=650)
     for i, ln in enumerate(["• KB1 (như ban đêm): A2 giữ 1 replica mà vẫn đạt SLO? (N1, N3)",
-                            "• KB2 (như 9 giờ sáng): phản ứng mất bao lâu? scale-down có lỗi? (N2, N4)",
-                            "• KB3 (cao điểm kéo dài): ổn định ở tối đa replica? cảnh báo đúng? (N1, N7)"]):
-        s.text(608, ny + 54 + i * 20, ln, size=12, fill=INK2)
+                            "• KB2 (như 9 giờ sáng): phản ứng, hồi phục mất bao lâu?",
+                            "  scale-down có làm lỗi request? (N2a, N2b, N3, N4)",
+                            "• KB3 (cao điểm kéo dài): đạt SLO ở pha sustain, không flapping,",
+                            "  cảnh báo đúng? (N1, N7)"]):
+        s.text(608 + (10 if ln.startswith("  ") else 0), ny + 54 + i * 18, ln.strip(), size=12, fill=INK2)
     s.save("08-kich-ban-tai.svg")
 
 

@@ -31,7 +31,7 @@ spec:
           policies: [{type: Pods, value: 1, periodSeconds: 60}]
   triggers:
     - type: prometheus
-      metricType: AverageValue         # desired = ⌈tổng ÷ threshold⌉; fallback cũng cần kiểu này
+      metricType: AverageValue         # desired = ⌈tổng ÷ threshold⌉; fallback không phụ thuộc số pod Ready
       metadata:
         serverAddress: http://prometheus-operated.monitoring.svc:9090
         # Tổng GPU utilization (%) của MỌI GPU mà Prometheus thấy, đọc từ nvidia_gpu_exporter 1.15.1:
