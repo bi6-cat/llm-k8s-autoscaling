@@ -68,6 +68,44 @@
 - **Links:** PR #59, merge commit `31a3ae5` (CI 6/6 xanh, MERGEABLE, không có review); sau đó merge `origin/main` vào `docs/tr8-thesis-ch5-drafts`, nhật ký tuần 08 gộp đúng thứ tự. `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§3 M4, M5; §5.1; §11.1; §11.4); `docs/chi-tiet/01`, `03`, `04`, `05` (phần đầu; 05 dòng F4); `docs/luan-van/quy-tac-viet.md`, `nguon-tu-lieu.md`, `README.md`, `03-05-giam-sat-slo-canh-bao.md`.
 - **Thesis:** dàn ý toàn bộ; 1.4 (cách trình bày quy trình); Lời cam đoan (khai báo công cụ AI).
 
+## 2026-11-23 – Đưa bộ soát văn phong luận văn vào repo (`analysis/kiem_van.py`)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Chuyển bộ soát văn phong (trước đó chỉ có trên máy của Trình) vào `analysis/kiem_van.py`: docstring theo CONTRIBUTING §2, type hint, tên mỗi luật kèm § của `quy-tac-viet.md` hoặc README; tách hàm thuần `check_text()` trả về danh sách điểm để test được; CLI bằng `argparse`, bỏ trống thì soát mọi file mục `docs/luan-van/CC-SS-*.md`, mã thoát 0 (sạch), 1 (còn điểm), 2 (không đọc được file) như ruff.
+  2. Thêm 3 luật có sẵn trong `quy-tac-viet.md` mà bản cũ chưa đếm: đường dẫn `docs/` và link Markdown tương đối trong thân bài (§3.5); nhãn dàn ý TĐ/HG và mã biểu đồ C1–C6 (§4); cụm "với mục tiêu" (§3.4).
+  3. Sửa 3 chỗ bắt sai của bản cũ: tách câu ngắt nhầm trước chữ thường có dấu (khoảng `À-Ỹ` của regex cũ gồm cả chữ thường như "ở"); đoạn dẫn và mục danh sách bị báo thiếu nguồn dù comment nguồn đặt sau cả danh sách; công thức riêng dòng `$$…$$` bị đếm như đoạn văn một câu. Luật nguồn cũng chặt hơn: comment nguồn phải đứng ngay sau khối (chỉ cách bởi dòng trống, comment khác hoặc danh sách đi liền), không còn được tính khi nằm sau đoạn kế tiếp trong cửa sổ 3 dòng.
+  4. `analysis/tests/test_kiem_van.py`: 46 cặp ca vi phạm/viết đúng phủ mọi luật (một test kiểm mỗi luật, kể cả luật viết thẳng trong `check_text`, đều có ca), cùng test cho tách khối, tách câu, tìm nguồn, thống kê, giới hạn 5 điểm mỗi luật và mã thoát.
+  5. Thêm dòng chạy `kiem_van` vào checklist `quy-tac-viet.md` §10; cập nhật cây thư mục ở CONTRIBUTING §1 và header `analysis/pyproject.toml`.
+  6. Việc làm trong lượt tự chạy 23/11. Nhánh `feat/tr8-style-checker` đã push; lệnh tạo PR bị chế độ quyền của lượt tự chạy chặn, nên PR chờ Trình mở.
+- **Decision:** (D91)
+  - Đặt trong gói `analysis/` thay cho gói Python riêng: module chỉ dùng thư viện chuẩn, gói `analysis` đã phục vụ luận văn, và job `python` của CI đã chạy pytest, ruff cho gói này trên 3.11 và 3.15, nên không phải thêm `pyproject.toml`, `uv.lock` và bước CI mới. Bỏ phương án đặt cạnh `docs/diagrams/build_diagrams.py` vì chỗ đó không có test và lint.
+  - CI chỉ chạy test của module, không chạy soát trên `docs/luan-van/`: vài luật chỉ là gợi ý cần người đọc lại (từ nối, dấu hai chấm, chữ "agent" của k3s), nên nếu chặn merge thì sẽ đỏ giả. Mã thoát 1 dành cho người viết và người soát trước khi mở PR.
+- **Results:**
+  - `uv run --project analysis --locked pytest analysis`: 207 passed (56 của `kiem_van`) trên Python 3.15; test `kiem_van` trên Python 3.11: 56 passed. `ruff check`, `ruff format --check`, `yamllint -s .`: đạt. lychee 0.24.2 (offline, kèm anchor, bỏ qua đường dẫn cũ như job `docs`): 0 lỗi.
+  - So bản cũ với bản mới trên 4 file nháp (03-05, 05-03, 05-05b, 05-06): số điểm giống nhau ở mọi luật, trừ "đoạn ngoài 3–7 câu" của 03-05 (8 xuống 6, hai dòng công thức `$$`) và "thiếu nguồn" của 05-05b (4 xuống 2) và 05-06 (4 xuống 3), đều là đoạn dẫn hoặc mục danh sách có nguồn đặt sau cả danh sách. Tổng: 52 → 50, 29 → 29, 46 → 44, 13 → 12.
+  - `/code-review high` báo 10 điểm; đã thử lại từng điểm bằng đoạn mẫu và sửa cả 10, mỗi điểm thêm một ca test:
+    - "số dính đơn vị" bắt nhầm `k3s`, `K8s`;
+    - "prompt" bị coi là chuyện nội bộ, trong khi đó là thuật ngữ của LLM;
+    - mã việc Q1–Q8, TR1–TR8 (§3.5) chưa bị bắt;
+    - comment mở giữa dòng và đóng ở dòng sau bị đọc như văn xuôi;
+    - comment nguồn đặt cuối dòng của đoạn không được tính;
+    - "Chương 5", "Mục 3", "§5" bị đòi nguồn;
+    - tiêu đề hoặc bảng nằm giữa không ngắt luật "hai đoạn liền mở bằng từ nối";
+    - file có BOM làm dòng tiêu đề thành văn xuôi, file không phải UTF-8 gây traceback thay cho mã thoát 2;
+    - in đậm ở đầu câu thứ hai bị coi là in đậm giữa câu;
+    - test "mọi luật đều có ca" chưa xét luật viết thẳng trong `check_text`; kèm hai lỗi nhỏ cùng loại: rào code `~~~` và "khủng hoảng" bị bắt là văn nói.
+  - Sau khi sửa, số điểm trên 4 file nháp không đổi so với dòng trên.
+- **Links:** `analysis/kiem_van.py`, `analysis/tests/test_kiem_van.py`, `docs/luan-van/quy-tac-viet.md` §10, `CONTRIBUTING.md` §1, `analysis/pyproject.toml`.
+- **Thesis:** không vào thân bài; công cụ dùng ở bước soát mọi mục (quy-tac-viet.md §10).
+
+## 2026-11-24 – kiem_van: độ dài câu và đoạn thành gợi ý đọc lại
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** bỏ hai luật "câu > 35 chữ" và "đoạn ngoài 3–7 câu" khỏi `analysis/kiem_van.py`. Thêm bốn luật gợi ý đọc lại, in ở phần riêng sau các điểm và không tính vào mã thoát: câu > 45 chữ, đoạn > 8 câu, 3 đoạn ≤ 2 câu liền nhau (chuỗi ngắt ở tiêu đề, bảng, công thức và mục danh sách; báo một lần mỗi chuỗi), ", nên" hơn một lần trong đoạn. Dòng tổng in thêm số gợi ý. Test thêm ca cho bốn luật gợi ý, ca chuỗi đoạn ngắn, ca in gợi ý sau điểm, và ca mã thoát 0 khi chỉ có gợi ý. Dòng kiem_van ở `quy-tac-viet.md` §10 ghi rõ phần gợi ý không cần về 0.
+- **Decision:** theo việc bỏ trần cứng câu và đoạn ở quy tắc viết (PR quy tắc viết theo luận văn ngoài, nhánh `docs/tr8-style-external-theses`). Lý do: khi luật trả mã thoát 1, người viết sửa cho về 0 và văn bị dài đều nhau. Ngưỡng gợi ý (45 chữ, 8 câu) đặt cao hơn ngưỡng cũ, để chỉ báo chỗ thật sự nên đọc lại.
+- **Results:** `uv run --project analysis --locked pytest analysis`: 212 passed (Python 3.15); test `kiem_van` trên Python 3.11: 61 passed; `ruff check`, `ruff format --check` đạt. Chạy trên nháp 5.7 (nhánh `docs/tr8-thesis-ch5-drafts`): 0 điểm, 1 gợi ý (đoạn đầu có 3 lần ", nên"), mã thoát 0.
+- **Links:** `analysis/kiem_van.py`, `analysis/tests/test_kiem_van.py`, `docs/luan-van/quy-tac-viet.md` §10; PR #61.
 ## 2026-11-23 – TR8: bản base mục 3.1 (yêu cầu và chỉ tiêu nghiệm thu)
 
 - **Task:** TR8 · **Environment:** none
