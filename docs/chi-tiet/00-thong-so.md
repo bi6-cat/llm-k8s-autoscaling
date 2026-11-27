@@ -1,6 +1,6 @@
 # Thông số và chỉ tiêu (nguồn sự thật duy nhất)
 
-> Thuộc [bộ tài liệu đồ án](../mo-ta-chi-tiet-do-an.md#bộ-tài-liệu) · Quyết định liên quan: [ADR-004](../adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md), [ADR-005](../adr/005-sua-thiet-ke-sau-review.md), [ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) (chốt trước V2, 10/11)
+> Thuộc [bộ tài liệu đồ án](../mo-ta-chi-tiet-do-an.md#bộ-tài-liệu) · Quyết định liên quan: [ADR-004](../adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md), [ADR-005](../adr/005-sua-thiet-ke-sau-review.md), [ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) (chốt trước V2, 10/11), [ADR-007](../adr/007-doi-vh1-vh2-f6-n8-khoi-cluster-nha.md) (dời VH1, VH2, F6, N8 khỏi cluster nhà, 24/11)
 
 **Tóm tắt nhanh**
 - Mọi yêu cầu (F1–F7), chỉ tiêu (N1–N8), SLO, kịch bản tải (KB1–KB3), cấu hình đánh giá, tham số triển khai, cấu hình máy và ngân sách được **định nghĩa ở đúng một chỗ: tài liệu này**.
@@ -37,10 +37,10 @@
 |---|---|---|---|---|
 | **F1** | Phục vụ **một model mở cỡ 3–8B** qua API tương thích OpenAI (`/v1/chat/completions`), có streaming | vLLM, Traefik | Gọi API có streaming; chạy được ĐG1–ĐG3 | Must |
 | **F2** | Tự điều chỉnh số replica trong khoảng [1, N] theo tải (N = số GPU) | KEDA + HPA, cấu hình A2 | Bài kiểm thử T1–T7; ĐG2 | Must |
-| **F3** | Triển khai, cập nhật và rollback qua Git, không thao tác tay trên cluster | Argo CD (bản core, một App-of-Apps), Kustomize | VH2: cập nhật và rollback bằng `git revert` | Must |
+| **F3** | Triển khai, cập nhật và rollback qua Git, không thao tác tay trên cluster | Argo CD (bản core, một App-of-Apps), Kustomize | VH2: cập nhật và rollback bằng `git revert`. **Sửa 24/11:** vòng Git chạy trên kind + simulator có Argo CD ([ADR-007](../adr/007-doi-vh1-vh2-f6-n8-khoi-cluster-nha.md)) | Must |
 | **F4** | Dựng toàn bộ từ máy trắng bằng vài lệnh `make` | Ansible; `vast.sh`; Argo CD ở nhà, `make cloud-platform` (helm) trên VM thuê ([ADR-006 §3.1](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md#31-quyết-định-ngày-12112026)) | VH5 | Must |
 | **F5** | **3 dashboard**: Serving + GPU; Autoscaling; SLO + chi phí | Prometheus, Grafana | Kiểm tra trong mọi lượt; ảnh chụp đưa vào luận văn | Must |
-| **F6** | **6 cảnh báo** theo SLO và sức khoẻ nền tảng, gửi tới Telegram; **mỗi cảnh báo có runbook** | Alertmanager, `docs/runbooks/` | VH6 | Must |
+| **F6** | **6 cảnh báo** theo SLO và sức khoẻ nền tảng, gửi tới Telegram; **mỗi cảnh báo có runbook** | Alertmanager, `docs/runbooks/` | VH6; tin tới Telegram thật kiểm trên kind + simulator ([ADR-007](../adr/007-doi-vh1-vh2-f6-n8-khoi-cluster-nha.md)) | Must |
 | **F7** | Bảo vệ tối thiểu: API key, giới hạn tốc độ, một NetworkPolicy, bí mật mã hoá trong Git | `--api-key` của vLLM, Traefik `rateLimit`, NetworkPolicy, Sealed Secrets. **Sửa 12/11:** chỉ làm API key và mạng riêng; rate limit, NetworkPolicy thường trực, Sealed Secrets bị lược ([ADR-006 §3.1](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md#31-quyết-định-ngày-12112026)) | Checklist ở [Vận hành](04-van-hanh.md#8-bảo-mật-tối-thiểu) | Should |
 
 Danh sách 6 cảnh báo nằm ở [Vận hành §3.2](04-van-hanh.md#32-danh-sách-cảnh-báo).
@@ -74,8 +74,8 @@ Danh sách 6 cảnh báo nằm ở [Vận hành §3.2](04-van-hanh.md#32-danh-s�
 
 | Mức | Nội dung | Ý nghĩa |
 |---|---|---|
-| **Must** | F1–F6 (F3–F6 ở bản rút gọn); N1, N2a, N4, N6; ĐG1; ĐG2 17 lượt; VH1, VH2 ở nhà (gồm ca 1 replica), VH4, VH5 | Đủ điều kiện bảo vệ |
-| **Should** | F7; N2b, N3, N5, N7, N8; ĐG3; VH2 trên GPU thuê, VH3, VH6; dashboard chi phí | Đồ án tốt |
+| **Must** | F1–F6 (F3–F6 ở bản rút gọn); N1, N2a, N4, N6; ĐG1; ĐG2 17 lượt; VH1 (pha `drop` của KB2 trên GPU thuê); VH2 gồm vòng Git trên kind + simulator và ca 1 replica trên GPU thuê; VH4, VH5. **Sửa 24/11** (trước đó: "VH1, VH2 ở nhà"), [ADR-007](../adr/007-doi-vh1-vh2-f6-n8-khoi-cluster-nha.md) | Đủ điều kiện bảo vệ |
+| **Should** | F7; N2b, N3, N5, N7, N8; ĐG3; VH2 ca mọi GPU có pod và ca kiểu web (GPU thuê), VH3, VH6; dashboard chi phí | Đồ án tốt |
 | **Could** | A3 (KV-cache); A4 (flapping) trên simulator; cảnh báo phụ (`LLMSLOBurnSlow`, `LLMPreemptions`, `GPUTemperatureHigh`, `GPUXidError`); `gitleaks`; trigger theo TTFT (E6); `pod-deletion-cost` (E11); warm pool | Đồ án xuất sắc |
 
 Nếu chậm tiến độ thì cắt từ dưới lên theo thứ tự trên ([Kế hoạch §8](06-ke-hoach-quan-ly.md#8-dự-phòng-và-cắt-giảm-phạm-vi)).

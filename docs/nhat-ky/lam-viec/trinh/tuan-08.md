@@ -134,6 +134,28 @@
 - **Links:** `docs/luan-van/quy-tac-viet.md` (§1, §3.5, §9); `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§5.1, §11.1).
 - **Thesis:** phần đầu quyển (không có Tóm tắt, không có Lời cam đoan); Mở đầu; mục 1.3 Đóng góp.
 
+## 2026-11-24 – Nghiệm thu: soát các việc Must còn phụ thuộc cluster nhà
+
+- **Task:** TR8, chung · **Environment:** none
+- **Done:** Đối chiếu danh sách Must ([Thông số §5](../../../chi-tiet/00-thong-so.md#5-mức-độ-thành-công)) với bảng nghiệm thu ngày 21/11 ([Môi trường §16](../../../chi-tiet/05-moi-truong-danh-gia.md)) và dữ liệu `runs/ops-vh2a-*`, nhật ký vận hành 19/11. Ước lượng: 10/16 mục Must đạt, 4 đạt một phần (F3, F5, F6, N4), 2 chưa chạy (VH1, VH2 ở nhà). Với từng việc còn lại, xét việc đó có thật sự cần cluster nhà hay không.
+- **Decision:**
+  - VH1 không chạy lại ở nhà. Bằng chứng scale-down an toàn lấy từ pha `drop` của 3 lượt A2 × KB2 trên V2 (N = 4, 0 lỗi): cùng cơ chế preStop và graceful shutdown, đo trên nhiều GPU hơn KB2-mini ở nhà.
+  - VH2 chạy trên kind + simulator có cài Argo CD. Phần F3 còn thiếu chỉ là vòng Git → Argo CD sync → `git revert`, không phụ thuộc GPU. Các ràng buộc GPU của VH2 (ca 1 replica, `maxSurge: 0`, ca kẹt Pending) đã đo trên V2 với 0 lỗi. Application trên kind theo dõi một nhánh riêng, nên không đổi `main` hay cluster nhà.
+  - F6 (tin cảnh báo tới Telegram thật) và N8 (người thứ hai dựng lại theo README) làm trên kind + simulator; định nghĩa VH5 ở Môi trường §13 đã cho phép cách này.
+  - Ảnh chụp dashboard trên GPU thật (F5) làm trên cluster nhà; nếu không có trước 28/11 thì dùng ảnh trên simulator cộng Hình C3 (GPU từ dữ liệu V2) và ghi vào Hạn chế. Tổng chi phí thuê lấy từ trang thanh toán của Vast.
+  - Không sửa `vh3_kill` (thiếu bước bảo đảm ≥ 2 pod), vì dữ liệu đã đóng băng 22/11; nêu ở mục 5.5 và 5.7.
+- **Deviations:** Must ở Thông số §5 ghi "VH1, VH2 ở nhà"; nay VH1 dùng kết quả trên GPU thuê và VH2 chạy trên kind. Sửa Thông số §5 và Môi trường §13 trong PR này.
+- **Thesis:** 5.5 (VH1, VH2), 5.6 (bảng nghiệm thu), 5.7 (Hạn chế).
+
+## 2026-11-24 – Nghiệm thu: ghi phạm vi Must mới vào ADR-007 và tài liệu thiết kế
+
+- **Task:** TR8, chung · **Environment:** none
+- **Done:** Viết [ADR-007](../../../adr/007-doi-vh1-vh2-f6-n8-khoi-cluster-nha.md) cho các quyết định ở mục trước (VH1, VH2, F6, N8 không còn chờ cluster nhà). Sửa theo ADR: Thông số §3 (cách kiểm chứng F3, F6), §5 (dòng Must và Should); Môi trường §13 (cột "Ở đâu" của VH1, VH2, VH6) và ghi chú của N4, N8, F3, F6 trong bảng nghiệm thu §16; ghi chú ngày 24/11 ở mốc M2, mục học chéo và rủi ro R7 của Kế hoạch; bảng ADR.
+- **Decision:** Ghi thành ADR mới thay vì thêm mục vào ADR-006, vì README của `docs/adr/` quy định không sửa nội dung ADR cũ. Bảng nghiệm thu chỉ đổi cột ghi chú; cột "Đạt?" giữ nguyên cho tới khi có kết quả trên kind.
+- **Results:** lychee offline: không lỗi ngoài các đường dẫn cũ mà CI cũng bỏ qua. `/code-review high`: 10 điểm, đã sửa 9. (1) Ca (c) của VH2 chưa có bằng chứng `LLMPodPending` kêu: `runs/v2-vm/ops-vh2c-20261118-174729/summary.json` chỉ ghi `rollout_stuck: true`, 0 lỗi trên 2.077 request, còn quy tắc có `for: 10m` trong khi lượt chỉ chờ kẹt khoảng 300 s; ADR-007 ghi rõ. (2) Ca (c) không thuộc mức nào, nay xếp vào Should. (3) Trình đã dùng cụm simulator từ 07/11, nên N8 không phải lần dựng của người chưa từng thấy repo; ghi vào Hệ quả và Hạn chế. Các điểm còn lại là câu chữ và danh sách mục bị thay thế. Không sửa mốc M2 (01/11, đã qua), chỉ thêm ghi chú ngày 24/11. Mục trước xếp N4 vào "đạt một phần", còn bảng Môi trường §16 ghi Đạt; theo ADR-007, N4 dùng số đo V2 nên lấy mức Đạt của bảng.
+- **Deviations:** Must ở Thông số §5 trước đây ghi "VH1, VH2 ở nhà".
+- **Links:** `docs/adr/007-doi-vh1-vh2-f6-n8-khoi-cluster-nha.md`, `docs/chi-tiet/00-thong-so.md`, `docs/chi-tiet/05-moi-truong-danh-gia.md`, `docs/chi-tiet/06-ke-hoach-quan-ly.md`.
+- **Thesis:** 5.5 (VH1, VH2), 5.6 (bảng nghiệm thu), 5.7 (Hạn chế: chưa có vòng Git trọn vẹn trên GPU thật).
 ## 2026-11-24 – Luận văn: soát cách trình bày theo luận văn ngoài cùng đề tài
 
 - **Task:** TR8 · **Environment:** none
