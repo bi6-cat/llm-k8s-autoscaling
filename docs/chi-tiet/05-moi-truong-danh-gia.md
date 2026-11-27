@@ -225,7 +225,7 @@ Nếu máy chỉ có 32 vCPU: dùng 5 lõi cho mỗi pod vLLM; máy tạo tải 
 - Trên marketplace khó thuê được một máy CPU riêng nằm cùng datacenter. Nhóm vì thế đặt máy tạo tải **trong chính cluster**, dưới dạng pod Guaranteed có lõi riêng. Độ trễ mạng gần như bằng 0 và không dao động. **Sửa 27/11:** máy tạo tải gọi thẳng Service `vllm.llm-serving.svc:8000`, không qua Traefik, ở mọi môi trường kể cả V2 ([Thông số §7](00-thong-so.md#7-kịch-bản-tải)); thiết kế ban đầu đi qua Traefik bằng route riêng, đã lược cùng rate limit ([ADR-006 §3.1](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md#31-quyết-định-ngày-12112026)).
 - **Kiểm chứng trong mỗi lượt:** CPU của từng tiến trình gửi tải < 70% một lõi; thời gian **bị giới hạn CPU** (throttle) < 0,1% thời gian lượt (đọc `throttled_usec` trong `cpu.stat` của cgroup); độ lệch lịch gửi p99 < 50 ms; độ trễ event loop (§9). Ngưỡng ở §17.
 - Runner chạy dưới dạng dịch vụ `systemd` trên chính VM, ngoài cluster, dùng `kubectl` và API của Prometheus. Runner tốn rất ít CPU, và vẫn chạy tiếp khi mất SSH.
-- **Thực tế V2 (18/11):** không dùng `systemd` (`make runner-start`): PC lúc đó chưa có `.env`, nên runner sẽ dừng vì thiếu `R2_REMOTE` (phiên cloud bắt buộc sao lưu). ĐG1 chạy runner từ PC qua tunnel SSH; ma trận ĐG2, VH2–VH4 và ĐG3 chạy trong `tmux` trên VM với `--no-backup`, để 8 giờ chạy ma trận không phụ thuộc tunnel. Runner vẫn ở ngoài cluster và dùng `kubectl`, API của Prometheus như thiết kế ([nhật ký Quang tuần 07](../nhat-ky/lam-viec/quang/tuan-07.md)).
+- **Thực tế V2 (18/11):** không dùng `systemd` (`make runner-start`): PC lúc đó chưa có `.env`, nên runner sẽ dừng vì thiếu `R2_REMOTE` (phiên cloud bắt buộc sao lưu). ĐG1 chạy runner từ PC qua tunnel SSH; ma trận ĐG2 chạy runner trong `tmux` trên VM với `--no-backup`, để hơn 7 giờ chạy ma trận không phụ thuộc tunnel. VH2–VH4 (`experiments/ops/vh.py`) và ĐG3 (`envs/cloud/provision/dg3.sh`) là script riêng, cũng chạy trong `tmux` trên VM. Runner vẫn ở ngoài cluster và dùng `kubectl`, API của Prometheus như thiết kế ([nhật ký Quang tuần 07](../nhat-ky/lam-viec/quang/tuan-07.md)).
 
 ### 3.7. Tự động hoá bằng Makefile
 
@@ -254,7 +254,7 @@ Nếu máy chỉ có 32 vCPU: dùng 5 lõi cho mỗi pod vLLM; máy tạo tải 
 
 - Runner đẩy `runs/<run-id>/` lên **Cloudflare R2** ngay sau mỗi lượt (`rclone copy` kèm checksum). Nhóm đã có tài khoản R2.
 - `make release` kiểm tra xem mọi lượt đã được sao lưu chưa; nếu chưa thì **từ chối huỷ instance**.
-- **Thực tế V2:** không sao lưu lên R2 (runner chạy với `--no-backup`, §3.6). Một vòng lặp trên PC kéo `runs/` của VM về mỗi 30 phút; trước khi tắt máy, mọi file trên VM đều có trên PC với cùng sha256. Máy thuê qua giao diện web nên không có API key cho `make release`: VM được tắt bằng `poweroff` từ bên trong, rồi Quang xoá instance trên trang Vast.
+- **Thực tế V2:** không sao lưu lên R2 (runner chạy với `--no-backup`, §3.6). Một vòng lặp trên PC kéo `runs/` của VM về mỗi 30 phút, tới khoảng 23:15 thì mất cùng tunnel khi phiên điều khiển trên PC khởi động lại (runner trên VM không bị ảnh hưởng), sau đó kéo lại khi ma trận xong và trước khi tắt máy; mọi file trên VM đều có trên PC với cùng sha256. Máy thuê qua giao diện web nên không có API key cho `make release`: VM được tắt bằng `poweroff` từ bên trong, rồi Quang xoá instance trên trang Vast.
 
 ---
 
@@ -307,7 +307,7 @@ Trên Vast.ai, giá hiển thị cho mỗi máy thường đã gồm CPU và RAM
 |---|---|---|---|---|---|---|
 | V0 smoke | ~~17–18/10~~ gộp với V1, **làm 08/11** ([Kế hoạch §1.1](06-ke-hoach-quan-ly.md#11-điều-chỉnh-ngày-04112026)); thực tế: VM 2 × 5060 Ti rồi VM 4 × A4000, model 3B, ~$1,5 cho máy thứ hai ([log phiên](../nhat-ky/lam-viec/quang/phien-2026-11-08-a4000.md)) | ~~VM 1 × 4090~~ VM 4 × A4000 | k3s trong VM, GPU, vLLM 7B, `fio`, TPOT ở batch 1/16/32, thử `make bootstrap` | 3–4 | 4 | 1–2 |
 | V1 phát triển | ~~31/10–01/11~~ gộp với V0, **làm 08/11** (ĐG1 thử C = 4,5 req/s; runner 2 lượt có KEDA) | ~~VM 1 × 4090~~ VM 4 × A4000 | L2 (pre-pull, compile cache); runner chạy 2 lượt không cần can thiệp; ĐG1 thử (không dùng làm số liệu chính) | 6–8 | 6–8 | 2–4 |
-| **V2 đợt chính** | ~~07–08/11~~ ~~T7 14/11 08:00 → CN 15/11 ~06:00~~ **làm 18/11 15:42 → 19/11 02:05** (§6.2) | ~~VM 4 × A4000, ≥ 20 vCPU~~ VM 4 × RTX 4060 Ti 16 GB, 61 vCPU (hôm đó không có máy A4000) | Burn-in rút gọn; VH5 từ VM trắng; **ĐG1 → ADR-003**; ĐG3; ma trận 17 lượt; VH2–VH4 trên GPU thật; quay video thô | 20–22 (thực tế ≈ 10,4) | 80–88 (≈ 41,5) | 24–44 (thực tế chưa có) |
+| **V2 đợt chính** | ~~07–08/11~~ ~~T7 14/11 08:00 → CN 15/11 ~06:00~~ **làm 18/11 15:42 → 19/11 02:05** (§6.2) | ~~VM 4 × A4000, ≥ 20 vCPU~~ VM 4 × RTX 4060 Ti 16 GB, 61 vCPU (hôm đó không có máy A4000) | Burn-in rút gọn; VH5 từ VM trắng; **ĐG1 → ADR-003**; ĐG3; ma trận 17 lượt; VH2–VH4 trên GPU thật; quay video thô | 20–22 (thực tế > 10,4, xem dưới bảng) | 80–88 (> 41,5) | 24–44 (thực tế chưa có) |
 | V3 dự phòng | ~~14–15/11~~ bỏ (đã dùng cho V2) | – | Chỉ khi V2 hỏng: chạy lại trọn bộ cấu hình của kịch bản hỏng + ĐG1 | ≤ 10 | ≤ 40 | ≤ 20 |
 | Đĩa, băng thông | – | – | – | – | – | ~3–6 |
 | **Tổng** | | | | | ~90–140 | **~30–75** |
@@ -328,14 +328,15 @@ trước 15:42  máy 4 × RTX 4090 không lên SSH (thử khoảng 15 phút), b�
 15:47–15:50  make cloud-platform (82 s); vLLM Ready 15:50:30, tức 8 phút 22 giây từ đầu bootstrap
 15:50–16:29  ĐG1: 5 mức λ, runner chạy từ PC qua tunnel → C = 3,5 req/s, threshold A2 = 37
 16:30–23:44  ma trận ĐG2 17 lượt, thứ tự xáo trộn, runner trong tmux trên VM, không cần can thiệp;
-             VH1 và VH6 ghi trong các lượt; PC kéo runs/ về mỗi 30 phút
-23:46–01:43  VH2a, VH2b, VH2c, VH3 (xoá pod, kill tiến trình), VH4 ở 1,75 req/s (0,5 C)
+             VH1 (pha drop của KB2) và VH6 (ALERTS) lấy từ dữ liệu các lượt này;
+             PC kéo runs/ về mỗi 30 phút tới khoảng 23:15
+23:46–01:43  VH2a, VH2b, VH2c, VH3 (xoá pod, kill tiến trình), VH4 ở 1,75 req/s (0,5 C), bằng vh.py
 Thứ Năm 19/11
 01:43–02:04  ĐG3: L2 × 3, L0 × 2; ba lượt hỏng do lỗi dg3.sh, đo lại từ 01:55
 02:05        kiểm sha256 mọi file đã kéo về PC, poweroff VM; Quang xoá instance trên Vast sau đó
 ```
 
-**Khác kế hoạch:** dời từ 14–15/11 sang 18–19/11; không chạy `vllm bench serve` từng GPU (§3.4); runner trong `tmux` thay cho `systemd`, không sao lưu R2 (§3.6, §3.8); không có lượt kiểm tra năng lực giữa phiên, vì ma trận chạy liền 17 lượt; ĐG3 L0 đo 0 → 1 thay cho 1 → 2 (§12); suốt ma trận Alertmanager không gửi được tin tới receiver (`AlertmanagerFailedToSendAlerts` firing). Phiên xong sau khoảng 10,4 giờ, ngắn hơn nhiều so với 20–22 giờ dự kiến.
+**Khác kế hoạch:** dời từ 14–15/11 sang 18–19/11; nhật ký và console của phiên không có bước `vllm bench serve` từng GPU, chỉ có `make probe` (§3.4); thứ tự đổi thành ĐG1 → ma trận → VH → ĐG3 (kế hoạch: ĐG1 → ĐG3 → VH → ma trận); runner trong `tmux` thay cho `systemd`, không sao lưu R2 (§3.6, §3.8); không có lượt kiểm tra năng lực giữa phiên, vì ma trận chạy liền 17 lượt; `vh.py` lấy từ PR #46 lúc chưa merge, và thời lượng tải của VH2c hạ từ 3000 s xuống 1200 s ngay trên VM; ĐG3 L0 đo 0 → 1 thay cho 1 → 2 (§12), ba lượt L2 đo lại chạy sau L0-2 nên compile cache do pod của L0-2 tạo lại; suốt ma trận Alertmanager không gửi được tin tới receiver (`AlertmanagerFailedToSendAlerts` firing). Phiên xong sau khoảng 10,4 giờ, ngắn hơn nhiều so với 20–22 giờ dự kiến.
 
 **Kế hoạch trước phiên (dự kiến 14–15/11), giữ để đối chiếu:**
 
@@ -482,7 +483,7 @@ Ma trận 17 lượt và lý do phân bổ nằm ở [Thông số §8.2](00-thon
 |---|---|---|
 | Chuẩn bị node | `crictl rmi` image vLLM; xoá model và compile cache | Image đã pre-pull; model trên NVMe; compile cache đã làm ấm |
 | Làm lạnh RAM | `sync; echo 3 > /proc/sys/vm/drop_caches` | như L0 |
-| Kích hoạt | Scale từ 1 lên 2 replica | như L0 |
+| Kích hoạt | Scale từ 1 lên 2 replica. **Thực tế V2:** L0 đo 0 → 1, vì containerd không xoá được image khi còn container đang dùng (§6.2) | như L0 (V2 đo đúng 1 → 2) |
 | Đo | Mốc thời gian của 8 pha: pod conditions, event pull image, log vLLM ([Kiến trúc §7](03-kien-truc-autoscaling.md#7-cold-start-chi-tiết)) | như L0 |
 | Số lần | Theo [Thông số §8.3](00-thong-so.md#83-đg1-và-đg3) | như cột bên |
 
