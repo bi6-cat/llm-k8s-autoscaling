@@ -93,7 +93,7 @@ Việc gắn với máy: các bước cài đặt trên PC (driver, k3s server) 
 - [x] Máy tạo tải đạt tiêu chí tự kiểm tra; runner chạy 2 lượt **không cần can thiệp** trên V1; `make bootstrap` dựng xong VM dưới 30 phút. *(08/11: runner chạy A1 × KB3, A2 × KB2 liền nhau không can thiệp; tự kiểm đánh dấu cả 2 invalid vì máy tạo tải 2 lõi vượt ngưỡng CPU, Quang chấp nhận sau xem xét (nhật ký tuần 05). Ansible dựng VM 164 s, tới vLLM phục vụ 12,5 phút; cài nền vẫn bằng script tay.)*
 
 ### M3 (22/11): xong đánh giá
-- [ ] `capacity.json` đã chốt (C, B\*, SLO, threshold), có ADR-003 đi kèm.
+- [x] `capacity.json` đã chốt (C, B\*, SLO, threshold), có ADR-003 đi kèm. *(18/11: C = 3,5 req/s, B\* = 46,3, target A2 37 chốt trước ma trận; ADR-003 viết ngày 27/11.)*
 - [ ] Cold start: L0 và L2 đủ số lần hợp lệ.
 - [ ] Ma trận: mọi ô đủ số lượt hợp lệ.
 - [ ] VH1–VH6 có kết quả trên môi trường tương ứng.

@@ -10,7 +10,7 @@ Cách dùng: tìm mục mình viết ở [§2](#2-từng-mục-nguồn-nào), m�
 | Loại | Ở đâu | Dùng để |
 |---|---|---|
 | Thiết kế | [`docs/chi-tiet/00`–`06`](../chi-tiet/) và [mô tả tổng](../mo-ta-chi-tiet-do-an.md) | Chương 1–3: lý do, kiến trúc, cách tính. Là **ý định**; chỗ nào lệch với cái đã làm thì viết theo nhật ký và mã nguồn |
-| Quyết định | [`docs/adr/`](../adr/): 001 lựa chọn ban đầu, 002 trọng tâm vận hành, 004 phạm vi rút gọn và cloud, 005 sửa thiết kế sau review, 006 chốt máy, model, kịch bản trước V2 | Đoạn "vì sao chọn X, bỏ Y" ở chương 3–4. ADR-003 (chốt năng lực) **chưa viết** |
+| Quyết định | [`docs/adr/`](../adr/): 001 lựa chọn ban đầu, 002 trọng tâm vận hành, 004 phạm vi rút gọn và cloud, 005 sửa thiết kế sau review, 006 chốt máy, model, kịch bản trước V2, 003 kết quả ĐG1 và giá trị chốt | Đoạn "vì sao chọn X, bỏ Y" ở chương 3–4; C, B\*, target, SLO ở chương 5 |
 | Nhật ký cá nhân | [`lam-viec/quang/`](../nhat-ky/lam-viec/quang/), [`lam-viec/trinh/`](../nhat-ky/lam-viec/trinh/), mỗi tuần một file; mục nào cũng có dòng **Thesis** ghi mục luận văn nó phục vụ | Chương 4 (đã làm gì, gặp sự cố gì), chương 5 (số đo). Tìm nhanh: `grep -n "Thesis:.*§5" docs/nhat-ky/lam-viec/*/tuan-*.md` |
 | Nhật ký vận hành | [`docs/nhat-ky/van-hanh.md`](../nhat-ky/van-hanh.md) | Sự cố (4.6), các phiên thuê GPU, **LT1–LT8** (lý thuyết → dự đoán → đo → lệch) |
 | Nhật ký họp | [`docs/nhat-ky/tuan-01.md`](../nhat-ky/tuan-01.md), [`tuan-05.md`](../nhat-ky/tuan-05.md) | Mốc, quyết định của nhóm |
@@ -137,7 +137,6 @@ Mọi số dưới đây đã có trong nhật ký; cột "Gốc" là nơi đặ
 ## 4. Chưa có: không được viết số
 
 - **Chi phí thực tế V2:** chờ Quang đọc trang Billing của Vast. Hiện chỉ có giá 1,5 USD/giờ.
-- **ADR-003** (chốt C, B\*, SLO, threshold): chưa viết; số đã có ở `capacity.json`.
 - **Hình C1–C4 trên V2:** đã có ở `analysis/figures/v2-dg2/`, chưa xem lại bố cục. **C5** (cold start 8 pha) và **C6** (VH2): chưa có script.
 - **Bảng nghiệm thu F1–F7, N1–N8:** chưa điền. Nhật ký 19/11 đã đánh giá N1, N2a, N3 (KB1), N4, N6; N2b chỉ báo cáo.
 - **VH5 ở nhà do Trình dựng lại** (N8), **VH6 tổng hợp**, **T6, T7**, **checklist bảo mật**: chưa làm.
