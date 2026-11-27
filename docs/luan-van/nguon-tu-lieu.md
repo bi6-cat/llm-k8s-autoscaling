@@ -1,7 +1,7 @@
 <!-- Mục đích: chỉ chỗ tìm tư liệu cho từng mục luận văn (thiết kế, nhật ký, dữ liệu, hình, trang báo cáo), trạng thái số liệu ngày 20/11/2026 và những gì chưa được viết số. Người viết: Quang. File không ghép vào .docx (tên không bắt đầu bằng số). -->
 # Nguồn tư liệu để viết luận văn
 
-Cập nhật **20/11/2026**, sau phiên V2 (18–19/11); số mục ở §1, §2 đánh lại theo dàn ý ngày 23/11. Đọc cùng [README.md](README.md) (quy ước viết) và [Kế hoạch §11.1](../chi-tiet/06-ke-hoach-quan-ly.md#111-dàn-ý-luận-văn-5565-trang) (dàn ý, số trang, người viết).
+Cập nhật **20/11/2026**, sau phiên V2 (18–19/11); số mục ở §1, §2 đánh lại theo dàn ý ngày 23/11, sửa ngày 24/11. Đọc cùng [README.md](README.md) (quy ước viết) và [Kế hoạch §11.1](../chi-tiet/06-ke-hoach-quan-ly.md#111-dàn-ý-luận-văn) (dàn ý, số trang, người viết).
 
 Cách dùng: tìm mục mình viết ở [§2](#2-từng-mục-nguồn-nào), mở các nguồn trong cột "Nguồn", lấy số từ [§3](#3-số-liệu-đã-chốt) (mỗi số có nơi gốc để đặt vào comment `<!-- nguồn: … -->`), và kiểm [§4](#4-chưa-có-không-được-viết-số) trước khi viết bất kỳ con số nào.
 
@@ -10,7 +10,7 @@ Cách dùng: tìm mục mình viết ở [§2](#2-từng-mục-nguồn-nào), m�
 | Loại | Ở đâu | Dùng để |
 |---|---|---|
 | Thiết kế | [`docs/chi-tiet/00`–`06`](../chi-tiet/) và [mô tả tổng](../mo-ta-chi-tiet-do-an.md) | Chương 1–3: lý do, kiến trúc, cách tính. Là **ý định**; chỗ nào lệch với cái đã làm thì viết theo nhật ký và mã nguồn |
-| Quyết định | [`docs/adr/`](../adr/): 001 lựa chọn ban đầu, 002 trọng tâm vận hành, 004 phạm vi rút gọn và cloud, 005 sửa thiết kế sau review, 006 chốt máy, model, kịch bản trước V2 | Đoạn "vì sao chọn X, bỏ Y" ở chương 3–4. ADR-003 (chốt năng lực) **chưa viết** |
+| Quyết định | [`docs/adr/`](../adr/): 001 lựa chọn ban đầu, 002 trọng tâm vận hành, 004 phạm vi rút gọn và cloud, 005 sửa thiết kế sau review, 006 chốt máy, model, kịch bản trước V2, 003 kết quả ĐG1 và giá trị chốt | Đoạn "vì sao chọn X, bỏ Y" ở chương 3–4; C, B\*, target, SLO ở chương 5 |
 | Nhật ký cá nhân | [`lam-viec/quang/`](../nhat-ky/lam-viec/quang/), [`lam-viec/trinh/`](../nhat-ky/lam-viec/trinh/), mỗi tuần một file; mục nào cũng có dòng **Thesis** ghi mục luận văn nó phục vụ | Chương 4 (đã làm gì, gặp sự cố gì), chương 5 (số đo). Tìm nhanh: `grep -n "Thesis:.*§5" docs/nhat-ky/lam-viec/*/tuan-*.md` |
 | Nhật ký vận hành | [`docs/nhat-ky/van-hanh.md`](../nhat-ky/van-hanh.md) | Sự cố (4.6), các phiên thuê GPU, **LT1–LT8** (lý thuyết → dự đoán → đo → lệch) |
 | Nhật ký họp | [`docs/nhat-ky/tuan-01.md`](../nhat-ky/tuan-01.md), [`tuan-05.md`](../nhat-ky/tuan-05.md) | Mốc, quyết định của nhóm |
@@ -51,43 +51,43 @@ Số mục theo dàn ý ở Kế hoạch §11.1. Bản base do Trình viết; ng
 
 | Mục | Nguồn |
 |---|---|
-| 1.1 Bối cảnh, 1.2 Phát biểu bài toán | Bài toán §1–§7 (§4: Hình 1; §5: vì sao vận hành LLM trên GPU khó; §6: ba yêu cầu kéo nhau); mô tả tổng |
-| 1.3 Mục tiêu, phạm vi và giả định | Bài toán §9 (bảy mục tiêu của đề cương), §11, §12 (phạm vi, giả định G1–G7); mô tả tổng; ADR-002, ADR-004 |
-| 1.4 Phương pháp và tổ chức thực hiện | Kế hoạch §1, §2 (lịch, mốc, kế hoạch tuần), §5.1 (phân công), §7 (quy trình làm việc); CONTRIBUTING §7 (PR, CI); `docs/adr/`; nhật ký họp; cách trình bày: `quy-tac-viet.md` §2.2 |
-| 1.5 Đóng góp, 1.6 Cấu trúc luận văn | Ba thông điệp TĐ1–TĐ3 (Kế hoạch §11.1); số ở §3 dưới đây |
+| Mở đầu | Bài toán §1, §5, §6 (vấn đề và ba yêu cầu kéo nhau, kể ở mức người không chuyên); bảng dàn ý ở Kế hoạch §11.1 (mỗi chương trả lời câu hỏi gì) |
+| 1.1 Bối cảnh và bài toán | Bài toán §1–§7 (§4: Hình 1; §5: vì sao vận hành LLM trên GPU khó; §6: ba yêu cầu kéo nhau); mô tả tổng |
+| 1.2 Mục tiêu, phạm vi và phương pháp | Mục tiêu, phạm vi, giả định: Bài toán §9 (bảy mục tiêu của đề cương), §11, §12 (phạm vi, giả định G1–G7); mô tả tổng; ADR-002, ADR-004. Phương pháp và tổ chức thực hiện: Kế hoạch §1, §2 (lịch, mốc, kế hoạch tuần), §5.1 (phân công), §7 (quy trình làm việc); CONTRIBUTING §7 (PR, CI); `docs/adr/`; nhật ký họp; cách trình bày: `quy-tac-viet.md` §2.2 |
+| 1.3 Đóng góp chính | Ba thông điệp TĐ1–TĐ3 (Kế hoạch §11.1); số ở §3 dưới đây |
 | 2.1 Phục vụ LLM và vLLM | Kiến thức nền §1, §2; LT1–LT3 trong `VH` (phần lý thuyết) |
 | 2.2 Hàng đợi và năng lực phục vụ | Bài toán §3; LT5 trong `VH` (phần lý thuyết) |
 | 2.3 GPU trên Kubernetes | Kiến thức nền §4; LT6 trong `VH` (phần lý thuyết) |
 | 2.4 Autoscaling trên Kubernetes | Kiến thức nền §3; LT7 trong `VH` (phần lý thuyết) |
-| 2.5 Vận hành theo SLO và GitOps | Kiến thức nền §5; LT8 trong `VH` (phần lý thuyết) |
+| 2.5 Vận hành theo SLO và GitOps | Kiến thức nền §5; LT8 trong `VH` (phần lý thuyết). Khái niệm mà 3.5 dùng thẳng, phải giải thích ở đây: histogram và biên bucket, recording rule, `for` (pending, firing), định tuyến và gom nhóm của Alertmanager, page và ticket, runbook, vai trò hai cửa sổ của burn rate |
 | 2.6 Giải pháp liên quan | Kiến thức nền §6; `tai-lieu.bib` |
 
 ### Chương 3
 
 | Mục | Nguồn |
 |---|---|
-| 3.1 Yêu cầu và chỉ tiêu nghiệm thu | Thông số §3–§6 (§6: giá trị SLO); Bài toán §8–§10 (ma trận truy vết); bảng mã định danh: `quy-tac-viet.md` §4 |
+| 3.1 Yêu cầu và chỉ tiêu nghiệm thu | **Đã có bản base**, cắt về 1,5 trang ngày 24/11: [`03-01-yeu-cau-chi-tieu.md`](03-01-yeu-cau-chi-tieu.md) (một bảng F1–F7, N1–N8; giá trị SLO và lý do ngưỡng viết thành văn xuôi; 25/11 khôi phục phần lõi, D119: sáu việc nền tảng phải làm thành cột "Việc" của bảng, lý do TPOT 100 ms, lý do giữ một ngưỡng TTFT, lý do không áp 95% cho KB2); Thông số §3–§6 (§6: giá trị SLO). Phần chuyển ra từ bản base (xem lịch sử Git của `03-01-yeu-cau-chi-tieu.md`, commit `fbe651b`): bảng mã định danh đầy đủ (S, A, KB, ĐG, VH, LT, L, V, C, B\*, N) → danh mục mã định danh ở phần đầu quyển, dùng làm bản gốc khi ghép; ma trận truy vết từng mã tới mục thiết kế, triển khai, đánh giá → Bài toán §10, Kế hoạch §11.1; F3 kiểm ở cluster nhà vì VM thuê không chạy Argo CD, cách cập nhật bằng annotation trên VM → 3.6 (VH2); các hạng mục bảo vệ đã lược của F7 → 6.2; mục tiêu 99% request không 5xx đo ở Traefik (không có số trong lượt đánh giá) → 6.2; lý do ngưỡng 30 phút dựng lại (đặt khi còn dự kiến model 7B) → 5.5 nếu cần |
 | 3.2 Kiến trúc tổng thể | Kiến trúc §1–§5, §18; Vận hành §7–§9 (dựng lại, bảo mật, chi phí); Môi trường §1–§3 (hai tầng dùng chung manifest); Thông số §10; ADR-004 §7; ADR-006 C2, §3.1; Hình 2, 3, 6 |
-| 3.3 Thiết kế autoscaling | Kiến trúc §6, §9–§16; Thông số §8, §9; ADR-006 C7 (truy vấn A1); Hình 4, 14, 15 |
+| 3.3 Thiết kế autoscaling | Kiến trúc §6, §9–§16; Thông số §8, §9; ADR-006 C7 (truy vấn A1); Hình 4, 14, 15; `common/autoscaling/a2/scaledobject-a2.yaml` (comment: vào fallback sau khoảng 20 s, so với giới hạn 30 s; 3.5 chỉ dẫn chéo) |
 | 3.4 Cold start và thay đổi an toàn | Kiến trúc §3, §7, §8; Vận hành §5; ADR-005; Hình 5, 12, 13, 16 |
-| 3.5 Giám sát, cảnh báo, xử lý sự cố | **Đã có bản nháp**: [`03-05-giam-sat-slo-canh-bao.md`](03-05-giam-sat-slo-canh-bao.md) (viết theo dàn ý cũ; khi viết lại thì thêm phần xử lý sự cố và chuyển giá trị SLO sang 3.1); Kiến trúc §17; Vận hành §1–§4, §6; Hình 7 |
-| 3.6 Thiết kế đánh giá | Môi trường §7–§17, §19; Thông số §7, §8; Bài toán §9 (chỉ số của đề cương); cách chấm cảnh báo và page giả: `analysis/vh6_window.py`, LT8 |
+| 3.5 Giám sát, cảnh báo, xử lý sự cố | **Đã có bản mẫu văn**, cắt về 2 trang ngày 24/11: [`03-05-giam-sat-slo-canh-bao.md`](03-05-giam-sat-slo-canh-bao.md) (viết theo bố cục mới: có phần xử lý sự cố và vai trò người trực; giá trị SLO đặt ở 3.1, ở đây chỉ dẫn chéo; 25/11 khôi phục từ bản base `d14e6e5`, D119: burn rate 14,4 của SRE Workbook, mốc 20% trùng page giả nhưng khác nguồn, định nghĩa page và ticket, cột lý do của bảng cảnh báo, định tuyến của Alertmanager, khung runbook, chỉ sửa qua Git; các ý còn để chỗ khác ghi ở comment đầu file); Kiến trúc §17; Vận hành §1–§4, §6; Hình 7 |
+| 3.6 Thiết kế đánh giá | **Đã có bản base**, cắt về 2 trang ngày 24/11: [`03-06-thiet-ke-danh-gia.md`](03-06-thiet-ke-danh-gia.md) (một bảng KB1–KB3; ĐG, VH, LT, chỉ số và cách chấm cảnh báo viết thành văn xuôi; 25/11 khôi phục phần lõi, D119: hai câu hỏi của đánh giá, lý do không dùng closed-loop, độ dài prompt, lý do đỉnh 0,75 × N × C và thời lượng từng pha, hai lượt chỉ khác cấu hình, cách báo chỉ số đề cương, GPU-giờ không thổi phồng, lý do chấm cảnh báo độc lập, lý do LT chạy ở máy nhà); Môi trường §7–§17, §19; Thông số §7, §8; Bài toán §9 (chỉ số của đề cương); cách chấm cảnh báo và page giả: `analysis/vh6_window.py`, LT8. Phần chuyển ra từ bản base (xem lịch sử Git của `03-06-thiet-ke-danh-gia.md`, commit `6e63ad5`): bảng ba lớp đánh giá → Môi trường §7; chi tiết request (streaming, timeout 120 s) → Thông số §7; cách quét của ĐG1 (1 + 4 phút mỗi mức) và kiểm chéo Little 15 % → 5.2, LT5; ma trận 17 lượt theo ô, thứ tự xáo, reset, làm ấm, cooldown → 4.7, Phụ lục E, Thông số §8.2, Môi trường §14.1; chi tiết ĐG3 (L0 xoá image, model, compile cache; số lần đo; tám pha; lý do xoá page cache) → 5.4, Môi trường §12; bảng chỉ số đầy đủ, cách tính hồi phục SLO, phân vị trên mọi request của pha, histogram chỉ cho dashboard → 5.3 (bảng chỉ số), Môi trường §15; trung bình kèm min–max, "không phân biệt được" khi dưới ngưỡng → 5.1, Môi trường §16; bảng điều kiện hợp lệ đầy đủ (CPU 70 %, event loop, throttle, scrape ≤ 15 s, chấm từng tiến trình) → 4.7, Môi trường §17, §9; bảng VH1–VH6 (cách làm, tiêu chí, môi trường; ca đối chứng graceful shutdown 5 s) → 5.5, Môi trường §13; thời gian tới cảnh báo chưa gồm group_wait, mỗi đợt kêu chấm riêng, runner ghi ALERTS từ 30 s trước làm ấm, đợt kêu từ trước pha chính không chấm, VH6 chỉ kiểm được `LLMSLOBurnFast` → 5.5, Môi trường §13, §14.2, §15; bảng LT1–LT8 (dự đoán, số đo, môi trường, mục báo cáo; LT chạy được ở máy nhà và simulator) → 5.2–5.5, Môi trường §19; câu mở đầu cũ (công thức cố định trong `analysis/metrics.py` có unit test trước phiên chính) → 4.7, Môi trường §7, §14.2; đổi máy thì chỉ đo lại C → 5.2, Môi trường §8; cột "Dùng để kiểm" của bảng kịch bản tải → Môi trường §10; pha dưới khoảng 200 request chỉ báo p95, request lỗi chỉ tính vào SLO attainment và tỷ lệ lỗi → 5.3, Môi trường §15; biểu đồ vẽ từng lượt thành chấm riêng → 5.1, Môi trường §16; ca đối chứng VH2 (cập nhật kiểu web service bị kẹt khi mọi GPU đã có pod) → 5.5, Môi trường §13 |
 
 ### Chương 4
 
 | Mục | Nguồn |
 |---|---|
-| 4.1 Hạ tầng và cluster | `Q-03` (23/10: k3s bằng Ansible); `Q-05` (02/11: IP Tailscale; 06/11: dựng lại sau cài lại OS); `phien-2026-11-08-a4000.md` §2–§7; `Q-06` (09/11: tự động hoá VM); `Q-07` (16/11: `vast.sh attach`); sự cố 23/10, 02/11, 05/11 trong `VH`; mã: `ansible/`, `envs/cloud/provision/` |
-| 4.1 GitOps, CI, bí mật | `T-04` (TR1 CI); `T-06` (15/11: app `autoscaling`, `observability`); `Q-05` (06/11: Argo CD tiếp quản nhà); `Q-07` (16/11: Argo CD mất đồng bộ sau refactor); ADR-006 §3.1 (lược Sealed Secrets) |
-| 4.1 Bảo mật tối thiểu | Vận hành §8; ADR-006 §3.1 (lược NetworkPolicy, rate limit); API key không có → 401 (Kế hoạch §3, M1) |
-| 4.1 Dựng lại từ máy trắng | Vận hành §7; VH5 (`Q-07` 18/11) |
+| 4.1.1 Dựng cluster bằng Ansible và k3s | `Q-03` (23/10: k3s bằng Ansible); `Q-05` (02/11: IP Tailscale; 06/11: dựng lại sau cài lại OS); `phien-2026-11-08-a4000.md` §2–§7; `Q-06` (09/11: tự động hoá VM); `Q-07` (16/11: `vast.sh attach`); sự cố 23/10, 02/11, 05/11 trong `VH`; mã: `ansible/`, `envs/cloud/provision/` |
+| 4.1.2 GitOps, CI; 4.1.3 bí mật | `T-04` (TR1 CI); `T-06` (15/11: app `autoscaling`, `observability`); `Q-05` (06/11: Argo CD tiếp quản nhà); `Q-07` (16/11: Argo CD mất đồng bộ sau refactor); ADR-006 §3.1 (lược Sealed Secrets) |
+| 4.1.3 Bảo vệ tối thiểu | Vận hành §8; ADR-006 §3.1 (lược NetworkPolicy, rate limit); API key không có → 401 (Kế hoạch §3, M1) |
+| 4.1.3 Dựng lại từ máy trắng | Vận hành §7; VH5 (`Q-07` 18/11) |
 | 4.2 Phục vụ vLLM trên GPU | `Q-03` (vLLM trên 5060, chốt image `v0.31.0`); `Q-05` (06/11: time-slicing, 2 pod chung GPU, overlay `cloud-3b`); sự cố hết RAM 06/11 trong `VH`; mã: `common/serving/`, `envs/*/serving/` |
 | 4.3 Autoscaling | `T-04`, `T-05` (TR2: T1–T5, A1/A3/A4, ma trận); `Q-05` (04/11: vòng autoscaling trên kind); `Q-06` (09/11: sửa truy vấn A1); mã: `common/autoscaling/` |
 | 4.4 Rút ngắn cold start | `phien-2026-11-08-a4000.md` §6, §9; `VH` 08/11 và LT4 (16/11); `Q-07` (16/11: LT4 page cache nguội/ấm; 18–19/11: `dg3.sh`, L0/L2); mã: `envs/cloud/provision/dg3.sh`, `parse_vllm_log` (`T-05` 08/11) |
 | 4.5 Scale-down và cập nhật không rớt request | Graceful shutdown (`Q-05` 06/11, `VH` 06/11); ADR-005; Vận hành §5; `VH` 09/11 (VH2 trên kind), 16/11 (VH2a N = 2); `Q-07` (19/11: vh2a/b/c trên N = 4) |
-| 4.6 Giám sát và SLO | `T-05` (TR3: 3 dashboard); `common/observability/` |
-| 4.6 Cảnh báo và runbook | `T-03` (TR4: 7 quy tắc, promtool, runbook); `T-06` (Telegram, `KedaScalerErrors`); `docs/runbooks/` |
-| 4.6 Sự cố và tự phục hồi | Các mục sự cố trong `VH`; VH3 (`Q-07` 19/11); image vLLM bị GC (`Q-07` 16/11) |
+| 4.6.1 Thu thập metric và dashboard | `T-05` (TR3: 3 dashboard); `common/observability/` |
+| 4.6.2 Cảnh báo; 4.6.3 runbook | `T-03` (TR4: 7 quy tắc, promtool, runbook); `T-06` (Telegram, `KedaScalerErrors`); `docs/runbooks/`. Phần chuyển ra từ bản nháp cũ của 3.5 (xem lịch sử Git của `03-05-giam-sat-slo-canh-bao.md`): bảng nguồn metric và chu kỳ scrape, retention, cảnh báo im lặng khi không có traffic (NaN, có unit test), chọn lại tín hiệu `KedaScalerErrors`, khuôn tin Telegram. Từ lượt cắt 24/11: tên ba dashboard; chart có sẵn 134 cảnh báo, 100 cái ở mức warning/info không được gửi đi |
+| 4.6.3 Sự cố và tự phục hồi | Các mục sự cố trong `VH`; VH3 (`Q-07` 19/11); image vLLM bị GC (`Q-07` 16/11) |
 | 4.7 Công cụ đánh giá | `T-03`, `T-05` (TR5: loadgen, tiêu chí hợp lệ, `PodWatcher`); runner (`Q-05` 06/11, `Q-06` 09/11); `build_tables` (`T-06`, `T-07`) |
 | Kết chương 4 | Kế hoạch §9.3 (R21: cặp vấn đề → cách xử lý → số đo); Bài toán §5, §13 |
 
@@ -100,13 +100,13 @@ Số mục theo dàn ý ở Kế hoạch §11.1. Bản base do Trình viết; ng
 | 5.2 Năng lực một replica (ĐG1) | `Q-07` (18/11: bảng ĐG1); [`envs/cloud/experiments/capacity.json`](../../envs/cloud/experiments/capacity.json); `phien-2026-11-08-a4000.md` §12 (ĐG1 thử); LT1–LT3 trong `VH` |
 | 5.3 Autoscaling so với tĩnh (C1–C4) | `Q-07` (18/11: bảng 11 ô; 19/11: nguyên nhân lỗi A2 × KB2, pha giảm tải); [`analysis/figures/v2-dg2/`](../../analysis/figures/v2-dg2/) (`runs.csv`, `cells.csv`, `phases.csv`, hình C1–C4); `analysis/dg2_a2.py`; LT5 (phần V2 lấy số ĐG1, `Q-07` 18/11), LT6, LT7 |
 | 5.4 Cold start (C5) | `Q-07` (19/11: ĐG3); `runs/v2-vm/dg3-v2-4060ti/*/summary.txt`, `vllm_log.json` (đủ 8 mốc pha) |
-| 5.5 VH1–VH3, VH5 | `Q-07` (19/11); `runs/v2-vm/ops-vh*/summary.json`; VH1 trên máy thuê là pha giảm tải của KB2 (dẫn chéo 5.3); VH3 drain chỉ có trên kind (`VH` 09/11) |
-| 5.5 VH4, VH6 | VH4: `Q-07` (19/11: fallback 16,8 s), `analysis/vh4_windows.py`; VH6: `analysis/figures/v2-dg2/alerts.csv`, `analysis/vh6_window.py`, LT8 |
-| 5.5 Graceful shutdown | `VH` 06/11 (144/144 stream; ca đối chứng grace 5 s) |
+| 5.5.1 VH1, VH2; 5.5.2 VH3, VH5 | `Q-07` (19/11); `runs/v2-vm/ops-vh*/summary.json`; VH1 trên máy thuê là pha giảm tải của KB2 (`phases.csv`; viết đầy đủ ở 5.5.1, 5.3 dẫn chéo); VH3 drain chỉ có trên kind (`VH` 09/11) |
+| 5.5.2 VH4; 5.5.3 VH6 | VH4: `Q-07` (19/11: fallback 16,8 s), `analysis/vh4_windows.py`; VH6: `analysis/figures/v2-dg2/alerts.csv`, `analysis/vh6_window.py`, LT8; bảng từng lượt và ý đã cắt ngày 24/11: comment đầu file `05-05-kich-ban-van-hanh.md` (trước 24/11 là `05-05b-vh4-vh6.md`), bản đầy đủ ở commit `bc49ff6` |
+| 5.5.1 Graceful shutdown | `VH` 06/11 (144/144 stream; ca đối chứng grace 5 s) |
 | 5.6 Tổng hợp | Bảng nghiệm thu: Bài toán (bảng yêu cầu → đánh giá → chỉ số), Thông số §4, số ở §3 dưới đây; bảng LT1–LT8: `VH`, Môi trường §19; khuyến nghị cấu hình: Kiến trúc §16 |
 | 5.7 Hạn chế của phép đo | §6 dưới đây |
 | 6.1 Kết luận | Ba thông điệp TĐ1–TĐ3 (Kế hoạch §11.1) |
-| 6.2 Hạn chế của hệ thống và phạm vi | §6 dưới đây; Bài toán §11, §12; ADR-006 §3.1 |
+| 6.2 Hạn chế của hệ thống và phạm vi | §6 dưới đây; Bài toán §11, §12; ADR-006 §3.1; hai hạn chế mà 3.5 dẫn chéo: `LLMErrorRateHigh` vẫn page vì một đợt lỗi 503 ngắn, chưa có dead man's switch cho Prometheus |
 | 6.3 Hướng phát triển | Kế hoạch §12 (E1–E13); `docs/bao-cao/de-xuat-v3/`; `Q-06` (13–15/11: các hướng nâng cấp) |
 | Phụ lục A–F | A: `common/serving/`, `common/autoscaling/`; B: `common/observability/alerts/` (kèm `tests/`); C: `docs/runbooks/`; D: `docs/phien-ban.md`; E: `analysis/figures/v2-dg2/`; F: Kế hoạch §1, §5.1 |
 | Slide, video | Kế hoạch §11.2, §11.3 |
@@ -137,7 +137,6 @@ Mọi số dưới đây đã có trong nhật ký; cột "Gốc" là nơi đặ
 ## 4. Chưa có: không được viết số
 
 - **Chi phí thực tế V2:** chờ Quang đọc trang Billing của Vast. Hiện chỉ có giá 1,5 USD/giờ.
-- **ADR-003** (chốt C, B\*, SLO, threshold): chưa viết; số đã có ở `capacity.json`.
 - **Hình C1–C4 trên V2:** đã có ở `analysis/figures/v2-dg2/`, chưa xem lại bố cục. **C5** (cold start 8 pha) và **C6** (VH2): chưa có script.
 - **Bảng nghiệm thu F1–F7, N1–N8:** chưa điền. Nhật ký 19/11 đã đánh giá N1, N2a, N3 (KB1), N4, N6; N2b chỉ báo cáo.
 - **VH5 ở nhà do Trình dựng lại** (N8), **VH6 tổng hợp**, **T6, T7**, **checklist bảo mật**: chưa làm.

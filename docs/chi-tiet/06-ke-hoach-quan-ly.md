@@ -4,10 +4,10 @@
 
 **Tóm tắt nhanh**
 - Kế hoạch **9 tuần** từ 08/10 đến hạn nộp khoảng **08/12/2026**. Mỗi tuần có việc chính, sản phẩm kiểm chứng được và **điểm dừng** khi chậm.
-- W1–W4 dành cho xây dựng và vận hành thử ở nhà và trên simulator, xen hai phiên thuê nhỏ (V0, V1). **Toàn bộ đánh giá trên GPU thuê dồn vào một lần thuê liền 14–15/11** (V2, dời từ 07–08/11 ngày 04/11, xem [§1.1](#11-điều-chỉnh-ngày-04112026)). **Đóng băng dữ liệu muộn nhất 22/11**; sau đó chỉ viết.
+- W1–W4 dành cho xây dựng và vận hành thử ở nhà và trên simulator, xen hai phiên thuê nhỏ (V0, V1). **Toàn bộ đánh giá trên GPU thuê dồn vào một lần thuê liền 14–15/11** (V2, dời từ 07–08/11 ngày 04/11, xem [§1.1](#11-điều-chỉnh-ngày-04112026); thực tế chạy 18–19/11 trên 4 × RTX 4060 Ti). **Đóng băng dữ liệu muộn nhất 22/11**; sau đó chỉ viết.
 - Khối lượng phạm vi rút gọn khoảng **169–251 người-giờ**, vừa quỹ giờ khi mỗi người làm khoảng 12–15 giờ/tuần. Phân công theo tính năng dọc: Quang "chạy được trên GPU", Trình "tự scale và đo được" ([§5.1](#51-phân-công)).
-- Sổ rủi ro gồm **28 rủi ro**; rủi ro lớn nhất là **thiếu thời gian viết**, **không có máy VM 4 GPU đạt tiêu chí vào đúng cuối tuần 14–15/11**, và **đồ án bị xem là thiên về cài đặt** (R21).
-- 7 sản phẩm bàn giao kèm tiêu chí nghiệm thu; luận văn 55–65 trang, chương 4 "Triển khai và vận hành" dài nhất; 13 hướng mở rộng.
+- Sổ rủi ro gồm **28 rủi ro**; rủi ro lớn nhất là **thiếu thời gian viết**, **không có máy VM 4 GPU đạt tiêu chí vào đúng cuối tuần 14–15/11** (đã xảy ra: V2 chạy 18–19/11 trên máy khác loại), và **đồ án bị xem là thiên về cài đặt** (R21).
+- 7 sản phẩm bàn giao kèm tiêu chí nghiệm thu; luận văn khoảng 60–75 trang thân bài theo khuôn T (định hướng, trần 85), chương 4 "Triển khai và vận hành" dài nhất; 13 hướng mở rộng.
 
 ---
 
@@ -19,7 +19,7 @@
 
 | Tuần | Ngày | Tuần | Ngày |
 |---|---|---|---|
-| W1 | 08/10 – 11/10 | W6 | 09/11 – 15/11 (V0+V1 gộp; **V2 14–15/11**) |
+| W1 | 08/10 – 11/10 | W6 | 09/11 – 15/11 (V0+V1 gộp; **V2 14–15/11**, thực tế 18–19/11 ở W7) |
 | W2 (M1) | 12/10 – 18/10 (~~V0~~) | W7 | 16/11 – 22/11 (**đóng băng dữ liệu 22/11**) |
 | W3 | 19/10 – 25/10 | W8 (M4) | 23/11 – 29/11 |
 | W4 (M2) | 26/10 – 01/11 (~~V1~~) | W9 | 30/11 – 06/12 |
@@ -41,7 +41,7 @@ Cả nhóm đã đồng ý dời V2. Lý do: tới 04/11, M1 mới đạt 2/7 m�
 |---|---|---|
 | Xây dựng và vận hành thử | xong 01/11 | **làm local trước** (kind + simulator, rồi cluster nhà), xong trước 13/11 |
 | V0, V1 | 17–18/10, 31/10–01/11 (không diễn ra) | gộp thành một phiên ngắn trước V2, dự kiến 11–12/11 |
-| V2 | 07–08/11 | **14–15/11** |
+| V2 | 07–08/11 | **14–15/11** (thực tế 18–19/11) |
 | V3 dự phòng | 14–15/11 | **mất**: V2 hỏng thì áp dụng các dòng còn lại của §8 |
 | Đóng băng dữ liệu (M3) | 15/11, muộn nhất 22/11 | **22/11**, không lùi thêm |
 | Chọn cloud (ADR-004 K6) | 18/10 | chưa chốt, để sau phần local, nhưng phải xong trước phiên V0+V1 |
@@ -80,20 +80,20 @@ Việc gắn với máy: các bước cài đặt trên PC (driver, k3s server) 
 - [x] Simulator chạy trên kind; A2 scale 1 → 3 trên simulator. *(06/11: ScaledObject A2 lên `main` qua PR #11 (bản nháp, Trình review và thay bằng bản chính ở `feat/tr2-sim`). Trên kind: quyết định 3 replica ở 17 s, 3 pod Ready ở 27 s, scale-down đúng window 300 s rồi 1 pod/60 s.)*
 - [x] Repo có CI chạy xanh. *(04/11: PR #5; 6 job xanh trên `main` ngày 02/11.)*
 - [x] V0 đạt: k3s có GPU trong VM Vast, vLLM 7B trả lời, đã đo `fio` và TPOT. *(08/11: VM 4 × A4000, model 3B (chốt thay 7B cùng ngày); ghi tuần tự 599 MB/s, TPOT 17,2 ms ở 1 request. Xem [van-hanh.md](../nhat-ky/van-hanh.md) 08/11.)*
-- [x] Đã chốt cloud (ADR-004 K6). *(08/11: Vast VM; ADR-004 §7 ghi GCP bị từ chối quota (PR #15). 10/11: loại máy V2 4 × A4000 chốt ở ADR-006 C2.)*
+- [x] Đã chốt cloud (ADR-004 K6). *(08/11: Vast VM; ADR-004 §7 ghi GCP bị từ chối quota (PR #15). 10/11: loại máy V2 4 × A4000 chốt ở ADR-006 C2. 18/11: V2 chạy trên 4 × RTX 4060 Ti vì không có máy A4000, xem [Thông số §10.2](00-thong-so.md#102-gpu-thuê).)*
 
 ### M2 (01/11): vận hành thử đạt
 - [ ] A1, A2 qua bài kiểm thử T1–T7 (trên simulator và GPU nhà). *(08/11: T1–T5 tự động trên kind; A1, A2 scale 1 → 4 trên GPU thật ở V1; A1 không tự về 1 replica sau tải (Kiến trúc §13); chưa có T6, T7.)*
 - [ ] Graceful shutdown: 0 lỗi trong 3 lần thử, ca đối chứng có lỗi. *(06/11: 0 lỗi trong 3 lần (144/144 stream); đối chứng không preStop, timeout 0 nhưng grace 180 s cũng 0 lỗi, chỉ đối chứng grace 5 s mới cắt 48/48. vLLM 0.31.0 không dừng khi nhận SIGTERM, nên request an toàn là nhờ grace period, drain chưa hoạt động như thiết kế; pod giữ GPU đủ 180 s. Xem [van-hanh.md](../nhat-ky/van-hanh.md) 06/11.)*
 - [ ] Đủ 3 dashboard; 6 cảnh báo có unit test, tới được Telegram; **mỗi cảnh báo có runbook**. *(08/11: 3 dashboard và `make dashboards-check` (PR #23), kiểm trên kind. 04/11: 7 quy tắc cho 6 cảnh báo, 8 unit test `promtool`, 7 runbook (PR #3). Chưa có Telegram, chưa áp cảnh báo lên cluster.)*
 - [ ] Bảo mật tối thiểu đạt checklist ([Vận hành §8](04-van-hanh.md#8-bảo-mật-tối-thiểu)).
-- [ ] VH1, VH2 (gồm ca 1 replica), VH6 đạt ở nhà.
+- [ ] VH1, VH2 (gồm ca 1 replica), VH6 đạt ở nhà. *(24/11: VH1 lấy từ pha `drop` của KB2 trên V2; vòng Git của VH2 chạy trên kind + simulator có Argo CD, ca 1 replica đã đo trên V2; tin Telegram thật kiểm trên kind ([ADR-007](../adr/007-doi-vh1-vh2-f6-n8-khoi-cluster-nha.md)).)*
 - [x] ĐG1-mini xong; có `capacity-home.json`. *(06/11: đo lại với 0,5B bằng runner, 10 mức λ đều hợp lệ: C = 12,5 req/s, B\* = 28,4, threshold A2 tạm 23; chưa đối chiếu với `vllm bench serve` (bước 7). Bản 1,5B giữ ở `capacity-home-1.5b.json`.)* *(05/11: có bản tạm `envs/home/experiments/capacity.json`: C = 6 req/s, B\* ≈ 27, threshold A2 tạm 21. Còn thiếu: quét bước 0,25 quanh λ = 6; lượt λ = 6 bị máy tạo tải đánh dấu không hợp lệ vì 1 chu kỳ CPU throttle.)*
 - [ ] LT1–LT8 có kết quả (dự đoán, số đo, giải thích) trong `docs/nhat-ky/van-hanh.md` ([Môi trường §19](05-moi-truong-danh-gia.md#19-kiểm-chứng-lý-thuyết-lt1lt8)). *(05/11: LT1 (5060), LT2, LT3 có kết quả trong `van-hanh.md`; dữ liệu ĐG1-mini đã có cho LT5, LT6 của Trình; LT1 trên 4050, LT4, LT7, LT8 chưa làm.)* *(16/11: LT7 có kết quả, đo trên simulator. LT5 có kết quả từ dữ liệu nhà (ĐG1-mini 1,5B và 0,5B) và simulator; V2 chưa có.)* *(16/11: LT6 có kết quả từ dữ liệu nhà (ĐG1-mini); phần V2 từ lượt A1 chưa có.)* *(21/11: LT5, LT6 thêm V2. LT5: 27/27 cửa sổ chưa xếp hàng lệch −5,8…+4,9 %, kể cả lúc 4 replica. LT6: util = 1,000 từ 0,57 C, không tách được; dự đoán "A1 × KB1 gần bằng S4" đúng (97–98 % GPU-giây của S4 trong pha `steady`). Còn thiếu: so tổng util theo node với số pod đang có request, trên dữ liệu thô.)* *(16/11: LT8 có kết quả, đo trên simulator: 9/9 lần bơm, x = 0,1 không kêu, x = 0,3 và 0,6 kêu đúng như dự đoán (lệch −11 đến +31 s).)*
 - [x] Máy tạo tải đạt tiêu chí tự kiểm tra; runner chạy 2 lượt **không cần can thiệp** trên V1; `make bootstrap` dựng xong VM dưới 30 phút. *(08/11: runner chạy A1 × KB3, A2 × KB2 liền nhau không can thiệp; tự kiểm đánh dấu cả 2 invalid vì máy tạo tải 2 lõi vượt ngưỡng CPU, Quang chấp nhận sau xem xét (nhật ký tuần 05). Ansible dựng VM 164 s, tới vLLM phục vụ 12,5 phút; cài nền vẫn bằng script tay.)*
 
 ### M3 (22/11): xong đánh giá
-- [ ] `capacity.json` đã chốt (C, B\*, SLO, threshold), có ADR-003 đi kèm.
+- [x] `capacity.json` đã chốt (C, B\*, SLO, threshold), có ADR-003 đi kèm. *(18/11: C = 3,5 req/s, B\* = 46,3, target A2 37 chốt trước ma trận; ADR-003 viết ngày 27/11.)*
 - [ ] Cold start: L0 và L2 đủ số lần hợp lệ.
 - [ ] Ma trận: mọi ô đủ số lượt hợp lệ.
 - [ ] VH1–VH6 có kết quả trên môi trường tương ứng.
@@ -101,7 +101,7 @@ Việc gắn với máy: các bước cài đặt trên PC (driver, k3s server) 
 - [ ] Toàn bộ dữ liệu đã sao lưu, có checksum; instance đã huỷ; chi phí thực tế đã ghi.
 
 ### M4 (29/11): bản thảo
-- [ ] Đủ 6 chương ở lượt 1 (§11.1): mọi mục có mặt, khoảng 60% ngân sách chữ; mọi hình và bảng có chú thích và được dẫn trong bài.
+- [ ] Đủ 6 chương ở lượt 1 (§11.1): mọi mục của dàn ý có bản base; mọi hình và bảng có chú thích và được dẫn trong bài.
 - [ ] Bảng nghiệm thu kèm số liệu cho mọi yêu cầu F1–F7, N1–N8; chỗ chưa có số ghi "chưa đo".
 - [ ] Có mục Hạn chế (5.7, 6.2).
 - [ ] Bản base đã gửi Quang review. Từ 22/11, Trình viết bản base và Quang review sau khi base xong, nên việc review toàn bộ chuyển sang M5.
@@ -118,7 +118,7 @@ Việc gắn với máy: các bước cài đặt trên PC (driver, k3s server) 
 
 ```text
 Thử vLLM trên 5060 (W1) ─► k3s + Argo CD + giám sát ở nhà (W2) ─► A1/A2, graceful shutdown, cảnh báo (W3)
-      ─► rolling update, runbook, runner (W4) ─► V2: toàn bộ đánh giá (14–15/11, dời từ 07–08/11) ─► phân tích (W6) ─► chương 5 (W7)
+      ─► rolling update, runbook, runner (W4) ─► V2: toàn bộ đánh giá (14–15/11, dời từ 07–08/11; thực tế 18–19/11) ─► phân tích (W6) ─► chương 5 (W7)
 Simulator: A2, dashboard, cảnh báo, runner (W1–W4, song song) ──────────────────────┘
 Tìm offer Vast (W1–W2) ─► V0 (17–18/10) ─► chốt cloud (18/10) ─► V1 (31/10–01/11) ─┘
 Viết chương 2–4 (W5–W7) ─► bản thảo (29/11) ─► bản cuối (06/12)
@@ -126,7 +126,7 @@ Viết chương 2–4 (W5–W7) ─► bản thảo (29/11) ─► bản cuối 
 
 - **Đường găng:** cài GPU nhà → nền tảng ở nhà → vận hành thử → V1 → **V2** → phân tích → chương 5 → bản thảo. Gần như không có độ dư; mỗi tuần có điểm dừng ở §2.
 - **Có thời gian đệm:** dashboard, cảnh báo, runner và autoscaling làm trên simulator song song với phần GPU thật.
-- **Phụ thuộc bên ngoài:** có máy 4 × A4000 chế độ VM (≥ 20 vCPU) hoặc dự phòng 4 × 4090 vào cuối tuần 14–15/11 ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C2).
+- **Phụ thuộc bên ngoài:** có máy 4 × A4000 chế độ VM (≥ 20 vCPU) hoặc dự phòng 4 × 4090 vào cuối tuần 14–15/11 ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C2). *(Thực tế 18/11: không có máy A4000, máy 4090 không lên SSH; V2 chạy trên 4 × RTX 4060 Ti.)*
 
 ---
 
@@ -152,9 +152,9 @@ Viết chương 2–4 (W5–W7) ─► bản thảo (29/11) ─► bản cuối 
 
 **Nguyên tắc**
 - Hai người **cùng vai trò** (DevOps/SRE), chia theo **tính năng dọc**. Ai sở hữu tính năng nào thì làm trọn tính năng đó: thiết kế chi tiết, code và manifest, kiểm thử, phần giám sát liên quan, runbook, rồi viết mục luận văn tương ứng (từ 22/11/2026: Trình viết bản base toàn bộ luận văn, người sở hữu tính năng soát mục tương ứng, xem §11.1). Người còn lại review PR (bắt buộc từ W3).
-- Mọi việc trên cluster đều làm được từ xa qua Tailscale (Trình có quyền kubectl và SSH đầy đủ). Chỉ các việc **phải có mặt cạnh máy** do Quang làm: cài OS và driver, khởi động lại khi máy treo, cắm dây. Phần này tốn khoảng 3–5 giờ cho cả dự án, đã tính khi cân giờ.
+- Mọi việc trên cluster đều làm được từ xa qua Tailscale (Trình có quyền kubectl và SSH đầy đủ). *(24/11: Trình chưa có kubeconfig; các việc cần quyền này chuyển sang kind + simulator, [ADR-007](../adr/007-doi-vh1-vh2-f6-n8-khoi-cluster-nha.md).)* Chỉ các việc **phải có mặt cạnh máy** do Quang làm: cài OS và driver, khởi động lại khi máy treo, cắm dây. Phần này tốn khoảng 3–5 giờ cho cả dự án, đã tính khi cân giờ.
 - Cluster nhà chạy **một node là PC**. Từ 06/11, RTX 5060 được chia thành 2 GPU replica (time-slicing) và chạy model 0,5B, nên các bài cần nhiều replica (KB2-mini 1 → 2, VH1, VH2) làm được trên PC; drain node (VH3) làm trên kind nhiều node. Laptop 4050 không còn bắt buộc ([ADR-004 §7](../adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md#7-cập-nhật-sau-ngày-08102026)).
-- **Học chéo:** mỗi người chạy ít nhất một kịch bản VH thuộc phần của người kia. VH5 ở nhà do **Trình** dựng lại cluster theo README, đúng yêu cầu N8 "người thứ hai dựng lại".
+- **Học chéo:** mỗi người chạy ít nhất một kịch bản VH thuộc phần của người kia. VH5 ở nhà do **Trình** dựng lại cluster theo README, đúng yêu cầu N8 "người thứ hai dựng lại". *(24/11: Trình dựng lại cluster kind + simulator thay cho cluster nhà, [ADR-007](../adr/007-doi-vh1-vh2-f6-n8-khoi-cluster-nha.md).)*
 
 **Quang: "chạy được trên GPU"** (hạ tầng → serving → vòng đời pod → đo năng lực)
 
@@ -198,17 +198,18 @@ Phần Trình nhỉnh hơn khoảng 5–6 giờ, bù cho các việc phải có 
 
 Nếu một người chậm, người kia nhận việc theo thứ tự ưu tiên của [§8](#8-dự-phòng-và-cắt-giảm-phạm-vi), không chờ.
 
-**Luận văn:** từ 22/11/2026, Trình viết bản base toàn bộ luận văn, **lấy từ nhật ký làm việc cá nhân** của cả hai người (do AI agent của từng người ghi theo quy tắc trong `AGENTS.md`), thiết kế và dữ liệu đo; Quang review toàn bộ, sửa và cập nhật số. Bảng dưới ghi người sở hữu tính năng của từng mục (số mục theo [§11.1](#111-dàn-ý-luận-văn-5565-trang)); người này soát kỹ sự kiện và số trong mục đó.
+**Luận văn:** từ 22/11/2026, Trình viết bản base toàn bộ luận văn, **lấy từ nhật ký làm việc cá nhân** của cả hai người (do AI agent của từng người ghi theo quy tắc trong `AGENTS.md`), thiết kế và dữ liệu đo; Quang review toàn bộ, sửa và cập nhật số. Bảng dưới ghi người sở hữu tính năng của từng mục (số mục theo [§11.1](#111-dàn-ý-luận-văn)); người này soát kỹ sự kiện và số trong mục đó.
 
 | Chương | Quang | Trình |
 |---|---|---|
+| Mở đầu | Cùng soát (tóm lược mọi chương) | Cùng soát |
 | 1. Giới thiệu | Toàn chương | – |
 | 2. Cơ sở lý thuyết | 2.1, 2.3 | 2.2, 2.4–2.6 |
 | 3. Yêu cầu và thiết kế | 3.2, 3.4, 3.6 (ĐG1, ĐG3, VH1–VH3, VH5) | 3.1, 3.3, 3.5, 3.6 (ĐG2, VH4, VH6, tính hợp lệ) |
 | 4. Triển khai và vận hành | 4.1 (hạ tầng, dựng lại), 4.2, 4.4, 4.5, 4.7 (runner) | 4.1 (GitOps, CI, bí mật, bảo mật), 4.3, 4.6, 4.7 (máy tạo tải, phân tích) |
 | 5. Đánh giá | 5.1, 5.2, 5.4, 5.5 (VH1–VH3, VH5, graceful shutdown), 5.7 | 5.3, 5.5 (VH4, VH6), 5.6, 5.7 |
 | 6. Kết luận | – | Toàn chương |
-| Ghép và định dạng | Slide, video demo | Luận văn (khuôn trường, hình, tài liệu tham khảo) |
+| Ghép và định dạng | Slide, video demo | Luận văn (khuôn T ở [quy tắc viết §1](../luan-van/quy-tac-viet.md#1-khuôn-trình-bày), hình, tài liệu tham khảo) |
 
 ---
 
@@ -265,7 +266,7 @@ Nhờ hợp đồng này, dashboard, cảnh báo, autoscaling và runner đượ
 |---|---|
 | **vLLM không chạy trên RTX 5060** | Laptop 4050 làm node GPU; hoặc thuê 1 GPU cho các bài cần GPU thật; phần còn lại làm trên simulator |
 | **GVHD không đồng ý phạm vi rút gọn** | Đòi ma trận đủ 28 lượt: thêm khoảng 6 giờ máy 4 GPU (~10–15 USD), vẫn trong ngân sách. Đòi demo trực tiếp với GPU: mang PC đi hoặc dùng Tailscale. Đòi lịch 16 tuần: không khả thi với hạn 08/12, cần GVHD và trường xác nhận lại hạn |
-| **Tới 18/10 không có offer Vast đạt tiêu chí** | ~~Chuyển sang GCP~~ (GCP bị từ chối quota 05/11). Đã xử lý 08/11: đổi sang 4 × A4000 và model 3B (ADR-006). Nếu 14/11 cũng không có: 4 × 4090 VM đắt hơn, hoặc máy 2 GPU với N = 2 và viết lại N3 theo N ở ADR-003 |
+| **Tới 18/10 không có offer Vast đạt tiêu chí** | ~~Chuyển sang GCP~~ (GCP bị từ chối quota 05/11). Đã xử lý 08/11: đổi sang 4 × A4000 và model 3B (ADR-006). Nếu 14/11 cũng không có: 4 × 4090 VM đắt hơn, hoặc máy 2 GPU với N = 2 và viết lại N3 theo N ở ADR-003. Đã xảy ra 18/11: không có máy A4000, máy 4090 không lên SSH; dùng 4 × RTX 4060 Ti 16 GB |
 | **Trễ 1 tuần ở M2** | Bỏ các mục Could; nếu V2 vẫn chưa sẵn sàng thì dời V2 sang 14–15/11 (mất phiên dự phòng) |
 | **Runner chưa chạy trọn ở V1** | V2 giảm số lượt lặp của mọi ô (tối thiểu 1 lượt/ô) và bỏ KB3 của S1. **Không bỏ A1 và L0**: đây là đối chứng cho đóng góp 2 và 3 |
 | **V2: sau 3 giờ chạy ma trận mà < 70% lượt hợp lệ** | Dừng runner, sửa, chạy lại phần hỏng trong 15/11 (không còn V3, [ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C9). Hết giờ thì ô đó chỉ có 1 lượt |
@@ -291,12 +292,12 @@ Thứ tự cắt: Could → Should, theo [Thông số §5](00-thong-so.md#5-mứ
 | ID | Nhóm | Rủi ro | Dấu hiệu sớm | K | A | Điểm | Phòng ngừa | Kế hoạch B |
 |---|---|---|---|---|---|---|---|---|
 | R1 | Chi phí | Tiền thuê GPU vượt dự toán | V2 kéo dài quá 24 giờ; nhiều lượt phải chạy lại | 1 | 2 | 2 | Phát triển ở nhà và trên simulator; V0, V1 trước; tín dụng trả trước làm giới hạn cứng; runner tự dừng | Bỏ lượt Could; V3 chỉ chạy phần tối thiểu |
-| R2 | Hạ tầng | Không có máy VM 4 GPU đạt tiêu chí vào đúng cuối tuần V2 (**đã xảy ra** với 4 × 4090: 06/11 không có máy verified vừa giá → đổi sang 4 × A4000, ADR-006) | `make find MODE=v2` sáng 14/11 không có offer A4000 (09/11: không có) | 2 | 3 | **6** | Lọc bằng `vast.sh`; đo máy bằng `make probe`; code tham số hoá theo N | 4 × 4090 VM (~2,5 USD/giờ, trong trần); máy 2 GPU với N = 2; kế hoạch Z |
+| R2 | Hạ tầng | Không có máy VM 4 GPU đạt tiêu chí vào đúng cuối tuần V2 (**đã xảy ra** với 4 × 4090: 06/11 không có máy verified vừa giá → đổi sang 4 × A4000, ADR-006; lại xảy ra 18/11 với A4000 → dùng 4 × RTX 4060 Ti) | `make find MODE=v2` sáng 14/11 không có offer A4000 (09/11: không có) | 2 | 3 | **6** | Lọc bằng `vast.sh`; đo máy bằng `make probe`; code tham số hoá theo N | 4 × 4090 VM (~2,5 USD/giờ, trong trần); máy 2 GPU với N = 2; kế hoạch Z |
 | R3 | Hạ tầng | Thuê nhầm máy container (không chạy được K8s) | Không có systemd | 1 | 2 | 2 | Chỉ lọc máy `vms_enabled=true`; thử ở V0 | Huỷ, thuê máy khác |
 | R4 | Hạ tầng | Máy lỗi hoặc bị thu hồi giữa V2 | Mất kết nối, node NotReady, GPU biến mất | 2 | 2 | 4 | Chỉ thuê on-demand; sao lưu sau mỗi lượt; `progress.json` | Thuê máy Vast khác ngay trong 14–15/11, chạy lại trọn kịch bản hỏng (không còn V3) |
 | R5 | Kỹ thuật | Device plugin hoặc exporter GPU khó chạy trên k3s ở nhà | Tới cuối W2 vẫn chưa thấy `nvidia.com/gpu` | 2 | 2 | 4 | Theo hướng dẫn k3s; chỉ cài device plugin | Simulator cho phần lớn việc; thử GPU trên V0 |
 | R6 | Kỹ thuật | Cold start quá dài làm autoscaling "vô dụng" ở KB2 | L2 vẫn ≥ 3 phút ở V1 | 2 | 1 | 2 | Tối ưu L2; đĩa VM đọc ≥ 1 GB/s | Ghi N2a "không đạt", dùng số đo 8 pha chỉ ra pha chậm; cân nhắc warm pool |
-| R7 | Kỹ thuật | Scale-down hoặc rolling update làm lỗi request | Có lỗi ở test graceful shutdown hoặc VH2 ở nhà | 2 | 2 | 4 | `--shutdown-timeout`, preStop, grace period; bước nâng min = 2 khi cập nhật; kiểm thử từ W3 | Tăng preStop; chủ động gỡ pod khỏi Endpoints trước; ghi vào runbook và đo lại |
+| R7 | Kỹ thuật | Scale-down hoặc rolling update làm lỗi request | Có lỗi ở test graceful shutdown hoặc VH2 | 2 | 2 | 4 | `--shutdown-timeout`, preStop, grace period; bước nâng min = 2 khi cập nhật; kiểm thử từ W3 | Tăng preStop; chủ động gỡ pod khỏi Endpoints trước; ghi vào runbook và đo lại |
 | R8 | Kỹ thuật | Tên, ý nghĩa metric hoặc cờ vLLM thay đổi | Truy vấn trả rỗng; cờ không có trong `--help` | 2 | 1 | 2 | Ghim digest ở W2; kiểm tra `/metrics`, `--help`, danh sách bucket | Cập nhật truy vấn, ghi vào phụ lục |
 | R9 | Đo lường | Máy tạo tải là nút thắt hoặc đo sai | Độ lệch lịch gửi p99 > 50 ms; event loop nghẽn; TTFT lệch với `vllm bench` | 2 | 2 | 4 | Lịch sinh trước; tự kiểm tra phía gửi và phía nhận mọi lượt; đối chiếu công cụ chuẩn | Nhiều tiến trình; loại lượt hỏng |
 | R10 | Đo lường | Kết quả dao động lớn giữa các lượt, khó nghiệm thu | Kiểm tra năng lực giữa phiên lệch > 10%; hai lượt cùng ô chênh nhiều | 2 | 2 | 4 | Cùng một máy; xáo trộn thứ tự; kiểm tra giữa phiên | Thêm lượt cho ô đó trong phần chạy lại; báo cáo đủ mọi lượt |
@@ -327,7 +328,7 @@ Thứ tự cắt: Could → Should, theo [Thông số §5](00-thong-so.md#5-mứ
 - **Kế hoạch B:** thu hẹp chương 5 (bỏ phần phân tích phụ), không đo thêm sau 22/11.
 
 **R2. Không có máy VM 4 GPU đạt tiêu chí vào cuối tuần V2**
-- **Vì sao đáng chú ý:** cả phần đánh giá dồn vào một lần thuê và không còn cuối tuần dự phòng. Đã xảy ra một lần: 06/11 không có máy 4 × 4090 VM verified vừa giá, GCP bị từ chối quota 05/11; nhóm đổi sang 4 × A4000 và model 3B, chạy trọn V0+V1 ngày 08/11 ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md)). Ngày 09/11 lại không thấy offer 4 × A4000 VM.
+- **Vì sao đáng chú ý:** cả phần đánh giá dồn vào một lần thuê và không còn cuối tuần dự phòng. Đã xảy ra một lần: 06/11 không có máy 4 × 4090 VM verified vừa giá, GCP bị từ chối quota 05/11; nhóm đổi sang 4 × A4000 và model 3B, chạy trọn V0+V1 ngày 08/11 ([ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md)). Ngày 09/11 lại không thấy offer 4 × A4000 VM. Ngày V2 (18/11) cũng không có, nhóm dùng 4 × RTX 4060 Ti 16 GB.
 - **Phòng ngừa:** `make find MODE=v2` nhiều lần trước 14/11; nạp tiền sẵn; code và ma trận tham số hoá theo N.
 - **Kế hoạch B:** 4 × 4090 VM (~2,5 USD/giờ, ≈ 55–60 USD cho V2, trong trần); máy 2 GPU với N = 2 (N3 viết lại theo N). **Kế hoạch Z:** chạy ở nhà, chỉ rút kết luận định tính.
 
@@ -448,9 +449,9 @@ dataset/
 
 ## 11. Luận văn, slide và demo
 
-### 11.1. Dàn ý luận văn (55–65 trang)
+### 11.1. Dàn ý luận văn
 
-Bố cục chốt ngày 23/11/2026, thay dàn ý trước đó (lý do ở cuối mục). Khung vẫn theo [ADR-002](../adr/002-chuyen-trong-tam-sang-van-hanh.md) Q1: yêu cầu F/N và bảng nghiệm thu, không dùng câu hỏi nghiên cứu hay giả thuyết. Tổng số trang theo [ADR-004](../adr/004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md) K12. Quy tắc viết và nguồn cho từng mục nằm ở [`docs/luan-van/`](../luan-van/).
+Bố cục chốt ngày 23/11/2026, thay dàn ý trước đó; đề mục và độ dài sửa ngày 24/11/2026 (lý do ở cuối mục). Khung vẫn theo [ADR-002](../adr/002-chuyen-trong-tam-sang-van-hanh.md) Q1: yêu cầu F/N và bảng nghiệm thu, không dùng câu hỏi nghiên cứu hay giả thuyết. Độ dài theo đoạn **Độ dài** dưới bảng. Quy tắc viết và nguồn cho từng mục nằm ở [`docs/luan-van/`](../luan-van/).
 
 **Xương sống.** Bài toán có ba yêu cầu kéo nhau: chất lượng phục vụ, hiệu quả GPU và vận hành được hằng ngày ([Bài toán §6](01-bai-toan-yeu-cau.md#6-phát-biểu-bài-toán)). Đồ án giải bằng năm hướng: **HG1** tín hiệu scale đúng, **HG2** rút ngắn cold start, **HG3** thay đổi an toàn, **HG4** quan sát và phản ứng, **HG5** tái lập. Mỗi hướng đi qua thiết kế (chương 3), triển khai (chương 4), đánh giá (chương 5) và kết luận (chương 6).
 
@@ -467,20 +468,21 @@ Bố cục chốt ngày 23/11/2026, thay dàn ý trước đó (lý do ở cuố
 
 | Chương | Mục | Trang |
 |---|---|---|
-| 1. Giới thiệu | 1.1 Bối cảnh: vì sao vận hành LLM trên GPU khó (các điểm khó chính ở [Bài toán §5](01-bai-toan-yeu-cau.md#5-vì-sao-vận-hành-llm-trên-gpu-khó)) · 1.2 Phát biểu bài toán (Hình 1) · 1.3 Mục tiêu, phạm vi và giả định (bảng bảy mục tiêu đề cương → F/N → mục, theo [Bài toán §9](01-bai-toan-yeu-cau.md#9-đối-chiếu-với-bảy-mục-tiêu-của-đề-cương); giả định G1 "chi phí ≈ GPU-giờ") · 1.4 Phương pháp và tổ chức thực hiện · 1.5 Đóng góp (2–3 số chính, dẫn chéo tới chương 5) · 1.6 Cấu trúc luận văn | 4–5 |
-| 2. Cơ sở lý thuyết và giải pháp liên quan | 2.1 Phục vụ LLM và vLLM (prefill, decode, KV cache, continuous batching, TTFT, TPOT, metric của vLLM) · 2.2 Hàng đợi và năng lực phục vụ (định luật Little, vì sao không chạy GPU sát 100%) · 2.3 GPU trên Kubernetes (device plugin, time-slicing, vì sao GPU utilization bão hoà) · 2.4 Autoscaling trên Kubernetes (HPA, KEDA, fallback) · 2.5 Vận hành theo SLO và GitOps (SLI, SLO, error budget, burn rate, Argo CD, rolling update) · 2.6 Giải pháp liên quan và vị trí của đồ án | 8–10 |
-| 3. Yêu cầu và thiết kế | 3.1 Yêu cầu và chỉ tiêu nghiệm thu (F1–F7, N1–N8; giá trị SLO: TTFT ≤ 2,5 s cho 95% request; truy vết bài toán → yêu cầu; bảng mã định danh) · 3.2 Kiến trúc tổng thể (thành phần; luồng request, luồng autoscaling, luồng thay đổi qua Git; hai môi trường dùng chung manifest) · 3.3 Thiết kế autoscaling (HG1: tín hiệu, threshold từ năng lực, tham số KEDA và HPA, fallback, các cấu hình S1, S4, A1, A2) · 3.4 Thiết kế cold start và thay đổi an toàn (HG2, HG3: mức L0, L2; graceful shutdown cho streaming; rolling update khi hết GPU) · 3.5 Thiết kế giám sát, cảnh báo và xử lý sự cố (HG4: SLI, dashboard, burn rate, runbook, vai trò người trực) · 3.6 Thiết kế đánh giá (ĐG1–ĐG3, VH1–VH6, KB1–KB3; chỉ số theo đề cương: P95, P99, TTFT, TPOT, throughput, GPU-giờ, token/GPU-giờ, GPU utilization; quy tắc so sánh; điều kiện hợp lệ của lượt đo và lý do; cách chấm cảnh báo, định nghĩa page giả; LT1–LT8) | 10–12 |
-| **4. Triển khai và vận hành** | Mỗi mục theo khung sáu bước ([quy tắc viết §2.1](../luan-van/quy-tac-viet.md#21-chương-4-không-được-là-nhật-ký-cài-đặt)). 4.1 Hạ tầng và quy trình triển khai (HG5: Ansible và k3s, Argo CD, CI, bí mật, bảo mật tối thiểu, dựng lại từ máy trắng) · 4.2 Phục vụ vLLM trên GPU · 4.3 Autoscaling (HG1: KEDA, fallback, phát triển trên simulator) · 4.4 Rút ngắn cold start (HG2) · 4.5 Scale-down và cập nhật không rớt request (HG3) · 4.6 Giám sát, cảnh báo, xử lý sự cố và runbook (HG4) · 4.7 Công cụ đánh giá (máy tạo tải, runner, cách runner kiểm tính hợp lệ, phân tích) · Kết chương có bảng "vấn đề riêng của GPU/LLM → cách xử lý ở chương 4 → bằng chứng ở chương 5" ([§9.3](#93-phân-tích-sâu-các-rủi-ro-đáng-chú-ý), [Bài toán §13](01-bai-toan-yeu-cau.md#13-câu-hỏi-hội-đồng-có-thể-đặt-ra)) | **16–20** |
-| 5. Đánh giá | 5.1 Môi trường và điều kiện đo (phiên V2; tính hợp lệ: 17/17 lượt; máy RTX 4060 Ti thay cho A4000; chi phí nếu đã có số) · 5.2 Năng lực một replica (ĐG1; LT1–LT3, ghi điều kiện đo của từng LT) · 5.3 Autoscaling so với cấu hình tĩnh (ĐG2: bảng chỉ số đề cương theo ô, lấy từ `runs.csv`; TĐ1, TĐ2; scale-down viết đầy đủ ở đây, vì VH1 trên máy thuê là pha giảm tải của KB2; LT5–LT7) · 5.4 Cold start (ĐG3; LT4) · 5.5 Kịch bản vận hành (VH1 dẫn chéo 5.3 và nêu thêm ca ở nhà; VH2 kèm ca đối chứng VH2c; VH3; VH4; VH5; VH6; graceful shutdown kèm ca đối chứng grace 5 s; LT8) · 5.6 Tổng hợp: bảng nghiệm thu, bảng kiểm chứng LT1–LT8 (dự đoán, số đo, độ lệch, giải thích), khuyến nghị cấu hình · 5.7 Hạn chế của phép đo | 12–14 |
-| 6. Kết luận và hướng phát triển | 6.1 Kết luận theo TĐ1–TĐ3 · 6.2 Hạn chế của hệ thống và phạm vi (cân bằng tải round-robin, tối đa 4 replica, các phần bảo mật đã lược) · 6.3 Hướng phát triển, chọn theo phát hiện ([§12](#12-hướng-mở-rộng)): E1 định tuyến theo hàng đợi (nguyên nhân của TĐ2), E3 khởi động nhanh và scale-to-zero, E5 autoscaling dự báo, E13 đánh giá mở rộng | 2–3 |
+| Mở đầu (không đánh số) | Dẫn dắt vào vấn đề và việc đề tài làm, ở mức người không chuyên; mô tả ngắn từng chương, thay cho mục "Cấu trúc luận văn" của chương 1 ([quy tắc viết §1](../luan-van/quy-tac-viet.md#1-khuôn-trình-bày)) | 1,5–2 |
+| 1. Giới thiệu | 1.1 Bối cảnh và bài toán (vì sao vận hành LLM trên GPU khó, các điểm chính ở [Bài toán §5](01-bai-toan-yeu-cau.md#5-vì-sao-vận-hành-llm-trên-gpu-khó); ba yêu cầu kéo nhau, Hình 1) · 1.2 Mục tiêu, phạm vi và phương pháp (bảng bảy mục tiêu đề cương → F/N → mục, theo [Bài toán §9](01-bai-toan-yeu-cau.md#9-đối-chiếu-với-bảy-mục-tiêu-của-đề-cương); giả định G1 "chi phí ≈ GPU-giờ"; phương pháp và tổ chức thực hiện) · 1.3 Đóng góp chính (TĐ1–TĐ3, 2–3 số chính, dẫn chéo tới chương 5) | 3–4 |
+| 2. Cơ sở lý thuyết và giải pháp liên quan | 2.1 Phục vụ LLM và vLLM: 2.1.1 Sinh token và bộ nhớ GPU (prefill, decode, KV cache, giới hạn băng thông bộ nhớ) · 2.1.2 vLLM: continuous batching và các chỉ số TTFT, TPOT, metric của vLLM · 2.2 Hàng đợi và năng lực phục vụ (định luật Little, vì sao không chạy GPU sát 100%) · 2.3 GPU trên Kubernetes (device plugin, time-slicing, vì sao GPU utilization bão hoà) · 2.4 Autoscaling trên Kubernetes: 2.4.1 HPA · 2.4.2 KEDA và fallback · 2.5 Vận hành theo SLO và GitOps: 2.5.1 SLO, error budget và burn rate · 2.5.2 Prometheus và Alertmanager · 2.5.3 GitOps với Argo CD, rolling update · 2.6 Giải pháp liên quan và vị trí của đồ án | 10–13 |
+| 3. Yêu cầu và thiết kế | 3.1 Yêu cầu và chỉ tiêu nghiệm thu (F1–F7, N1–N8; giá trị SLO: TTFT ≤ 2,5 s cho 95% request; truy vết bài toán → yêu cầu; bảng mã định danh) · 3.2 Kiến trúc tổng thể: 3.2.1 Thành phần và ba luồng (luồng request, luồng autoscaling, luồng thay đổi qua Git; bảo vệ tối thiểu) · 3.2.2 Hai môi trường dùng chung manifest · 3.3 Thiết kế autoscaling (HG1): 3.3.1 Chọn tín hiệu scale · 3.3.2 Threshold từ năng lực một replica (tham số KEDA và HPA; các cấu hình S1, S4, A1, A2) · 3.3.3 Fallback khi mất tín hiệu · 3.4 Thiết kế cold start và thay đổi an toàn (HG2, HG3): 3.4.1 Rút ngắn cold start (mức L0, L2) · 3.4.2 Tắt pod và cập nhật không rớt request (graceful shutdown cho streaming; rolling update khi hết GPU) · 3.5 Thiết kế giám sát và cảnh báo (HG4): 3.5.1 SLI và cảnh báo theo burn rate (gồm dashboard) · 3.5.2 Định tuyến cảnh báo, runbook và người trực · 3.6 Thiết kế đánh giá: 3.6.1 Tải và kịch bản tải (KB1–KB3) · 3.6.2 Phép đo, chỉ số và quy tắc so sánh (ĐG1–ĐG3; chỉ số theo đề cương: P95, P99, TTFT, TPOT, throughput, GPU-giờ, token/GPU-giờ, GPU utilization; điều kiện hợp lệ của lượt đo và lý do) · 3.6.3 Kịch bản vận hành và cách chấm cảnh báo (VH1–VH6; định nghĩa page giả; LT1–LT8) | 13–15 |
+| **4. Triển khai và vận hành** | Mỗi mục theo khung sáu bước ([quy tắc viết §2.1](../luan-van/quy-tac-viet.md#21-chương-4-không-được-là-nhật-ký-cài-đặt)); sáu bước là thứ tự các đoạn, không đặt thành tiêu đề. 4.1 Hạ tầng và quy trình triển khai (HG5): 4.1.1 Dựng cluster bằng Ansible và k3s · 4.1.2 GitOps với Argo CD và CI · 4.1.3 Bí mật, bảo vệ tối thiểu và dựng lại từ máy trắng · 4.2 Phục vụ vLLM trên GPU · 4.3 Autoscaling (HG1): 4.3.1 Đưa tải đồng thời của vLLM vào HPA qua KEDA · 4.3.2 Thử autoscaling và fallback trên simulator trước khi thuê GPU · 4.4 Rút ngắn cold start (HG2) · 4.5 Scale-down và cập nhật không rớt request (HG3) · 4.6 Giám sát, cảnh báo và runbook (HG4): 4.6.1 Thu thập metric và dashboard · 4.6.2 Quy tắc cảnh báo, unit test và gửi Telegram · 4.6.3 Runbook và xử lý sự cố · 4.7 Công cụ đánh giá: 4.7.1 Máy tạo tải và runner · 4.7.2 Kiểm tính hợp lệ và phân tích số liệu · Kết chương có bảng "vấn đề riêng của GPU/LLM → cách xử lý ở chương 4 → bằng chứng ở chương 5" ([§9.3](#93-phân-tích-sâu-các-rủi-ro-đáng-chú-ý), [Bài toán §13](01-bai-toan-yeu-cau.md#13-câu-hỏi-hội-đồng-có-thể-đặt-ra)) | **19–22** |
+| 5. Đánh giá | 5.1 Môi trường và điều kiện đo (phiên V2; tính hợp lệ: 17/17 lượt; máy RTX 4060 Ti thay cho A4000; chi phí nếu đã có số) · 5.2 Năng lực một replica (ĐG1; LT1–LT3, ghi điều kiện đo của từng LT) · 5.3 Autoscaling so với cấu hình tĩnh (ĐG2: bảng chỉ số đề cương theo ô, lấy từ `runs.csv`; LT5–LT7): 5.3.1 Tải đồng thời so với GPU utilization làm tín hiệu (TĐ1) · 5.3.2 Tải ổn định: tiết kiệm GPU-giờ mà vẫn đạt SLO (TĐ2) · 5.3.3 Tải tăng đột ngột: vì sao SLO chỉ đạt khoảng 80% (TĐ2) · 5.4 Cold start (ĐG3; LT4) · 5.5 Kịch bản vận hành (TĐ3; LT8): 5.5.1 Scale-down và cập nhật không rớt request (N4: pha giảm tải của KB2, thay cho VH1 ở nhà theo ADR-007; VH2 kèm ca đối chứng VH2c; graceful shutdown kèm ca đối chứng grace 5 s) · 5.5.2 Tự phục hồi và dựng lại (N6: VH3, VH4, VH5) · 5.5.3 Cảnh báo kịp thời, không báo giả (N7: VH6) · 5.6 Tổng hợp: bảng nghiệm thu, bảng kiểm chứng LT1–LT8 (dự đoán, số đo, độ lệch, giải thích), khuyến nghị cấu hình · 5.7 Hạn chế của phép đo | 14–17 |
+| 6. Kết luận và hướng phát triển | 6.1 Kết luận theo TĐ1–TĐ3 · 6.2 Hạn chế của hệ thống và phạm vi (cân bằng tải round-robin, tối đa 4 replica, các phần bảo mật đã lược) · 6.3 Hướng phát triển, chọn theo phát hiện ([§12](#12-hướng-mở-rộng)): E1 định tuyến theo hàng đợi (nguyên nhân của TĐ2), E3 khởi động nhanh và scale-to-zero, E5 autoscaling dự báo, E13 đánh giá mở rộng | 3 |
 
-Chương 2–5 kết bằng mục "Kết chương" (một đoạn).
+Chương 2–5 kết bằng mục "Kết chương" (một đoạn). Tiểu mục cấp 3 trong bảng là dự kiến: chỉ giữ khi mục cấp 2 đạt khoảng 2 trang (khoảng 1.000 chữ) và mỗi tiểu mục đạt khoảng 1 trang (khoảng 500 chữ) ([quy tắc viết §2](../luan-van/quy-tac-viet.md#2-mỗi-chương-nói-gì)); không đạt thì viết thành đoạn.
 
-**Phần đầu:** bìa, nhiệm vụ đồ án · Lời cam đoan (có khai báo dùng công cụ AI, [quy tắc viết §9](../luan-van/quy-tac-viet.md#9-dùng-ai-agent-khi-viết)) · Lời cảm ơn · Tóm tắt, *Abstract* (viết sau cùng, có 2–3 kết quả kèm số) · Mục lục · Danh mục hình, bảng · Danh mục chữ viết tắt, mã định danh và thuật ngữ (lấy từ [Kiến thức nền §7](02-kien-thuc-nen.md#7-bảng-thuật-ngữ)).
+**Phần đầu** (theo hai đồ án mẫu của khoa, chỗ khác mẫu và lý do ở [quy tắc viết §1](../luan-van/quy-tac-viet.md#1-khuôn-trình-bày)): bìa chính, bìa phụ · Lời cảm ơn · hai trang nhận xét, đánh giá, cho điểm (người hướng dẫn, giảng viên phản biện) · Mục lục · Danh mục thuật ngữ, chữ viết tắt và mã định danh (lấy từ [Kiến thức nền §7](02-kien-thuc-nen.md#7-bảng-thuật-ngữ)) · Danh mục hình vẽ, bảng biểu.
 
 **Phần cuối:** Tài liệu tham khảo · Phụ lục A. Manifest chính (Deployment vLLM, ScaledObject A2) · B. Quy tắc cảnh báo và unit test · C. Runbook mẫu · D. Bảng phiên bản · E. Số liệu từng lượt (ĐG2, ĐG3, VH, kèm bảng chi tiết như thời gian từ vi phạm tới page) · F. Kế hoạch và phân công.
 
-**Cân đối.** Cộng các khoảng trang của sáu chương được 52–64 trang, nên muốn đạt tối thiểu 55 trang theo K12 thì phần lớn chương phải viết ở nửa trên của khoảng. Tính trên ba chương 3–5, chương 3 và 4 chiếm khoảng 70%, chương 5 khoảng 30%. Ngân sách chương 5 (khoảng 300 chữ văn xuôi mỗi trang, chưa hiệu chỉnh trên khuôn của trường): 5.1 ≈ 1,5 trang · 5.2 ≈ 1,5 · 5.3 ≈ 3 · 5.4 ≈ 1,5 · 5.5 ≈ 3 (mỗi VH khoảng nửa trang) · 5.6 ≈ 2 · 5.7 ≈ 1. Nếu vẫn vượt sau khi rút gọn thì nâng chương 5 lên 14–16 trang và rút chương 2 còn 7–8 trang.
+**Độ dài** (thay đoạn "Cân đối" và ADR-004 K12 từ 24/11/2026). Độ dài của mỗi mục do phần nội dung lõi của nó quyết định, không theo ngân sách trang. Mục mang một thông điệp TĐ1–TĐ3 hoặc một hướng giải HG1–HG5 được trình bày đủ lý do và bằng chứng. Phần ngoại vi (thủ tục cài đặt, danh sách cấu hình, số của từng lượt) viết ngắn hoặc đưa xuống phụ lục. Cột "Trang" là khoảng định hướng để soát, đo bằng Word theo khuôn T ở [quy tắc viết §1](../luan-van/quy-tac-viet.md#1-khuôn-trình-bày) (A4, Times New Roman 13 pt, giãn dòng 1,15). Cộng các khoảng của chương 1–6 được 62–74 trang, nên định hướng chung là **60–75 trang thân bài, trần 85**; Mở đầu (1,5–2 trang) không tính vào thân bài. Trước ngày 24/11/2026 các khoảng này đo theo khuôn B (14 pt, giãn 1,5 dòng) bằng Typst và cộng được 73–89 trang, định hướng 70–90, trần 100; sau khi có hai đồ án mẫu của khoa thì đổi sang khuôn T, mỗi khoảng nhân khoảng 0,85 rồi làm tròn, nội dung không đổi. Căn cứ: [ĐH Khoa học Tự nhiên TP.HCM](https://www.ctda.hcmus.edu.vn/wp-content/uploads/2022/06/CTTT_Quy-dinh-trinh-bay-KLTN-1.pdf) quy định 50–100 trang; Trường ĐH Công nghệ Thông tin và Truyền thông quy định 60–80 trang, không kể phụ lục ([bản hướng dẫn của một khoa](https://docs.google.com/document/d/159wNzTsl6HJAaL6fCSIgnl015no7umNc/export?format=pdf), đăng trên Google Docs); [Khoa CNTT, ĐH Kinh tế Quốc dân](https://fit.neu.edu.vn/post/mot-so-quy-dinh-viet-bao-cao-khoa-luan) quy định tối thiểu 50 trang. Chưa tìm thấy quy định công khai của PTIT, nên con số cuối cùng theo GVHD hoặc khoa. Hai đồ án mẫu của khoa dài 74 và 113 trang thân bài, trong đó 42 và 65 trang là chương phân tích và thiết kế, chủ yếu là sơ đồ và đặc tả use case. Khuôn ảnh hưởng nhiều tới số trang ([quy tắc viết §1](../luan-van/quy-tac-viet.md#1-khuôn-trình-bày)), nên phần ngoại vi được đặt ở cuối mục hoặc ở phụ lục ngay từ đầu, để cắt nhanh nếu trường đặt trần thấp hơn.
 
 **Truy vết yêu cầu → mục:**
 
@@ -495,17 +497,17 @@ Chương 2–5 kết bằng mục "Kết chương" (một đoạn).
 | F7 bảo vệ tối thiểu | 3.2 | 4.1 | 5.6 |
 | N1 chất lượng, N3 hiệu quả GPU | 3.3 | 4.3 | 5.3 |
 | N2 phản ứng (gồm cold start) | 3.3, 3.4 | 4.3, 4.4 | 5.3, 5.4 |
-| N4 0 lỗi khi scale-down và cập nhật | 3.4 | 4.5 | 5.3 (scale-down), 5.5 (VH2) |
+| N4 0 lỗi khi scale-down và cập nhật | 3.4 | 4.5 | 5.5 (scale-down, VH2) |
 | N5 cold start | 3.4 | 4.4 | 5.4 |
 | N6 tự phục hồi và dựng lại | 3.3 (fallback), 3.5 | 4.1 (dựng lại), 4.3 (fallback), 4.6 (sự cố) | 5.5 (VH3, VH4, VH5) |
 | N7 cảnh báo kịp, không báo giả | 3.5, 3.6 | 4.6 | 5.5 (VH6) |
 | N8 tái lập và chi phí | 3.2 | 4.1 | 5.1, 5.5 (VH5) |
-| Bảy mục tiêu của đề cương | 1.3 (bảng ánh xạ) | – | 5.6 |
+| Bảy mục tiêu của đề cương | 1.2 (bảng ánh xạ) | – | 5.6 |
 | Chỉ số của đề cương | 3.6 | 4.7 | 5.3 (bảng chỉ số), Phụ lục E |
 
 Ranh giới để không viết trùng một nội dung ở hai mục: [quy tắc viết §8](../luan-van/quy-tac-viet.md#8-phối-hợp-giữa-hai-người).
 
-**Người viết và lộ trình.** Từ 22/11/2026, Trình viết bản base toàn bộ luận văn; khi base xong, Quang review, sửa và cập nhật số. Người sở hữu tính năng soát kỹ mục tương ứng (bảng ở [§5.1](#51-phân-công)). Lượt 1 (tới mốc M4, 29/11) đưa mọi mục tới khoảng 60% ngân sách chữ, theo thứ tự chương 3 → 4 → 5 → 2 → 1 → 6 → tóm tắt; lượt 2 đào sâu theo góp ý. Tới bước định dạng (W9), bản gốc là Markdown trong `docs/luan-van/`; góp ý qua review PR hoặc comment trên file `.docx` ghép thử.
+**Người viết và lộ trình.** Từ 22/11/2026, Trình viết bản base toàn bộ luận văn; khi base xong, Quang review, sửa và cập nhật số. Người sở hữu tính năng soát kỹ mục tương ứng (bảng ở [§5.1](#51-phân-công)). Lượt 1 (tới mốc M4, 29/11) đưa mọi mục của dàn ý tới bản base, theo thứ tự chương 3 → 4 → 5 → 2 → 1 → 6 → Mở đầu, trong đó chương 2 viết song song với chương 4. Phần lõi đã cắt khỏi chương 3, 5 trước ngày 24/11 được khôi phục theo đề mục mới, tới trước hạn nộp. Lượt 2 đào sâu theo góp ý. Mỗi chương ghép thành một PR để người đọc đọc trọn chương. Tới bước định dạng (W9), bản gốc là Markdown trong `docs/luan-van/`; góp ý qua review PR hoặc comment trên file `.docx` ghép thử.
 
 **Lý do các thay đổi chính so với dàn ý trước:**
 - Thêm xương sống TĐ1–TĐ3 và HG1–HG5 xuyên chương 3–6, để luận văn có một mạch thay vì một chuỗi thành phần rời rạc.
@@ -514,6 +516,10 @@ Ranh giới để không viết trùng một nội dung ở hai mục: [quy tắ
 - Chương 4 gom 11 mục còn 7, để mỗi mục đủ dày cho khung sáu bước (rủi ro R21, §9.3).
 - Chương 5 thêm 2 trang và mục 5.7; LT1–LT8 đặt ở mục có khẳng định tương ứng và được tổng hợp ở 5.6; giữ đủ các ca đối chứng (§8).
 - Chương 6 viết theo TĐ1–TĐ3; hướng phát triển chọn theo phát hiện, không theo thứ tự xếp hạng ở §12.1.
+- Ngân sách tính theo trang, gồm cả bảng và hình, thay cho ước tính 300 chữ mỗi trang (bổ sung 23/11). Dàn trang thử bốn bản nháp đầu tiên của chương 3 (3.1, 3.3, 3.5, 3.6): 6.609 chữ văn xuôi và 17 bảng chiếm 22–29 trang, gấp 2,75–3,6 lần ngân sách 8 trang của bốn mục này, và đã vượt 10–12 trang của cả sáu mục. Văn xuôi chiếm 13–16 trang, bảng chiếm 9–13 trang.
+- Bổ sung 24/11: bỏ ngân sách trang của từng mục, thay bằng khoảng định hướng theo chương (đoạn **Độ dài**). Đo các bản base viết theo ngân sách cũ: phần lớn tiểu mục cấp 3 chỉ có 55–300 chữ (⅛–⅔ trang), vì mỗi mục 2 trang bị chia ba tiểu mục; thông điệp TĐ1 ở chương 5 chỉ còn 110 chữ, ở tiểu mục cuối của 5.3; nhiều phần lý do và giải thích bị cắt (5.3 từ 3.500 còn 830 chữ). Đề mục theo quy tắc mới ở [quy tắc viết §2](../luan-van/quy-tac-viet.md#2-mỗi-chương-nói-gì): chương 1 gộp 6 mục còn 4 (còn 3 sau khi mục 1.4 chuyển sang Mở đầu, ý cuối của danh sách này); chương 4 bỏ tiêu đề theo bước của khung; 5.3 đưa TĐ1 lên đầu; 5.5 gom 7 tiểu mục theo mã VH thành 3 tiểu mục theo chỉ tiêu N4, N6, N7, và scale-down chuyển từ 5.3 sang 5.5.1.
+- Bổ sung 24/11 (khuôn T): GVHD gửi hai đồ án tốt nghiệp mẫu của khoa. Nhóm chọn khuôn T từ hai mẫu ([quy tắc viết §1](../luan-van/quy-tac-viet.md#1-khuôn-trình-bày)) và đo lại bằng Word: cùng nội dung, khuôn T bằng khoảng 0,85 trang khuôn B cũ, nên cột "Trang" và đoạn **Độ dài** đổi sang khuôn T; phần đầu quyển theo hai mẫu, giữ Lời cam đoan và Tóm tắt (hai mẫu không có), bỏ *Abstract* và nhiệm vụ đồ án. Lời cam đoan và Tóm tắt bị bỏ sau đó (ý ngay dưới).
+- Bổ sung 24/11 (Mở đầu): thêm phần Mở đầu không đánh số, theo mẫu tiếng Việt, để dẫn dắt người đọc trước chương 1 và mô tả nhanh từng chương. Mục "Cấu trúc luận văn" chuyển từ chương 1 sang Mở đầu nên nội dung không lặp; chương 1 còn 3–4 trang. Bỏ trang Lời cam đoan và trang Tóm tắt như hai mẫu: Mở đầu đã dẫn dắt, còn kết quả chính kèm số nằm ở mục 1.3. Luận văn không có đoạn khai báo dùng công cụ AI, trừ khi GVHD hoặc khoa yêu cầu ([quy tắc viết §9](../luan-van/quy-tac-viet.md#9-dùng-ai-agent-khi-viết)).
 
 **Danh mục hình đề xuất cho luận văn:** Hình 1–17 của bộ tài liệu này (thay bản minh hoạ bằng số liệu thật ở Hình 5 và 15), cộng các biểu đồ kết quả C1–C6, ảnh chụp dashboard và một tin nhắn cảnh báo thật.
 

@@ -1,0 +1,53 @@
+<!-- Mục đích: mục 3.1 của luận văn (Yêu cầu và chỉ tiêu nghiệm thu): yêu cầu chức năng F1–F7 và chỉ tiêu N1–N8 trong một bảng, giá trị SLO, lý do của các ngưỡng. Người viết: Trình. Quy ước: docs/luan-van/README.md, docs/luan-van/quy-tac-viet.md. Cắt ngày 24/11 về 1,5 trang (D94); 25/11 khôi phục phần lõi (D118, D119): sáu việc nền tảng phải làm, lý do TPOT 100 ms, lý do giữ một ngưỡng TTFT, lý do không áp 95% cho KB2. Các ý còn để chỗ khác ghi ở docs/luan-van/nguon-tu-lieu.md dòng 3.1 -->
+<!-- Thông điệp: (1) Ba yêu cầu kéo nhau của bài toán được tách thành 7 yêu cầu chức năng và 8 chỉ tiêu nghiệm thu; mỗi cái có phép thử và mức ưu tiên, phần lớn chỉ tiêu có ngưỡng, nên chương 5 chủ yếu đối chiếu số đo với ngưỡng. (2) SLO: TTFT ≤ 2,5 s, TPOT ≤ 100 ms, 95% request đạt; cảnh báo và nghiệm thu dùng cùng một ngưỡng TTFT. (3) Các ngưỡng chính có lý do: mức 95% theo thông lệ dịch vụ nội bộ, ngưỡng thời gian và tài nguyên tính từ đặc điểm của nền tảng (cold start, tải tăng đột ngột); mọi ngưỡng được đặt trước phiên đo chính. -->
+<!-- Soát số: chưa · Soát văn phong: chưa · Người viết đọc lại: chưa -->
+## 3.1. Yêu cầu và chỉ tiêu nghiệm thu
+
+Bài toán ở mục 1.1 gồm ba yêu cầu kéo nhau: chất lượng phục vụ, hiệu quả GPU và vận hành được hằng ngày. Phát biểu đó chưa đo được trực tiếp. Nhóm tách nó thành bảy yêu cầu chức năng và tám chỉ tiêu nghiệm thu (Bảng 3.1), mỗi cái có một phép thử định trước và một mức ưu tiên. Phần lớn chỉ tiêu có ngưỡng đặt từ trước, nhờ đó chương 5 nghiệm thu bằng cách đối chiếu số đo với ngưỡng.
+
+Để giải bài toán, nền tảng phải làm được sáu việc. Cột "Việc" của Bảng 3.1 ghi mỗi yêu cầu phục vụ việc nào:
+
+1. phục vụ được qua API chuẩn;
+2. tự điều chỉnh số replica theo tải, giữ SLO với ít GPU-giờ;
+3. có pod mới sẵn sàng nhanh;
+4. scale-down và cập nhật phiên bản mà không cắt request đang stream;
+5. biết khi nào có vấn đề và phải làm gì;
+6. dựng lại được từ đầu một cách an toàn, với chi phí biết trước.
+<!-- nguồn: docs/chi-tiet/01-bai-toan-yeu-cau.md §8 (sơ đồ "Bài toán vận hành LLM tự host" tách thành sáu nhánh, mỗi nhánh ứng với F/N); docs/chi-tiet/06-ke-hoach-quan-ly.md §11.1 (bảng "Truy vết yêu cầu → mục"); bản base commit fbe651b (mục 3.1.1, Bảng 3.1 truy vết). Cột "Việc" thay cho bảng truy vết của bản base; cột thiết kế, triển khai, đánh giá của bảng đó ở Kế hoạch §11.1 -->
+
+Việc 3 và 4 là điểm khó riêng của LLM so với một web service thông thường, và là chủ đề của mục 3.4. Phép thử thuộc một trong ba loại: kiểm thử chức năng, kịch bản vận hành và phép đo trên VM thuê (mục 3.6). Mức Must là điều kiện đủ để bảo vệ, mức Should làm đồ án tốt hơn. Khi chậm tiến độ, nhóm cắt từ mức thấp nhất trở lên. Các mã khác (S, A, L, KB, ĐG, VH), ký hiệu C, N và khái niệm page giả được định nghĩa ở mục 3.3–3.6 và gom ở danh mục mã định danh đầu quyển.
+<!-- nguồn: docs/chi-tiet/01-bai-toan-yeu-cau.md §6 (ba yêu cầu kéo nhau), §8 (sơ đồ tách bài toán thành sáu nhánh, mỗi nhánh ứng với F/N; cách kiểm chứng: bài kiểm thử ở nhà hoặc simulator, VH1–VH6, ĐG1–ĐG3 trên GPU thuê); docs/chi-tiet/06-ke-hoach-quan-ly.md §11.1 (bảng "Truy vết yêu cầu → mục": F/N ứng với mục thiết kế); bản base của mục này, commit fbe651b (mục 3.1.1); docs/chi-tiet/00-thong-so.md §3 (F1–F7), §4 (N1–N8), §5 (Must = đủ điều kiện bảo vệ, Should = đồ án tốt, Could = xuất sắc; cắt từ dưới lên); docs/luan-van/quy-tac-viet.md §4 (mã định danh vào danh mục chữ viết tắt), §1 (phần đầu có danh mục mã định danh). Đã cắt khỏi thân bài (lượt cắt 24/11): ma trận truy vết từng mã tới mục thiết kế, triển khai, đánh giá (docs/chi-tiet/01-bai-toan-yeu-cau.md §10, docs/chi-tiet/06-ke-hoach-quan-ly.md §11.1); bảng mã định danh đầy đủ, chuyển sang danh mục ở phần đầu quyển (xem docs/luan-van/nguon-tu-lieu.md dòng 3.1) -->
+
+**Bảng 3.1.** Yêu cầu chức năng và chỉ tiêu nghiệm thu
+
+| Mã | Nội dung | Phép thử | Mức | Việc |
+|---|---|---|---|---|
+| F1 | API chuẩn OpenAI, streaming, model 3–8B | ĐG1–ĐG3 | Must | 1 |
+| F2 | Tự điều chỉnh số replica trong [1, N] theo tải | Kiểm thử, ĐG2 | Must | 2 |
+| F3 | Triển khai, cập nhật, rollback qua Git | VH2 | Must | 4 |
+| F4 | Dựng lại từ máy trắng bằng vài lệnh `make` | VH5 | Must | 6 |
+| F5 | Ba dashboard: phục vụ và GPU, autoscaling, SLO và chi phí (Should) | Ảnh chụp | Must | 5 |
+| F6 | Sáu cảnh báo tới Telegram, có runbook | VH6 | Must | 5 |
+| F7 | API key, API không mở ra Internet | Rà soát | Should | 6 |
+| N1 | A2: SLO attainment ≥ 95% ở pha ổn định của KB1, pha duy trì của KB3 | ĐG2 | Must | 2 |
+| N2a | KB2, L2: replica mới đầu tiên Ready ≤ 2 phút từ lúc tải tăng | ĐG2 | Must | 2 |
+| N2b | KB2: thời gian hồi phục SLO, chỉ báo cáo | ĐG2 | Should | 2 |
+| N3 | KB1: A2 ≤ 50% GPU-giờ của S4, SLO attainment kém S4 ≤ 5 điểm phần trăm | ĐG2 | Should | 2 |
+| N4 | 0 request lỗi khi scale-down và cập nhật, kể cả khi chỉ có 1 replica | ĐG2, VH1, VH2 | Must | 4 |
+| N5 | Cold start ở mức L2 ≤ 50% của L0 | ĐG3 | Should | 3 |
+| N6 | Tự thay pod hỏng; mất Prometheus thì về số replica tối đa trong ≤ 30 s; dựng lại ≤ 30 phút | VH3–VH5 | Must | 6 |
+| N7 | Cảnh báo SLO ≤ 5 phút sau vi phạm; 0 page giả | VH6 | Should | 5 |
+| N8 | Ghim phiên bản; người khác dựng lại < 1 giờ; thuê GPU ≤ 150 USD | VH5, chi phí | Should | 6 |
+<!-- nguồn: docs/chi-tiet/00-thong-so.md §3 (F1–F7, cột "Cách kiểm chứng"; F2 kiểm bằng bài kiểm thử T1–T7 trên simulator và máy nhà, và ĐG2; F7 sửa 12/11; F7 đã thu hẹp trước V2: lược rate limit, NetworkPolicy thường trực, Sealed Secrets, xem ADR-006 §3.1, nêu ở mục 6.2; F3/VH2 kiểm ở cluster nhà vì VM thuê không chạy Argo CD, xem 05-moi-truong-danh-gia.md §13, nêu ở mục 3.6), §4 (N1–N8, cột "Đo bằng" và "Mức"; N1 chỉ tính pha ổn định của KB1 (steady [2, 12] ở §7, mô tả ở mục 3.6) và pha duy trì của KB3, ở KB2 chỉ báo cáo; N3 ở KB2 chỉ báo cáo mức tiết kiệm và cái giá về SLO; N4 gồm ca chỉ có 1 replica, phần scale-down đo ở pha giảm của KB2 và VH1; N6: fallback = số replica tối đa khi mất Prometheus, VM trắng = VM Ubuntu có sẵn driver NVIDIA, chưa có image, model hay cluster; N7: vi phạm thật là S1 × KB3, page giả xét khi A2 chạy KB1 và KB3; N8: người thứ hai dựng lại cluster nhà hoặc kind với simulator), §5 (dashboard chi phí ở mức Should). Định nghĩa page giả và cách chấm cảnh báo: mục 3.6 -->
+
+Một request đạt SLO khi TTFT ≤ 2,5 s, TPOT ≤ 100 ms và không lỗi. Lỗi gồm lỗi HTTP, chờ quá 120 s, và stream bị cắt trước khi trả `usage`. Ngưỡng TPOT cho ít nhất 10 token/s, nhanh hơn tốc độ đọc của người dùng. Mục tiêu là 95% request đạt SLO, nên ngân sách lỗi là 5%. Mức này phổ biến cho dịch vụ nội bộ.
+<!-- nguồn: docs/chi-tiet/00-thong-so.md §6 (request đạt SLO: TTFT, TPOT, không lỗi; lỗi gồm lỗi HTTP, timeout, stream bị cắt không có usage; TPOT ≤ 100 ms tương đương ít nhất 10 token/s, nhanh hơn tốc độ đọc; 95%, ngân sách lỗi 5%), §4 (95% phổ biến cho dịch vụ nội bộ), §7 (timeout 120 s, stream_options.include_usage=true) -->
+
+Bản thiết kế đầu đặt ngưỡng TTFT 2 s cho nghiệm thu, trong khi quy tắc cảnh báo dùng biên bucket 2,5 s. Hai ngưỡng lệch nhau sẽ cho hai kết luận khác nhau về cùng một khoảng thời gian: cảnh báo im lặng trong khi chỉ tiêu đã trượt. Nhóm vì vậy giữ một ngưỡng 2,5 s cho cả cảnh báo (mục 3.5) và nghiệm thu. Ngưỡng này trùng một biên bucket có thật của histogram TTFT trong bản vLLM đã ghim, nhờ đó quy tắc cảnh báo tính được trực tiếp từ histogram.
+<!-- nguồn: docs/chi-tiet/00-thong-so.md §6 (TTFT ≤ 2,5 s trùng bucket le="2.5" của v0.31.0, đã kiểm 23/10; TPOT ≤ 100 ms tương đương ít nhất 10 token/s, nhanh hơn tốc độ đọc; lỗi gồm lỗi HTTP, timeout, stream bị cắt không có usage; 95%, ngân sách lỗi 5%), §7 (timeout 120 s); docs/adr/005-sua-thiet-ke-sau-review.md T3 (ngưỡng TTFT 2 s trong khi recording rule dùng bucket 2,5; chốt một ngưỡng cho cả N7 lẫn N1; "cảnh báo im lặng trong khi chỉ tiêu đã trượt" là hệ quả khi ngưỡng nghiệm thu chặt hơn ngưỡng cảnh báo); common/observability/rules/slo.yaml (le="2.5"). Đã cắt: mục tiêu 99% request không trả 5xx đo ở Traefik, không có số trong các lượt đánh giá vì runner gọi thẳng Service của vLLM (00-thong-so.md §6, §7 sửa 21/11); docs/chi-tiet/00-thong-so.md §4 (mục "Vì sao chọn các ngưỡng này": 95% phổ biến cho dịch vụ nội bộ), §7 (KB1 steady [2, 12]) -->
+
+Các ngưỡng chất lượng chỉ áp cho phần tải mà một hệ thống có cold start đáp ứng được. Nhóm không áp mức 95% cho KB2, nơi tải tăng gấp 6 lần trong 30 giây, vì khi đó hệ thống nào có cold start cũng vi phạm SLO trong vài phút. Với KB3, chỉ pha duy trì được tính, vì trong pha tăng dần pod đang chạy chắc chắn quá tải lúc chờ replica mới. Thời gian hồi phục SLO (N2b) chỉ được báo cáo. Request đã dồn trong hàng đợi của pod cũ không chuyển được sang pod mới, nên thời gian này phụ thuộc nhiều vào mức quá tải trước đó, và mức dự kiến 5 phút không được dùng để chấm đạt hay không.
+<!-- nguồn: docs/chi-tiet/00-thong-so.md §4 (mục "Vì sao chọn các ngưỡng này": không áp cho KB2 vì tải tăng gấp 6 lần trong 30 giây, hệ thống nào có cold start cũng vi phạm vài phút; KB3 chỉ tính sustain vì pha ramp pod đầu chắc chắn quá tải; N2b chỉ báo cáo vì request dồn ở pod cũ không chuyển sang pod mới, ngưỡng dự kiến ≤ 5 phút là tạm), §7 (KB2 từ 0,5 lên 3,0 trong [4; 4,5]); bản base commit fbe651b (mục 3.1.4) -->
+
+Các ngưỡng thời gian và tài nguyên tính từ đặc điểm của nền tảng. Ngưỡng 2 phút của N2a là cold start L2 dự kiến 0,5–1,5 phút cộng khoảng 10 giây phát hiện tải. Ngưỡng 50% của N3 dựa trên việc ở 0,5 C chỉ cần 1 trong 4 GPU (25%), phần chênh chừa cho thời gian giữ GPU lúc khởi động và chờ ổn định. Mọi ngưỡng được đặt trước phiên đo chính và giữ nguyên sau đó; chỉ tiêu không đạt được báo cáo kèm nguyên nhân (chương 5).
+<!-- nguồn: docs/chi-tiet/00-thong-so.md §4 (mục "Vì sao chọn các ngưỡng này": 2 phút = cold start L2 0,5–1,5 phút cộng khoảng 10 giây; 50% vì ở 0,5C chỉ cần 1 trong 4 GPU, chừa chỗ cho thời gian giữ GPU lúc khởi động và chờ ổn định), §1 (không chỉnh sau khi đã thấy kết quả); git log -L của docs/chi-tiet/00-thong-so.md (các dòng N1–N8, TPOT, mục tiêu 95% không đổi từ commit 8dde92c ngày 08/10; dòng TTFT chỉ đổi phần ghi chú ở acfa7c8 ngày 10/11, giá trị 2,5 s giữ nguyên); docs/nhat-ky/van-hanh.md mục 18/11 và 19/11 (phiên V2 chạy 18–19/11). Ghi chú: 00-thong-so.md vẫn gắn nhãn "tạm" cho TTFT 2,5 s và N2b, chờ ADR-003 (chưa viết); các giá trị tạm được dùng nguyên trong V2. Đã cắt: lý do ngưỡng 30 phút dựng lại (đặt khi còn dự kiến model 7B, khoảng 15 GB; model 3B khoảng 6 GB nên giữ nguyên ngưỡng): 00-thong-so.md §4, ADR-006 §1 và C3, docs/chi-tiet/02-kien-thuc-nen.md §1.5 -->

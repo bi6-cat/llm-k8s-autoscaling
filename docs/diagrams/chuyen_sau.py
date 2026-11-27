@@ -1,4 +1,5 @@
-"""Sơ đồ bổ sung cho các tài liệu chuyên sâu trong docs/chi-tiet/ (Hình 10–17).
+"""Sơ đồ bổ sung cho các tài liệu chuyên sâu trong docs/chi-tiet/ (Hình 10–17), và bản riêng cho luận văn
+của Hình 10 (10-do-tre-theo-muc-tai-luan-van.svg, dùng làm Hình 2.2 ở docs/luan-van/).
 
 Được gọi từ build_diagrams.py; dùng chung lớp Svg và bảng màu.
 """
@@ -19,6 +20,15 @@ def _dec(v):
 # ======================================================================
 # Hình 10 — Độ trễ theo mức tải (đầu gối của đường cong hàng đợi)
 # ======================================================================
+# Tham số minh hoạ dùng chung cho Hình 10 và bản luận văn: μ (req/s), C (req/s, nơi TTFT chạm 2,5 s)
+# và đường cong T ≈ T₀ + k·ρ/(1 − ρ) với T₀ = 0,3 s, k = 0,35 s.
+KNEE_MU, KNEE_C = 2.4, 2.07
+
+
+def knee_ttft(l):
+    return 0.3 + 0.35 * (l / KNEE_MU) / (1 - l / KNEE_MU)
+
+
 def fig_knee():
     W, H = 1100, 450
     s = Svg(W, H, "TTFT theo tốc độ request trên một replica: tăng chậm khi tải thấp, tăng vọt khi gần thông lượng "
@@ -27,10 +37,10 @@ def fig_knee():
              "TTFT p95 theo tốc độ request trên 1 replica — mô hình hàng đợi minh hoạ: T ≈ T₀ + k·ρ/(1 − ρ), với ρ = λ/μ")
     x0, top, pw, ph = 96, 110, 900, 240
     y1 = top + ph
-    lmax, ymax, mu, C = 3.0, 8.0, 2.4, 2.07
+    lmax, ymax, mu, C = 3.0, 8.0, KNEE_MU, KNEE_C
     X = lambda l: x0 + l / lmax * pw
     Y = lambda v: y1 - v / ymax * ph
-    ttft = lambda l: 0.3 + 0.35 * (l / mu) / (1 - l / mu)
+    ttft = knee_ttft
 
     s.rect(X(C), top, X(mu) - X(C), ph, fill=WARN, stroke=None, rx=0, opacity=0.16)
     s.rect(X(mu), top, X(lmax) - X(mu), ph, fill=CRIT, stroke=None, rx=0, opacity=0.12)
@@ -71,6 +81,60 @@ def fig_knee():
     s.text(x0, 418, "ρ = 0,5 → TTFT ≈ 0,65 s   ·   ρ = 0,8 → ≈ 1,7 s   ·   ρ = 0,9 → ≈ 3,5 s   "
                     "(tăng ρ từ 0,8 lên 0,9 làm TTFT gấp đôi)", size=12, fill=INK2)
     s.save("10-do-tre-theo-muc-tai.svg")
+
+
+def fig_knee_thesis():
+    """Hình 2.2 của luận văn: cùng đường cong và ba vùng như Hình 10, nhưng
+    - không tiêu đề trong hình (chú thích nằm dưới hình, theo quy-tac-viet §6);
+    - không số trên trục, trên C, μ và đường ngưỡng, không lưới: chương 2 chỉ nêu khái niệm, chưa nói SLO
+      hay số đo của đồ án, mà giữ trục số thì vẫn đọc được ngưỡng 2,5 s;
+    - nhãn vùng nói "ngưỡng" thay cho "SLO", vì mục 2.2 đứng trước chỗ định nghĩa SLO (mục 2.5);
+    - khổ hẹp hơn, chữ to hơn, để còn đọc được khi thu về bề rộng trang A4."""
+    W, H = 760, 392
+    s = Svg(W, H, "TTFT theo tốc độ request trên một replica: tăng chậm khi tải thấp, tăng vọt khi gần thông lượng "
+                  "tối đa μ; C là tốc độ lớn nhất mà TTFT còn dưới ngưỡng")
+    x0, top, pw, ph = 70, 56, 640, 280
+    y1 = top + ph
+    lmax, ymax = 3.0, 8.0
+    X = lambda l: x0 + l / lmax * pw
+    Y = lambda v: y1 - v / ymax * ph
+
+    s.rect(X(KNEE_C), top, X(KNEE_MU) - X(KNEE_C), ph, fill=WARN, stroke=None, rx=0, opacity=0.16)
+    s.rect(X(KNEE_MU), top, X(lmax) - X(KNEE_MU), ph, fill=CRIT, stroke=None, rx=0, opacity=0.12)
+    s.text(x0 + pw, y1 + 30, "tốc độ request đến λ (req/s)", size=15, fill=INK2, anchor="end")
+    s.text(x0, top - 16, "TTFT (s)", size=15, fill=INK2)
+
+    pts = []
+    l = 0.0
+    while l < KNEE_MU:
+        v = knee_ttft(l)
+        if v > ymax:
+            break
+        pts.append((X(l), Y(v)))
+        l += 0.005
+    s.polyline(pts, BLUE, sw=3)
+    s.arrow([pts[-1], (pts[-1][0] + 2, top + 2)], BLUE, sw=3, r=0)
+    s.line(x0, y1, x0 + pw, y1, stroke=AXIS, sw=1.4)
+    s.line(x0, top, x0, y1, stroke=AXIS, sw=1.4)
+
+    s.line(x0, Y(2.5), x0 + pw, Y(2.5), stroke=INK2, sw=1.5, dash="7 5")
+    s.label(x0 + 10, Y(2.5) - 7, "ngưỡng TTFT", size=14, anchor="start", fill=INK)
+    for lv, lab in ((KNEE_C, "C"), (KNEE_MU, "μ")):
+        s.line(X(lv), top, X(lv), y1, stroke=INK, sw=1.4, dash="4 4")
+        s.text(X(lv), top - 16, lab, size=16, weight=650, anchor="middle")
+    s.text(X(0.95), Y(7.0), "dưới ngưỡng", size=15, weight=650, anchor="middle")
+    s.text(X(0.95), Y(7.0) + 21, "vùng vận hành an toàn", size=14, fill=INK2, anchor="middle")
+    xm = (X(KNEE_C) + X(KNEE_MU)) / 2
+    s.text(xm, Y(1.6), "vượt", size=14, weight=650, anchor="middle")
+    s.text(xm, Y(1.6) + 19, "ngưỡng", size=14, weight=650, anchor="middle")
+    xr = (X(KNEE_MU) + X(lmax)) / 2
+    s.text(xr, Y(7.0), "quá tải", size=15, weight=650, anchor="middle")
+    s.text(xr, Y(7.0) + 21, "hàng đợi", size=14, fill=INK2, anchor="middle")
+    s.text(xr, Y(7.0) + 40, "tăng mãi", size=14, fill=INK2, anchor="middle")
+    s.text(X(0.2), Y(4.7), "đầu gối: thêm một chút tải", size=14, fill=INK)
+    s.text(X(0.2), Y(4.7) + 20, "→ độ trễ tăng mạnh", size=14, fill=INK)
+    s.arrow([(X(1.3), Y(3.85)), (X(1.78), Y(1.45))], INK2, sw=1.5, r=0)
+    s.save("10-do-tre-theo-muc-tai-luan-van.svg")
 
 
 # ======================================================================
@@ -455,63 +519,74 @@ def fig_rolling_update():
 
 
 # ======================================================================
-# Hình 17 — Quy trình một đợt đánh giá trên GPU thuê
+# Hình 17 — Quy trình phiên đánh giá chính V2 (như đã chạy 18–19/11)
 # ======================================================================
 def fig_eval_pipeline():
-    W, H = 1240, 620
-    s = Svg(W, H, "Quy trình phiên đánh giá chính: thuê và dựng từ máy trắng, triển khai, đo năng lực, vòng lặp 17 lượt, "
-                  "cold start và kịch bản vận hành, sao lưu, huỷ máy và phân tích")
-    s.header("Quy trình tự động của phiên đánh giá chính trên GPU thuê",
-             "Một lần thuê liền ~20–22 giờ; mọi bước chạy bằng script để dựng lại được và rút ngắn thời gian thuê GPU")
+    W, H = 1240, 650
+    s = Svg(W, H, "Quy trình phiên đánh giá chính V2 trên VM thuê: thuê và kiểm máy, dựng từ máy trắng không có "
+                  "Argo CD, đo năng lực, vòng lặp 17 lượt, kịch bản vận hành và cold start, kéo dữ liệu về rồi "
+                  "tắt máy, phân tích")
+    s.header("Quy trình phiên đánh giá chính trên GPU thuê (V2)",
+             "Một lần thuê VM 4 GPU; mọi bước chạy bằng lệnh make hoặc script; máy tạo tải là pod trong cluster "
+             "trên chính VM")
     xs = [32, 448, 864]
-    row1 = [(1, "Thuê máy & dựng từ đầu", ["vastai: thuê VM 4 GPU, burn-in rút gọn", "Ansible + Argo CD; đo thời gian (VH5)"]),
-            (2, "Triển khai nền tảng", ["Argo CD sync: giám sát, cảnh báo,", "KEDA, vLLM; tắt auto-sync autoscaling"]),
-            (3, "Đo năng lực", ["quét tốc độ → tìm C của 1 replica", "chốt SLO, target A1, A2 (ADR-003)"])]
+    row1 = [(1, "Thuê và kiểm máy", ["thuê VM 4 GPU trên Vast.ai;",
+                                     "make probe: phần cứng, ổ, mạng → giữ máy"]),
+            (2, "Dựng từ máy trắng", ["make bootstrap: k3s, GPU, tải sẵn model, image;",
+                                            "make cloud-platform: Helm, không Argo CD"]),
+            (3, "ĐG1: đo năng lực", ["5 mức λ, 1 replica, 300 s mỗi mức; runner trên PC;",
+                                    "capacity.py → C, B*, threshold A2"])]
     for i, (n, t, ls) in enumerate(row1):
         s.step_box(xs[i], 86, 344, 100, n, t, ls, INK2)
     s.arrow([(376, 136), (448, 136)], INK2, sw=1.8)
     s.arrow([(792, 136), (864, 136)], INK2, sw=1.8)
     s.arrow([(1036, 186), (1036, 234)], INK2, sw=1.8)
 
-    s.rect(32, 234, 1176, 216, fill=GRAY_T, stroke=AXIS, rx=14)
+    s.rect(32, 234, 1176, 236, fill=GRAY_T, stroke=AXIS, rx=14)
     s.add(f'<circle cx="56" cy="259" r="12" fill="{INK2}"/>')
     s.text(56, 263.5, "4", size=12.5, weight=700, fill=WHITE, anchor="middle")
-    s.rich(76, 264, [("Vòng lặp đánh giá autoscaling", 650, INK),
-                     ("  4 cấu hình × 3 kịch bản, 1–3 lượt mỗi ô = 17 lượt · runner (Python), chạy qua đêm", 400, INK2)],
+    s.rich(76, 264, [("ĐG2: vòng lặp 17 lượt", 650, INK),
+                     (("  11 ô (S1, S4, A1, A2 × KB1–KB3, bỏ S1 × KB1), 1–3 lượt mỗi ô, thứ tự xáo trộn "
+                       "· runner (Python) trong tmux trên VM"), 400, INK2)],
            size=13.5)
-    steps = [("a", "Áp cấu hình", ["S1, S4 hoặc", "ScaledObject A1/A2"]),
-             ("b", "Reset", ["về 1 replica,", "chờ hệ thống ổn định"]),
-             ("c", "Warm-up", ["2 phút tải nhẹ", "(không tính kết quả)"]),
-             ("d", "Chạy kịch bản", ["λ(t) theo KB1–KB3,", "log từng request"]),
-             ("e", "Thu thập", ["CSV, Prometheus,", "sự kiện pod, cảnh báo"]),
-             ("f", "Cooldown", ["chờ scale-down,", "kiểm tra dữ liệu"])]
+    steps = [("a", "Áp cấu hình", ["S1, S4: đặt số replica;", "A1, A2: ScaledObject", "tạm dừng ở 1 replica"]),
+             ("b", "Reset", ["1 pod Ready (S4: 4 pod),", "hàng đợi trống,", "chờ thêm 60 s"]),
+             ("c", "Warm-up", ["0,3C trong 2 phút", "(không tính kết quả)"]),
+             ("d", "Chạy kịch bản", ["bỏ tạm dừng;", "λ(t) theo KB1–KB3,", "log từng request"]),
+             ("e", "Thu thập", ["CSV, Prometheus,", "log vLLM, sự kiện pod,", "cảnh báo (ALERTS)"]),
+             ("f", "Cooldown", ["chờ còn 1 replica", "(tối đa 10 phút)"])]
     for i, (k, t, ls) in enumerate(steps):
         bx = 52 + i * 194
-        s.rect(bx, 286, 172, 96, fill=WHITE, stroke=AXIS, rx=10)
+        s.rect(bx, 286, 172, 110, fill=WHITE, stroke=AXIS, rx=10)
         s.text(bx + 14, 310, f"{k}. {t}", size=13.5, weight=650)
         for j, ln in enumerate(ls):
             s.text(bx + 14, 334 + j * 18, ln, size=11.5, fill=INK2)
         if i < 5:
-            s.arrow([(bx + 172, 334), (bx + 194, 334)], INK2, sw=1.6)
-    s.arrow([(1108, 382), (1108, 424), (138, 424), (138, 382)], INK2, sw=1.6, dash="5 4")
-    s.label(623, 428, "lượt tiếp theo", bg=GRAY_T, fill=INK)
-    s.arrow([(1036, 450), (1036, 494)], INK2, sw=1.8)
+            s.arrow([(bx + 172, 341), (bx + 194, 341)], INK2, sw=1.6)
+    s.arrow([(1108, 396), (1108, 428), (138, 428), (138, 396)], INK2, sw=1.6, dash="5 4")
+    s.label(623, 432, "lượt tiếp theo", bg=GRAY_T, fill=INK)
+    s.text(52, 458, "VH1 (pha drop của KB2) và VH6 (cảnh báo so với log client) được ghi trong chính các lượt; "
+                    "PC kéo runs/ của VM về mỗi 30 phút", size=11.5, fill=INK2)
+    s.arrow([(1036, 470), (1036, 514)], INK2, sw=1.8)
 
-    row3 = [(864, 5, "Cold start & vận hành", ["L0/L2; rolling update, xoá pod,", "chặn Prometheus, kiểm tra cảnh báo"]),
-            (448, 6, "Sao lưu, huỷ máy, phân tích", ["đẩy dữ liệu lên R2; huỷ instance;", "pandas: bảng và biểu đồ"])]
+    row3 = [(864, 5, "Vận hành và cold start", ["VH2–VH4 dưới tải 0,5C (vh.py);",
+                                                 "ĐG3: L2 × 3, L0 × 2 (dg3.sh)"]),
+            (448, 6, "Kéo dữ liệu, tắt máy", ["rsync runs/ về PC, khớp sha256 mọi file;",
+                                              "poweroff VM, xoá instance"])]
     for bx, n, t, ls in row3:
-        s.step_box(bx, 494, 344, 100, n, t, ls, INK2)
-    s.arrow([(864, 544), (792, 544)], INK2, sw=1.8)
-    s.rect(32, 494, 344, 100, fill=SURFACE, stroke=INK2, dash="5 4", rx=10)
-    s.text(48, 524, "Kết quả", size=13.5, weight=650)
-    s.text(48, 550, "bảng nghiệm thu N1–N8,", size=11.5, fill=INK2)
-    s.text(48, 567.5, "khuyến nghị cấu hình vận hành", size=11.5, fill=INK2)
-    s.arrow([(448, 544), (376, 544)], INK2, sw=1.8)
+        s.step_box(bx, 514, 344, 100, n, t, ls, INK2)
+    s.arrow([(864, 564), (792, 564)], INK2, sw=1.8)
+    s.rect(32, 514, 344, 100, fill=SURFACE, stroke=INK2, dash="5 4", rx=10)
+    s.text(48, 544, "Phân tích trên PC", size=13.5, weight=650)
+    s.text(48, 570, "build_tables: bảng và biểu đồ chương 5;", size=11.5, fill=INK2)
+    s.text(48, 587.5, "bảng nghiệm thu N1–N8", size=11.5, fill=INK2)
+    s.arrow([(448, 564), (376, 564)], INK2, sw=1.8)
     s.save("17-quy-trinh-danh-gia.svg")
 
 
 def build_all():
     fig_knee()
+    fig_knee_thesis()
     fig_batching()
     fig_coldstart_detail()
     fig_shutdown()
