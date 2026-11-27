@@ -133,3 +133,17 @@
 - **Results:** `/code-review high` trên diff: 5 điểm nhỏ (§3.5 và §9 nói khác nhau về chỗ ghi việc dùng AI; quy tắc "kết quả cụ thể có số" của Tóm tắt chưa chuyển sang mục 1.3; §1 chưa ghi chỗ đặt đoạn khai báo nếu được yêu cầu; "khuôn T" ở §5.1 chưa có link; thiếu dòng Thesis), đã sửa cả 5.
 - **Links:** `docs/luan-van/quy-tac-viet.md` (§1, §3.5, §9); `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§5.1, §11.1).
 - **Thesis:** phần đầu quyển (không có Tóm tắt, không có Lời cam đoan); Mở đầu; mục 1.3 Đóng góp.
+
+## 2026-11-27 – Phụ lục A–C: manifest chính, quy tắc cảnh báo, runbook mẫu
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  - Viết `docs/luan-van/phu-luc/a-manifest-chinh.md`: trích Deployment vLLM, overlay VM thuê, ScaledObject A2, Application gốc của Argo CD, bảng tám Application con; mỗi đoạn ghi đường dẫn file và commit.
+  - Viết `b-quy-tac-canh-bao.md`: quy tắc ghi `llm:ttft_bad_ratio:rate5m`, bảng bảy cảnh báo (mức, `for`, điều kiện), quy tắc `LLMSLOBurnFast` đầy đủ, unit test đầu tiên của nó kèm cách đọc bốn thời điểm kiểm.
+  - Viết `c-runbook-mau.md`: runbook `LLMSLOBurnFast`, bỏ dẫn chiếu tới tài liệu thiết kế.
+  - Thêm dòng `phu-luc/` vào bảng tổ chức file của `docs/luan-van/README.md`.
+- **Decision:** Trình chọn mỗi phụ lục một file trong `phu-luc/`, đánh số theo chữ (A.1, Bảng A.1, Đoạn mã A.1), và ghi commit cạnh mỗi trích đoạn vì phụ lục không thuộc thân bài. Phụ lục A thêm Application gốc vì mục 4.1 dẫn tới nó. Lệnh pandoc trong README để phần 2 sửa, vì PR phần đầu quyển đang sửa cùng dòng.
+- **Results:** kiem_van còn 1 điểm (đường dẫn `docs/runbooks/` ở Phụ lục C, giữ vì đó là chỗ người đọc tìm runbook); lychee 0 lỗi; pandoc ghép ba file không cảnh báo; `make alerts-test SHELL=bash` đạt (9 test case, 4 + 5 + 7 quy tắc).
+- **Deviations:** threshold trong file ScaledObject là 24 (giá trị tạm), phiên V2 dùng 37 do runner ghi đè từ `matrix-v2.yaml`; Phụ lục A ghi rõ điều này.
+- **Links:** `docs/luan-van/phu-luc/a-manifest-chinh.md`, `b-quy-tac-canh-bao.md`, `c-runbook-mau.md`; `docs/luan-van/README.md`.
+- **Thesis:** Phụ lục A–C; dẫn từ mục 3.5, 4.1, 4.3, 4.6.
