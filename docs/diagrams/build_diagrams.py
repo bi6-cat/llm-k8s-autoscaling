@@ -331,24 +331,24 @@ def fig_architecture():
 
     # namespace llm-serving
     s.group(442, 138, 730, 318, "namespace: llm-serving", fill=BLUE_T, stroke="#c9dcf3")
-    s.box(462, 172, 150, 56, "Lưu model", ["hostPath: NVMe (cloud)", "ổ cục bộ (nhà)"], tsize=12.5, lsize=10.5)
-    s.box(462, 269, 150, 64, "Service vllm", ["ClusterIP · chia tải"])
-    s.box(462, 352, 150, 72, "Máy tạo tải", ["pod, lõi CPU riêng", "gọi thẳng Service"])
+    s.box(462, 172, 140, 56, "Lưu model", ["hostPath: NVMe (cloud)", "ổ cục bộ (nhà)"], tsize=12.5, lsize=10.5)
+    s.box(462, 269, 140, 64, "Service vllm", ["ClusterIP · chia tải"])
+    s.box(462, 352, 140, 72, "Máy tạo tải", ["pod, gọi thẳng Service", "lõi CPU riêng (cloud)"])
 
-    s.rect(632, 168, 520, 252, fill=ORANGE_T, stroke=ORANGE, sw=1.4, dash="6 4", rx=12)
-    s.rich(648, 190, [("Deployment vllm", 650, INK), ("  replicas 1…N (N = số GPU)", 400, INK2)], size=12.5)
+    s.rect(642, 168, 510, 252, fill=ORANGE_T, stroke=ORANGE, sw=1.4, dash="6 4", rx=12)
+    s.rich(658, 190, [("Deployment vllm", 650, INK), ("  replicas 1…N (N = số GPU)", 400, INK2)], size=12.5)
     pods = [("vLLM pod 1", "Ready", "API key · :8000 · /metrics"),
             ("vLLM pod 2", "Ready", "API key · :8000 · /metrics"),
             ("vLLM pod N", "Đang khởi động", "chưa nhận traffic tới khi Ready")]
     for k, (name, st, sub) in enumerate(pods):
         py = 204 + k * 70
-        s.rect(648, py, 360, 58, fill=WHITE, stroke=AXIS if k < 2 else INK2, dash=None if k < 2 else "5 4", rx=9)
-        s.text(662, py + 24, name, size=13.5, weight=650)
+        s.rect(658, py, 350, 58, fill=WHITE, stroke=AXIS if k < 2 else INK2, dash=None if k < 2 else "5 4", rx=9)
+        s.text(672, py + 24, name, size=13.5, weight=650)
         if k < 2:
-            s.status_pill(662 + text_width(name, 13.5, 650) + 10, py + 10, st, GOOD, GREEN_T)
+            s.status_pill(672 + text_width(name, 13.5, 650) + 10, py + 10, st, GOOD, GREEN_T)
         else:
-            s.status_pill(662 + text_width(name, 13.5, 650) + 10, py + 10, st, WARN, YELLOW_T)
-        s.text(662, py + 45, sub, size=11.5, fill=INK2)
+            s.status_pill(672 + text_width(name, 13.5, 650) + 10, py + 10, st, WARN, YELLOW_T)
+        s.text(672, py + 45, sub, size=11.5, fill=INK2)
         s.line(1008, py + 29, 1024, py + 29, stroke=GREEN, sw=1.5)
         s.gpu_chip(1024, py + 10, 100, 38, f"GPU {k if k < 2 else 'N'}")
 
@@ -375,13 +375,13 @@ def fig_architecture():
     # luồng request: người dùng qua Traefik; máy tạo tải gọi thẳng Service
     s.arrow([(208, 301), (267, 301)], BLUE, sw=2.2)
     s.arrow([(407, 301), (462, 301)], BLUE, sw=2.2)
-    s.arrow([(537, 352), (537, 333)], BLUE, sw=2.2)
-    s.arrow([(612, 301), (630, 301), (630, 233), (648, 233)], BLUE, sw=2.2, r=6)
-    s.arrow([(612, 301), (648, 301)], BLUE, sw=2.2)
-    s.arrow([(612, 301), (630, 301), (630, 373), (648, 373)], BLUE, sw=2.2, dash="6 5", r=6)
+    s.arrow([(532, 352), (532, 333)], BLUE, sw=2.2)
+    s.arrow([(602, 301), (624, 301), (624, 233), (658, 233)], BLUE, sw=2.2, r=6)
+    s.arrow([(602, 301), (658, 301)], BLUE, sw=2.2)
+    s.arrow([(602, 301), (624, 301), (624, 373), (658, 373)], BLUE, sw=2.2, dash="6 5", r=6)
     # nạp image / model
-    s.arrow([(1224, 150), (622, 150), (622, 186), (612, 186)], INK2, sw=1.5, dash="3 4", r=6)
-    s.arrow([(612, 212), (632, 212)], INK2, sw=1.5, dash="3 4")
+    s.arrow([(1224, 150), (614, 150), (614, 186), (602, 186)], INK2, sw=1.5, dash="3 4", r=6)
+    s.arrow([(602, 212), (642, 212)], INK2, sw=1.5, dash="3 4")
     s.arrow([(1224, 371), (1152, 371)], INK2, sw=1.5, dash="3 4")
     # metric
     s.arrow([(675, 420), (675, 532)], VIOLET, sw=1.6, dash="5 4")
@@ -396,7 +396,7 @@ def fig_architecture():
     # GitOps: Argo CD kéo manifest từ Git rồi áp vào cluster (VM thuê dùng make cloud-platform)
     s.arrow([(1224, 557), (1158, 557)], MAGENTA, sw=2)
     s.arrow([(1140, 532), (1140, 456)], MAGENTA, sw=2)
-    s.label(1132, 486, "áp manifest", anchor="end", bg="#fbfbfa")
+    s.label(1132, 486, "áp manifest cho mọi namespace", anchor="end", bg="#fbfbfa")
     s.save("02-kien-truc-tong-the.svg")
 
 

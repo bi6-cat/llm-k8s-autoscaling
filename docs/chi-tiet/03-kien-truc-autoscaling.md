@@ -47,7 +47,7 @@
 
 | Namespace | Thành phần | Ghi chú |
 |---|---|---|
-| `llm-serving` | Deployment `vllm`, Service, PodMonitor, ScaledObject | Workload chính |
+| `llm-serving` | Deployment `vllm`, Service, PodMonitor, ScaledObject; Job máy tạo tải (runner tạo khi đánh giá) | Workload chính |
 | `keda` | KEDA operator, metrics API server, admission webhook | Helm chart `kedacore/keda` |
 | `monitoring` | Prometheus Operator, Prometheus, **Alertmanager**, Grafana, kube-state-metrics, node-exporter | Helm chart `kube-prometheus-stack` |
 | `gpu` | Device plugin, exporter GPU | Helm chart của NVIDIA |
@@ -110,7 +110,7 @@ Manifest thật nằm trong repo, mỗi dòng có comment giải thích: [common
 | Đóng model vào image | Image chứa luôn weights | Một artifact duy nhất | Image khoảng 25 GB, pull rất lâu | Không khuyến nghị |
 | Stream từ object storage | `--load-format runai_streamer` | Không cần ổ cục bộ | Phụ thuộc băng thông object storage | Hướng mở rộng |
 
-**Khuyến nghị:** ở nhà, dùng `hostPath` `/var/lib/llm-cache` trên **từng node** (chứa cả model lẫn compile cache). Không dùng PVC `local-path`, vì PVC này chỉ gắn được vào một node: pod vLLM thứ hai chạy trên laptop sẽ bị Pending. Trên VM thuê (một node), dùng L2: `hostPath` `/mnt/nvme/cache` trên ổ NVMe, và một Job `model-prefetch` (W4) tải model vào đó trước khi scale. Đồ án chỉ đo L0 và L2, vì trên một máy thuê không có ổ mạng tương đương để đo L1 một cách thực tế.
+**Khuyến nghị:** ở nhà, dùng `hostPath` `/var/lib/llm-cache` trên **từng node** (chứa cả model lẫn compile cache). Không dùng PVC `local-path`, vì PVC này chỉ gắn được vào một node: pod vLLM thứ hai chạy trên laptop sẽ bị Pending. Trên VM thuê (một node), dùng L2: `hostPath` `/mnt/nvme/cache` trên ổ NVMe, và role Ansible `cloud-prefetch` tải model vào đó trước khi scale (thiết kế ban đầu dùng Job `model-prefetch`, §4). Đồ án chỉ đo L0 và L2, vì trên một máy thuê không có ổ mạng tương đương để đo L1 một cách thực tế.
 
 ### 3.4. Service và cân bằng tải
 
