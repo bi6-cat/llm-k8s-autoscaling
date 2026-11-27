@@ -42,7 +42,7 @@ Hình E.1 đặt từng lượt lên mặt phẳng GPU-giờ và SLO attainment,
 
 ## E.2. Phản ứng của A2 khi tải tăng đột ngột
 
-Bảng E.2 tách thời gian phản ứng của A2 ở ba lượt KB2 thành hai phần. Phần phát hiện tính từ lúc tải tăng theo lịch tới khi pod mới đầu tiên được tạo, gồm thời gian KEDA đọc metric và HPA tính số replica. Phần còn lại tính từ lúc tạo pod tới khi pod mới đầu tiên Ready.
+Bảng E.2 tách thời gian phản ứng của A2 ở ba lượt KB2 thành hai phần. Phần phát hiện tính từ lúc tải tăng theo lịch tới khi pod mới đầu tiên được tạo, gồm thời gian KEDA đọc metric, HPA tính số replica và cửa sổ ổn định. Phần còn lại tính từ lúc tạo pod tới khi pod mới đầu tiên Ready.
 <!-- nguồn: analysis/metrics.py reaction() (detect_s: t_rise → pod mới đầu tiên được tạo; react_s: t_rise → pod mới đầu tiên Ready; create_to_ready_s = react_s − detect_s; mốc tạo pod theo API server, chính xác tới 1 s) -->
 
 **Bảng E.2.** Thời gian phản ứng của A2 × KB2 (s)
@@ -77,8 +77,8 @@ Cả 7 page đều kêu khi tỷ lệ request xấu đã vượt 20%, nên khôn
 
 ## E.4. Cold start (ĐG3)
 
-Bảng E.4 ghi thời gian từng pha của 5 lượt cold start, chia theo 8 pha như Bảng 5.4a. Ba lượt đầu dừng sớm do lỗi của script đo và được đo lại, nên không có trong bảng.
-<!-- nguồn: comment đầu 05-04-cold-start.md (số từng lượt, chính xác tới 0,1 s); runs/v2-vm/dg3-v2-4060ti/ (5 thư mục hợp lệ, 3 thư mục *-failed-wait-count-bug) -->
+Bảng E.4 ghi thời gian từng pha của 5 lượt cold start, chia theo 8 pha như Bảng 5.4a. Lần chạy đầu của L2-1, L2-3 và L0-1 dừng sớm do lỗi của script đo nên được đo lại; bảng ghi lần đo lại.
+<!-- nguồn: comment đầu 05-04-cold-start.md (số từng lượt, chính xác tới 0,1 s); runs/v2-vm/dg3-v2-4060ti/ (5 thư mục hợp lệ, 3 thư mục *-failed-wait-count-bug của lần chạy đầu L2-1, L2-3, L0-1; nhật ký Quang tuần 07 mục 19/11) -->
 
 **Bảng E.4.** Thời gian từng pha cold start của từng lượt (s). Thứ tự đo thực tế: L2-2, L0-2, L2-1, L2-3, L0-1.
 
@@ -99,16 +99,16 @@ Bảng E.4 ghi thời gian từng pha của 5 lượt cold start, chia theo 8 ph
 ## E.5. Các kịch bản vận hành
 
 Bảng E.5 ghi các lượt kịch bản vận hành chạy trên V2, mỗi kịch bản một lượt, cùng tải không đổi 1,75 req/s. Số request và lỗi tính trên cả lượt tải, nên các lượt dài ngắn khác nhau có số request khác nhau.
-<!-- nguồn: runs/v2-vm/ops-*-20261118-*/summary.json (load.requests, load.errors), timeline.json (load_started rate 1.75 ở vh2c, vh3-kill, vh4); comment 05-05 (load/loadgen.json duration_s 1200 cho vh2a, 2400 cho vh2b, 780 cho vh3-delete) -->
+<!-- nguồn: runs/v2-vm/ops-*-20261118-*/summary.json (load.requests, load.errors), load/loadgen.json (rate_rps 1.75 ở cả 6 lượt); comment 05-05 (load/loadgen.json duration_s 1200 cho vh2a, 2400 cho vh2b, 780 cho vh3-delete) -->
 
 **Bảng E.5.** Kết quả các kịch bản vận hành trên V2
 
 | Kịch bản | Thao tác | Request / lỗi | Thời gian | Ghi chú |
 |---|---|---|---|---|
-| VH2a | Rolling update, 1 replica | 2.077 / 0 | Hoàn tất sau 141,4 s | |
+| VH2a | Rolling update, từ 1 replica | 2.077 / 0 | Hoàn tất sau 141,4 s | Nâng tối thiểu lên 2 replica và chờ đủ 2 pod Ready trước khi cập nhật |
 | VH2b | Rolling update, 4 replica trên 4 GPU | 4.229 / 0 | Hoàn tất sau 371,6 s | Pod mới phải chờ pod cũ nhả GPU |
 | VH2c | Rolling update với maxSurge 1 khi hết GPU | 2.077 / 0 | Kẹt sau 300,5 s | 1 pod Pending; trả maxSurge về 0 thì hoàn tất sau 379,1 s |
 | VH3, xoá pod | Xoá 1 trong 2 pod | 1.351 / 0 | Pod thay thế Ready sau 67,4 s | |
 | VH3, kill | `kill -9` tiến trình vLLM trong container | 1.041 / 129 | Container Ready lại sau 67,4 s | 70 lỗi kết nối, 47 timeout kết nối, 11 lỗi stream, 1 lỗi HTTP |
 | VH4 | Chặn KEDA tới Prometheus 301 s | 1.263 / 0 | Fallback sau 16,8 s | Lên 4 replica; thoát fallback trong không quá 5,3 s sau khi gỡ chặn |
-<!-- nguồn: ops-vh2a-20261118-164653/summary.json (2077 / 0, rollout_s 141,39, replicas_before 1); ops-vh2b-20261118-170715/summary.json (4229 / 0, rollout_s 371,55), timeline.json (all_gpus_filling replicas 4); ops-vh2c-20261118-174729/summary.json (2077 / 0, rollout_stuck true, pending_pods 1), timeline.json (rollout_start → after_wait 300,5 s, after_wait → restored 379,1 s); experiments/ops/vh.py (vh2c: set_strategy(1, 0)); ops-vh3-delete-20261118-180750/summary.json (1351 / 0, replace_s 67,38, ready_before 2); ops-vh3-kill-20261118-182107/summary.json (1041 / 129, by_error ConnectError 70, ConnectTimeout 47, StreamError 11, HTTPStatus 1; recover_s 67,45); ops-vh4-20261118-183127/summary.json (1263 / 0, fallback_s 16,80, max_replicas 4), timeline.json (block_prometheus → unblocked 301,0 s, unblocked → signal_back 5,31 s) -->
+<!-- nguồn: ops-vh2a-20261118-164653/summary.json (2077 / 0, rollout_s 141,39, replicas_before 1), timeline.json (min_replicas_2, two_ready trước rollout_start; experiments/ops/vh.py vh2a); ops-vh2b-20261118-170715/summary.json (4229 / 0, rollout_s 371,55), timeline.json (all_gpus_filling replicas 4); ops-vh2c-20261118-174729/summary.json (2077 / 0, rollout_stuck true, pending_pods 1), timeline.json (rollout_start → after_wait 300,5 s, after_wait → restored 379,1 s); experiments/ops/vh.py (vh2c: set_strategy(1, 0)); ops-vh3-delete-20261118-180750/summary.json (1351 / 0, replace_s 67,38, ready_before 2); ops-vh3-kill-20261118-182107/summary.json (1041 / 129, by_error ConnectError 70, ConnectTimeout 47, StreamError 11, HTTPStatus 1; recover_s 67,45); ops-vh4-20261118-183127/summary.json (1263 / 0, fallback_s 16,80, max_replicas 4), timeline.json (block_prometheus → unblocked 301,0 s, unblocked → signal_back 5,31 s) -->

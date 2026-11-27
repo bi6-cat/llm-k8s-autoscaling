@@ -3,8 +3,8 @@
 
 # Phụ lục D. Phiên bản thành phần {.unnumbered}
 
-Mọi thành phần của hệ thống được ghim theo phiên bản cụ thể, image container ghim thêm digest, model ghim theo commit của kho trên Hugging Face. Nhờ vậy cấu hình đã đo có thể dựng lại đúng như cũ, đúng yêu cầu N8 (Bảng 3.1). Bảng phiên bản gốc nằm ở `docs/phien-ban.md` của repository (commit `03ce930`), cũng là nơi duy nhất được sửa khi đổi phiên bản. Hai bảng dưới chép lại các dòng mà thân bài dựa vào. Phiên bản được tra ngày 09/10/2026, các công cụ của CI tra ngày 01/11/2026.
-<!-- nguồn: docs/phien-ban.md (dòng mở đầu: tra 09/10/2026, CI 01/11/2026; "Đổi phiên bản: sửa ở đây và ở file dùng nó trong cùng một PR"), commit 03ce930; 00-thong-so.md §4 (N8) -->
+Mọi thành phần của hệ thống được ghim theo phiên bản cụ thể, image container ghim thêm digest, model ghim theo commit của kho trên Hugging Face. Nhờ vậy cấu hình đã đo có thể dựng lại đúng như cũ, đúng yêu cầu N8 (Bảng 3.1). Bảng phiên bản gốc nằm ở `docs/phien-ban.md` của repository (commit `03ce930`), cũng là nơi duy nhất được sửa khi đổi phiên bản. Hai bảng dưới chép lại các dòng mà thân bài dựa vào. Phần lớn phiên bản được tra ngày 09/10/2026, các công cụ của CI tra ngày 01/11/2026, còn model và vài công cụ thêm sau được tra khi đưa vào.
+<!-- nguồn: docs/phien-ban.md (dòng mở đầu: tra 09/10/2026, CI 01/11/2026; model tra 06/11, amtool tra 15/11; "Đổi phiên bản: sửa ở đây và ở file dùng nó trong cùng một PR"), commit 03ce930; 00-thong-so.md §4 (N8) -->
 
 ## D.1. Nền tảng và tầng phục vụ
 
