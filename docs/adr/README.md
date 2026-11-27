@@ -6,8 +6,8 @@ Mỗi quyết định lớn một file `NNN-<ten>.md`, không sửa nội dung c
 |---|---|---|---|
 | [001](001-cac-lua-chon-ban-dau.md) | 30/09/2026 | 25 lựa chọn ban đầu: Vast.ai 4 × 4090, k3s, KEDA, Argo CD, ma trận 78 lượt | Bị thay một phần bởi 002, 004 |
 | [002](002-chuyen-trong-tam-sang-van-hanh.md) | 04/10/2026 | Chuyển trọng tâm sang xây dựng và vận hành (70/30); F1–F7, N1–N8; 28 lượt; VH1–VH6 | Bị thay một phần bởi 004 |
-| 003 | (dành) | Kết quả đo năng lực ĐG1 và các giá trị chốt: C, B\*, threshold, ngưỡng N2b, N3 theo N. Viết trong phiên V2 | Chưa viết |
+| [003](003-ket-qua-dg1-va-gia-tri-chot.md) | 18/11/2026 (ghi lại 27/11) | Kết quả ĐG1 trên V2 (4 × RTX 4060 Ti, 3B): C = 3,5 req/s, B\* = 46,3, target A2 = 37, SLO TTFT 2,5 s, mức tham chiếu N2b 5 phút, N = 4 giữ N3; máy V2 thay A4000 | Đang áp dụng |
 | [004](004-dieu-kien-thuc-te-va-pham-vi-rut-gon.md) | 08/10/2026 | Điều kiện thực tế (hạn 08/12, máy nhà, cloud), phạm vi rút gọn, 17 lượt, kế hoạch 9 tuần; §7 ghi cập nhật tới 06/11 | Bị thay một phần bởi 006 |
 | [005](005-sua-thiet-ke-sau-review.md) | 08/10/2026 | 18 sửa thiết kế kỹ thuật sau review: graceful shutdown, rolling update khi 1 replica, ngưỡng TTFT trùng bucket, VH4 bằng NetworkPolicy… | T1 bị thay bởi 006 C8 |
-| [006](006-chot-may-model-va-kich-ban-truoc-v2.md) | 10/11/2026 | Chốt trước V2: chỉ còn Vast, máy 4 × A4000, model 3B, N = 4, kịch bản 12/24/17, KEDA timeout, truy vấn A1, chấp nhận grace 180 s; tình trạng phạm vi, lược các hạng mục hội đồng không thấy (12/11) | Đang áp dụng |
+| [006](006-chot-may-model-va-kich-ban-truoc-v2.md) | 10/11/2026 | Chốt trước V2: chỉ còn Vast, máy 4 × A4000, model 3B, N = 4, kịch bản 12/24/17, KEDA timeout, truy vấn A1, chấp nhận grace 180 s; tình trạng phạm vi, lược các hạng mục hội đồng không thấy (12/11) | C2 bị thay một phần bởi 003 |
 | [007](007-doi-vh1-vh2-f6-n8-khoi-cluster-nha.md) | 24/11/2026 | Dời VH1, VH2, F6, N8 khỏi cluster nhà: VH1 từ pha `drop` trên V2; vòng Git của VH2, Telegram thật và dựng lại theo README làm trên kind + simulator | Đang áp dụng |

@@ -353,6 +353,24 @@
 - **Links:** `docs/luan-van/quy-tac-viet.md` (§1, §3.5, §9); `docs/chi-tiet/06-ke-hoach-quan-ly.md` (§5.1, §11.1).
 - **Thesis:** phần đầu quyển (không có Tóm tắt, không có Lời cam đoan); Mở đầu; mục 1.3 Đóng góp.
 
+## 2026-11-27 – ADR-003: ghi lại kết quả ĐG1 trên V2 và các giá trị chốt
+
+- **Task:** TR8 (tài liệu; số của Q6) · **Environment:** none
+- **Done:**
+  1. Viết `docs/adr/003-ket-qua-dg1-va-gia-tri-chot.md` từ `envs/cloud/experiments/capacity.json`, `matrix-v2.yaml` (khối `x-adr003`), `capacity.py`, `analysis/figures/v2-dg2/runs.csv` và nhật ký Quang 18–19/11: bảng 5 mức ĐG1, quyết định G1–G8, các chỗ ĐG1 làm khác quy trình, kiểm tra R12 sau ma trận, hệ quả.
+  2. Thông số: bỏ nhãn *tạm* ở SLO TTFT, target A2 (37) và N2b (mức tham chiếu 5 phút); ghi C = 3,5 req/s ở §7. Cập nhật bảng ADR (003 đã viết, 006 C2 bị thay một phần), dòng trạng thái ADR-006, mốc M3 ở Kế hoạch, danh sách ADR ở bản mô tả và nguồn tư liệu luận văn.
+  3. Một agent soát số độc lập đối chiếu từng số với nguồn, rồi chạy `/code-review high`.
+- **Decision:**
+  - D137: N2b giữ "chỉ báo cáo" với mức tham chiếu 5 phút, tức đúng con số "dự kiến ≤ 5 phút" đã ghi trước V2. Hai phương án bị bỏ: bỏ hẳn ngưỡng sau khi thấy số đo 409–430 s (như vậy là né kết quả), và nâng ngưỡng cho vừa số đo (trái Môi trường §7).
+  - ADR ghi rõ thời điểm. C, target A2 và SLO đã có trên VM trước lượt đầu của ma trận (16:30 ngày 18/11): sha256 của ma trận trên VM trùng commit `a44ae71` (19/11), và console runner in C = 3,5 ngay từ lượt đầu. File ADR và G5 thì viết ngày 27/11, sau khi đã có kết quả. Điểm này được ghi vào bảng lệch và phần Hạn chế.
+  - Không sửa tên máy A4000 ở Thông số §2, §10.2, §11, vì PR #79 đã sửa các chỗ đó, sửa thêm ở đây sẽ gây xung đột. Câu "ADR-003 chưa có" trong comment nguồn của 3.5 cũng đã được PR #80 bỏ.
+- **Results:**
+  - Soát số độc lập: 4 điểm sai, đã sửa cả 4. (1) Commit `a44ae71` mang ngày 19/11, không phải 18/11. (2) N = 4 đã chốt từ ADR-006 C4. (3) Ổ đĩa máy V2 là 126 GB, dưới tiêu chí 130 GB, và tốc độ đọc tuần tự không được đo. (4) G4 chỉ được bỏ nhãn *tạm* ngày 27/11.
+  - `/code-review high`: 8 điểm, sửa 6. Các điểm đã sửa: dòng tóm tắt Thông số nói G5 chốt trước ma trận; bảng lệch thiếu dòng về thời điểm chốt; mục ADR-003 vẫn nằm trong danh sách "chưa có" của nguồn tư liệu; câu "đạt mọi tiêu chí" trong nhật ký 18/11 trái với số đo ổ đĩa; nguồn của B\*; 30 s làm ấm ở 0,3 λ trước mỗi mức. Hai điểm bỏ qua: tên máy (PR #79) và comment ở 3.5 (PR #80).
+  - lychee trên các file đã sửa: 0 lỗi; yamllint đạt.
+- **Deviations:** ADR-003 được viết ngày 27/11, không phải "ngay trong phiên V2" như Môi trường §8.
+- **Links:** `docs/adr/003-ket-qua-dg1-va-gia-tri-chot.md`, `docs/chi-tiet/00-thong-so.md` (§1, §4, §6, §7, §8.1).
+- **Thesis:** chương 5, mục năng lực một replica (bảng ĐG1, C cận dưới); bảng nghiệm thu N2b (409–430 s so với mức tham chiếu 5 phút); Hạn chế (card 4060 Ti, ổ đĩa, C có độ phân giải 0,5 req/s, chưa đối chiếu `vllm bench serve`, ADR viết sau kết quả).
 ## 2026-11-27 – Vẽ lại Hình 8 (kịch bản tải) và Hình 17 (quy trình phiên V2)
 
 - **Task:** TR8 · **Environment:** none

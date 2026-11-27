@@ -5,7 +5,7 @@
 **Tóm tắt nhanh**
 - Mọi yêu cầu (F1–F7), chỉ tiêu (N1–N8), SLO, kịch bản tải (KB1–KB3), cấu hình đánh giá, tham số triển khai, cấu hình máy và ngân sách được **định nghĩa ở đúng một chỗ: tài liệu này**.
 - Các tài liệu khác chỉ giải thích và link về đây, không chép lại giá trị.
-- Các giá trị đánh dấu *tạm* sẽ được chốt **một lần** ở ADR-003, sau bước đo năng lực trong phiên V2, trước khi chạy ma trận. Không chỉnh sau khi đã thấy kết quả.
+- Các giá trị từng đánh dấu *tạm* đã được chốt **một lần** ở [ADR-003](../adr/003-ket-qua-dg1-va-gia-tri-chot.md). C, B\*, target A2 và SLO chốt sau ĐG1 của phiên V2, trước lượt đầu của ma trận (18/11); mức tham chiếu N2b chốt ngày 27/11, dùng đúng con số đã ghi trước V2. Không chỉnh sau khi đã thấy kết quả.
 
 ---
 
@@ -13,7 +13,7 @@
 
 - Đổi một giá trị thì sửa **ở đây**, qua PR. Nếu đó là một quyết định (không phải sửa lỗi chính tả), ghi thêm ADR.
 - Lịch, các phiên thuê GPU và dự toán chi phí theo phiên **không** nằm ở đây. Lịch nằm ở [Kế hoạch](06-ke-hoach-quan-ly.md#1-lịch-và-mốc); các phiên thuê nằm ở [Môi trường và đánh giá](05-moi-truong-danh-gia.md#6-các-phiên-thuê-gpu).
-- Nhãn dùng trong bảng: **tạm** = chốt ở ADR-003; **cần kiểm chứng** = phụ thuộc phiên bản phần mềm hoặc nguồn ngoài.
+- Nhãn dùng trong bảng: **tạm** = chốt ở ADR-003 (từ 27/11 không còn giá trị nào của V2 mang nhãn này; "target tạm" ở nhà lấy từ ĐG1-mini, không thuộc ADR-003); **cần kiểm chứng** = phụ thuộc phiên bản phần mềm hoặc nguồn ngoài.
 
 ---
 
@@ -53,7 +53,7 @@ Danh sách 6 cảnh báo nằm ở [Vận hành §3.2](04-van-hanh.md#32-danh-s�
 |---|---|---|---|---|
 | **N1** | Chất lượng phục vụ | Với A2: **SLO attainment ≥ 95%** ở KB1 (pha `steady`) và KB3 (**chỉ pha `sustain`**). Ở KB2 chỉ báo cáo | ĐG2 | Must |
 | **N2a** | Tốc độ phản ứng | Ở KB2, mức cold start L2: từ lúc tải tăng đến khi replica mới đầu tiên Ready **≤ 2 phút** | ĐG2 | Must |
-| **N2b** | Hồi phục | Ở KB2: thời gian hồi phục SLO. Chỉ báo cáo; ngưỡng (dự kiến ≤ 5 phút) *tạm*, chốt ở ADR-003 | ĐG2 | Should |
+| **N2b** | Hồi phục | Ở KB2: thời gian hồi phục SLO. Chỉ báo cáo; mức tham chiếu **5 phút**, không tính đạt hay trượt ([ADR-003](../adr/003-ket-qua-dg1-va-gia-tri-chot.md) G5) | ĐG2 | Should |
 | **N3** | Hiệu quả GPU | Ở KB1: A2 dùng **≤ 50% GPU-giờ** của S4, SLO attainment kém S4 **không quá 5 điểm phần trăm**. Ở KB2: báo cáo mức tiết kiệm và cái giá về SLO. Nếu phải chạy với N = 2 thì viết lại theo N ở ADR-003 | ĐG2 | Should |
 | **N4** | An toàn khi thay đổi | **0 request lỗi** do scale-down (pha `drop` của KB2, VH1) và do cập nhật phiên bản (VH2, gồm ca chỉ có 1 replica) | ĐG2, VH1, VH2 | Must |
 | **N5** | Cold start | Cold start ở mức L2 **≤ 50%** so với L0 | ĐG3 | Should |
@@ -88,7 +88,7 @@ Nếu chậm tiến độ thì cắt từ dưới lên theo thứ tự trên ([K
 
 | Đại lượng | Giá trị | Ghi chú |
 |---|---|---|
-| TTFT | **≤ 2,5 s** (*tạm*) | Phải **trùng một biên bucket có thật** của histogram `vllm:time_to_first_token_seconds` trong bản đã ghim (đã kiểm 23/10: v0.31.0 có bucket `le="2.5"`, [nhật ký tuần 01](../nhat-ky/tuan-01.md)). Cảnh báo và nghiệm thu dùng **cùng** ngưỡng này |
+| TTFT | **≤ 2,5 s** (chốt ở [ADR-003](../adr/003-ket-qua-dg1-va-gia-tri-chot.md) G4) | Phải **trùng một biên bucket có thật** của histogram `vllm:time_to_first_token_seconds` trong bản đã ghim (đã kiểm 23/10: v0.31.0 có bucket `le="2.5"`, [nhật ký tuần 01](../nhat-ky/tuan-01.md)). Cảnh báo và nghiệm thu dùng **cùng** ngưỡng này |
 | TPOT | **≤ 100 ms** | Tương đương ít nhất 10 token/s, nhanh hơn tốc độ đọc |
 | Request đạt SLO | TTFT và TPOT đều đạt, và request không lỗi | Lỗi gồm lỗi HTTP, timeout, stream bị cắt (không có `usage`) |
 | Mục tiêu SLO attainment | **95%** request đạt SLO | Ngân sách lỗi 5% |
@@ -99,7 +99,7 @@ Nếu chậm tiến độ thì cắt từ dưới lên theo thứ tự trên ([K
 
 ## 7. Kịch bản tải
 
-Đơn vị **C** là năng lực một replica: tốc độ request lớn nhất mà vẫn đạt SLO, đo ở ĐG1. t tính bằng phút.
+Đơn vị **C** là năng lực một replica: tốc độ request lớn nhất mà vẫn đạt SLO, đo ở ĐG1. V2: **C = 3,5 req/s** trên 4 × RTX 4060 Ti với model 3B ([ADR-003](../adr/003-ket-qua-dg1-va-gia-tri-chot.md) G1), nên KB1 = 1,75 req/s và đỉnh KB2, KB3 = 10,5 req/s. t tính bằng phút.
 
 | KB | λ(t) / C | Thời lượng | Các pha khi phân tích | Kiểm chứng chủ yếu |
 |---|---|---|---|---|
@@ -137,7 +137,7 @@ Hai phút đầu của KB1 và KB2 là thời gian ổn định, không tính.
 | **S1** | Static-1 | – (cố định 1 replica) | – | Cấp thiếu: chi phí thấp nhất | GPU thuê |
 | **S4** | Static-4 (S_N) | – (cố định N replica) | – | Cấp theo đỉnh: hiệu năng tốt nhất | GPU thuê |
 | **A1** | GPU utilization | `sum(DCGM_FI_DEV_GPU_UTIL{…})`, hoặc `sum(avg_over_time(nvidia_smi_utilization_gpu_ratio[15s])) * 100` với `nvidia_gpu_exporter` (trung bình 15 s từ 09/11, [ADR-006](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md) C7) | **70** (%) | Đối chứng: cách làm phổ biến | GPU thuê, nhà |
-| **A2** | Tải đồng thời | `sum(vllm:num_requests_running) + sum(vllm:num_requests_waiting)` | **0,8 × B\*** (*tạm*; minh hoạ: 24) | **Cấu hình vận hành chính thức** | GPU thuê, nhà, simulator |
+| **A2** | Tải đồng thời | `sum(vllm:num_requests_running) + sum(vllm:num_requests_waiting)` | **0,8 × B\*** (V2: B\* = 46,3 → **37**, [ADR-003](../adr/003-ket-qua-dg1-va-gia-tri-chot.md) G3) | **Cấu hình vận hành chính thức** | GPU thuê, nhà, simulator |
 | A3 | KV-cache | `sum(vllm:kv_cache_usage_perc)` | 0,8 × KV\* | Could | – |
 | A4 | Chỉ hàng đợi | `sum(vllm:num_requests_waiting)` | 5 | Minh hoạ flapping | Simulator |
 
