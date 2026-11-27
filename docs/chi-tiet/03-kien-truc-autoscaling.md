@@ -386,7 +386,7 @@ vLLM/GPU exporter ──scrape 5 s──► Prometheus ◄──PromQL── KED
 
 **Với `nvidia_gpu_exporter`** (GPU nhà và VM thuê, vì DCGM chưa thử): exporter không có label pod. A1 vẫn dùng được nếu node chỉ chạy vLLM, vì GPU rảnh cộng thêm 0. **Ngoại lệ đo được ở V1 (08/11):** GPU của pod **đang tắt** (sau scale-down) báo util 100 % trong một mẫu; tổng tăng lên 100 → desired = 2, và cửa sổ ổn định 300 s giữ con số đó, A1 không về được 1 replica. Exporter không có label pod nên không lọc được theo pod Ready; vì vậy từ 09/11 truy vấn A1 lấy trung bình 15 s trên từng GPU trước khi cộng, hạ mẫu đơn lẻ còn 33 %. Chạy lại trên dữ liệu V1: hết kẹt, các mốc scale-up trễ thêm 5–20 s (chưa kiểm trên cluster; chi tiết: [log phiên 08/11 §13](../nhat-ky/lam-viec/quang/phien-2026-11-08-a4000.md#13-v1-runner-chạy-2-lượt-đg2-có-keda)). Ở nhà, RTX 5060 còn chạy màn hình nên số liệu bị nhiễu; vì vậy chạy Ubuntu không giao diện đồ hoạ ([ADR-005](../adr/005-sua-thiet-ke-sau-review.md) T9).
 
-**Biến thể A1′ (không làm):** dùng `DCGM_FI_PROF_SM_ACTIVE` hoặc `DCGM_FI_PROF_DRAM_ACTIVE`, phản ánh mức làm việc thật tốt hơn. Cần dcgm-exporter với metric profiling; GeForce không có, còn trên A4000 nhóm chưa thử dcgm-exporter trước V2 nên không đưa vào ma trận.
+**Biến thể A1′ (không làm):** dùng `DCGM_FI_PROF_SM_ACTIVE` hoặc `DCGM_FI_PROF_DRAM_ACTIVE`, phản ánh mức làm việc thật tốt hơn. Cần dcgm-exporter với metric profiling; GeForce (gồm RTX 4060 Ti của V2) không có, còn trên A4000 nhóm chưa thử dcgm-exporter trước V2 nên không đưa vào ma trận.
 
 **Công bằng:** chu kỳ thu metric GPU phải là 5 s, giống vLLM (xem §6).
 
