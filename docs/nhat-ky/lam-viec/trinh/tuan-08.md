@@ -1257,3 +1257,15 @@
   2. PR #97 báo `CONFLICTING` sau chuỗi trên: gộp `origin/main` vào `fix/tr4-dashboard-panel-desc`, chỉ xung đột ở nhật ký tuần 08 (union tự gộp; thêm dòng trống trước tiêu đề mục kế bị union bỏ sót).
 - **Decision:** (D147) coi điều kiện merge 4 của PR #97 là đạt nhờ kiểm trên kind: PR chỉ đổi `description` của hai panel, không đổi PromQL; D114 đã cho dùng kind `llm-sim` thay cluster nhà để kiểm; Argo CD nhà ghi lại hai ConfigMap dashboard chỉ làm đổi chữ chú thích.
 - **Links:** PR #104, #105, #106, #107, #97.
+
+## 2026-11-28 – Merge PR #97; chèn Hình 15 vào 5.2 và Hình 5 vào 5.4
+
+- **Task:** TR4, TR8 · **Environment:** none
+- **Done:**
+  1. Merge PR #97 (mô tả panel dashboard) `52ae446` sau khi gộp `origin/main`, CI 6/6 xanh, theo D147. Hết PR mở.
+  2. Sửa dòng chú thích cuối Hình 5 trong `docs/diagrams/build_diagrams.py`: bỏ câu dẫn tới "Bảng 5.4a" (số bảng tạm) và "của luận văn" (hình nằm ngay trong 5.4), chỉ giữ "Nhãn số tính bằng giây, làm tròn 0,1 s", để hình không phải vẽ lại khi đánh số chương 5. Dựng lại SVG (chỉ `05-cold-start.svg` đổi) và xuất riêng PNG của hình này bằng Chrome headless với cùng cờ như `export_png.sh`.
+  3. Chèn Hình 15 vào 5.2 thành Hình 5.2b (sau Bảng 5.2a), Hình 5 vào 5.4 thành Hình 5.4b (trước đoạn pha khởi động tiến trình); mỗi hình có câu dẫn trước và câu nhận xét sau.
+- **Decision:** (D148) chèn cả hai hình vì mỗi hình nói được điều bảng không nói: Hình 5.2b cho thấy TTFT vượt ngưỡng khi λ qua C trong khi TPOT đứng yên dưới ngưỡng (vi phạm do hàng đợi), và vị trí threshold 37 so với B\*; Hình 5.4b cho thấy tỷ lệ các pha trong từng lượt, pha chi phối đổi từ kéo image (L0) sang khởi động tiến trình (L2). Số hình tạm theo mục (5.2b, 5.4b) như Hình 5.3b; đánh lại ở việc kế tiếp.
+- **Results:** kiem_van 05-02, 05-04: 0 điểm; lychee offline (loại trừ như job `docs` của CI): 0 lỗi. Khuôn T đo bằng `gop.py`: 5.2 1,40 → 1,79 tr, 5.4 1,34 → 1,74 tr, chương 5 14,74 tr (định hướng 14–17). `/code-review high`: 8 điểm, sửa cả 8 (thứ tự đo của L2 so với nhãn thanh, chú thích B, "tám pha" thành nhóm pha của bảng, ghi chú soát số và độ dài, nơi vẽ Hình 15 là `chuyen_sau.py`).
+- **Links:** nhánh `docs/tr8-thesis-fig5-fig15`; `docs/luan-van/05-02-nang-luc-mot-replica.md`, `05-04-cold-start.md`, `docs/diagrams/build_diagrams.py`, `docs/images/05-cold-start.svg`, `docs/images/png/05-cold-start.png`.
+- **Thesis:** 5.2 (Hình 5.2b), 5.4 (Hình 5.4b).
