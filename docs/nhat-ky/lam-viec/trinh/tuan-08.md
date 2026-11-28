@@ -1325,3 +1325,21 @@
 - **Deviations:** Bìa, bìa phụ, hai trang "Nhận xét, đánh giá, cho điểm" và Lời cảm ơn vẫn làm tay trong Word. Hai biểu đồ SVG cần Word 2016 trở lên vì máy không có `rsvg-convert`.
 - **Links:** nhánh `feat/tr8-thesis-build`; `analysis/luan_van.py`, `analysis/tests/test_luan_van.py`, `Makefile`, `docs/luan-van/README.md`, `docs/luan-van/ieee.csl`, `docs/phien-ban.md`.
 - **Thesis:** bản nộp (khuôn trình bày, mục lục, danh mục hình và bảng, tài liệu tham khảo).
+
+## 2026-11-28 – Merge PR #112 (`make thesis`)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** kiểm lại 5 điều kiện merge (CI 6/6 xanh, MERGEABLE, không review hay bình luận chờ xử lý, chỉ đổi Makefile, `analysis/` và `docs/`, base `main`), merge bằng merge commit `4369f15`, xoá nhánh head.
+- **Links:** PR #112.
+
+## 2026-11-28 – Cắt chương 4 về 22 trang khuôn T
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Đo trước khi cắt. Bản ghép đo từng mục (gop.py) cho chương 4 21,97 tr và thân bài 71,89 tr, trong khoảng định hướng. Bản nộp dựng bằng `make thesis` rồi cập nhật trường trong Word cho chương 4 23 trang (tr. 49–71, trang cuối chỉ có khoảng 860 ký tự) và thân bài 76 trang, vì mỗi chương bắt đầu ở trang mới. Trình chọn đo theo bản nộp, vì đó là bản khoa nhận.
+  2. Cắt 8 chỗ ở 4.1, 4.6, 4.7, chọn ý đã có ở chương khác hoặc ở đoạn khác của cùng mục. 4.1.1 rút sự cố đổi dải địa chỉ (đoạn sáu role đã nói k3s dùng địa chỉ Tailscale). 4.1.2 bỏ câu VH2 qua Git (4.5 và 5.5 đã nêu). 4.1.3 bỏ sự cố `--from-file` (lỗi chức năng, không lộ bí mật) và đổi vế thứ hai của bài học cho khớp sự cố còn giữ. 4.6.2 bỏ câu VH6 trùng 4.6.1. 4.6.3 gộp ba câu đầu của đoạn VM 2 GPU thành một. 4.7.2 bỏ hai số tự kiểm đã có ở 5.1 (độ lệch lịch, CPU), gộp event loop, throttle và tín hiệu scale vào một câu, và bỏ một ví dụ lỗi của `build_tables`. Câu bỏ chép nguyên văn vào comment "Ý không đưa vào" đầu mỗi file.
+  3. Dựng lại `make thesis THESIS_OUT=.work/luan-van/nop/luan-van.docx` và cập nhật trường bằng Word.
+- **Results:** bản nộp 119 trang (chưa có bìa), 0 lỗi trường. Chương 4 tr. 49–70 = 22 trang, trang cuối còn khoảng 2.300 ký tự (trang đầy khoảng 3.100). Chương 5 bắt đầu tr. 71, chương 6 tr. 87, Tài liệu tham khảo tr. 91, nên thân bài chương 1–6 = 75 trang. kiem_van: 0 điểm cần xem ở ba file (04-01 còn gợi ý "đoạn > 8 câu" có sẵn từ trước). lychee offline trên `docs/luan-van/`: 0 lỗi. `/code-review high` 7 điểm, sửa cả 7: khôi phục câu 134 cảnh báo (bản gộp làm tổng còn 133), vế "luôn trả số replica tối thiểu về như cũ" của VH3, câu tín hiệu scale ở 4.7.2 (5.1 chỉ có khoảng trống scrape), "Cách sửa lâu dài" ở 4.1.1; cập nhật ngày soát số và số đo trong comment đầu ba file; sửa số chỗ cắt trong nhật ký.
+- **Decision:** cắt ở 4.1 trước (phần ngoại vi, HG5, như comment đầu 04-01 đã định), rồi tới các câu trùng số với 5.1 và 5.5. Không cắt bảng hay đoạn bài học, vì chúng mang thông điệp của mục.
+- **Links:** nhánh `docs/tr8-thesis-ch4-trim`; `docs/luan-van/04-01-ha-tang-trien-khai.md`, `04-06-giam-sat-canh-bao.md`, `04-07-cong-cu-danh-gia.md`.
+- **Thesis:** chương 4 (độ dài theo D103).
