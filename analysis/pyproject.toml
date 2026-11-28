@@ -10,6 +10,7 @@
 #              uv run --project analysis python -m analysis.build_tables runs/<phiên>
 #              uv run --project analysis python -m analysis.charts runs/<phiên>
 #              uv run --project analysis python -m analysis.kiem_van docs/luan-van/<file>.md
+#              uv run --project analysis python -m analysis.luan_van ../luan-van.docx   (cần pandoc)
 #              uv run --project analysis pytest analysis
 #              uv run --project analysis ruff check analysis
 # Tham khảo: Môi trường §14.2, §15, §16; CONTRIBUTING §5

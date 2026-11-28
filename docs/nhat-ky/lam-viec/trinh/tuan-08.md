@@ -1307,3 +1307,21 @@
 - **Results:** kiem_van trên 25 file đổi (trừ `quy-tac-viet.md`): 2 điểm cần xem, 5 gợi ý, trùng hệt bản trên main (0 điểm mới). lychee offline trên `docs/luan-van/`: 0 lỗi.
 - **Links:** nhánh `docs/tr8-thesis-proofread-2`; `docs/luan-van/quy-tac-viet.md`, `docs/luan-van/phan-dau/02-danh-muc-thuat-ngu.md` và 24 file chương, phụ lục.
 - **Thesis:** toàn quyển (thuật ngữ, đơn vị); danh mục mã định danh.
+
+## 2026-11-28 – Lệnh ghép luận văn ra .docx theo khuôn T (`make thesis`)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Thêm module `analysis/luan_van.py` và target `make thesis`. Module ghép `docs/luan-van/` theo thứ tự phần đầu, Mở đầu, chương 1–6, "Tài liệu tham khảo", phụ lục rồi gọi pandoc 3.13. Reference doc khuôn T được dựng ngay trong code từ bản mặc định của pandoc: A4, lề 2,5/2,5/3/2 cm, Times New Roman 13 pt, giãn dòng 1,15, Heading 1 sang trang mới, chú thích hình và bảng in nghiêng căn giữa, bảng 12 pt có viền và hàng tiêu đề lặp lại, đầu trang "Đồ án tốt nghiệp Đại học", chân trang tên hai tác giả kèm số trang, mục lục tự động.
+  2. Danh mục hình và bảng được sinh từ chú thích `![Hình x.y. …]` và `**Bảng x.y.** …`, lấy câu đầu của mỗi chú thích. Số trang là trường PAGEREF trỏ tới bookmark gắn ở từng hình và bảng (pandoc thêm tiền tố `_` vào tên bookmark). Script dừng khi trùng số chú thích, cảnh báo chú thích sai mẫu và kiểm mọi PAGEREF đều có bookmark trước khi ghi file.
+  3. Trích dẫn dùng `--citeproc` với `docs/luan-van/ieee.csl` (CSL IEEE, ghim commit trong `docs/phien-ban.md`). Khối `> **[Bước định dạng]**` bị bỏ khỏi bản ghép và được in ra để nhắc làm tay.
+  4. Kiểm bằng Word 365 qua COM (script cục bộ): cập nhật trường, xuất PDF, đo trang bắt đầu của từng Heading 1, rồi xem ảnh một số trang (pdftoppm trong WSL).
+  5. `/code-review high`: sửa các điểm đã xác nhận. Chú thích kết thúc bằng mã inline bị dính trường PAGEREF. Năm hình mất chú thích vì comment nguồn nằm ngay dưới, nên thêm dòng trống sau hình. Chú thích sai mẫu trước đây bị bỏ qua lặng lẽ. Style có sẵn của Word bị gắn `customStyle`. Regex xoá style nuốt style tự đóng. File đích bị ghi đè trước khi kiểm. Chưa kiểm trùng số. Chưa bỏ qua khối code và comment.
+- **Decision:** (D151) Script nằm trong repo (`analysis/`) để Quang dựng lại được bản nộp sau khi sửa số. Repo không chứa file khuôn nhị phân, khuôn nằm ở hằng số trong code. Danh mục tài liệu theo locale en-US của CSL IEEE vì locale vi-VN trộn "và c.s.", "Tháng Mười-Một" với "[Online]. Available". Tên bài giữ chữ hoa bằng cách bọc thêm ngoặc cho title, booktitle, journal, series. Bỏ: trường SEQ và chú thích kiểu Word (phải viết lại chú thích ở mọi file), lua filter (khó test, CI không có pandoc).
+- **Results:** `uv run --project analysis pytest analysis`: 247 passed; ruff check và format đạt; lychee offline trên `docs/`: 0 lỗi. Bản Word sau khi cập nhật trường có 120 trang (chưa có bìa), 0 lỗi trường, 12 hình (CaptionedFigure), 35 chú thích bảng. Trang bắt đầu: Lời cảm ơn 1, Danh mục thuật ngữ 5, DM hình 11, DM bảng 12, Mở đầu 14, Ch.1 16, Ch.2 21, Ch.3 34, Ch.4 49, Ch.5 72, Ch.6 88, Tài liệu tham khảo 92, Phụ lục A 96, G 116. Thân bài ch.1–6 khoảng 76 trang tính cả ngắt trang chương: trên mức định hướng 60–75, dưới trần 85 (D103).
+- **Incidents:**
+  - Bookmark không được tạo vì pandoc bỏ span rỗng. Sửa: gắn id vào thuộc tính của hình và bọc span quanh nhãn bảng.
+  - `pandoc -o -` tạo một file tên `-` ở gốc repo thay vì in ra stdout. Sửa: ghi vào file tạm. File thừa chưa xoá được trong lượt tự chạy và không vào commit.
+- **Deviations:** Bìa, bìa phụ, hai trang "Nhận xét, đánh giá, cho điểm" và Lời cảm ơn vẫn làm tay trong Word. Hai biểu đồ SVG cần Word 2016 trở lên vì máy không có `rsvg-convert`.
+- **Links:** nhánh `feat/tr8-thesis-build`; `analysis/luan_van.py`, `analysis/tests/test_luan_van.py`, `Makefile`, `docs/luan-van/README.md`, `docs/luan-van/ieee.csl`, `docs/phien-ban.md`.
+- **Thesis:** bản nộp (khuôn trình bày, mục lục, danh mục hình và bảng, tài liệu tham khảo).
