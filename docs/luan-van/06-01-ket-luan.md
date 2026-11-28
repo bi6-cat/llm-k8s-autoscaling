@@ -7,7 +7,7 @@
 
 Đồ án đã xây dựng một nền tảng phục vụ LLM trên Kubernetes và đo nền tảng này trên GPU thật. Nền tảng gồm autoscaling theo tải, giám sát và cảnh báo theo SLO, và quy trình thay đổi qua Git. Theo bảng nghiệm thu ở mục 5.6, mọi yêu cầu mức Must đều đạt hoặc đạt một phần. Phần còn thiếu nằm ở khâu kiểm chứng, ví dụ chưa gửi cảnh báo tới Telegram thật và chưa chụp dashboard trên GPU thật. Từ số đo của chương 5, nhóm rút ra ba kết luận.
 
-<!-- nguồn: 05-06 (Bảng 5.6a: mọi Must đạt hoặc đạt một phần; F5 chưa chụp trên GPU thật, F6 chưa gửi Telegram thật; đoạn "Các phần còn thiếu đều nằm ở khâu kiểm chứng, không nằm ở chức năng") -->
+<!-- nguồn: 05-06 (Bảng 5.4: mọi Must đạt hoặc đạt một phần; F5 chưa chụp trên GPU thật, F6 chưa gửi Telegram thật; đoạn "Các phần còn thiếu đều nằm ở khâu kiểm chứng, không nằm ở chức năng") -->
 
 Với LLM serving, tín hiệu scale đúng là tải đồng thời mà vLLM báo, gồm số request đang xử lý và đang chờ. GPU utilization không dùng được, vì nó đã bằng 100% ở mức tải thấp nhất của phép đo năng lực, 0,57 C (mục 5.3.1). Ở tải thấp ổn định, A1 scale theo GPU utilization lên 4 replica và dùng 89,7–90,6% GPU-giờ của cấu hình tĩnh 4 replica (2 lượt). Ở cùng tải, A2 giữ 1 replica, dùng 25% GPU-giờ và vẫn đạt SLO attainment 100% (mục 5.3.2). Threshold của A2 bằng 0,8 lần tải đồng thời đo được tại năng lực của một replica (mục 3.3), nên khi đổi model hoặc GPU chỉ cần đo lại năng lực.
 

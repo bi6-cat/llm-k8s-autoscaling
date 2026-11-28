@@ -20,7 +20,7 @@ Mục tiêu tổng quát của đồ án là xây dựng và vận hành một n
 | 6. So sánh với cấu hình tài nguyên cố định | N1; N3 | 3.6; 4.7 | 5.3 |
 | 7. Đánh giá đánh đổi giữa hiệu năng và tài nguyên | N3 | 3.6 | 5.3, 5.6 |
 
-<!-- nguồn: docs/chi-tiet/01-bai-toan-yeu-cau.md §9 (bảng: mục tiêu → F/N → bằng chứng); docs/chi-tiet/06-ke-hoach-quan-ly.md §11.1 (bảng "Truy vết yêu cầu → mục"); tên ngắn của F/N theo Bảng 5.6a trên nhánh docs/tr8-thesis-ch5-drafts (05-06). N2 gồm N2a phản ứng và N2b hồi phục -->
+<!-- nguồn: docs/chi-tiet/01-bai-toan-yeu-cau.md §9 (bảng: mục tiêu → F/N → bằng chứng); docs/chi-tiet/06-ke-hoach-quan-ly.md §11.1 (bảng "Truy vết yêu cầu → mục"); tên ngắn của F/N theo Bảng 5.4 trên nhánh docs/tr8-thesis-ch5-drafts (05-06). N2 gồm N2a phản ứng và N2b hồi phục -->
 
 Bốn yêu cầu không có trong bảng (bảo vệ tối thiểu, an toàn khi thay đổi, tự phục hồi, tái lập và chi phí) là phần nhóm thêm ngoài đề cương, đều thuộc yêu cầu vận hành được hằng ngày của bài toán.
 
