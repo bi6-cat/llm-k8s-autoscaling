@@ -1092,6 +1092,16 @@
 - **Links:** `docs/diagrams/build_diagrams.py`, `docs/diagrams/chuyen_sau.py`, `docs/images/05-cold-start.svg`, `docs/images/15-hieu-chinh-nang-luc.svg` (+ PNG), `docs/chi-tiet/01`, `02`, `03`, `06`.
 - **Thesis:** Hình 5 dùng được cho 5.4 (cạnh Bảng 5.4a), Hình 15 cho 5.2; chưa chèn vào luận văn.
 
+## 2026-11-27 – Merge PR #96; sửa mô tả hai panel dashboard theo thiết kế hiện hành
+
+- **Task:** TR4 · **Environment:** sim
+- **Done:** (1) Merge PR #96 (Hình 5, Hình 15 theo số V2) bằng merge commit `bb0d922` sau khi 6 check CI xanh, `MERGEABLE`, không có review đòi sửa. (2) Sửa `description` của panel "GPU-giờ theo ngày" trong `slo-cost.json`: retention dẫn về Thông số §9.4 (sửa 21/11: cloud để mặc định của chart, không phải 15 ngày), thêm giới hạn 4 GB của nhà; không chép số ngày của cloud vào JSON để khỏi lệch lần nữa khi đổi chart. (3) Sửa `description` của panel ITL trong `serving-gpu.json`: nói rõ ITL khác TPOT, panel chỉ để chẩn đoán, SLO và nghiệm thu dùng TPOT (`vllm:request_time_per_output_token_seconds`; dashboard SLO và chi phí vẽ tỉ lệ request có TPOT ≤ 100 ms), vạch 100 ms chỉ để tham chiếu (Vận hành §2.1, D78). (4) Kiểm trên kind `llm-sim`: áp riêng hai ConfigMap dashboard sinh từ `kubectl kustomize common/observability`, chờ sidecar Grafana nạp lại, đọc dashboard qua API Grafana.
+- **Decision:** Chỉ sửa chữ mô tả, không đổi PromQL hay panel ITL sang TPOT, đúng D78. Chỉ kiểm được trên kind: Trình không có quyền vào cluster nhà (D114 bỏ yêu cầu kubeconfig), nên PR chưa đạt điều kiện merge 4 (Argo CD app `observability` ở nhà sẽ ghi lại hai ConfigMap) và chưa merge cho tới khi Trình quyết. Trên kind chỉ áp hai ConfigMap đã đổi, không áp lại cả `common/observability`, để không đụng phần khác của simulator.
+- **Results:** `python -m json.tool` hợp lệ cả hai file; `make dashboards-check`: đã kiểm 3 dashboard, đạt.
+  - `/code-review high`: 6 điểm, sửa 4 (mô tả TPOT trên dashboard SLO là tỉ lệ, không phải phân vị; Decision dẫn sai D114; số retention cloud chép cứng; thiếu giới hạn 4 GB của nhà). Không sửa: màu đỏ của vạch 100 ms (chế độ `dashed` chỉ vẽ một vạch, không tô vùng; mô tả đã ghi là tham chiếu). Điều kiện merge 4 ghi ở Decision. Trên kind: `llm-slo-cost` 19 panel, `llm-serving-gpu` 24 panel, API Grafana trả về mô tả mới ở đúng hai panel đã sửa.
+- **Links:** nhánh `fix/tr4-dashboard-panel-desc`; `common/observability/dashboards/slo-cost.json`, `serving-gpu.json`.
+- **Thesis:** §4.4 (dashboard), nếu cần dẫn chuyện ITL và TPOT.
+
 ## 2026-11-27 – Thay nguồn công thức M/M/1 ở mục 2.2 bằng giáo trình mở đã đọc trực tiếp
 
 - **Task:** TR8 · **Environment:** none
@@ -1238,3 +1248,12 @@
 - **Results:** kiem_van 03-05 và 03-06: 0 điểm; lychee offline trên 03-0x và `nguon-tu-lieu.md`: 0 lỗi. Chưa đo lại khuôn T ch. 3 (cần push rồi chạy `gop.py`).
 - **Links:** nhánh `docs/tr8-thesis-ch3-figures` (xếp trên `docs/tr8-thesis-vh2-acceptance`, PR #106); `docs/luan-van/03-05-giam-sat-slo-canh-bao.md`, `nguon-tu-lieu.md`.
 - **Thesis:** 3.5 (Hình 3.2).
+
+## 2026-11-28 – Merge chuỗi PR #104–#107 và chuẩn bị merge PR #97
+
+- **Task:** TR8, TR4 · **Environment:** none
+- **Done:**
+  1. Merge chuỗi xếp chồng theo D42: đổi base của PR trên về `main` trước khi merge PR dưới. #104 (cắt trang D103) `ba7496c`, #105 (soát chính tả) `84ee5c6`, #106 (Hạn chế ADR-003) `dcc934d`, #107 (Hình 3.2) `92a5b0b`. Mỗi PR: 6 check CI xanh, `MERGEABLE`, không có review hay bình luận đòi sửa, chỉ đổi tài liệu (không làm Argo CD đổi cluster), merge commit và xoá nhánh head.
+  2. PR #97 báo `CONFLICTING` sau chuỗi trên: gộp `origin/main` vào `fix/tr4-dashboard-panel-desc`, chỉ xung đột ở nhật ký tuần 08 (union tự gộp; thêm dòng trống trước tiêu đề mục kế bị union bỏ sót).
+- **Decision:** (D147) coi điều kiện merge 4 của PR #97 là đạt nhờ kiểm trên kind: PR chỉ đổi `description` của hai panel, không đổi PromQL; D114 đã cho dùng kind `llm-sim` thay cluster nhà để kiểm; Argo CD nhà ghi lại hai ConfigMap dashboard chỉ làm đổi chữ chú thích.
+- **Links:** PR #104, #105, #106, #107, #97.
