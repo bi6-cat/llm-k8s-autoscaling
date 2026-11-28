@@ -245,7 +245,7 @@ Tổng phần cấp riêng là 4 × 3 + 3 = 15 lõi, cộng phần nhỏ cho cá
 | `make ops-tests S=… MATRIX=… RATE=…` | Chạy một kịch bản vận hành dưới tải (VH2–VH4), chấm đạt/không đạt |
 | `make backup` | `rclone` lên R2, kiểm tra checksum |
 | `make release` | Huỷ instance; **từ chối chạy** nếu backup chưa xong |
-| `make analysis` | Tạo bảng, chạy notebook, xuất hình (**lược** lệnh `make`, [ADR-006 §3.1](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md#31-quyết-định-ngày-12112026); bảng và hình chương 5 vẫn làm bằng script, TR7) |
+| `make analysis` | Dựng lại bảng, hình và số của chương 5 từ `runs/` hoặc `DATA=<thư mục>`, ghi đè `analysis/figures/` (có từ 28/11; [ADR-006 §3.1](../adr/006-chot-may-model-va-kich-ban-truoc-v2.md#31-quyết-định-ngày-12112026) từng lược lệnh này; không có notebook, mọi bước là script trong `analysis/`) |
 | `make lint`, `make alerts-test`, `make dashboards-check` | Kiểm tra YAML, manifest, quy tắc cảnh báo, dashboard; Python chạy `pytest` và `ruff` trong từng gói |
 
 - Chỉ phần `find/rent/probe/release` (`envs/cloud/provision/vast.sh`) phụ thuộc Vast.ai. Đổi nhà cung cấp thì chỉ viết lại các lệnh này; toàn bộ Ansible trở đi giữ nguyên.

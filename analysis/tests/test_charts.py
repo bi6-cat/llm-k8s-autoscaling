@@ -182,6 +182,7 @@ def test_main_writes_every_chart_and_is_reproducible(tmp_path, capsys):
     )
     svg = (out / "c1-kb2-sim-r1.svg").read_bytes()
     assert "Số replica".encode() in svg  # chữ có dấu được giữ (font mặc định có đủ glyph tiếng Việt)
+    assert b"\r" not in svg  # LF ở mọi hệ điều hành: make analysis so từng byte với bản trong Git
 
     # Chạy lại trên cùng dữ liệu: SVG giống từng byte (không có ngày giờ, id cố định), nên commit hình vào Git
     # chỉ tạo diff khi dữ liệu hoặc code đổi

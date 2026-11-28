@@ -35,7 +35,7 @@ YQ ?= yq
 AMTOOL ?= amtool
 
 # .PHONY: các target này không phải tên file, make luôn chạy chúng (kể cả khi có file trùng tên)
-.PHONY: help home-up alertmanager-secret home-eval-begin home-eval-end sim-up sim-down sim-argocd sim-argocd-down sim-test-load sim-test sim-lt7 sim-lt8 find rent attach probe bootstrap prefetch cloud-platform run backup backup-check ops-tests vh5 release lint alerts-test alerts-coverage alertmanager-check dashboards-check
+.PHONY: help home-up alertmanager-secret home-eval-begin home-eval-end sim-up sim-down sim-argocd sim-argocd-down sim-test-load sim-test sim-lt7 sim-lt8 find rent attach probe bootstrap prefetch cloud-platform run backup backup-check ops-tests vh5 release analysis lint alerts-test alerts-coverage alertmanager-check dashboards-check
 
 # In danh sách lệnh, chia nhóm theo môi trường. Hai loại dòng được in:
 #   `##@ <tiêu đề>`        = đầu một nhóm (in thành dòng tiêu đề);
@@ -276,6 +276,53 @@ vh5: ## Dựng lại từ VM trắng, ghi thời gian từng bước vào runs/v
 release: ## Huỷ instance Vast đang thuê
 	envs/cloud/provision/vast.sh release
 
+# ── Phân tích dữ liệu đã đo ─────────────────────────────────────────────────────
+##@ Phân tích: dựng lại bảng, hình và số của chương 5 từ dữ liệu (Kế hoạch §10.7)
+# DATA = thư mục chứa các phiên đo, cùng bố cục với runs/ (v2-vm/v2-dg2, sim/lt7-<giờ>, dg1-v2-4060ti…): runs/ trên
+#   máy đã đo, hoặc dataset/ khi dùng bộ dữ liệu đã công bố. File capacity của ĐG1 ở nhà nằm sẵn trong repo.
+# OUT mặc định là analysis/figures, tức ghi đè bản trong Git. Chạy xong mà `git status analysis/figures` sạch
+#   nghĩa là mọi bảng, hình và báo cáo số tái lập đúng từng byte từ dữ liệu.
+# build_tables ghi bảng vào <phiên>/tables (chỗ mặc định, Môi trường §14.2) rồi mới chép sang OUT, vì dg2_a2 và
+#   vh6_window đọc bảng ở đó: nhờ vậy hai báo cáo luôn tính từ bảng vừa dựng, không từ bảng cũ còn sót.
+# Các phiên dưới là lượt luận văn dùng (nhật ký vận hành, mục LT5–LT8 và VH4). Hậu tố @k của LT5 đổi mốc của
+#   máy tạo tải trên WSL2 sang giờ thực, vì đồng hồ đơn điệu ở đó chạy nhanh k lần (docstring lt5_little.py).
+# Mỗi bước in nhiều dòng tóm tắt, nên `step` cất output vào file tạm và chỉ in lại dòng báo bỏ dữ liệu ("bỏ qua
+#   <phiên>", "Bỏ <lượt>: thiếu …"), để không lặng lẽ dựng bảng từ ít lượt hơn.
+# PYTHONUTF8=1: Python dưới 3.15 trên Windows ghi ra pipe theo bảng mã ANSI của máy; bảng mã đó không phải UTF-8
+#   thì lỗi ở chữ có dấu. Python trên Windows in stdout bằng CRLF, nên các báo cáo .txt đi qua `tr -d '\r'`.
+# Chưa gồm: bảng cold start 8 pha của ĐG3 (summary.txt do runner ghi) và hình trong docs/images/ (build_diagrams.py).
+DATA ?= runs
+OUT ?= analysis/figures
+LT5_SIM := sim/mp-final-w2@1.0162 sim/tr7-kb2-sim-2@1.033
+LT7_SESSION := sim/lt7-20261116-165323
+LT8_SESSION := sim/lt8-20261116-131116
+VH4_SESSION := v2-vm/ops-vh4-20261118-183127
+ANALYSIS := uv run -q --project analysis python -m analysis
+analysis: ## Dựng lại bảng, hình, số chương 5: make analysis [DATA=runs|dataset] [OUT=analysis/figures]
+	@set -euo pipefail; d="$(patsubst %/,%,$(DATA))"; o="$(OUT)"; v2="$$d/v2-vm/v2-dg2"; \
+	test -d "$$v2" || { echo "make analysis: không thấy $$v2 (đặt DATA=<thư mục dữ liệu>)" >&2; exit 1; }; \
+	export PYTHONUTF8=1; log=$$(mktemp); trap 'rm -f "$$log"' EXIT; \
+	step() { "$$@" > "$$log"; grep -E '^(bỏ qua|Bỏ |không có lần thử)' "$$log" >&2 || true; }; \
+	mkdir -p "$$o/v2-dg2"; \
+	echo "ĐG2 → $$o/v2-dg2: 4 bảng CSV, biểu đồ C1–C4, số phụ của mục 5.3 và VH6"; \
+	step $(ANALYSIS).build_tables "$$v2" --baseline S4; \
+	cp "$$v2"/tables/{runs,phases,cells,alerts}.csv "$$o/v2-dg2/"; \
+	step $(ANALYSIS).charts "$$v2" --baseline S4 --formats svg --out "$$o/v2-dg2"; \
+	$(ANALYSIS).dg2_a2 "$$v2" | tr -d '\r' > "$$o/v2-dg2/dg2-a2.txt"; \
+	$(ANALYSIS).vh6_window "$$v2" | tr -d '\r' > "$$o/v2-dg2/vh6-window.txt"; \
+	echo "VH4 → $$o/vh4-windows.txt"; \
+	$(ANALYSIS).vh4_windows "$$d/$(VH4_SESSION)" | tr -d '\r' > "$$o/vh4-windows.txt"; \
+	echo "LT5–LT8 → $$o/lt*.csv, lt*.svg"; \
+	step $(ANALYSIS).lt5_little envs/home/experiments/capacity-1.5b.json envs/home/experiments/capacity.json \
+	  $(foreach s,$(LT5_SIM),"$$d/$(s)") "$$d/dg1-v2-4060ti" "$$v2" --out "$$o/lt5-little.csv"; \
+	step $(ANALYSIS).lt6_gpu_util envs/home/experiments/capacity-1.5b.json envs/home/experiments/capacity.json \
+	  "$$d/dg1-v2-4060ti/capacity.json" --out "$$o/lt6-gpu-util.csv"; \
+	step $(ANALYSIS).lt7_hpa "$$d/$(LT7_SESSION)" --out "$$o/lt7-hpa.csv"; \
+	step $(ANALYSIS).lt8_burn "$$d/$(LT8_SESSION)" --out "$$o/lt8-burn.csv"; \
+	step $(ANALYSIS).lt_charts --lt5 "$$o/lt5-little.csv" --lt6 "$$o/lt6-gpu-util.csv" --lt7 "$$o/lt7-hpa.csv" \
+	  --lt8 "$$d/$(LT8_SESSION)" --out "$$o"; \
+	echo "Xong. So với bản trong Git: git status --short $$o"
+
 # ── Kiểm tra trước khi mở PR ────────────────────────────────────────────────────
 ##@ Kiểm tra trước khi mở PR (CI chạy cùng các lệnh này)
 # Bản rút gọn của CI để chạy trên máy: danh sách thư mục kustomize ở đây viết sẵn và không chạy kubeconform,
@@ -423,14 +470,12 @@ dashboards-check: ## Kiểm JSON dashboard: uid, datasource, kích thước, Pro
 # ── Lệnh có trong thiết kế nhưng đã lược ────────────────────────────────────────
 # Tên lấy từ Môi trường §3.7. ADR-006 §3.1 (12/11) lược phần đóng gói thành lệnh `make` vì hội đồng chỉ thấy
 # kết quả; việc thật vẫn làm bằng lệnh khác (in ra bên dưới). Gọi thì trả mã lỗi 1 để script gọi nó dừng lại.
-NOT_YET := burnin capacity analysis test
+NOT_YET := burnin capacity test
 .PHONY: $(NOT_YET)
 $(NOT_YET):
 	@echo "make $@: đã lược (ADR-006 §3.1). Thay bằng:"; \
 	case $@ in \
 	  burnin) echo "  make probe, rồi vllm bench serve chạy tay (Môi trường §3.4)";; \
 	  capacity) echo "  make run MATRIX=envs/cloud/experiments/matrix-dg1.yaml (runner ghi capacity.json)";; \
-	  analysis) echo "  uv run --project analysis python -m analysis.build_tables runs/<phiên> (bảng chương 5)"; \
-	            echo "  uv run --project analysis python -m analysis.charts runs/<phiên> (biểu đồ C1–C4)";; \
 	  test) echo "  make lint alerts-test dashboards-check; pytest theo CONTRIBUTING §7";; \
 	esac; exit 1

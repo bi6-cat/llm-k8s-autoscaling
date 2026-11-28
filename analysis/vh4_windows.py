@@ -71,7 +71,9 @@ def report(run: Path) -> str:
     with open(run / "load" / "requests.csv", encoding="utf-8", newline="") as fh:
         reqs = [m.parse_request(r, t0) for r in csv.DictReader(fh)]
     out = [
-        f"##### {run.as_posix()}",
+        # Chỉ in <thư mục cha>/<lượt>, không in cả đường dẫn, để báo cáo giống nhau dù dữ liệu nằm ở runs/
+        # hay dataset/ (make analysis so báo cáo với bản trong Git)
+        f"##### {run.parent.name}/{run.name}",
         f"t0={t0:.1f} dur={lg['duration_s']} rate={lg['rate_rps']} n={len(reqs)}",
     ]
     out += [f"  {k:18s} rel_t0={t - t0:8.1f} s" for k, t in marks.items()]

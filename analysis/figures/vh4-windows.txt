@@ -1,0 +1,25 @@
+##### v2-vm/ops-vh4-20261118-183127
+t0=1795026694.6 dur=720.0 rate=1.75 n=1263
+  settled            rel_t0=    -6.1 s
+  load_started       rel_t0=    -5.8 s
+  block_prometheus   rel_t0=   114.4 s
+  fallback_reached   rel_t0=   131.2 s
+  unblocked          rel_t0=   415.4 s
+  signal_back        rel_t0=   420.7 s
+truoc_chan  [   0.0,  114.4) n=  185 err=  0 SLO=100.00% TTFT p50=0.182 p95=0.305 p99=nan s TPOT p50=30.7 p95=34.0 ms
+dang_chan   [ 114.4,  415.4) n=  548 err=  0 SLO=100.00% TTFT p50=0.165 p95=0.254 p99=0.399 s TPOT p50=25.7 p95=32.6 ms
+sau_go      [ 415.4,  720.0) n=  530 err=  0 SLO=100.00% TTFT p50=0.163 p95=0.221 p99=0.310 s TPOT p50=25.3 p95=26.8 ms
+ca_luot     [   0.0,  720.0) n= 1263 err=  0 SLO=100.00% TTFT p50=0.167 p95=0.238 p99=0.326 s TPOT p50=25.7 p95=32.3 ms
+theo phut (t tu t0):
+  [    0,   60) n=  104 err=  0 SLO=100.00% TTFT p50=0.193 p95=0.318 p99=nan s TPOT p50=30.8 p95=34.5 ms
+  [   60,  120) n=   93 err=  0 SLO=100.00% TTFT p50=0.175 p95=0.237 p99=nan s TPOT p50=30.6 p95=32.1 ms
+  [  120,  180) n=  113 err=  0 SLO=100.00% TTFT p50=0.180 p95=0.301 p99=nan s TPOT p50=31.2 p95=35.4 ms
+  [  180,  240) n=  105 err=  0 SLO=100.00% TTFT p50=0.155 p95=0.238 p99=nan s TPOT p50=25.3 p95=28.9 ms
+  [  240,  300) n=  101 err=  0 SLO=100.00% TTFT p50=0.159 p95=0.213 p99=nan s TPOT p50=25.2 p95=26.7 ms
+  [  300,  360) n=   99 err=  0 SLO=100.00% TTFT p50=0.168 p95=0.219 p99=nan s TPOT p50=25.2 p95=26.4 ms
+  [  360,  420) n=  126 err=  0 SLO=100.00% TTFT p50=0.162 p95=0.226 p99=nan s TPOT p50=25.5 p95=27.1 ms
+  [  420,  480) n=   90 err=  0 SLO=100.00% TTFT p50=0.165 p95=0.223 p99=nan s TPOT p50=25.2 p95=26.8 ms
+  [  480,  540) n=  106 err=  0 SLO=100.00% TTFT p50=0.164 p95=0.225 p99=nan s TPOT p50=25.2 p95=26.4 ms
+  [  540,  600) n=  104 err=  0 SLO=100.00% TTFT p50=0.154 p95=0.219 p99=nan s TPOT p50=25.3 p95=27.0 ms
+  [  600,  660) n=  109 err=  0 SLO=100.00% TTFT p50=0.170 p95=0.230 p99=nan s TPOT p50=25.5 p95=26.6 ms
+  [  660,  720) n=  113 err=  0 SLO=100.00% TTFT p50=0.163 p95=0.221 p99=nan s TPOT p50=25.4 p95=27.1 ms
