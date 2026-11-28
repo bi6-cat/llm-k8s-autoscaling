@@ -53,10 +53,12 @@ make analysis DATA=dataset OUT=/tmp/figures && diff -r /tmp/figures analysis/fig
 ## Cách đóng gói
 
 ```bash
-uv run --project analysis python -m analysis.dataset runs --out dataset --env-file .env
+uv run --project analysis python -m analysis.dataset runs --out dataset
 ```
 
-Script chép các phiên trong `SESSIONS` (bỏ `figures/` vì dựng lại được, file khoá `.lock` của runner, và log Ansible của `make bootstrap` vì ghi kèm địa chỉ máy thuê). Trước khi chép, script quét mọi file, kể cả `.gz`, tìm token Telegram, token Hugging Face, khoá riêng, chứng chỉ kubeconfig, khoá truy cập, IP công khai, email, và đúng các giá trị trong `.env`; thấy chỗ nào thì dừng, không chép gì, chỉ in tên file và số dòng. Sau đó ghi `INDEX.csv` và `SHA256SUMS`.
+Script chép các phiên trong `SESSIONS` (bỏ `figures/` vì dựng lại được, file khoá `.lock` của runner, và log Ansible của `make bootstrap` vì ghi kèm địa chỉ máy thuê). Vì vậy `v2-evidence/README.md` và `v2-evidence/vm-runs-sha256-before-poweroff.txt` (checksum gốc trên VM) còn nhắc tới vài file không có trong bộ dữ liệu; mọi file còn lại khớp checksum gốc.
+
+Trước khi chép, script quét mọi file, kể cả `.gz`, tìm token Telegram, token Hugging Face, khoá riêng, chứng chỉ kubeconfig, JWT, khoá truy cập dạng `KEY=giá trị`, IP công khai (IPv4, IPv6), email, và đúng các giá trị trong `.env` (mặc định đọc `.env` ở gốc repo nếu có, vì khoá của Vast và R2 chỉ là chuỗi hex, không nhận ra được bằng mẫu; `--no-env-file` để bỏ). File nhị phân không đọc được như văn bản cũng làm script dừng. Thấy chỗ nào thì dừng, không chép gì, chỉ in tên file, số dòng và tên mẫu. Sau đó ghi `INDEX.csv` và `SHA256SUMS` cho đúng các file đã chép, cộng README này.
 
 ## Giấy phép và quyền riêng tư
 
