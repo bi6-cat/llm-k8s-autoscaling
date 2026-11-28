@@ -560,7 +560,7 @@ Các cảnh dùng vLLM thật (model 3B) quay trong phiên V2 (phần ban ngày)
 
 - [ ] Mọi số liệu trong luận văn đều truy được về `analysis/` và tag `v1.0`.
 - [x] Hình minh hoạ (Hình 5, 15) đã được thay bằng số đo thật, hoặc ghi rõ là minh hoạ (27/11: cả hai vẽ lại từ số ĐG3, ĐG1 trên V2).
-- [ ] Mọi cảnh báo có runbook; runbook được review lần cuối sau phiên V2.
+- [x] Mọi cảnh báo có runbook; runbook được review lần cuối sau phiên V2 (28/11: soát 7 runbook với sự cố V1, V2, VH, sửa 6).
 - [ ] Không còn TODO hay placeholder (`vX.Y.Z`, `<org>`) trong repo công khai. Quét lần 1 ngày 28/11 trên `main` (`TODO`, `FIXME`, `vX.Y.Z`, `<org>`, "chưa viết"): ngoài nhật ký chỉ còn hai chỗ đúng nghĩa, là tên thư mục `shellcheck-vX.Y.Z/` trong gói tải ở `ci.yaml` và chính dòng này; quét lại trên bản nộp.
 - [ ] Link trong tài liệu không hỏng (CI `docs`).
 - [ ] Bộ dữ liệu có README, checksum và giấy phép.
