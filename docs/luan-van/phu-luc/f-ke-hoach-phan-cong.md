@@ -1,36 +1,33 @@
 <!-- Mục đích: Phụ lục F, kế hoạch, mốc và phân công của nhóm (quy tắc viết §2: bảng kế hoạch và phân công kèm tên thành viên), mà mục 1.2 dẫn tới. Người viết: Trình. -->
-<!-- Tóm từ docs/chi-tiet/06-ke-hoach-quan-ly.md §1, §1.1, §5, §5.1 trên main (commit 71368c0, 24/11/2026). Tên có dấu của Quang suy từ tên Git "Nguyen Ngoc Quang"; mã sinh viên, lớp chưa điền: cần Trình và Quang soát theo mẫu của trường. Không đưa vào: bảng việc theo tuần W2–W5 của §5.1 (kế hoạch, nhiều việc đã đổi), cột gói WP của từng mã, Hình 9 (vẽ lịch trước điều chỉnh 04/11). -->
+<!-- Tóm từ docs/chi-tiet/06-ke-hoach-quan-ly.md §1, §1.1, §5, §5.1 trên main (commit 71368c0, 24/11/2026). Tên có dấu của Quang suy từ tên Git "Nguyen Ngoc Quang"; mã sinh viên, lớp chưa điền: cần Trình và Quang soát theo mẫu của trường. Rút gọn 28/11 (bản nộp: phụ lục F 3 tr, đích ≤ 1,5 tr): F.2 bỏ câu về PR và CI (đã có ở 1.2) và ví dụ việc cạnh máy nhà (cài hệ điều hành và driver, khởi động lại máy). Bảng F.1 chỉ giữ tiêu chí chính của mốc (bỏ phiên thử V0 và chốt nhà cung cấp cloud ở M1, ADR-003 ở M3, sao lưu ở M3); bỏ chi tiết phiên dự phòng V3 bị bỏ, lịch V2 cũ 07–08/11 → 14–15/11 và hạn nộp 07–08/12 trong văn xuôi; tra ở Kế hoạch §1, §1.1. Không đưa vào: bảng việc theo tuần W2–W5 của §5.1 (kế hoạch, nhiều việc đã đổi), cột gói WP của từng mã, Hình 9 (vẽ lịch trước điều chỉnh 04/11). -->
 
 # Phụ lục F. Kế hoạch và phân công {.unnumbered}
 
 ## F.1. Lịch và mốc
 
-Đồ án làm trong khoảng 9 tuần, từ 08/10/2026 tới hạn nộp 07–08/12/2026, chia thành 5 mốc. Bảng F.1 ghi tiêu chí của từng mốc theo kế hoạch.
-<!-- nguồn: 06-ke-hoach-quan-ly.md §1 (bảng tuần W1–W9, M5 07/12–08/12; bảng mốc) -->
+Đồ án làm trong khoảng 9 tuần và có 5 mốc (Bảng F.1). Lịch được điều chỉnh một lần lớn ngày 04/11/2026, khi M1 mới đạt 2/7 mục và M2 chưa đạt mục nào. Nhóm làm trên kind và cluster nhà trước, gộp hai phiên thử V0 và V1, dời phiên đo chính V2 và giữ nguyên ngày đóng băng dữ liệu. V2 diễn ra ngày 18–19/11, trước ngày đóng băng.
+<!-- nguồn: 06-ke-hoach-quan-ly.md §1 (bảng tuần W1–W9, bảng mốc; M3 ghi "~~15/11~~ 22/11 (không lùi thêm)"), §1.1 (04/11: M1 2/7, M2 0/8; V0+V1 gộp; V2 dời sang 14–15/11; đóng băng 22/11); nhật ký Quang tuần 07 mục 18/11 và 19/11 (phiên V2) -->
 
 **Bảng F.1.** Các mốc của đồ án
 
-| Mốc | Ngày | Tiêu chí hoàn thành |
-|---|---|---|
-| M1 | 18/10 | Nền tảng tối thiểu chạy ở nhà qua Argo CD; phiên thử V0 đạt; đã chốt nhà cung cấp cloud |
-| M2 | 01/11 | Vận hành thử đạt ở nhà và trên simulator; runner chạy 2 lượt không cần can thiệp trên VM thuê (phiên V1) |
-| M3 | 22/11 | Dữ liệu đánh giá đầy đủ, đã sao lưu và đóng băng; có ADR-003 |
-| M4 | 29/11 | Bản thảo đủ 6 chương gửi giảng viên hướng dẫn |
-| M5 | 07–08/12 | Nộp luận văn; gắn tag `v1.0` cho repository |
-<!-- nguồn: 06-ke-hoach-quan-ly.md §1 bảng mốc (M3 ghi "~~15/11~~ 22/11 (không lùi thêm)"; ngày bảo vệ chưa có) -->
-
-Lịch được điều chỉnh một lần lớn ngày 04/11/2026. Khi đó M1 mới đạt 2/7 mục và M2 chưa đạt mục nào, vì Prometheus, KEDA và runner chưa chạy trên cluster. Nhóm thống nhất làm trên máy cục bộ trước (kind với simulator, rồi cluster nhà), gộp hai phiên thử V0 và V1 thành một, dời phiên đo chính V2 từ 07–08/11 sang 14–15/11, và chốt ngày đóng băng dữ liệu là 22/11, không lùi thêm. Phiên dự phòng V3 vì thế bị bỏ. Trên thực tế, V2 diễn ra ngày 18–19/11, trước ngày đóng băng dữ liệu.
-<!-- nguồn: 06-ke-hoach-quan-ly.md §1.1 (04/11: M1 2/7, M2 0/8; V0+V1 gộp; V2 14–15/11; V3 dự phòng mất; đóng băng 22/11); nhật ký Quang tuần 07 mục 16/11 ("V2 (lịch 14–15/11) chưa chạy"), mục 18/11 và 19/11 (phiên V2) -->
+| Mốc | Ngày | Tiêu chí chính |
+|----|------|--------------------|
+| M1 | 18/10 | Nền tảng tối thiểu chạy ở nhà qua Argo CD |
+| M2 | 01/11 | Vận hành thử đạt; runner chạy được trên VM thuê |
+| M3 | 22/11 | Dữ liệu đánh giá đầy đủ, đóng băng |
+| M4 | 29/11 | Bản thảo đủ 6 chương |
+| M5 | 07–08/12 | Nộp luận văn; tag `v1.0` |
+<!-- nguồn: 06-ke-hoach-quan-ly.md §1 bảng mốc, cột tiêu chí rút gọn -->
 
 ## F.2. Phân công theo tính năng
 
-Hai thành viên cùng vai trò DevOps/SRE và chia việc theo tính năng dọc. Người sở hữu một tính năng làm trọn tính năng đó, từ thiết kế chi tiết, code và manifest, kiểm thử, phần giám sát liên quan, runbook, tới mục luận văn tương ứng. Mọi thay đổi đi qua PR và được CI kiểm tự động trước khi merge. Những việc phải có mặt cạnh máy nhà (cài hệ điều hành và driver, khởi động lại máy) do Nguyễn Ngọc Quang làm. Theo kế hoạch, hai người chia ca trực phiên đo V2. Phân công được chốt ngày 15/10/2026. Bảng F.2 ghi các tính năng và giờ công ước lượng theo kế hoạch, chưa tính phần viết luận văn và thời gian trực V2.
+Hai thành viên cùng vai trò DevOps/SRE và chia việc theo tính năng dọc, chốt ngày 15/10/2026. Người sở hữu một tính năng làm trọn tính năng đó, từ thiết kế, code, kiểm thử, giám sát, runbook tới mục luận văn tương ứng. Việc phải có mặt cạnh máy nhà do Nguyễn Ngọc Quang làm. Bảng F.2 ghi giờ công ước lượng theo kế hoạch, chưa tính phần viết luận văn và ca trực phiên V2 của cả hai người.
 <!-- nguồn: 06-ke-hoach-quan-ly.md §5 (phân công chốt 15/10/2026), §5.1 Nguyên tắc (tính năng dọc; việc cạnh máy do Quang, 3–5 giờ cả dự án) và "Việc chung" (trực V2 cả hai) -->
 
 **Bảng F.2.** Phân công tính năng và giờ công ước lượng
 
 | Mã | Tính năng | Người-giờ |
-|---|---|---|
+|----|------------------------------------|--------|
 | | **Nguyễn Ngọc Quang: chạy được trên GPU** | **61–89** |
 | Q1 | Hạ tầng nhà: Ansible cho k3s, NVIDIA, device plugin, GPU exporter | 9–12 |
 | Q2 | Cloud: script thuê máy Vast.ai, Ansible cho VM, overlay `cloud`, `make bootstrap`; phiên V0 | 5–8 |
@@ -53,13 +50,13 @@ Hai thành viên cùng vai trò DevOps/SRE và chia việc theo tính năng dọ
 
 ## F.3. Phân công viết luận văn
 
-Từ 22/11/2026, Trần Đức Trình viết bản đầu của toàn bộ luận văn, dựa trên nhật ký làm việc cá nhân của cả hai người, tài liệu thiết kế và dữ liệu đo. Nguyễn Ngọc Quang review toàn bộ, sửa và cập nhật số. Bảng F.3 ghi người sở hữu tính năng ứng với từng mục. Người này soát kỹ sự kiện và số liệu trong mục đó.
+Từ 22/11/2026, Trần Đức Trình viết bản đầu của toàn bộ luận văn từ nhật ký làm việc của cả hai người, tài liệu thiết kế và dữ liệu đo. Nguyễn Ngọc Quang review toàn bộ, sửa và cập nhật số. Mỗi mục do người sở hữu tính năng tương ứng soát sự kiện và số liệu (Bảng F.3).
 <!-- nguồn: 06-ke-hoach-quan-ly.md §5.1 đoạn "Luận văn" (từ 22/11/2026) và bảng theo chương -->
 
 **Bảng F.3.** Người soát sự kiện và số liệu của từng chương
 
 | Chương | Nguyễn Ngọc Quang | Trần Đức Trình |
-|---|---|---|
+|------|---------|---------|
 | Mở đầu | Cùng soát | Cùng soát |
 | 1. Giới thiệu | Toàn chương | – |
 | 2. Cơ sở lý thuyết | 2.1, 2.3 | 2.2, 2.4–2.6 |

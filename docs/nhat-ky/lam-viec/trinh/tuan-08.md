@@ -1367,3 +1367,22 @@
 - **Incidents:** lệnh đầu tiên dùng `rm -rf .work/dataset-check` bị deny rule chặn (cấm xoá `.work/`). Chuyển sang thư mục mới trong scratchpad, không xoá gì.
 - **Links:** nhánh `docs/tr8-checklist-final`; `docs/chi-tiet/06-ke-hoach-quan-ly.md` §11.4, `docs/huong-dan/w2.md`.
 - **Thesis:** phụ lục bàn giao (bộ dữ liệu, checklist nộp).
+
+## 2026-11-28 – Merge PR #114 (soát checklist §11.4)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** kiểm lại 5 điều kiện merge (CI xanh, MERGEABLE, không review hay bình luận chờ xử lý, chỉ đổi tài liệu, base `main`), merge bằng merge commit `47035e1`, xoá nhánh head.
+- **Links:** PR #114.
+
+## 2026-11-28 – Rút gọn Phụ lục A và F
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Phụ lục A: Đoạn mã A.1 (Deployment vLLM) còn 15 dòng YAML, chỉ giữ các trường thân bài dựa vào (không `replicas`, `maxSurge: 0`, startup probe 10 phút, preStop 20 s, `--shutdown-timeout=150`, grace period 180 s). Bỏ đoạn mã overlay VM thuê và YAML của Application gốc, thay bằng đường dẫn file và một câu tóm tắt. Giữ trọn ScaledObject A2 (nay là Đoạn mã A.2) và Bảng A.1.
+  2. Phụ lục F: F.1 còn một đoạn bốn câu và Bảng F.1 rút cột tiêu chí xuống một dòng mỗi mốc. Rút gọn văn xuôi F.2, F.3 (bỏ câu về PR và CI đã có ở 1.2), giữ nguyên hai bảng phân công.
+  3. Đặt độ rộng cột cho bốn bảng (A.1, F.1–F.3) bằng số dấu gạch ở dòng phân cách của pipe table. Pandoc chia đều cột khi các dấu gạch bằng nhau, nên cột "Tính năng" của Bảng F.2 chỉ rộng 1/3 trang và mỗi dòng xuống 3–4 dòng.
+  4. Ý bỏ ghi vào comment đầu hai file. Dựng lại bản nộp bằng `make thesis` và cập nhật trường bằng Word.
+- **Decision:** giữ hai bảng phân công F.2, F.3 vì quy tắc viết yêu cầu bảng phân công kèm tên thành viên theo mẫu của trường, nên F chưa xuống mức 1,5 trang đặt ra. Cách đặt độ rộng cột chỉ áp cho phụ lục. Các bảng ở thân bài chưa xem lại.
+- **Results:** bản nộp từ 119 xuống 116 trang (chưa bìa), 0 lỗi trường. Phụ lục A tr. 95–97, trang 97 chỉ có Bảng A.1 (khoảng 2,4 tr, trước 5 tr). Phụ lục F tr. 110–111, trang 111 khoảng 40/47 dòng (khoảng 1,9 tr, trước 3 tr). Thân bài chương 1–6 vẫn 75 trang. `kiem_van`: A 0 điểm, F 8 điểm (trước 13, đều là ngày tháng và tên thành viên vốn có). lychee offline 0 lỗi.
+- **Links:** nhánh `docs/tr8-thesis-appendix-trim`; `docs/luan-van/phu-luc/a-manifest-chinh.md`, `docs/luan-van/phu-luc/f-ke-hoach-phan-cong.md`.
+- **Thesis:** Phụ lục A, F.
