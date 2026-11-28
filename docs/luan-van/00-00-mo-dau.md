@@ -13,7 +13,7 @@ Autoscaling đã thành thông lệ với ứng dụng web, nhưng LLM trên GPU
 
 <!-- nguồn: docs/chi-tiet/01-bai-toan-yeu-cau.md §5 (cold start tính bằng phút, GPU utilization bão hoà sớm, request dài có streaming); quy-tac-viet §4 (replica: một bản sao pod vLLM, mỗi bản dùng 1 GPU; autoscaling: tự động điều chỉnh số replica theo tải); mục 1.1 (01-01), 2.3 (02-03) -->
 
-Autoscaling mới giải quyết một nửa bài toán. Hệ thống còn phải để một nhóm nhỏ vận hành được hằng ngày. Cập nhật phiên bản không được làm gián đoạn người dùng. Khi chất lượng phục vụ giảm, người trực phải được báo kịp thời và có sẵn hướng dẫn xử lý. Khi một máy hỏng, toàn bộ hệ thống phải dựng lại được từ phần mô tả lưu trong kho mã. Vì vậy đồ án coi đây là một bài toán vận hành, với ba yêu cầu kéo nhau. Ba yêu cầu đó là người dùng không phải chờ lâu, hệ thống không giữ GPU thừa, và vận hành được hằng ngày.
+Autoscaling mới giải quyết một nửa bài toán. Hệ thống còn phải để một nhóm nhỏ vận hành được hằng ngày. Cập nhật phiên bản không được làm gián đoạn người dùng. Khi chất lượng phục vụ giảm, người trực phải được báo kịp thời và có sẵn hướng dẫn xử lý. Khi một máy hỏng, toàn bộ hệ thống phải dựng lại được từ phần mô tả lưu trong repository. Vì vậy đồ án coi đây là một bài toán vận hành, với ba yêu cầu kéo nhau. Ba yêu cầu đó là người dùng không phải chờ lâu, hệ thống không giữ GPU thừa, và vận hành được hằng ngày.
 
 <!-- nguồn: docs/chi-tiet/01-bai-toan-yeu-cau.md §6 (phát biểu bài toán, ba yêu cầu kéo nhau); docs/chi-tiet/06-ke-hoach-quan-ly.md §11.1 (xương sống) -->
 

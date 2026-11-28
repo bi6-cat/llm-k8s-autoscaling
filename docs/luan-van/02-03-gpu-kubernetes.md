@@ -14,7 +14,7 @@ GPU không phải tài nguyên có sẵn của Kubernetes như CPU hay bộ nh�
 
 <!-- nguồn: tài liệu Kubernetes v1.36 "Device Plugins" (content/en/docs/concepts/extend-kubernetes/compute-storage-net/device-plugins.md nhánh release-1.36, đọc 27/11/2026: "Extended resources are only supported as integer resources and cannot be overcommitted. Devices cannot be shared between containers."); "Schedule GPUs" (tasks/manage-gpus/scheduling-gpus.md: GPU chỉ khai báo ở limits, requests nếu có phải bằng limits); docs/chi-tiet/02-kien-thuc-nen.md §4.1 (scheduler chỉ đếm số GPU còn trống); README NVIDIA k8s-device-plugin v0.20.1 -->
 
-Với LLM serving, hệ quả là mỗi replica vLLM giữ trọn một GPU trong suốt vòng đời của pod. Năng lực của hệ thống tăng theo từng bậc một GPU, và số replica tối đa bằng số GPU của cluster. Một replica mới chỉ chạy được khi còn GPU trống. Điều này giới hạn cả autoscaling (mục 2.4) lẫn rolling update, vốn tạo pod mới trước khi xoá pod cũ (mục 2.5).
+Khi phục vụ LLM, hệ quả là mỗi replica vLLM giữ trọn một GPU trong suốt vòng đời của pod. Năng lực của hệ thống tăng theo từng bậc một GPU, và số replica tối đa bằng số GPU của cluster. Một replica mới chỉ chạy được khi còn GPU trống. Điều này giới hạn cả autoscaling (mục 2.4) lẫn rolling update, vốn tạo pod mới trước khi xoá pod cũ (mục 2.5).
 
 <!-- nguồn: suy ra từ đoạn trên (số nguyên, không chia, Pending khi hết GPU); docs/chi-tiet/02-kien-thuc-nen.md §5.4 (pod "vượt" cần thêm một GPU trống, không có thì cập nhật bị kẹt); docs/luan-van/quy-tac-viet.md §4 (replica = một bản sao pod vLLM, mỗi bản dùng 1 GPU) -->
 

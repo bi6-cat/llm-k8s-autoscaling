@@ -1294,3 +1294,16 @@
 - **Results:** kiem_van: Phụ lục G 0 điểm; 4.6, Mở đầu, 5.6 như main. lychee offline trên `docs/luan-van/` và Kế hoạch: 0 lỗi. gop.py (bản gộp từ `origin/main` và nhánh `docs/tr8-thesis-*`): Phụ lục G nằm sau F, ba ảnh có đường dẫn đúng, danh mục hình và bảng "Cần xem" 0. Số trang khuôn T: chưa đo (phụ lục không tính vào thân bài).
 - **Links:** nhánh `docs/tr8-thesis-appendix-dashboards`; `docs/luan-van/phu-luc/g-anh-dashboard-sim.md`, `04-06-giam-sat-canh-bao.md`, `05-06-bang-nghiem-thu.md`, `00-00-mo-dau.md`, `README.md`, `nguon-tu-lieu.md`, `docs/chi-tiet/06-ke-hoach-quan-ly.md`.
 - **Thesis:** Phụ lục G; 4.6.1, 5.6 (F5).
+
+## 2026-11-28 – Merge PR #110; soát chính tả lần 2, chốt thuật ngữ cả quyển
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Merge PR #110 (Phụ lục G ảnh dashboard trên simulator) `deed69b` sau CI xanh.
+  2. Chốt tám điểm còn để ngỏ của lần soát chính tả đầu và áp cho cả quyển (24 file chương và phụ lục): thời lượng theo §5 (154 s, 502 s kèm 8,4 phút khi so với chỉ tiêu 30 phút, 24,4 phút, 14,9 phút, 11,5 phút, 24,7 phút, 7,2 giờ; 371,6 s thành 372 s cho khớp 5.5); "API key" thay "khoá API"; "chu kỳ đánh giá" của HPA thay "chu kỳ sync" để chữ sync chỉ dành cho Argo CD; "phục vụ LLM", "repository", "rolling update", "khởi động lại", "TTFT p50"; "tám pha" trong văn xuôi; câu "kiến trúc V1" của vLLM viết lại theo số phiên bản để không trùng mã phiên đo V1.
+  3. `quy-tac-viet.md` §4 thêm sáu dòng thuật ngữ và quy tắc tên phiên bản upstream; bảng mã định danh khớp danh mục đầu quyển (A1, A2; L0–L2; T1–T7; V0–V2); §5 thêm quy tắc thời lượng và số đếm. Danh mục mã thêm V0, V1 (dùng ở Phụ lục F và runbook mẫu).
+  4. `/code-review high`: 10 điểm, sửa 9 điểm đã xác nhận: Bảng 3.5 còn "sync HPA"; "chu kỳ đánh giá rule" của Prometheus đổi thành "chu kỳ tính rule" để không trùng chữ của HPA; "Khoá API" viết hoa và "kho mã" còn sót; thời lượng 25 phút (24,7 phút) và 7 giờ 14 phút (7,2 giờ); 409–430 s kèm số phút; câu chunked prefill dẫn về phiên bản ở Phụ lục D thay cho "bản 0.8" không có nguồn; T7 thêm mô tả ở 4.3; danh mục ghi V0, V1 ở Phụ lục C, F; số file trong nhật ký. Điểm "bước" chỉ đúng một phần: ở 5.4 và Bảng 4.5, "bước" là thao tác bên trong một pha, nên quy tắc được nới thay vì đổi chữ.
+- **Decision:** giữ "pha" cho tám pha cold start vì tài liệu thiết kế, Bảng 5.3, Hình 5.3 và Bảng E.4 đều dùng chữ này; pha của tải luôn gọi bằng tên nên không lẫn. Bỏ dạng "X phút Y giây" dù đọc tự nhiên hơn, vì trái quy tắc đơn vị §5. Số cảnh báo F6 không sửa: sáu cảnh báo ứng với bảy quy tắc (pod không khởi động được tách thành hai), mục 3.5 đã nói rõ; `common/observability/alerts/llm.yaml` có 7 rule và `docs/runbooks/` có 7 runbook. Phụ lục E giữ số chữ số của nguồn.
+- **Results:** kiem_van trên 25 file đổi (trừ `quy-tac-viet.md`): 2 điểm cần xem, 5 gợi ý, trùng hệt bản trên main (0 điểm mới). lychee offline trên `docs/luan-van/`: 0 lỗi.
+- **Links:** nhánh `docs/tr8-thesis-proofread-2`; `docs/luan-van/quy-tac-viet.md`, `docs/luan-van/phan-dau/02-danh-muc-thuat-ngu.md` và 24 file chương, phụ lục.
+- **Thesis:** toàn quyển (thuật ngữ, đơn vị); danh mục mã định danh.

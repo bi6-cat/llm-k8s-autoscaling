@@ -196,10 +196,16 @@ Những thứ này chỉ nằm trong comment nguồn. Ngoại lệ: mục phân 
 | model (LLM) | | mô hình (dành cho mô hình toán, mô hình hàng đợi) |
 | cold start | thời gian từ khi tạo pod tới khi pod phục vụ được | khởi động nguội |
 | graceful shutdown | tắt pod mà không cắt request đang xử lý | tắt êm |
-| rolling update | | cập nhật cuốn chiếu |
+| rolling update | | cập nhật cuốn chiếu, rollout (trừ lệnh `kubectl rollout`) |
 | threshold | | ngưỡng (được dùng trong câu thường, ví dụ "ngưỡng 1%", nhưng tham số của ScaledObject gọi là threshold) |
 | SLO attainment | tỷ lệ request đạt SLO | độ đạt SLO |
-| TTFT, TPOT, p95 | xem README; p95 = phân vị 95 | |
+| TTFT, TPOT, p50, p95 | xem README; p95 = phân vị 95 | TTFT trung vị |
+| phục vụ LLM | | LLM serving |
+| API key | | khoá API |
+| repository | | repo, kho mã (`repo-server` là tên thành phần của Argo CD, giữ nguyên) |
+| khởi động lại | | restart (trừ tên metric và trường `restartPolicy`) |
+| chu kỳ đánh giá (của HPA) | khoảng thời gian giữa hai lần HPA tính lại số replica (*sync period*, mặc định 15 s) | chu kỳ sync (chữ sync dành cho Argo CD) |
+| pha (của cold start) | tám pha đánh số 1–8, từ lúc pod được gán node tới khi Ready (mục 3.4); "bước" chỉ dùng cho một thao tác bên trong pha (nạp weights, capture CUDA graph) | bước (khi nói về một trong tám pha) |
 | burn rate, error budget (ngân sách lỗi) | | |
 | page, ticket | hai mức cảnh báo (gọi người trực ngay / xử lý trong giờ làm việc) | |
 | GPU-giờ | số GPU bị giữ nhân thời gian giữ | giờ GPU |
@@ -220,19 +226,22 @@ Những thứ này chỉ nằm trong comment nguồn. Ngoại lệ: mục phân 
 - Viết thường khi nói chung: pod, node, cluster.
 
 **Mã định danh của đồ án:**
-- Mỗi mã được định nghĩa ở mục chương 3 dùng nó (F, N ở 3.1; S, A ở 3.3; L ở 3.4; KB, ĐG, VH, LT ở 3.6), và gom vào một bảng ở danh mục mã định danh đầu quyển. Từ chương 4 trở đi được dùng thẳng.
+- Mỗi mã được định nghĩa ở mục dùng nó lần đầu (F, N ở 3.1; S, A ở 3.3; L ở 3.4; KB, ĐG, VH, LT ở 3.6; T ở 4.3; V2 ở 5.1), và gom vào một bảng ở danh mục mã định danh đầu quyển. Từ chương 4 trở đi được dùng thẳng. Bảng dưới phải khớp danh mục đó.
 
   | Mã | Nghĩa |
   |---|---|
   | S1, S4 | cấu hình tĩnh 1 và N replica |
-  | A1–A4 | cấu hình autoscaling |
+  | A1, A2 | cấu hình autoscaling (A1–A4 chỉ còn trong kế hoạch ở Phụ lục F) |
   | KB1–KB3 | ba kịch bản tải |
   | ĐG1–ĐG3 | ba đánh giá: năng lực, autoscaling, cold start |
   | VH1–VH6 | kịch bản vận hành |
   | LT1–LT8 | kiểm chứng lý thuyết |
-  | L0, L2 | mức cold start |
+  | L0, L1, L2 | mức cold start (L1 không dùng, chỉ nêu lý do bỏ) |
+  | T1–T7 | bài kiểm thử autoscaling |
   | F1–F7, N1–N8 | yêu cầu chức năng, chỉ tiêu nghiệm thu |
-  | V0–V2 | các phiên đo |
+  | V0–V2 | các phiên đo: V2 là phiên đo chính; V0, V1 là phiên thử, chỉ xuất hiện ở Phụ lục F và runbook mẫu |
+
+- Tên phiên bản của phần mềm upstream trùng mã của đồ án (ví dụ engine "V1" của vLLM) thì nói bằng số phiên bản ("từ bản 0.8"), không dùng nhãn trùng.
 
 - Ô ma trận viết "A2 × KB2".
 - Tối đa 4 mã trong một đoạn. Câu chủ đề viết bằng lời, không mở bằng mã.
@@ -252,6 +261,8 @@ Những thứ này chỉ nằm trong comment nguồn. Ngoại lệ: mục phân 
 - **Ngày tháng** chỉ ghi một lần cho phiên đo, ở mục 5.1. Bối cảnh phát hiện (ví dụ "phát hiện trên simulator ngày 01/11") để ở phần sự cố của chương 4, hoặc trong comment nguồn.
 - **Khoảng giá trị:** "80–82 s" (gạch ngang ngắn, không cách). Phép nhân: "4 × RTX 4060 Ti". Đẳng thức: "λ = 3,5 req/s" (có cách hai bên).
 - **Đơn vị:** s, ms, phút (không viết "min"), req/s, GB hoặc GiB đúng như nguồn, USD. Phần trăm và mọi định dạng số khác: theo README.
+- **Thời lượng** ghi bằng s, làm tròn như trên; từ 10 phút trở lên ghi bằng phút, từ 2 giờ trở lên ghi bằng giờ, đều 1 chữ số thập phân ("24,4 phút", "7,2 giờ"). Số từ 300 s trở lên khi so với một mức tính bằng phút thì thêm số phút trong ngoặc: "502 s (8,4 phút)". Không dùng dạng ghép "8 phút 22 giây", "7 giờ 14 phút". Giá trị tham số giữ đơn vị của tham số (`progressDeadlineSeconds` 600 s); trong bảng, mỗi cột dùng một đơn vị. Bảng số từng lượt ở Phụ lục E giữ số chữ số của nguồn.
+- **Số đếm cấu trúc** nhỏ hơn 10 viết bằng chữ trong văn xuôi ("ba kịch bản", "tám pha"); số đo, số lượt và số trong bảng viết bằng chữ số.
 - **Nhãn nguồn gốc:** số nào không phải đo thật thì gắn nhãn ngay cạnh:
   - "(mô phỏng)": ví dụ phần mô phỏng ma trận;
   - "(ước tính)": ví dụ giá thuê theo giờ;

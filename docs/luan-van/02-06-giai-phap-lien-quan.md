@@ -5,11 +5,11 @@
 <!-- Soát số: chưa · Soát văn phong: kiem_van 27/11 · Người viết đọc lại: chưa -->
 ## 2.6. Giải pháp liên quan và vị trí của đồ án
 
-Các giải pháp cho LLM serving trên Kubernetes chia thành hai nhóm: nền tảng mã nguồn mở lắp sẵn các thành phần để triển khai, và nghiên cứu học thuật cải tiến engine hay cách lập lịch. Bảng 2.2 tóm tắt các nền tảng theo tín hiệu autoscaling mà chúng dùng.
+Các giải pháp phục vụ LLM trên Kubernetes chia thành hai nhóm: nền tảng mã nguồn mở lắp sẵn các thành phần để triển khai, và nghiên cứu học thuật cải tiến engine hay cách lập lịch. Bảng 2.2 tóm tắt các nền tảng theo tín hiệu autoscaling mà chúng dùng.
 
 <!-- nguồn: docs/chi-tiet/02-kien-thuc-nen.md §6 (hai nhóm: nền tảng mã nguồn mở, nghiên cứu học thuật) -->
 
-**Bảng 2.2.** Một số nền tảng mã nguồn mở cho LLM serving và tín hiệu autoscaling của chúng
+**Bảng 2.2.** Một số nền tảng mã nguồn mở để phục vụ LLM và tín hiệu autoscaling của chúng
 
 | Nền tảng | Tín hiệu autoscaling | Điểm riêng |
 |---|---|---|
