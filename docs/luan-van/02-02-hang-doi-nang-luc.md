@@ -7,7 +7,7 @@
 
 Một replica vLLM nhận request đến ngẫu nhiên, giữ mỗi request một khoảng thời gian rồi trả kết quả, nên có thể phân tích như một hàng đợi. Mục này dùng hai kết quả của lý thuyết hàng đợi. Định luật Little nối số request đồng thời với tốc độ đến. Đường cong độ trễ theo mức tải giải thích vì sao một replica không thể chạy sát throughput tối đa của nó.
 
-**Tải mở và tải đóng.** Ký hiệu λ là tốc độ đến, tính bằng req/s. Request của nhiều người dùng đến độc lập với nhau. Mô hình thường dùng cho dòng request như vậy là quá trình Poisson: khoảng cách giữa hai request liên tiếp có phân phối mũ, và số request trong một khoảng thời gian dao động quanh giá trị trung bình. Ví dụ minh hoạ, với λ = 3 req/s, một cửa sổ 10 s có trung bình 30 request, với độ lệch chuẩn khoảng 5,5 request. Schroeder và cộng sự phân biệt hai cách sinh tải khi đánh giá hệ thống [@schroeder-open-closed]. Ở mô hình đóng, request mới chỉ được gửi khi một request cũ đã xong. Ở mô hình mở, request đến theo lịch riêng, không phụ thuộc lúc các request khác xong. Hai mô hình cho kết quả khác nhau nhiều trong thực tế.
+**Tải mở và tải đóng.** Ký hiệu λ là tốc độ đến, tính bằng req/s. Request của nhiều người dùng đến độc lập với nhau. Mô hình thường dùng cho dòng request như vậy là quá trình Poisson: khoảng cách giữa hai request liên tiếp có phân phối mũ, và số request trong một khoảng thời gian dao động quanh giá trị trung bình. Ví dụ minh hoạ, với λ = 3 req/s, một cửa sổ 10 s có trung bình 30 request, với độ lệch chuẩn khoảng 5,5 request. Schroeder và cộng sự phân biệt hai cách sinh tải khi đánh giá hệ thống [@schroeder-open-closed]. Ở mô hình đóng (*closed-loop*), request mới chỉ được gửi khi một request cũ đã xong. Ở mô hình mở (*open-loop*), request đến theo lịch riêng, không phụ thuộc lúc các request khác xong. Hai mô hình cho kết quả khác nhau nhiều trong thực tế.
 
 <!-- nguồn: tóm tắt Schroeder và cộng sự, NSDI 2006 (mô hình đóng, mô hình mở; khác nhau nhiều trong thực tế); docs/chi-tiet/05-moi-truong-danh-gia.md §8 bước 6 (số request đến dao động Poisson); √30 ≈ 5,48 -->
 
@@ -33,9 +33,9 @@ $$
 
 <!-- nguồn: docs/nhat-ky/van-hanh.md LT5 (cửa sổ hữu hạn: L_client = λ_thực × W + edge; hệ dừng thì edge ≈ 0, hàng đợi đang tăng thì edge < 0), LT3 (λ = 8 ở nhà lệch 11% vì hàng đợi tăng liên tục, không ở trạng thái dừng); docs/chi-tiet/05-moi-truong-danh-gia.md §8 bước 6 -->
 
-**Độ trễ theo mức sử dụng.** Gọi μ là throughput tối đa của một replica, tức số request mỗi giây mà nó xử lý được khi luôn có việc. Mức sử dụng là ρ = λ/μ. Với hàng đợi M/M/1, mô hình đơn giản nhất gồm dòng đến Poisson và một server có thời gian phục vụ phân phối mũ, thời gian trung bình một request lưu lại là [@harchol-balter-queueing]
+**Độ trễ theo mức sử dụng.** Gọi μ là throughput tối đa của một replica, tức số request mỗi giây mà nó xử lý được khi luôn có việc. Mức sử dụng là ρ = λ/μ. Với hàng đợi M/M/1, mô hình đơn giản nhất gồm dòng đến Poisson và một server có thời gian phục vụ phân phối mũ, thời gian trung bình một request lưu lại là [@zukerman-queueing]
 
-<!-- nguồn: docs/chi-tiet/01-bai-toan-yeu-cau.md §3 (μ, λ, ρ = λ/μ, công thức M/M/1); Harchol-Balter 2013 -->
+<!-- nguồn: docs/chi-tiet/01-bai-toan-yeu-cau.md §3 (μ, λ, ρ = λ/μ, công thức M/M/1); Zukerman, arXiv:1307.2968v27, mục 6.3, phương trình (303) (đọc bản PDF 27/11/2026: E[D] = E[Q]/λ = ρ/(λ(1 − ρ)) = 1/(μ − λ), suy từ E[Q] = ρ/(1 − ρ) bằng định luật Little; mục 6 giả định dòng đến Poisson, thời gian phục vụ IID phân phối mũ, một server, bộ đệm vô hạn) -->
 
 $$
 W = \frac{1}{\mu - \lambda} = \frac{1/\mu}{1 - \rho}.
@@ -43,7 +43,7 @@ $$
 
 Công thức cho thấy độ trễ không tăng đều theo tải. Ở ρ = 0,5, một request lưu lại gấp 2 lần thời gian phục vụ thuần 1/μ. Ở ρ = 0,8 là 5 lần, và ở ρ = 0,9 là 10 lần: thêm 10 điểm phần trăm tải làm độ trễ tăng gấp đôi. Khi λ ≥ μ, hàng đợi dài ra mãi, và hệ thống không tự hồi phục cho tới khi tải giảm.
 
-<!-- nguồn: docs/chi-tiet/01-bai-toan-yeu-cau.md §3 (μ, λ, ρ = λ/μ; M/M/1: W = 1/(μ − λ) = (1/μ)/(1 − ρ); ρ từ 0,8 lên 0,9 làm thời gian chờ tăng gấp đôi; λ > μ thì hàng đợi tăng mãi, không tự hồi phục cho tới khi tải giảm); Harchol-Balter 2013 (M/M/1). Tính: 1/(1 − 0,5) = 2; 1/(1 − 0,8) = 5; 1/(1 − 0,9) = 10 -->
+<!-- nguồn: docs/chi-tiet/01-bai-toan-yeu-cau.md §3 (μ, λ, ρ = λ/μ; M/M/1: W = 1/(μ − λ) = (1/μ)/(1 − ρ); ρ từ 0,8 lên 0,9 làm thời gian chờ tăng gấp đôi; λ > μ thì hàng đợi tăng mãi, không tự hồi phục cho tới khi tải giảm); Zukerman, arXiv:1307.2968v27, mục 6.3, phương trình (303) (chỉ cho công thức W, giả định ρ < 1; câu về λ ≥ μ lấy từ 01 §3). Tính: 1/(1 − 0,5) = 2; 1/(1 − 0,8) = 5; 1/(1 − 0,9) = 10 -->
 
 Một replica vLLM khác M/M/1 ở hai điểm. Thứ nhất, nó giống một hệ có nhiều chỗ phục vụ song song, mỗi chỗ trong batch là một chỗ, và mỗi chỗ chậm đi một chút khi batch đông hơn. Throughput tối đa μ vì vậy chỉ đạt được khi batch đã đầy. Thứ hai, thời gian phục vụ phụ thuộc độ dài prompt và câu trả lời. Dù vậy, đường cong độ trễ vẫn có dạng "đầu gối" như Hình 2.2. Khi batch còn chỗ, request mới vào ngay và TTFT gần bằng thời gian prefill. Khi batch đã đầy, phần request dư vào hàng đợi, và TTFT tăng nhanh trong khi TPOT của các request đang chạy gần như đứng yên.
 

@@ -81,7 +81,7 @@ spec:
             runbook_url: "https://github.com/bi6-cat/llm-k8s-autoscaling/blob/main/docs/runbooks/LLMAtMaxReplicas.md"
 
         # Pod vLLM nằm Pending > 10 phút. Pending gồm cả lúc chưa được xếp lịch (thiếu GPU) và lúc
-        # đang tải image (ContainerCreating). Image vLLM ~30 GB nên lần tải đầu có thể lâu: 10 phút là
+        # đang tải image (ContainerCreating). Image vLLM ~9–11 GB nén (~32 GB giải nén) nên lần tải đầu có thể lâu (V2: 2 phút 34 giây; PC nhà: gần 15 phút, đủ làm cảnh báo kêu): 10 phút là
         # mức "chắc chắn bất thường" khi image đã có sẵn trên node.
         # pod=~"vllm-.*": pod của Deployment vllm có tên vllm-<hash>-<id>.
         # sum by (namespace, pod): bỏ các nhãn thừa (phase, instance…) để tin nhắn gọn.

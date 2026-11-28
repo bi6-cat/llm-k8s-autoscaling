@@ -8,7 +8,7 @@ Mã nguồn, manifest và tài liệu thiết kế của đồ án nằm ở rep
 
 ## A.1. Deployment vLLM
 
-Manifest chung của tầng phục vụ nằm ở `common/serving/deployment.yaml` (commit `3101142`). Đoạn mã A.1 giữ ba nhóm khai báo mà mục 3.4 và 4.5 dựa vào: không đặt `replicas`, rolling update không xin thêm GPU, và chuỗi tắt pod an toàn (preStop 20 s, `--shutdown-timeout=150`, thời gian ân hạn 180 s). Image `vllm/vllm-openai` được ghim ở `common/serving/kustomization.yaml` theo tag `v0.31.0` kèm digest.
+Manifest chung của tầng phục vụ nằm ở `common/serving/deployment.yaml` (commit `3101142`). Đoạn mã A.1 giữ ba nhóm khai báo mà mục 3.4 và 4.5 dựa vào: không đặt `replicas`, rolling update không xin thêm GPU, và chuỗi tắt pod an toàn (preStop 20 s, `--shutdown-timeout=150`, grace period 180 s). Image `vllm/vllm-openai` được ghim ở `common/serving/kustomization.yaml` theo tag `v0.31.0` kèm digest.
 <!-- nguồn: common/serving/deployment.yaml; common/serving/kustomization.yaml (newTag v0.31.0); commit 3101142 -->
 
 **Đoạn mã A.1.** Deployment vLLM dùng chung cho mọi môi trường (trích)
@@ -141,10 +141,10 @@ spec:
 
 ## A.3. Application gốc của Argo CD
 
-Ở cluster nhà, Argo CD dựng mọi thành phần theo mẫu app-of-apps: một Application gốc (`envs/home/argocd/root-app.yaml`, commit `ffee403`) theo dõi thư mục `envs/home/argocd/apps/` trên nhánh `main`, mỗi file trong thư mục là một Application con. Đoạn mã A.4 giữ phần đồng bộ và hai khai báo `ignoreDifferences` mà mục 4.1 giải thích. Khai báo thứ nhất cho phép tắt auto-sync của riêng Application `autoscaling` trước đợt đánh giá mà Application gốc không bật lại.
+Ở cluster nhà, Argo CD dựng mọi thành phần theo mẫu App-of-Apps: một Application gốc (`envs/home/argocd/root-app.yaml`, commit `ffee403`) theo dõi thư mục `envs/home/argocd/apps/` trên nhánh `main`, mỗi file trong thư mục là một Application con. Đoạn mã A.4 giữ phần đồng bộ và hai khai báo `ignoreDifferences` mà mục 4.1 giải thích. Khai báo thứ nhất cho phép tắt auto-sync của riêng Application `autoscaling` trước đợt đánh giá mà Application gốc không bật lại.
 <!-- nguồn: envs/home/argocd/root-app.yaml, commit ffee403; envs/home/argocd/apps/autoscaling.yaml, commit 91dd660 -->
 
-**Đoạn mã A.4.** Application gốc theo mẫu app-of-apps (trích)
+**Đoạn mã A.4.** Application gốc theo mẫu App-of-Apps (trích)
 <!-- nguồn: envs/home/argocd/root-app.yaml, commit ffee403 -->
 
 ```yaml

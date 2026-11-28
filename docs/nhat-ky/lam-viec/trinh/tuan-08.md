@@ -1101,3 +1101,149 @@
   - `/code-review high`: 6 điểm, sửa 4 (mô tả TPOT trên dashboard SLO là tỉ lệ, không phải phân vị; Decision dẫn sai D114; số retention cloud chép cứng; thiếu giới hạn 4 GB của nhà). Không sửa: màu đỏ của vạch 100 ms (chế độ `dashed` chỉ vẽ một vạch, không tô vùng; mô tả đã ghi là tham chiếu). Điều kiện merge 4 ghi ở Decision. Trên kind: `llm-slo-cost` 19 panel, `llm-serving-gpu` 24 panel, API Grafana trả về mô tả mới ở đúng hai panel đã sửa.
 - **Links:** nhánh `fix/tr4-dashboard-panel-desc`; `common/observability/dashboards/slo-cost.json`, `serving-gpu.json`.
 - **Thesis:** §4.4 (dashboard), nếu cần dẫn chuyện ITL và TPOT.
+## 2026-11-27 – Thay nguồn công thức M/M/1 ở mục 2.2 bằng giáo trình mở đã đọc trực tiếp
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Tìm nguồn công khai cho W = 1/(μ − λ) (mục 2.2 dẫn Harchol-Balter 2013, giáo trình chưa đọc trực tiếp; điểm còn để ngỏ từ code-review của #83).
+  2. Đọc bản PDF arXiv:1307.2968v27 (M. Zukerman, *Introduction to Queueing Theory and Stochastic Teletraffic Models*, 15/03/2025): mục 6 giả định dòng đến Poisson, phục vụ IID phân phối mũ, một server; mục 6.3 phương trình (303) cho E[D] = E[Q]/λ = 1/(μ − λ), suy từ E[Q] = ρ/(1 − ρ) bằng định luật Little.
+  3. Đổi trích dẫn trong `02-02` thành `[@zukerman-queueing]`, sửa hai comment nguồn; thay mục `harchol-balter-queueing` trong `tai-lieu.bib` bằng `zukerman-queueing` (`@online`, eprint arXiv, URL ghim v27, ngày đọc).
+  4. `/code-review high`: 5 điểm (URL chưa ghim v27, design doc còn dẫn sách cũ, locator, trường `howpublished`, comment gán câu λ ≥ μ cho phương trình 303); sửa cả 5.
+- **Decision:** thay hẳn, không giữ Harchol-Balter song song: luận văn chỉ dẫn tài liệu đã đọc (quy-tac-viet), và giáo trình mở đủ cho khẳng định đang dẫn. Bỏ phương án dẫn Wikipedia (không phải nguồn học thuật) và bài giảng MIT 2.854 (bản tìm được không nêu trực tiếp 1/(μ − λ)). Tài liệu thiết kế `01-bai-toan-yeu-cau.md` §3 cũng đổi phần đọc thêm sang Zukerman để hai nơi dẫn cùng một nguồn. Số mục để trong comment nguồn, không dùng locator trong `[@…]`, cho giống các trích dẫn khác.
+- **Results:** `pandoc … --citeproc` cả quyển: không cảnh báo trích dẫn (chỉ cảnh báo SVG thiếu `rsvg-convert`, có từ trước); câu ra "(Zukerman 2025)". `kiem_van.py` 02-02: 0 điểm.
+- **Links:** `docs/luan-van/02-02-hang-doi-nang-luc.md`, `docs/luan-van/tai-lieu.bib`.
+- **Thesis:** §2.2, danh mục tài liệu tham khảo.
+## 2026-11-27 – Ảnh ba dashboard trên kind làm phương án dự phòng cho F5
+
+- **Task:** TR4 (F5) · **Environment:** sim
+- **Done:** (1) Tạm bật anonymous Viewer cho Grafana trên kind bằng `kubectl set env` để Chrome headless mở được dashboard. (2) `make sim-test-load C=25 DUR=240s`, A2 scale 1 → 3. (3) Port-forward Grafana, chụp ba dashboard ở chế độ kiosk, khoảng 15 phút gần nhất, bằng Chrome headless trên Windows. (4) Cắt khoảng trống ở đáy hai ảnh bằng Pillow, đặt ba ảnh ở `docs/images/anh-chup/` (không để chung `docs/images/png/`, nơi chỉ chứa PNG xuất từ SVG và đánh số theo hình). (5) Gỡ hai biến môi trường anonymous, Grafana rollout lại.
+- **Decision:** Dùng anonymous Viewer tạm thời trên kind cục bộ (vài phút, rồi gỡ), vì đây là cách ngắn nhất để Chrome headless mở dashboard mà không phải đăng nhập. Không chọn: render API (cần cài plugin grafana-image-renderer), token service account (Chrome headless gọi từ dòng lệnh không gắn được header `Authorization` vào trang), profile Chrome đã đăng nhập (`--user-data-dir`, phải đăng nhập tay một lần). Không lặp lại cách này trên cluster nhà: Grafana nhà do Argo CD quản lý và mở cho cả tailnet; ở đó nên dùng profile Chrome đã đăng nhập. Ảnh đặt tên đuôi `-sim` để không nhầm với ảnh GPU nhà; chưa gắn vào luận văn.
+- **Results:** hey 971 response 200, p95 13,2 s ở C = 25 (simulator). Dashboard SLO và chi phí: 972 request đã trả xong trong 15 phút (hơn hey 1 request; chưa kiểm request thừa đến từ đâu, có thể nằm ngoài lượt hey trong cửa sổ 15 phút), TTFT ≤ 2,5 s và TPOT ≤ 100 ms đều 100 %, `LLMAtMaxReplicas` pending, đồng thời cao nhất 25. Dashboard Autoscaling: desired = Ready = max = 3, cold start hai pod mới 6 s. Hàng GPU "No data" (kind không có GPU). Hàng chi phí có số (GPU-giờ 0,38, $0,19, $2,533 / 1 triệu token) chỉ vì panel đếm mỗi pod `vllm-*` đã xếp lên node là một GPU; trên kind đây không phải chi phí thật, không dùng làm số đo.
+- **Incidents:** Bảng "Request đang chạy" và "Token/s theo pod" chỉ có số ở pod cũ: `load-sim.sh` gửi tải qua `kubectl port-forward svc/vllm`, mà port-forward chỉ nối tới một pod, nên hai pod mới Ready nhưng không nhận request. Ảnh vẫn đúng cho vòng lặp scale (tín hiệu tổng, HPA, trạng thái pod), nhưng không minh hoạ chia tải giữa các pod. Ngoài ra, trên ảnh, "Request đang chạy" và "Request đang chờ" chỉ có số khoảng 23:24–23:26, trong khi tải chạy tới 23:27:59 và "Token/s theo pod" còn số tới khoảng 23:28; chưa tìm hiểu vì sao. Nếu cần ảnh chia tải thì bơm tải từ một pod trong cluster tới Service.
+- **Links:** `docs/images/anh-chup/dashboard-autoscaling-sim.png`, `dashboard-serving-gpu-sim.png`, `dashboard-slo-cost-sim.png`, `docs/nhat-ky/van-hanh.md`.
+- **Thesis:** dự phòng cho F5 ở 4.4 hoặc 5.6 nếu không có ảnh dashboard GPU nhà; khi dùng phải ghi rõ là simulator, hạn chế chia tải ở trên và hàng chi phí không phải số thật.
+
+## 2026-11-28 – Merge PR #98 (ảnh dashboard dự phòng F5)
+
+- **Task:** TR4 · **Environment:** none
+- **Done:** kiểm #98 đủ 5 điều kiện merge (CI 6/6 pass, MERGEABLE/CLEAN, không bình luận, chỉ thêm ảnh và nhật ký nên Argo CD nhà không đổi, base `main`); merge commit `c1d1756`, xoá nhánh head. Gộp `origin/main` vào nhánh #99: chỉ xung đột nhật ký `tuan-08.md`, `merge=union` tự giữ cả hai mục.
+- **Links:** PR #98, PR #99.
+
+## 2026-11-28 – Merge PR #99 (nguồn M/M/1 ở mục 2.2)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** sau khi gộp `origin/main` (có #98) vào nhánh #99 và CI chạy lại, merge commit `4853a39` lúc 07:41, xoá nhánh head. Nhật ký của bước này ghi ở PR kế tiếp vì #99 đã merge.
+- **Links:** PR #99.
+
+## 2026-11-28 – `make analysis`: dựng lại bảng và hình chương 5 từ dữ liệu (P5)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Tìm lệnh và phiên đã tạo từng file trong `analysis/figures/` (nhật ký tuần 07, `van-hanh.md` mục LT5–LT8, docstring của script). LT7 lấy phiên `runs/sim/lt7-20261116-165323`, LT8 lấy `runs/sim/lt8-20261116-131116`: chạy cả ba phiên LT7 và hai phiên LT8, chỉ hai phiên này ra CSV trùng bản trong Git.
+  2. Chạy lại từng script vào thư mục tạm. 4 bảng ĐG2, `lt5-little.csv`, `lt6-gpu-util.csv`, `lt7-hpa.csv`, `lt8-burn.csv` trùng từng byte. 10 SVG chỉ khác ở xuống dòng: matplotlib trên Windows ghi CRLF; bỏ CR thì trùng từng byte.
+  3. Sửa `charts._save`: SVG ghi qua file mở với `newline="\n"`, nên chạy trên Windows hay Linux đều ra LF. Thêm một assert vào test sẵn có.
+  4. Thêm target `make analysis [DATA=runs] [OUT=analysis/figures]`, bỏ `analysis` khỏi danh sách lệnh đã lược. Target ghi thêm 3 báo cáo số mà chương 5 dẫn làm nguồn: `v2-dg2/dg2-a2.txt` (mục 5.3), `v2-dg2/vh6-window.txt`, `vh4-windows.txt` (mục 5.5). Báo cáo `.txt` đi qua `tr -d '\r'`, vì Python trên Windows in stdout bằng CRLF.
+  5. README thêm mục "Tái lập" theo 7 ý của Kế hoạch §10.7; sửa Kế hoạch §10.7 ý 2 và Môi trường §3.7 (dòng `make analysis`).
+  6. `/code-review high`: 8 điểm, sửa 5. (a) `dg2_a2`, `vh6_window` đọc bảng ở `<phiên>/tables`, không đọc bảng vừa ghi vào `OUT`, nên có thể tính từ bảng cũ: target nay chạy `build_tables` với thư mục mặc định rồi chép 4 bảng sang `OUT`; README không còn hứa quá mức. (b) Bỏ tiền tố `DATA` bằng `sed` hỏng khi `DATA=./runs`: `vh4_windows` nay chỉ in `<thư mục cha>/<lượt>`. (c) `> /dev/null` giấu dòng "bỏ qua <phiên>": thêm hàm `step` cất output vào file tạm và in lại dòng báo bỏ dữ liệu. (d) Thêm `PYTHONUTF8=1` cho Python dưới 3.15 trên Windows (thử 3.11 trên máy này: không lỗi, vì bảng mã của máy đã là UTF-8). Không sửa: gom CRLF vào Python (`tr` đủ dùng, báo cáo không chứa CR thật), hệ số `@k` ghim trong Makefile (chép đúng lệnh ở `van-hanh.md`, là nguồn của CSV), gộp 10 lần `uv run` (25 s là chấp nhận được).
+- **Decision:** D142. Mặc định `OUT=analysis/figures`, tức ghi đè bản trong Git, để phép kiểm tái lập chỉ là `git status` sạch. Commit 3 báo cáo số vào Git vì luận văn đang dẫn chúng làm nguồn. Không chọn: thư mục ra riêng rồi so bằng `diff -r` (thêm một bước, phải sửa `.gitignore`); chỉ in báo cáo ra màn hình (không kiểm được số trong luận văn từ repo).
+- **Results:** `make analysis SHELL=bash` trên `runs/` mất 25 s; sau đó `git status` chỉ có 3 file báo cáo mới, không file cũ nào đổi. Sau bản sửa của review: chạy lại, `analysis/figures/` không đổi; `DATA=./runs//` với `OUT` là thư mục tạm cho kết quả trùng `analysis/figures` (`diff -r` rỗng). `DATA=nope` báo thiếu `nope/v2-vm/v2-dg2`, mã thoát 2. Test analysis: 212 passed; ruff check và ruff format đạt; lychee 0 lỗi; yamllint đạt.
+- **Deviations:** chưa gồm bảng cold start 8 pha của ĐG3 (đọc `summary.txt` do runner ghi) và hình trong `docs/images/` (`build_diagrams.py`), đã ghi rõ trong README. `dataset/` chưa có (việc P4), nên chưa chạy được với `DATA=dataset`.
+- **Links:** `Makefile` (target `analysis`), `analysis/charts.py`, `analysis/tests/test_charts.py`, `README.md` (mục Tái lập), `docs/chi-tiet/06-ke-hoach-quan-ly.md` §10.7, `docs/chi-tiet/05-moi-truong-danh-gia.md` §3.7.
+- **Thesis:** 4.6 hoặc 5.1 (HG5 tái lập: một lệnh dựng lại mọi bảng và hình chương 5, kiểm bằng `git status`); Phụ lục.
+
+## 2026-11-28 – Soát 7 runbook với sự cố V1, V2, VH (checklist Kế hoạch §11.4, phần 3)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** đọc 7 runbook trong `docs/runbooks/`, đối chiếu với các mục sự cố của `docs/nhat-ky/van-hanh.md` (06/11 SIGTERM, 08/11 NVML và V1, 16/11 image GC, 16/11 và 18–19/11 VH), nhật ký Quang tuần 07, quy tắc `common/observability/alerts/llm.yaml`, recording rule `llm:error_ratio:rate5m` và probe trong `common/serving/deployment.yaml`. Sửa 6 runbook và đồng bộ Phụ lục C.
+- **Results:** 7 cảnh báo, 7 runbook, mỗi quy tắc có `runbook_url` trỏ đúng file. Các điểm sửa:
+  - `LLMPodPending`: cỡ image chỉ ghi "~30 GB" (cỡ sau giải nén), thêm cỡ tải về 9–11 GB nén (Thông số §10.2, nhật ký vận hành 23/10; V2 kéo lại 2 phút 34 giây, PC nhà 14 phút 52 giây, đủ làm cảnh báo kêu); thêm Lưu ý vLLM 0.31.0 không thoát khi nhận SIGTERM nên pod cũ giữ GPU đủ 180 s (V2: rollout 4 pod 371,6 s; VH2c Pending 300 s, chưa tới `for: 10m`); thêm ca image mất khỏi node khi vLLM ở 0 replica (nghi kubelet image GC, chưa xác định). Comment quy tắc `LLMPodPending` ghi thêm cỡ nén.
+  - `LLMPodNotReady`: thêm số cold start đo được (container chạy → Ready 155–162 s ở nhà; lệnh scale → Ready trên V2 76–81 s L2, 300–311 s L0); startupProbe restart container sau 10 phút nên lúc cảnh báo kêu phải đọc `logs --previous`.
+  - `LLMPodCrashLooping`: thêm dòng `StartError` / NVML mismatch (VM Vast 08/11).
+  - `LLMErrorRateHigh`: thêm mục Giới hạn: chỉ đếm request qua Traefik, runner gọi thẳng Service nên cảnh báo không kêu được trong mọi lượt đánh giá; gộp vào dòng "Không còn pod Ready" ca pod duy nhất bị xoá/restart (V2 vh3-delete 2 pod 0 lỗi; vh3-kill 129 lỗi, khả năng cao vì chỉ có 1 pod, chưa kiểm).
+  - `LLMSLOBurnFast` và Phụ lục C: thêm ca hàng đợi ghim ở pod cũ (V1 A2 × KB2: 1.028 request, xả ~9 phút), kèm cách phân biệt với "một pod chậm"; số cold start L2 trên V2.
+  - `/code-review high`: 9 điểm, sửa cả 9 (hai chỗ ghi giả thuyết thành sự thật, cỡ image, cold start trộn hai cách đo, hai dòng bảng mâu thuẫn, Phụ lục C ghim commit).
+  - `KedaScalerErrors`: thêm thời gian từ lúc chặn tới fallback (16,8 s V2, 17,2 s N = 2).
+  - `LLMAtMaxReplicas`: không cần sửa.
+  - Kiểm: `make alerts-test` đạt (7 rule); `yamllint` sạch; `lychee` 27/27 link OK.
+- **Deviations:** chưa đánh dấu dòng "runbook được review lần cuối sau phiên V2" ở Kế hoạch §11.4, vì PR #102 sửa dòng ngay dưới (tránh xung đột); đánh dấu sau khi #102 merge.
+- **Links:** `docs/runbooks/*.md`, `docs/luan-van/phu-luc/c-runbook-mau.md`, `common/observability/alerts/llm.yaml` (chỉ comment).
+- **Thesis:** 4.6 (runbook cập nhật theo sự cố thật), 5.7 Hạn chế (`LLMErrorRateHigh` không đo được trong lượt đánh giá), Phụ lục C.
+
+## 2026-11-28 – Checklist trước khi nộp, lần quét 1: placeholder và bí mật trong lịch sử Git (Kế hoạch §11.4)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Quét placeholder trên `origin/main` bằng `git grep` (`TODO`, `FIXME`, `XXX`, `TBD`, `vX.Y.Z`, `<org>`, "chưa viết", `REPLACE_ME`, `changeme`, `<your`, "Giá trị tạm"). Ngoài nhật ký chỉ còn: tên thư mục `shellcheck-vX.Y.Z/` trong `ci.yaml` (đúng nghĩa), chính dòng checklist, và comment "Giá trị tạm" của threshold trong `common/autoscaling/a2/scaledobject-a2.yaml` (lỗi thời sau ADR-003). Câu "chi phí thực tế chưa được…" ở 5.1 chờ số chi phí Vast của Quang (N8).
+  2. Sửa comment threshold A2: 24 là giá trị giữ chỗ của base; nhà ghi đè 23, simulator 10, VM thuê lấy `A2_threshold` của ma trận (V1 42, thử N = 2 39, V2 37). Kiểm lại: mọi nơi dùng file (overlay nhà, overlay sim, ba ma trận cloud) đều ghi đè.
+  3. Quét bí mật trong lịch sử: không tải được gitleaks (lệnh `gh release download` bị deny rule của lượt tự chạy, không lách), nên dùng script Python cục bộ duyệt mọi blob của `git rev-list --objects --all` qua `git cat-file --batch`, áp các mẫu của script đóng gói bộ dữ liệu (PR #101) cộng thêm token GitHub, Tailscale, `certificate-authority-data`, trường `token:`, khoá Sealed Secrets, hex 64 cạnh chữ secret/R2/AWS, khoá Vast. Output chỉ in mẫu, đường dẫn, độ dài và 2 ký tự đầu, không in giá trị.
+  4. Ghi kết quả lần quét vào hai dòng checklist §11.4 (chưa đánh dấu, vì phải quét lại trên bản nộp).
+  5. `/code-review high`: 7 điểm. Sửa 5: (a) checklist dẫn `analysis/dataset.py` trong khi file chưa có trên `main`, nay mô tả mẫu bằng lời; (b) ghi rõ hai chỗ khớp còn lại thay vì "không còn chỗ nào"; (c) comment nói rõ threshold VM theo từng ma trận, không chỉ 37; (d) phạm vi quét ghi "ref đã fetch, gồm head của mọi PR" (review kiểm: không có `refs/pull/*/head` nào nằm ngoài nhánh đã fetch), lần quét lại phải fetch `refs/pull/*/head`; (e) thêm mục nhật ký này. Không sửa 2: thư mục `dataset/` chưa track trong cây làm việc là sản phẩm của PR #101, commit này chỉ `git add` từng file; đổi giá trị base từ 24 sang 37 (D144).
+- **Decision:** D144. Giữ `threshold: "24"` ở base, chỉ sửa comment. Mọi nơi dùng đều ghi đè, nên đổi giá trị không đổi kết quả nào; đổi sau khi dữ liệu đã đóng băng (22/11) thì base lệch với manifest ở Phụ lục A.3 mà không có lợi đo được. Phương án bỏ: đặt base = 37 (chỉ đúng cho V2, sai cho nhà và sim), thêm test bắt buộc ghi đè (thêm code cho một rủi ro chưa xảy ra).
+- **Results:** 1.827 blob, 489 đường dẫn. Tên file đáng ngờ từng có trong lịch sử: chỉ `.env.example`. Khớp mẫu: 7 nhóm, đều không phải bí mật thật: fixture giả trong `analysis/tests/test_dataset.py` (JWT, khoá riêng, khoá = giá trị, kubeconfig), tên mẫu trong `analysis/dataset.py`, tên biến `api_key` và `LOADGEN_API_KEY=...` trong `loadgen/__main__.py`, `experiments/ops/graceful_shutdown.py`. IP công khai: chỉ DNS công cộng (1.1.1.1, 8.8.8.8, 8.8.4.4, 114.114.114.114, 223.5.5.5) trong hướng dẫn W1 và nhật ký, DNS IPv6 của Google `2001:4860:4860::8888` trong test, và hai chuỗi trông như IPv6 trong `Makefile` (`::error file=…::`) và `mo_phong_v3.py` (lát cắt `[-1200::10]`), khớp nhầm. Không có IP máy thuê. Thời gian quét dưới 5 phút.
+- **Incidents:** lần chạy đầu treo: script ghi hết danh sách blob vào stdin của `git cat-file --batch` trước khi đọc stdout, pipe đầy nên hai tiến trình chờ nhau. Sửa: ghi stdin ở luồng riêng.
+- **Deviations:** không dùng gitleaks (mức Could ở Thông số §5) vì không tải được trong lượt tự chạy. Chưa so với giá trị thật trong file biến môi trường cục bộ (lượt tự chạy không được đọc file đó): Trình nên chạy gitleaks, hoặc chế độ so giá trị của script đóng gói, trước khi nộp. Phần (3) của việc (soát 7 runbook với sự cố V2 và VH) để vòng sau.
+- **Links:** `common/autoscaling/a2/scaledobject-a2.yaml`, `docs/chi-tiet/06-ke-hoach-quan-ly.md` §11.4.
+- **Thesis:** 6.1 hoặc Phụ lục (checklist bàn giao: repo công khai không chứa bí mật, cách kiểm).
+## 2026-11-28 – Bộ dữ liệu `dataset/`: script đóng gói, quét bí mật, checksum (P4)
+
+- **Task:** TR8 (P4, Kế hoạch §10.6) · **Environment:** none
+- **Done:** PR #100 (`make analysis`) đã merge vào `main` (`a904353`, CI 6/6). Viết `analysis/dataset.py`: chép 9 phiên chương 5 dùng từ `runs/` sang `dataset/`, giữ nguyên bố cục; trước khi chép quét mọi file (kể cả `.gz`) tìm token Telegram, token Hugging Face, khoá riêng, chứng chỉ kubeconfig, khoá truy cập, IP công khai, email, tuỳ chọn đúng các giá trị của `.env`; thấy chỗ khớp thì dừng và chỉ in file, số dòng, tên mẫu. Sau đó ghi `INDEX.csv` (mỗi lần thử của runner một dòng) và `SHA256SUMS` (định dạng `sha256sum`), có `--check`. Viết `dataset/README.md` (nội dung từng thư mục, ngày, máy, mục luận văn dùng; định dạng file; cách dùng; giấy phép CC BY 4.0). `.gitignore` bỏ `dataset/*` trừ README. Sửa README gốc (Tái lập ý 5) và Kế hoạch §10.6 (dòng "Thực tế 28/11"). 11 test mới.
+- **Decision:** D143. `dataset/` giữ bố cục của `runs/` thay cho cây `capacity/`, `coldstart/`, `matrix/`… ở §10.6, để `make analysis DATA=dataset` chạy không cần đổi đường dẫn. Bỏ `figures/` (dựng lại được), file `.lock` của runner, log Ansible của `make bootstrap` (README của `v2-evidence` ghi là có địa chỉ máy thuê; quét không thấy IP công khai nào, vẫn bỏ cho chắc). Giữ log vLLM vì ĐG3 và pha 4–8 cần. Giấy phép CC BY 4.0 theo đề xuất của §10.6. Không đăng lên GitHub Release hay R2 (việc đăng chờ Trình).
+- **Results:** đóng gói thật: 851 file dữ liệu, 38,0 MB, 9 phiên; `INDEX.csv` 25 dòng (22 cloud, 3 sim; 1 lần thử sim `valid=false` là S1-KB2 của `tr7-kb2-sim-2`); quét 0 chỗ khớp. `sha256sum -c SHA256SUMS` đạt cho 853 file. `make analysis DATA=dataset OUT=<thư mục tạm>` mất 24 s, `diff -r` với `analysis/figures` rỗng, và `--check` vẫn khớp sau khi lệnh này ghi lại `tables/`. `v2-evidence/vm-runs-sha256-before-poweroff.txt` (checksum gốc trên VM): 504 file khớp, 0 sai, 1 không có (file `.lock` bị bỏ). `/code-review high`: 10 điểm, sửa cả 10: mẫu token Telegram lọt trong URL Bot API; `VLLM_API_KEY=…` không khớp vì `\b` trước `_`; IPv4 có dấu chấm cuối câu bị bỏ qua; thêm IPv6 công khai và JWT; khoá Vast, R2 chỉ là chuỗi hex nên mặc định so với `.env` nếu có (`--no-env-file` để bỏ; lượt tự chạy dùng cờ này vì không được đọc `.env`); `.env` có comment cuối dòng; file nhị phân không quét được nay làm script dừng; `--check` báo rõ khi thiếu SHA256SUMS, đọc được dạng `sha256sum -b`; INDEX.csv và SHA256SUMS chỉ gồm file đã đóng gói; README ghi rõ `v2-evidence` còn nhắc file bị bỏ. Quét lại sau khi sửa: 0 chỗ khớp, `make analysis DATA=dataset` vẫn trùng từng byte. Test analysis 238 passed; ruff check, ruff format đạt; lychee 0 lỗi.
+- **Deviations:** bố cục khác cây ở Kế hoạch §10.6 (đã ghi "Thực tế" ở đó). Chưa đăng dữ liệu. Lượt tự chạy không đọc `.env` nên chưa quét theo giá trị trong đó: trước khi đăng, Trình chạy lại lệnh đóng gói không kèm `--no-env-file`.
+- **Links:** `analysis/dataset.py`, `analysis/tests/test_dataset.py`, `dataset/README.md`, `.gitignore`, `README.md`, `docs/chi-tiet/06-ke-hoach-quan-ly.md` §10.6.
+- **Thesis:** 4.6 hoặc 5.1 (HG5 tái lập: bộ dữ liệu kèm checksum dựng lại đúng từng byte mọi bảng và hình); Phụ lục (mô tả bộ dữ liệu).
+
+## 2026-11-28 – Merge PR #101 (bộ dữ liệu), PR #102 (quét placeholder, bí mật) và PR #103 (runbook)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** kiểm đủ 5 điều kiện merge cho #101, #102, #103 (CI 6/6 pass, MERGEABLE, không review hay bình luận, `/code-review high` đã chạy và sửa, base `main`). Điều kiện 4: #102 và #103 chỉ đổi comment trong `scaledobject-a2.yaml` và `alerts/llm.yaml`; hai file vào kustomize qua `resources:` nên comment bị bỏ khi render, manifest Argo CD áp lên cluster nhà không đổi. Merge #101 (`d26a9ba`, 11:09) trước vì nó thêm quy tắc `.gitignore` cho `dataset/`. Gộp `origin/main` vào nhánh #102: chỉ nhật ký và Kế hoạch §11.4 tự gộp, không xung đột thật; push, CI chạy lại xanh, merge `7086160` (11:10). Gộp `origin/main` vào nhánh #103: `merge=union` đặt hai mục nhật ký sát nhau, thiếu dòng trống, đã thêm. Đánh dấu dòng "runbook được review lần cuối sau phiên V2" ở Kế hoạch §11.4 (để dành từ #103 vì #102 sửa dòng ngay dưới).
+- **Results:** merge #103 `2d6c0b6` (11:12, CI 6/6 pass). Sau ba lần merge, `main` sạch và `dataset/` được ignore.
+- **Links:** PR #101, PR #102, PR #103, `docs/chi-tiet/06-ke-hoach-quan-ly.md` §11.4.
+
+## 2026-11-28 – Cắt trang nhẹ chương 1, 4, 6 theo D103
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** đo khuôn T bằng gop.py (Word COM) trước khi sửa: ch. 1 4,86 tr, ch. 4 22,48, ch. 6 3,91. Chỉ bỏ câu đã nói ở mục khác (GPU utilization ở 1.3 trùng 1.1, chi tiết môi trường ở 1.2 trùng 3.2, số VH3 và VH6 ở 4.6 trùng 5.5, số hàng đợi ở 6.1 trùng 5.3.3), câu lộ trình "Mục 4.x.1 nói…" ở 4.1 và 4.3, câu "Mục này trình bày" ở 4.6 (quy-tac-viet cấm), và vài câu phụ (sleep mode ở 6.3, số máy thử A4000 ở 4.1.1). Câu bỏ được chép nguyên văn vào comment "Ý không đưa vào (cắt 28/11 theo D103…)" ở đầu mỗi file; comment nguồn còn dẫn ý đã cắt thì ghi rõ ý đó nay chỉ ở comment này. Nhánh đặt tên `docs/tr8-thesis-trim-d103` để gop.py nhận và đo được. Sáu lần đo lại sau từng đợt cắt.
+- **Decision:** dừng ch. 1 ở 4,24 tr và ch. 6 ở 3,73 tr thay vì ép về 4 và 3,3: phần còn lại là ý chưa có ở chỗ khác (phát biểu bài toán, giả định GPU-giờ, mức bằng chứng của kết luận vận hành, giới hạn mô phỏng), bỏ tiếp là bỏ nội dung chứ không còn là "cắt nhẹ"; để Trình quyết khi đọc lại. Ch. 4 bắt buộc ≤ 22 nên cắt tới khi đạt.
+- **Results:** ch. 1 4,86 → 4,24 tr; ch. 4 22,48 → 21,89; ch. 6 3,91 → 3,73; thân bài 71,54 → 70,36 tr khuôn T. Số trang từng mục dao động khoảng ±0,1 tr giữa các lần đo vì cách ngắt trang của bảng (ch. 2 lần cuối đo 13,16 dù không sửa). kiem_van 0 điểm trên mọi file đã sửa; lychee 0 lỗi. `/code-review high` 9 điểm, sửa cả 9: khôi phục đoạn SIGTERM ở 6.2 (bản rút gọn sai quan hệ nhân quả với grace period 180 s), số event loop p99 4,1 ms và "không lượt nào bị throttle" ở 4.7 (mục 5.1 không có hai số này), câu N8 ở 4.1.3 (bảng truy vết Kế hoạch §11.1 trỏ N8 về 4.1); sửa ba câu ở ch. 1 (chủ ngữ, câu ghép dấu phẩy, câu GPU utilization khôi phục bản gốc); sửa lời dẫn của comment cắt (bản trong bài đã viết gọn thì khôi phục bằng cách thay, không chèn thêm), đánh dấu comment nguồn, đặt comment cắt trước dòng "Soát số" cho thống nhất.
+- **Links:** nhánh `docs/tr8-thesis-trim-d103`; `docs/luan-van/01-01…01-03`, `04-01`, `04-03`, `04-06`, `04-07`, `06-01…06-03`.
+- **Thesis:** cả quyển (độ dài theo D103).
+
+## 2026-11-28 – Soát chính tả và thuật ngữ toàn quyển, lần 1
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Dựng bản gộp bằng `gop.py`, chia bốn phần (ch. 0–2 và phần đầu; ch. 3; ch. 4; ch. 5–6 và phụ lục), mỗi phần một agent đọc đối chiếu `quy-tac-viet.md` §4–§6, chỉ báo lỗi có dẫn dòng.
+  2. Áp khoảng 70 sửa trên 30 file `docs/luan-van/`: thuật ngữ gọi hai kiểu theo bảng `quy-tac-viet.md` §4 (VM thuê, máy nhà, grace period, "lượt" thay "lần chạy", "phiên đo chính"), mã F/N ngoài chỗ được dùng, câu chủ đề mở bằng mã LT/ĐG, giải nghĩa lần đầu (CI, MPS, DCGM, open-loop, SRE), dấu phân cách nghìn (1.024, 1.230), đơn vị giây viết `s`, dấu chấm cuối chú thích Hình 1.1 và 3.1, bỏ dấu chấm thừa ở Bảng 2.1 và 2.2, dẫn chéo ở 5.1 (mục 1.3 → 1.2).
+  3. Chạy `kiem_van.py` trên 30 file: một điểm mới do lần sửa (03-06 dòng 39 thành 5 mã/đoạn khi đổi "mức ấm" thành "mức L2"), trả về "mức ấm". Các điểm còn lại (ngày tháng đủ năm ở 05-01, D, E; tên người ở F) đã có từ trước, đúng ngữ cảnh.
+  4. `/code-review high` trên diff: 10 điểm. Sửa 8: câu 3.6 dẫn "mức ấm" mà 3.4 không định nghĩa (nay gọi "cấu hình cold start chạy thật", như 3.4); bốn câu mở bằng "Kiểm chứng LTx" (lặp nghĩa của mã, nay mở bằng chủ đề); 4.1 thay N6, N8 bằng "chỉ tiêu nghiệm thu" không chỉ được dòng nào (nay "một chỉ tiêu ở mục 3.1"); 5.1 "lần đo đầu" khác 4.7 "lần thử đầu"; khoảng 409–430 s dẫn Hình 5.3b chỉ vẽ lượt 1; thêm closed-loop vào danh mục; "máy tạo tải" trong danh sách nội dung kho thành "mã nguồn máy tạo tải"; dòng Decision của mục này. Bỏ 2: "lượt thử" của vòng Git ở 4.5, 4.7 đúng nghĩa "lượt" ở §4; viết hoa ở danh mục so với thân bài là quy ước thường gặp.
+- **Results:** không có lỗi gõ hay dấu tiếng Việt; số hình, bảng và dẫn chéo khác đều đúng. `lychee --offline --include-fragments` trên `docs/luan-van/`: 0 lỗi. Số trang chưa đo lại (lần sửa chỉ đổi từ, không thêm câu).
+- **Decision:** chỉ sửa chỗ đã có quy ước trong `quy-tac-viet.md` §4–§6. Điểm chưa có quy ước để lại lần soát 2, vì mỗi điểm đụng nhiều chương và cần chốt một cách gọi trước khi sửa: "X phút Y giây" so với đơn vị s; "pha" của cold start trùng "pha" của tải; "khoá API" và "API key"; "chu kỳ sync" của HPA trùng "sync" của Argo CD; số cảnh báo của F6 (6 ở Bảng 3.1, bảy quy tắc ở Bảng 3.7); các cặp "LLM serving"/"phục vụ LLM", "repository"/"repo", "rollout"/"rolling update", "8 pha"/"tám pha". Viết hoa phần giải nghĩa từ viết tắt giữ như cũ: danh mục viết hoa (Continuous Integration), thân bài viết thường in nghiêng.
+- **Links:** nhánh `docs/tr8-thesis-proofread` (xếp trên `docs/tr8-thesis-trim-d103`, PR #104).
+- **Thesis:** cả quyển (chất lượng văn bản trước M4).
+
+## 2026-11-28 – Hạn chế theo ADR-003 §6 và dòng N2b trong bảng nghiệm thu
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Soát việc nhóm D đầu (số VH2 trên kind ở 4.5, F3 và N4 ở 5.6 theo ADR-007): đã có sẵn trên `main` từ các PR trước (4.5 có 615 request, 0 lỗi, push → sync 138–247 s; 5.6 dòng F3 ghi "trên GPU chỉ qua annotation"), không cần sửa.
+  2. Bảng 5.6a dòng N2b: thêm "vượt mức tham chiếu 5 phút" (ADR-003 G5, §5), kết luận vẫn "Báo cáo".
+  3. 5.7 thêm các hạn chế ADR-003 §6 yêu cầu: C = 3,5 là cận dưới (so với năng lực thật, tải nhẹ hơn danh nghĩa tối đa gần 12,5%); chưa đối chiếu ĐG1 với `vllm bench serve`; ổ đĩa 126 GB dưới mức 130 GB, tốc độ đọc tuần tự không đo; mức tham chiếu N2b ghi thành quyết định sau khi có kết quả. Nêu rõ `LLMErrorRateHigh` chỉ có unit test vì máy tạo tải gọi thẳng Service, không qua Traefik (ý còn nợ từ #103). Tách đoạn 1 của 5.7 thành hai đoạn (ma trận ĐG2; ĐG1).
+  4. 5.1 sửa câu "đạt các tiêu chí lọc còn lại" thành đạt CPU, RAM, mạng, giá; ổ đĩa không đạt, tốc độ đọc chưa đo (ADR-003 G8, `runs/v2-evidence/console/00-probe.txt`: `/dev/root 126G`, 120G trống).
+  5. `/code-review high`: 10 điểm, sửa cả 10 (5.1 nói quá về tiêu chí đĩa; tên tài liệu nội bộ "Thông số" lọt vào thân bài; "Cuối cùng" sai cấu trúc; câu 12,5% so sai mốc; "bước cuối của quy trình" chưa giới thiệu trong luận văn; comment ngân sách và dòng "Soát số" chưa cập nhật; nguồn đoạn 1 bị dồn sang comment đoạn sau; câu ổ đĩa thiếu ảnh hưởng; "tiêu chí chọn máy" và "tiêu chí lọc" gọi hai kiểu).
+- **Decision:** các hạn chế của ADR-003 §6 đặt ở 5.7 (hạn chế của phép đo), không ở 6.2 (hạn chế của hệ thống), vì đều là điều kiện đo của phiên V2.
+- **Results:** kiem_van: 05-06 và 05-07 0 điểm; 05-01 1 điểm có từ trước (ngày đủ năm ở dòng 8). 5.7 tăng 573 → 768 chữ văn xuôi, chưa đo lại khuôn T. Các câu mới do người viết đối chiếu ADR-003 và probe, chưa soát độc lập.
+- **Links:** nhánh `docs/tr8-thesis-vh2-acceptance` (xếp trên `docs/tr8-thesis-proofread`, PR #105); `docs/luan-van/05-01`, `05-06`, `05-07`.
+- **Thesis:** 5.1, 5.6, 5.7.
+
+## 2026-11-28 – Chèn Hình 3.2 (vòng vận hành theo SLO) vào 3.5
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Chèn Hình 7 của `docs/chi-tiet/04-van-hanh.md` (vẽ lại ở PR #60) vào 3.5.2 thành Hình 3.2, kèm một câu nhận xét sau hình; sửa comment đánh số ở đầu 03-02…03-06.
+  2. Bản đầu chèn cả Hình 8 và Hình 17 vào 3.6 thành Hình 3.3, 3.4. `/code-review high` báo 10 điểm; sửa hoặc xử lý cả 10: bỏ Hình 3.3, 3.4; dời Hình 3.2 xuống sau comment nguồn của đoạn định tuyến; sửa câu ticket cho khớp hình; bỏ cụm "làm theo runbook" lặp ở đoạn tự xử lý; cập nhật dòng Sơ đồ của `nguon-tu-lieu.md`.
+- **Decision:** (D146) không chèn Hình 8 (trùng Bảng 3.8, in mã N1–N7 trái quy-tac-viet §4) và Hình 17 (quy trình từng lượt và tên lệnh, phần đã chuyển sang 4.7 khi cắt ngày 24/11). Hình 2 đã có ở 3.2 (Hình 3.1) từ trước. Câu ticket sửa thành "không nhắc lại trong 24 giờ, dài hơn một phiên đo, và không báo lúc đã hết", đúng `repeat_interval: 24h`, `send_resolved: false` trong `common/platform/alertmanager-values.yaml`.
+- **Results:** kiem_van 03-05 và 03-06: 0 điểm; lychee offline trên 03-0x và `nguon-tu-lieu.md`: 0 lỗi. Chưa đo lại khuôn T ch. 3 (cần push rồi chạy `gop.py`).
+- **Links:** nhánh `docs/tr8-thesis-ch3-figures` (xếp trên `docs/tr8-thesis-vh2-acceptance`, PR #106); `docs/luan-van/03-05-giam-sat-slo-canh-bao.md`, `nguon-tu-lieu.md`.
+- **Thesis:** 3.5 (Hình 3.2).

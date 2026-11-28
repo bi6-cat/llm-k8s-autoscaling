@@ -1,0 +1,39 @@
+## 1. SuccessfulRescale (mốc s -> replica)
+A1-KB1-1 duration 720.0 : 15->2 100->3 181->4 1028->3 1089->2 1149->1
+A1-KB1-2 duration 720.0 : 15->2 91->3 166->4 1029->3 1089->2 1149->1
+A1-KB2-1 duration 1440.0 : 15->2 90->3 161->4 1751->3 1811->2 1871->1
+A1-KB2-2 duration 1440.0 : 15->2 95->3 170->4 1755->3 1815->2 1876->1
+A1-KB3-1 duration 1020.0 : 20->2 101->3 176->4 1335->3 1395->2 1455->1
+A2-KB1-1 duration 720.0 : -
+A2-KB1-2 duration 720.0 : -
+A2-KB2-1 duration 1440.0 : 256->2 266->3 271->4 1139->3 1200->2 1260->1
+A2-KB2-2 duration 1440.0 : 256->2 261->3 276->4 1030->3 1155->2 1215->1
+A2-KB2-3 duration 1440.0 : 255->2 265->3 270->4 1068->3 1148->2 1209->1
+A2-KB3-1 duration 1020.0 : 65->2 120->3 155->4 1315->3 1375->2 1435->1
+A2-KB3-2 duration 1020.0 : 70->2 105->3 140->4 1320->3 1380->2 1440->1
+
+## 2. vllm_waiting theo pod (KB2)
+A1-KB2-1 7krwm max=1 >0 trong [589;589] = 0 s ; skr5j max=0 ; nf5w5 max=0 ; fh6hk max=0
+A1-KB2-2 7krwm max=1 >0 trong [583;583] = 0 s ; mt8sq max=0 ; zv2xw max=0 ; xpmpf max=0
+A2-KB2-1 7krwm max=416 >0 trong [264;649] = 385 s ; jhx9t max=8 >0 trong [339;344] = 5 s ; lfwxn max=0 ; 8vprb max=0
+A2-KB2-2 7krwm max=425 >0 trong [264;654] = 390 s ; 5hmhw max=9 >0 trong [339;339] = 0 s ; drwsh max=0 ; nqdtn max=0
+A2-KB2-3 lnsb2 max=0 ; v2zjf max=0 ; 8sgfg max=0 ; 7krwm max=428 >0 trong [257;642] = 385 s
+S1-KB2-1 7krwm max=1301 >0 trong [264;1054] = 790 s
+S4-KB2-1 7krwm max=0 ; zdhkl max=0 ; 28lht max=0 ; x8rlm max=0
+
+## 3. Phần request mới mỗi pod nhận, [360; 600) s, A2 × KB2
+A2-KB2-1 gửi 2498 (log cả lượt 7771 = n_sent 7771 ) | 7krwm: đến 642 (25.7%), xong 908 (3.78 req/s), đến/xong 70.7%, chờ 370->63 ; jhx9t: đến 581 (23.3%), xong 579 (2.41 req/s), đến/xong 100.3%, chờ 0->0 ; 8vprb: đến 635 (25.4%), xong 648 (2.70 req/s), đến/xong 98.0%, chờ 0->0 ; lfwxn: đến 640 (25.6%), xong 646 (2.69 req/s), đến/xong 99.1%, chờ 0->0
+A2-KB2-2 gửi 2572 (log cả lượt 7730 = n_sent 7730 ) | 7krwm: đến 650 (25.3%), xong 863 (3.60 req/s), đến/xong 75.3%, chờ 379->80 ; 5hmhw: đến 637 (24.8%), xong 643 (2.68 req/s), đến/xong 99.1%, chờ 0->0 ; drwsh: đến 651 (25.3%), xong 680 (2.83 req/s), đến/xong 95.7%, chờ 0->0 ; nqdtn: đến 634 (24.7%), xong 640 (2.67 req/s), đến/xong 99.1%, chờ 0->0
+A2-KB2-3 gửi 2517 (log cả lượt 7846 = n_sent 7846 ) | 7krwm: đến 611 (24.3%), xong 880 (3.67 req/s), đến/xong 69.4%, chờ 400->38 ; lnsb2: đến 612 (24.3%), xong 609 (2.54 req/s), đến/xong 100.5%, chờ 0->0 ; v2zjf: đến 658 (26.1%), xong 646 (2.69 req/s), đến/xong 101.9%, chờ 0->0 ; 8sgfg: đến 636 (25.3%), xong 655 (2.73 req/s), đến/xong 97.1%, chờ 0->0
+
+## 4. Tín hiệu A2 = tổng running + waiting
+A2-KB2-1 [700;840) n=28 min=84 tb=109.2 max=135 tỷ lệ mẫu ≤ 111: 50%; mẫu > 111 đầu 714 s, cuối 839 s, khoảng cách lớn nhất giữa hai mẫu > 111: 25 s
+A2-KB2-2 [700;840) n=28 min=67 tb=97.0 max=140 tỷ lệ mẫu ≤ 111: 82%; mẫu > 111 đầu 709 s, cuối 749 s, khoảng cách lớn nhất giữa hai mẫu > 111: 20 s
+A2-KB2-3 [700;840) n=28 min=78 tb=102.2 max=146 tỷ lệ mẫu ≤ 111: 75%; mẫu > 111 đầu 702 s, cuối 767 s, khoảng cách lớn nhất giữa hai mẫu > 111: 25 s
+A2-KB3-1 [300;1020) n=144 min=64 tb=101.1 max=142 tỷ lệ mẫu ≤ 111: 74%; mẫu > 111 đầu 364 s, cuối 964 s, khoảng cách lớn nhất giữa hai mẫu > 111: 120 s
+A2-KB3-2 [300;1020) n=144 min=75 tb=106.1 max=152 tỷ lệ mẫu ≤ 111: 65%; mẫu > 111 đầu 324 s, cuối 1019 s, khoảng cách lớn nhất giữa hai mẫu > 111: 95 s
+
+## 5. Request không đạt SLO trong pha spike, A2 × KB2: gửi trước / sau lúc pod mới đầu tiên Ready
+A2-KB2-1 pod mới Ready lúc 321.4 s; n=6198 SLO=0.7538; không đạt: trước 635 (41.6%), sau 891 (58.4%)
+A2-KB2-2 pod mới Ready lúc 321.5 s; n=6145 SLO=0.7484; không đạt: trước 651 (42.1%), sau 895 (57.9%)
+A2-KB2-3 pod mới Ready lúc 319.7 s; n=6187 SLO=0.7619; không đạt: trước 647 (43.9%), sau 826 (56.1%)

@@ -494,7 +494,13 @@ def _save(fig: Any, base: Path, formats: Sequence[str]) -> list[Path]:
         p = base.with_suffix(f".{f}")
         # Bỏ ngày giờ khỏi metadata để chạy lại trên cùng dữ liệu ra đúng cùng file (dễ so trong Git)
         meta = {"Date": None} if f == "svg" else {"Software": None} if f == "png" else {}
-        fig.savefig(p, dpi=200, metadata=meta)
+        if f == "svg":
+            # SVG là file text: nhận đường dẫn thì matplotlib mở file theo xuống dòng của hệ điều hành, nên
+            # trên Windows ra CRLF và lệch với bản LF trong Git dù nội dung như nhau. Tự mở với newline="\n".
+            with p.open("w", encoding="utf-8", newline="\n") as fh:
+                fig.savefig(fh, format="svg", dpi=200, metadata=meta)
+        else:
+            fig.savefig(p, dpi=200, metadata=meta)
         out.append(p)
     plt.close(fig)
     return out

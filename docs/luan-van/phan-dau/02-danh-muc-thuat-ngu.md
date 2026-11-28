@@ -3,7 +3,7 @@
 
 # Danh mục thuật ngữ, chữ viết tắt và mã định danh {.unnumbered}
 
-Danh mục gồm bốn phần: chữ viết tắt, thuật ngữ giữ nguyên tiếng Anh, mã định danh do nhóm đặt và ký hiệu. Trong mỗi phần, các mục xếp theo thứ tự chữ cái; ký hiệu Hy Lạp đứng sau ký hiệu Latin.
+Danh mục gồm bốn phần: chữ viết tắt, thuật ngữ, mã định danh do nhóm đặt và ký hiệu. Trong mỗi phần, các mục xếp theo thứ tự chữ cái; ký hiệu Hy Lạp đứng sau ký hiệu Latin.
 
 **Chữ viết tắt**
 
@@ -72,6 +72,7 @@ Danh mục gồm bốn phần: chữ viết tắt, thuật ngữ giữ nguyên t
 | burn rate | Tốc độ tiêu hao error budget so với mức vừa hết đúng cuối kỳ |
 | chunked prefill | Chia prefill của prompt dài thành nhiều phần, xen với decode |
 | cold start | Thời gian từ khi tạo pod tới khi pod phục vụ được |
+| closed-loop | Cách sinh tải: mỗi người dùng giả chờ phản hồi rồi mới gửi request tiếp, nên tải giảm khi hệ thống chậm |
 | counter, gauge, histogram | Ba loại metric của Prometheus: bộ đếm chỉ tăng; giá trị tức thời; số lần đo rơi vào từng khoảng giá trị (bucket) |
 | CUDA graph | Chuỗi kernel GPU ghi sẵn một lần rồi chạy lại, giảm chi phí gọi kernel |
 | decode | Pha sinh lần lượt từng token ra |

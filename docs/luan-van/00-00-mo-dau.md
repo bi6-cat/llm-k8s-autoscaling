@@ -21,7 +21,7 @@ Autoscaling mới giải quyết một nửa bài toán. Hệ thống còn phả
 
 <!-- nguồn: docs/chi-tiet/03-kien-truc-autoscaling.md (thành phần, tín hiệu A2 = running + waiting, L2, graceful shutdown, cảnh báo burn rate, GitOps với Argo CD); docs/chi-tiet/00-thong-so.md F4 (Argo CD ở cluster nhà; VM thuê dựng bằng make cloud-platform, helm; Sealed Secrets và Argo CD trên VM thuê đã lược), Kế hoạch §11.1 TĐ3 ("ở cluster nhà, mọi thành phần do Argo CD quản lý từ Git"); mục 3.2–3.5 của luận văn -->
 
-Nhóm đánh giá nền tảng trên một máy thuê có bốn GPU. Máy tạo tải sinh request theo ba mẫu tải điển hình: tải thấp ổn định, tải tăng đột ngột, và tải tăng dần rồi giữ ở mức cao. Với mỗi mẫu tải, nhóm so autoscaling với cách giữ cố định số replica theo hai thước đo. Thước đo thứ nhất là tỷ lệ request đạt mục tiêu độ trễ. Thước đo thứ hai là số GPU-giờ, bằng số GPU bị giữ nhân với thời gian giữ.
+Nhóm đánh giá nền tảng trên một VM thuê có bốn GPU. Máy tạo tải (*load generator*) sinh request theo ba mẫu tải điển hình: tải thấp ổn định, tải tăng đột ngột, và tải tăng dần rồi giữ ở mức cao. Với mỗi mẫu tải, nhóm so autoscaling với cách giữ cố định số replica theo hai thước đo. Thước đo thứ nhất là tỷ lệ request đạt mục tiêu độ trễ. Thước đo thứ hai là số GPU-giờ, bằng số GPU bị giữ nhân với thời gian giữ.
 
 Nhóm cũng chạy các tình huống vận hành. Khi cập nhật phiên bản, xoá một replica đang phục vụ hay mất nguồn số liệu giám sát, nhóm kiểm xem có request nào bị rớt không. Nhóm còn đo thời gian dựng lại hệ thống từ máy trắng, và kiểm riêng xem cảnh báo có báo kịp khi chất lượng giảm và có báo giả hay không. Luận văn nêu cả những chỗ nền tảng chưa đạt mục tiêu, kèm nguyên nhân đo được và hướng sửa.
 
@@ -37,7 +37,7 @@ Ngoài phần Mở đầu, luận văn gồm sáu chương.
 
 **Chương 4. Triển khai và vận hành** kể nhóm đã dựng từng phần thế nào, gặp sự cố gì, lệch thiết kế ở đâu và kiểm chứng ra sao. Cuối chương có bảng đối chiếu các khó khăn riêng của GPU và LLM với cách nhóm xử lý.
 
-**Chương 5. Đánh giá** trình bày số đo trên máy thuê và so với chỉ tiêu của chương 3. Các phép đo gồm năng lực của một replica, autoscaling so với cấu hình cố định, thời gian khởi động và các tình huống vận hành. Chương này nêu rõ giới hạn của nền tảng khi tải tăng đột ngột, và các hạn chế của phép đo.
+**Chương 5. Đánh giá** trình bày số đo trên VM thuê và so với chỉ tiêu của chương 3. Các phép đo gồm năng lực của một replica, autoscaling so với cấu hình cố định, thời gian khởi động và các tình huống vận hành. Chương này nêu rõ giới hạn của nền tảng khi tải tăng đột ngột, và các hạn chế của phép đo.
 
 **Chương 6. Kết luận và hướng phát triển** rút ba kết luận từ kết quả đánh giá và nêu các hạn chế còn lại của hệ thống. Chương này đề xuất hướng làm tiếp, mỗi hướng xuất phát từ một phát hiện của chương 5.
 

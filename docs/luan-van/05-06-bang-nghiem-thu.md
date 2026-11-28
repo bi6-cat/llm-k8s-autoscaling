@@ -1,16 +1,16 @@
 <!-- Mục đích: mục 5.6, bảng nghiệm thu F1–F7, N1–N8 và khuyến nghị cấu hình. Người viết: Trình. Nháp ngày 21/11/2026 từ gói dữ liệu V2 (runs/v2-vm/), nhật ký và docs/chi-tiet/00-thong-so.md; 24/11 cắt về ngân sách 2 trang (D96): gộp hai bảng F, N thành một bảng 4 cột (F và N chung một bảng như Bảng 3.1 của mục 3.1, D95), bỏ cột Ngưỡng, Ghi chú và danh sách định nghĩa mức kết luận; Trình chưa đọc lại. Quy ước: docs/luan-van/README.md, docs/luan-van/quy-tac-viet.md -->
 <!-- Thông điệp: (1) mọi yêu cầu và chỉ tiêu mức Must đạt hoặc đạt một phần trong phiên đo V2, điểm yếu nhất là tải tăng đột ngột; (2) phần còn thiếu nằm ở khâu kiểm chứng (vòng Git trên GPU thật, dashboard trên GPU thật, Telegram thật, chi phí của N8), không nằm ở chức năng; (3) khuyến nghị A2 làm cấu hình mặc định, đánh đổi là SLO attainment khi tải tăng đột ngột. -->
-<!-- Soát số: 27/11/2026 · Soát văn phong: kiem_van 27/11 · Người viết đọc lại: chưa -->
+<!-- Soát số: 27/11/2026 (dòng N2b sửa 28/11 theo ADR-003 G5, §5: người viết đối chiếu, chưa soát độc lập) · Soát văn phong: kiem_van 27/11 · Người viết đọc lại: chưa -->
 <!-- Số bảng tạm theo mục (Bảng 5.6a) vì các mục 5.1–5.5 chưa có; đánh lại khi ghép chương. Bảng đầy đủ kèm cột Ghi chú và số từng lượt (bản nháp trước khi cắt, commit bb14810) dùng cho Phụ lục E. Ý đã cắt khi rút gọn 24/11: KB2 chỉ báo cáo SLO 79,4–80,7% (3 lượt); N2a gồm phát hiện 14,7–16,4 s và tạo pod tới Ready 65–66 s; N3 ở KB2: 71,8–75,2% GPU-giờ của S4, kém 19,3–20,6 điểm phần trăm, ở KB3: 91,7–92,3%, chênh 0 điểm; N4: 1.147–1.245 request trong pha giảm, rolling update 2.077 và 4.229 request; N6: xoá pod 0 lỗi / 1.351 request, fallback 0 lỗi / 1.263 request; N7: lúc A2 × KB3 page, tỷ lệ request xấu theo log client là 27% và 38%; F5: số panel 20, 9, 16; giá thuê V2 1,5 USD/giờ (ước tính); mọi số đo mới có trên VM thuê, các kịch bản vận hành ở máy nhà chưa chạy (đưa vào 5.7). -->
 <!-- Còn thiếu so với Kế hoạch §11.1 và nguon-tu-lieu.md §2 (dòng 5.6): bảng kiểm chứng LT1–LT8 (dự đoán, số đo, độ lệch, giải thích). Mục hiện đo 1,95 trang khuôn B (ngân sách 2), nên khi thêm bảng LT thì hoặc đưa bảng vào Phụ lục E kèm một câu tóm tắt ở đây, hoặc lấy khoảng 0,5 trang từ mục khác của chương 5. -->
 
 ## 5.6. Bảng nghiệm thu và khuyến nghị cấu hình
 
-Bảng nghiệm thu đối chiếu kết quả của các mục 5.2–5.5 với các yêu cầu và chỉ tiêu đặt ra ở mục 3.1; từ đó rút ra khuyến nghị chọn cấu hình autoscaling. Số đo trên GPU lấy từ phiên đo V2 (mục 5.1), còn vòng cập nhật qua Git và lần dựng lại theo README được đo trên simulator (mục 5.5).
+Bảng nghiệm thu (Bảng 5.6a) đối chiếu kết quả của các mục 5.2–5.5 với các yêu cầu và chỉ tiêu đặt ra ở mục 3.1; từ đó rút ra khuyến nghị chọn cấu hình autoscaling. Số đo trên GPU lấy từ phiên đo V2 (mục 5.1), còn vòng cập nhật qua Git và lần dựng lại theo README được đo trên simulator (mục 5.5).
 
 ### 5.6.1. Nghiệm thu yêu cầu và chỉ tiêu
 
-**Bảng 5.6a.** Nghiệm thu F1–F7 và N1–N8 (phiên đo V2 và simulator). Trong ngoặc là ngưỡng của Bảng 3.1; bảng đầy đủ kèm số từng lượt ở Phụ lục E. "Đạt một phần": phần chính đạt, một phần cách kiểm chứng chưa làm. "Báo cáo": chỉ yêu cầu báo cáo số đo.
+**Bảng 5.6a.** Nghiệm thu F1–F7 và N1–N8 (phiên đo V2 và simulator). Trong ngoặc là ngưỡng của Bảng 3.1; số từng lượt ở Phụ lục E. "Đạt một phần": phần chính đạt, một phần cách kiểm chứng chưa làm. "Báo cáo": chỉ yêu cầu báo cáo số đo.
 
 | Yêu cầu, chỉ tiêu | Mức | Kết quả, phần còn thiếu | Kết luận |
 |---|---|---|---|
@@ -23,8 +23,8 @@ Bảng nghiệm thu đối chiếu kết quả của các mục 5.2–5.5 với 
 | F7. Bảo vệ tối thiểu | Should | API key, SSH tunnel; checklist chưa chạy | Chưa đo |
 | N1. SLO attainment | Must | 100% ở KB1, KB3 (≥ 95%) | Đạt |
 | N2a. Tốc độ phản ứng | Must | 79,7–81,5 s (≤ 2 phút) | Đạt |
-| N2b. Hồi phục | Should | 409–430 s | Báo cáo |
-| N3. Hiệu quả GPU | Should | 25% GPU-giờ của S4; SLO chênh 0 điểm | Đạt |
+| N2b. Hồi phục | Should | 409–430 s, vượt mức tham chiếu 5 phút | Báo cáo |
+| N3. Hiệu quả GPU | Should | 25% GPU-giờ của S4; SLO chênh 0 điểm phần trăm | Đạt |
 | N4. An toàn khi thay đổi | Must | 0 lỗi, kể cả lúc 1 replica | Đạt |
 | N5. Cold start | Should | L2 bằng 25,3% L0 (≤ 50%) | Đạt |
 | N6. Tự phục hồi | Must | Thay pod 67,4 s; fallback 16,8 s; dựng lại như F4 | Đạt |
@@ -38,7 +38,7 @@ Bảng nghiệm thu đối chiếu kết quả của các mục 5.2–5.5 với 
 <!-- nguồn: F5: nhật ký Trình tuần 05 mục 07/11 (TR3: 3 dashboard, số panel, kiểm truy vấn qua /api/ds/query trên kind, make dashboards-check); envs/cloud/provision/install-platform.sh (nạp 3 dashboard) -->
 <!-- nguồn: F6: docs/chi-tiet/04-van-hanh.md §3.2; docs/runbooks/ (7 file); Makefile alerts-coverage; nhật ký Trình tuần 06 mục 15/11 (tg-mock; chưa thử Telegram thật); analysis/figures/v2-dg2/alerts.csv (7 đợt LLMSLOBurnFast tính được); GHI-CHU-CHO-TRINH §3 điểm 1 -->
 <!-- nguồn: F7: envs/cloud/provision/install-platform.sh (openssl rand -hex 24); common/serving/deployment.yaml (VLLM_API_KEY); 00-thong-so.md §3 F7 (sửa 12/11); nguon-tu-lieu.md §4 (checklist bảo mật chưa làm) -->
-<!-- nguồn: N1–N3: analysis/figures/v2-dg2/runs.csv (slo_attainment, scored_phases, detect_s, create_to_ready_s, react_s, recovery_s, gpu_h, gpu_vs_baseline, slo_delta_vs_baseline_pp); nhật ký Quang tuần 07 mục 18/11 (bảng 11 ô), 19/11 (nguyên nhân A2 × KB2: hàng đợi 416–428 request ở pod có sẵn) -->
+<!-- nguồn: N1–N3: analysis/figures/v2-dg2/runs.csv (slo_attainment, scored_phases, detect_s, create_to_ready_s, react_s, recovery_s, gpu_h, gpu_vs_baseline, slo_delta_vs_baseline_pp); nhật ký Quang tuần 07 mục 18/11 (bảng 11 ô), 19/11 (nguyên nhân A2 × KB2: hàng đợi 416–428 request ở pod có sẵn); docs/adr/003-ket-qua-dg1-va-gia-tri-chot.md G5 (N2b: mức tham chiếu 5 phút, chỉ báo cáo, không tính đạt hay trượt) và §5 (409–430 s vượt mức tham chiếu) -->
 <!-- nguồn: N4: analysis/figures/v2-dg2/phases.csv (pha drop của A2-KB2-1/2/3: n_error = 0, replicas_ready_mean 2,8; 2,5; 2,6), runs.csv (scale_downs = 3 mỗi lượt; n_error toàn lượt = số lỗi của pha spike); runs/v2-vm/ops-vh2a-*/summary.json (replicas_before 1, rollout_s 141,4), ops-vh2b-*/summary.json (rollout_s 371,6); VH 16/11 ("Chưa làm: VH1–VH4 trên GPU nhà") -->
 <!-- nguồn: N5: runs/v2-vm/dg3-v2-4060ti/{L2-1,L2-2,L2-3,L0-1,L0-2}/summary.txt (ready_seen_unix − trigger_unix, trung bình 77,4 / 305,7 s; theo trigger_to_ready_s nguyên giây là 25,4%; 05-04-cold-start.md); nhật ký Quang tuần 07 mục 18/11 (lý do L0 đo 0 → 1) -->
 <!-- nguồn: N6: runs/v2-vm/ops-vh3-delete-*/summary.json (replace_s 67,38, ready_before 2), ops-vh3-kill-*/summary.json (recover_s 67,45, 129 lỗi / 1.041 request), ops-vh4-*/summary.json (fallback_s 16,80, replicas_before 1, max_replicas 4); nhật ký Quang tuần 07 mục 18/11 (8 phút 22 giây từ đầu bootstrap tới vLLM Ready, bấm tay) -->

@@ -430,6 +430,7 @@ dataset/
 ```
 
 - Cấu trúc một lượt: [Môi trường §14.2](05-moi-truong-danh-gia.md#142-dữ-liệu-của-một-lượt).
+- **Thực tế (28/11):** `dataset/` giữ nguyên bố cục của `runs/` thay cho cây trên, để `make analysis DATA=dataset` đọc thẳng mà không phải đổi đường dẫn; `analysis/dataset.py` chép 9 phiên chương 5 dùng, quét bí mật trước khi chép, rồi ghi `INDEX.csv` (mỗi lần thử của runner một dòng) và `SHA256SUMS`. Bộ dữ liệu khoảng 38 MB, 853 file; trong Git chỉ có [dataset/README.md](../../dataset/README.md), phần dữ liệu chưa đăng.
 - **Kích thước ước tính:** khoảng 25 lượt × vài chục MB, tổng dưới 2 GB.
 - **Giấy phép đề xuất:** CC BY 4.0 cho dữ liệu, Apache-2.0 hoặc MIT cho mã nguồn.
 - **Không chứa dữ liệu cá nhân:** prompt hoàn toàn là dữ liệu tổng hợp.
@@ -438,7 +439,7 @@ dataset/
 ### 10.7. Hướng dẫn tái lập và vận hành (dàn ý README)
 
 1. **Yêu cầu:** phần cứng (máy có GPU NVIDIA, hoặc tài khoản Vast.ai), công cụ (vastai CLI, ansible, kubectl, helm, kubeseal, python, uv, tailscale).
-2. **Chạy nhanh ở nhà:** `make home-up`, rồi `make run MATRIX=envs/home/experiments/matrix.yaml`, rồi `make analysis` (chưa có). Không có GPU: `make sim-up` rồi `make run MATRIX=envs/sim/experiments/matrix.yaml`.
+2. **Chạy nhanh ở nhà:** `make home-up`, rồi `make run MATRIX=envs/home/experiments/matrix.yaml`, rồi `make analysis` (có từ 28/11, [README](../../README.md#tái-lập) ý 5). Không có GPU: `make sim-up` rồi `make run MATRIX=envs/sim/experiments/matrix.yaml`.
 3. **Chạy đầy đủ trên máy thuê:** cấu hình `.env` (template Vast, khoá R2, bot Telegram), rồi lần lượt `make find rent probe bootstrap cloud-platform`, ĐG1 bằng `make run MATRIX=envs/cloud/experiments/matrix-dg1.yaml`, sau đó `make run MATRIX=envs/cloud/experiments/matrix-v2.yaml`, `make ops-tests`, `make backup`, `make release`.
 4. **Vận hành:** cập nhật phiên bản và rollback ([Vận hành §5.3](04-van-hanh.md#53-quy-trình-cập-nhật-qua-gitops)); xử lý cảnh báo (`docs/runbooks/`); dựng lại từ đầu ([Vận hành §7](04-van-hanh.md#7-dựng-lại-từ-đầu-khôi-phục-sau-thảm-hoạ)).
 5. **Chỉ tái tạo hình và bảng từ dữ liệu đã công bố:** tải `dataset/`, rồi `make analysis DATA=dataset/`.
@@ -559,11 +560,11 @@ Các cảnh dùng vLLM thật (model 3B) quay trong phiên V2 (phần ban ngày)
 
 - [ ] Mọi số liệu trong luận văn đều truy được về `analysis/` và tag `v1.0`.
 - [x] Hình minh hoạ (Hình 5, 15) đã được thay bằng số đo thật, hoặc ghi rõ là minh hoạ (27/11: cả hai vẽ lại từ số ĐG3, ĐG1 trên V2).
-- [ ] Mọi cảnh báo có runbook; runbook được review lần cuối sau phiên V2.
-- [ ] Không còn TODO hay placeholder (`vX.Y.Z`, `<org>`) trong repo công khai.
+- [x] Mọi cảnh báo có runbook; runbook được review lần cuối sau phiên V2 (28/11: soát 7 runbook với sự cố V1, V2, VH, sửa 6).
+- [ ] Không còn TODO hay placeholder (`vX.Y.Z`, `<org>`) trong repo công khai. Quét lần 1 ngày 28/11 trên `main` (`TODO`, `FIXME`, `vX.Y.Z`, `<org>`, "chưa viết"): ngoài nhật ký chỉ còn hai chỗ đúng nghĩa, là tên thư mục `shellcheck-vX.Y.Z/` trong gói tải ở `ci.yaml` và chính dòng này; quét lại trên bản nộp.
 - [ ] Link trong tài liệu không hỏng (CI `docs`).
 - [ ] Bộ dữ liệu có README, checksum và giấy phép.
-- [ ] Không có kubeconfig, token hay khoá Sealed Secrets trong lịch sử Git.
+- [ ] Không có kubeconfig, token hay khoá Sealed Secrets trong lịch sử Git. Quét lần 1 ngày 28/11 (mọi blob đến được từ các ref đã fetch, gồm head của mọi PR; mẫu token Telegram, Hugging Face, GitHub, Tailscale, khoá riêng, trường kubeconfig, JWT, khoá AWS/R2, cặp khoá = giá trị, IP công khai): không có bí mật thật. Quét lại trên bản nộp, sau khi fetch cả `refs/pull/*/head`.
 - [ ] Đã review toàn bộ luận văn (Quang review bản base của Trình); đã kiểm tra chính tả.
 
 ---

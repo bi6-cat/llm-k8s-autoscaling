@@ -4,11 +4,11 @@
 <!-- Soát số: chưa · Soát văn phong: kiem_van 27/11 · Người viết đọc lại: chưa -->
 ## 2.5. Vận hành theo SLO và GitOps
 
-Một dịch vụ LLM chạy lâu dài cần ba thứ ngoài autoscaling: một mục tiêu chất lượng đo được, một hệ thống báo cho người trực khi mục tiêu bị đe doạ, và một cách thay đổi hệ thống có kiểm soát. Ba đoạn dưới trình bày ba phần đó theo thực hành SRE (*Site Reliability Engineering*) và GitOps.
+Một dịch vụ LLM chạy lâu dài cần ba thứ ngoài autoscaling: một mục tiêu chất lượng đo được, một hệ thống báo cho người trực khi mục tiêu bị đe doạ, và một cách thay đổi hệ thống có kiểm soát. Ba đoạn dưới trình bày ba phần đó theo thực hành kỹ thuật độ tin cậy (*site reliability engineering*, SRE) và GitOps.
 
 <!-- nguồn: docs/chi-tiet/06-ke-hoach-quan-ly.md §11.1 (dòng 2.5: SLO, error budget và burn rate; Prometheus và Alertmanager; GitOps với Argo CD, rolling update); docs/chi-tiet/02-kien-thuc-nen.md §5 -->
 
-**SLO và burn rate.** Chỉ số mức dịch vụ (*Service Level Indicator*, SLI) là một con số đo từ góc nhìn người dùng, thường là tỷ lệ sự kiện tốt trên tổng số sự kiện. Với LLM serving, ví dụ tự nhiên là tỷ lệ request có TTFT không vượt một ngưỡng. Mục tiêu mức dịch vụ (*Service Level Objective*, SLO) là mức SLI phải đạt trong một khoảng thời gian, ví dụ 99% request trong 30 ngày. Phần còn lại, 1 − SLO, là ngân sách lỗi (*error budget*). Đó là tỷ lệ request xấu mà dịch vụ được phép có trong kỳ. SRE Workbook đề xuất cảnh báo theo tốc độ tiêu ngân sách này, gọi là burn rate [@sre-workbook]:
+**SLO và burn rate.** Chỉ số mức dịch vụ (*service level indicator*, SLI) là một con số đo từ góc nhìn người dùng, thường là tỷ lệ sự kiện tốt trên tổng số sự kiện. Với LLM serving, ví dụ tự nhiên là tỷ lệ request có TTFT không vượt một ngưỡng. Mục tiêu mức dịch vụ (*service level objective*, SLO) là mức SLI phải đạt trong một khoảng thời gian, ví dụ 99% request trong 30 ngày. Phần còn lại, 1 − SLO, là ngân sách lỗi (*error budget*). Đó là tỷ lệ request xấu mà dịch vụ được phép có trong kỳ. SRE Workbook đề xuất cảnh báo theo tốc độ tiêu ngân sách này, gọi là burn rate [@sre-workbook]:
 
 <!-- nguồn: docs/chi-tiet/02-kien-thuc-nen.md §5.1 (SLI tỷ lệ sự kiện tốt / tổng; SLO mục tiêu cho SLI trong khoảng thời gian; error budget = 1 − SLO; SLI hợp lý cho LLM serving: TTFT, TPOT, tỷ lệ lỗi), §5.2 (công thức burn rate); SRE Workbook chương "Alerting on SLOs" (tài liệu [23] của đề cương). SLO 99% trong ví dụ là số minh hoạ, không phải SLO của đồ án -->
 
