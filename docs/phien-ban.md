@@ -31,5 +31,6 @@ Tra ngày 09/10/2026; các dòng của CI tra ngày 01/11/2026. Đổi phiên b�
 | yamllint (CI) | `1.38.0`; phụ thuộc giải theo mốc 01/11/2026 (PyYAML 6.0.3, pathspec 1.1.1) | `.github/workflows/ci.yaml` |
 | actionlint, shellcheck, lychee (CI) | `1.7.12`, `0.11.0`, `0.24.2` | `.github/workflows/ci.yaml` |
 | pandoc (ghép luận văn ra `.docx`, không chạy trong CI) | `3.13` (bản zip của GitHub release, kiểm sha256 theo digest của release) | `docs/luan-van/README.md`; máy cá nhân |
+| Kiểu trích dẫn IEEE (`docs/luan-van/ieee.csl`, cho `--citeproc` của pandoc) | "IEEE Reference Guide version 11.29.2023", tệp `ieee.csl` của repo citation-style-language/styles ở commit `1ccf469` (07/01/2026); giấy phép CC BY-SA 3.0 ghi trong tệp | `docs/luan-van/README.md`; `analysis/luan_van.py` |
 | uv, Python (CI cho `loadgen/`) | `0.13.1`; Python `3.11` và `3.15` | `.github/workflows/ci.yaml` |
 | GitHub Actions | `actions/checkout@v7.0.1`, `astral-sh/setup-uv@v10.3.2`, ghim theo commit SHA | `.github/workflows/ci.yaml` |

@@ -35,7 +35,7 @@ YQ ?= yq
 AMTOOL ?= amtool
 
 # .PHONY: các target này không phải tên file, make luôn chạy chúng (kể cả khi có file trùng tên)
-.PHONY: help home-up alertmanager-secret home-eval-begin home-eval-end sim-up sim-down sim-argocd sim-argocd-down sim-test-load sim-test sim-lt7 sim-lt8 find rent attach probe bootstrap prefetch cloud-platform run backup backup-check ops-tests vh5 release analysis lint alerts-test alerts-coverage alertmanager-check dashboards-check
+.PHONY: help home-up alertmanager-secret home-eval-begin home-eval-end sim-up sim-down sim-argocd sim-argocd-down sim-test-load sim-test sim-lt7 sim-lt8 find rent attach probe bootstrap prefetch cloud-platform run backup backup-check ops-tests vh5 release analysis thesis lint alerts-test alerts-coverage alertmanager-check dashboards-check
 
 # In danh sách lệnh, chia nhóm theo môi trường. Hai loại dòng được in:
 #   `##@ <tiêu đề>`        = đầu một nhóm (in thành dòng tiêu đề);
@@ -322,6 +322,12 @@ analysis: ## Dựng lại bảng, hình, số chương 5: make analysis [DATA=ru
 	step $(ANALYSIS).lt_charts --lt5 "$$o/lt5-little.csv" --lt6 "$$o/lt6-gpu-util.csv" --lt7 "$$o/lt7-hpa.csv" \
 	  --lt8 "$$d/$(LT8_SESSION)" --out "$$o"; \
 	echo "Xong. So với bản trong Git: git status --short $$o"
+
+# Ghép docs/luan-van/*.md thành một .docx theo khuôn T (cần pandoc 3.13, docs/phien-ban.md). Mặc định ghi ra
+# ngoài repo, vì .docx là file sinh ra, không commit. Chi tiết: docs/luan-van/README.md mục "Ghép thành .docx".
+THESIS_OUT ?= ../luan-van.docx
+thesis: ## Ghép luận văn ra .docx theo khuôn T: make thesis [THESIS_OUT=../luan-van.docx]
+	@PYTHONUTF8=1 $(ANALYSIS).luan_van "$(THESIS_OUT)"
 
 # ── Kiểm tra trước khi mở PR ────────────────────────────────────────────────────
 ##@ Kiểm tra trước khi mở PR (CI chạy cùng các lệnh này)

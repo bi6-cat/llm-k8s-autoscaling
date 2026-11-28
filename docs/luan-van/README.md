@@ -16,7 +16,7 @@ Thư mục này chứa **nội dung** luận văn, viết bằng Markdown, mỗi
 | `CC-SS-<ten>.md` | Chương `CC`, mục `SS`. Hai chữ số để thứ tự khi ghép đúng với thứ tự mục, ví dụ `03-05-<ten>.md` đứng trước `04-01-<ten>.md` |
 | `CC-00-<ten>.md` | Tiêu đề chương (`# Chương CC. …`) và đoạn mở đầu chương |
 | `00-00-mo-dau.md` | Phần Mở đầu, không đánh số: tiêu đề `# Mở đầu {.unnumbered}`. Tên bắt đầu bằng `00` để đứng trước chương 1 và khớp mẫu `[0-9]*.md` của lệnh ghép ([quy tắc viết §1](quy-tac-viet.md#1-khuôn-trình-bày)) |
-| `phan-dau/NN-<ten>.md` | Các trang đứng trước Mở đầu, theo thứ tự ở [quy tắc viết §1](quy-tac-viet.md#1-khuôn-trình-bày): `01` bìa, Lời cảm ơn, trang nhận xét, Mục lục (trường TOC của Word); `02` danh mục thuật ngữ, chữ viết tắt và mã định danh; `03` danh mục hình vẽ và bảng biểu. Hai danh mục hình và bảng không viết tay: ở bước định dạng, người ghép sinh chúng từ chú thích "Hình x.y." và "Bảng x.y." rồi thay vào dòng đánh dấu `<!-- @danh-muc-hinh -->`, `<!-- @danh-muc-bang -->`. Đặt trong thư mục con để không lẫn với khoá `CC-SS` và đứng trước `00-00-mo-dau.md` khi ghép |
+| `phan-dau/NN-<ten>.md` | Các trang đứng trước Mở đầu, theo thứ tự ở [quy tắc viết §1](quy-tac-viet.md#1-khuôn-trình-bày): `01` bìa, Lời cảm ơn, trang nhận xét, Mục lục (trường TOC của Word); `02` danh mục thuật ngữ, chữ viết tắt và mã định danh; `03` danh mục hình vẽ và bảng biểu. Hai danh mục hình và bảng không viết tay: lệnh ghép (mục "Ghép thành .docx") sinh chúng từ chú thích "Hình x.y." và "Bảng x.y." rồi thay vào dòng đánh dấu `<!-- @danh-muc-hinh -->`, `<!-- @danh-muc-bang -->`. Đặt trong thư mục con để không lẫn với khoá `CC-SS` và đứng trước `00-00-mo-dau.md` khi ghép |
 | `tai-lieu.bib` | Danh mục tài liệu tham khảo dùng chung (BibTeX) |
 | [`quy-tac-viet.md`](quy-tac-viet.md) | Quy tắc viết chung cho hai người: chương nào nói gì, văn phong, thuật ngữ thống nhất, trình bày kết quả, review, checklist trước PR. Không ghép vào `.docx` |
 | [`nguon-tu-lieu.md`](nguon-tu-lieu.md) | Mục nào lấy tư liệu ở đâu, số liệu đã chốt, những gì chưa có số, cách lấy dữ liệu V2. Không ghép vào `.docx` |
@@ -35,7 +35,7 @@ Thư mục này chứa **nội dung** luận văn, viết bằng Markdown, mỗi
 - **Số:** dấu phẩy thập phân (2,5 s), dấu chấm phân nghìn (1.942), một dấu cách giữa số và đơn vị (16 GB, 180 s), phần trăm viết liền (95%).
 - **Hình:** `![Hình 3.1. <chú thích>](../images/png/<tên>.png)`, chú thích nằm dưới hình. **Bảng:** dòng `**Bảng 3.1.** <chú thích>` đặt ngay trên bảng. Hình và bảng đánh số theo chương, theo thứ tự xuất hiện. Hình nào, bảng nào cũng phải được nhắc tới trong bài (mốc M4). Mục viết khi các mục đứng trước trong chương chưa có thì dùng số tạm theo mục (`Bảng 3.4a`, `Hình 3.4a`), ghi điều đó ở dòng comment thứ hai của file, và đánh lại khi ghép chương.
 - **Dẫn chéo:** "(mục 3.4.2)", "(chương 5)". Thân bài không link tới `docs/`, vì luận văn phải đọc được độc lập; đường dẫn nội bộ chỉ nằm trong comment nguồn.
-- **Trích dẫn:** `[@key]`, với `key` có trong `tai-lieu.bib`. Kiểu hiển thị (ví dụ IEEE đánh số `[1]`) chốt ở bước định dạng, nên không đánh số tay.
+- **Trích dẫn:** `[@key]`, với `key` có trong `tai-lieu.bib`. Lệnh ghép hiển thị theo kiểu IEEE đánh số `[1]` ([`ieee.csl`](ieee.csl)), nên không đánh số tay.
 - **Công thức:** `$…$` trong dòng, `$$…$$` cho công thức riêng một dòng. Pandoc chuyển thành công thức Word.
 
 ## Nguồn của mọi sự kiện và số liệu
@@ -52,18 +52,19 @@ Sau mỗi đoạn văn hoặc bảng có số liệu hay khẳng định kỹ th
 
 ## Ghép thành .docx
 
-Pandoc 3.13 (ghim ở [docs/phien-ban.md](../phien-ban.md)). Chạy từ gốc repo, ghi file ra ngoài repo:
+Pandoc 3.13 (ghim ở [docs/phien-ban.md](../phien-ban.md)). Chạy từ gốc repo; file `.docx` là file sinh ra nên ghi ra ngoài repo, không commit:
 
 ```bash
-# Pandoc tách các thư mục của --resource-path bằng ":" trên Linux/macOS, bằng ";" trên Windows (kể cả khi gọi từ Git Bash)
-SEP=":"; case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) SEP=";" ;; esac
-pandoc docs/luan-van/phan-dau/[0-9]*.md docs/luan-van/[0-9]*.md docs/luan-van/phu-luc/*.md \
-  --resource-path="docs/luan-van${SEP}docs/luan-van/phu-luc" \
-  --citeproc --bibliography=docs/luan-van/tai-lieu.bib \
-  -o ../luan-van.docx
+make thesis THESIS_OUT=../luan-van.docx
+# tương đương: uv run --project analysis python -m analysis.luan_van ../luan-van.docx
 ```
 
-- `--resource-path`: đường dẫn hình trong file viết tương đối với thư mục này (`../images/png/…`), nên pandoc cần biết gốc để tìm hình. Hình trong `phu-luc/` viết tương đối với thư mục `phu-luc/` nên thêm thư mục đó; trên Windows, các thư mục cách nhau bằng `;` thay cho `:`.
-- `--citeproc`: thay `[@key]` bằng trích dẫn và tạo danh mục tài liệu. Danh mục nằm ở khối `::: {#refs}` nếu có, không thì ở cuối file. Hiện chưa file nào có khối này, nên danh mục đứng sau phụ lục; bước định dạng thêm trang "Tài liệu tham khảo" có khối `::: {#refs}` vào giữa chương 6 và phụ lục.
-- Lệnh trên **chưa** sinh danh mục hình và bảng: hai dòng đánh dấu là comment, nên trong `.docx` hai trang này chỉ có tiêu đề. Bước định dạng (người ghép, theo dòng "Người viết" ở trên) sinh hai danh mục từ chú thích trước khi chạy pandoc, và thêm số trang. Mục lục là trường TOC của Word, điền khi cập nhật trường (Update Field).
-- Bước định dạng sẽ thêm `--reference-doc=<khuôn T>.docx` ([quy tắc viết §1](quy-tac-viet.md#1-khuôn-trình-bày)) (lề, phông, kiểu tiêu đề) và `--csl=<kiểu trích dẫn>.csl`.
+Lệnh gọi [`analysis/luan_van.py`](../../analysis/luan_van.py), làm các việc sau:
+
+- **Khuôn T** ([quy tắc viết §1](quy-tac-viet.md#1-khuôn-trình-bày)): dựng reference doc từ bản mặc định của pandoc rồi truyền qua `--reference-doc`. pandoc chỉ lấy style, khổ giấy, lề, đầu trang và chân trang của file này. Repo vì vậy không chứa file khuôn nhị phân; muốn đổi khuôn thì sửa hằng số `PAGE`, `STYLES` trong module.
+- **Thứ tự ghép:** `phan-dau/`, Mở đầu và chương 1–6 (`[0-9][0-9]-*.md`), trang "Tài liệu tham khảo", `phu-luc/`. README và các file quy tắc không được ghép.
+- **Danh mục hình và bảng:** sinh từ chú thích `![Hình x.y. …](…)` và `**Bảng x.y.** …`, mỗi dòng lấy câu đầu của chú thích, thay vào hai dòng đánh dấu ở `phan-dau/03-danh-muc-hinh-bang.md`. Số trang là trường PAGEREF trỏ tới bookmark đặt ở hình hoặc bảng. Chú thích nằm trên một dòng như mẫu ở quy ước dưới, không thì không vào danh mục.
+- **Trích dẫn:** `--citeproc` thay `[@key]` bằng số `[1]` theo [`ieee.csl`](ieee.csl) (CSL IEEE, ghim ở [docs/phien-ban.md](../phien-ban.md)). Danh mục tài liệu theo locale mặc định en-US của kiểu này (`et al.`, `Accessed:`), vì nguồn đều là tiếng Anh và kiểu IEEE chỉ dịch được một phần sang tiếng Việt.
+- **Khối `> **[Bước định dạng]**`** (bìa, hai trang nhận xét) bị bỏ khỏi bản ghép và được in ra để nhắc làm tay.
+
+Sau khi ghép, mở file bằng Word và chọn **Yes** khi Word hỏi cập nhật trường: mục lục (trường TOC), số trang của hai danh mục (PAGEREF) và số trang ở chân trang (PAGE) chỉ có số sau bước này. Việc còn làm tay trong Word: bìa và bìa phụ theo mẫu của khoa, hai trang "Nhận xét, đánh giá, cho điểm". Hai biểu đồ ở dạng SVG (Hình 5.2, Hình E.1) cần Word 2016 trở lên; pandoc chỉ tạo được ảnh PNG dự phòng khi máy có `rsvg-convert`, thiếu thì in cảnh báo nhưng vẫn ghi file.
