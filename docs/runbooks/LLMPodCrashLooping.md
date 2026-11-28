@@ -21,6 +21,7 @@ kubectl -n llm-serving describe pod <pod> | grep -A5 'Last State' # Reason: OOMK
 | `Reason: OOMKilled` | Container dùng quá `limits.memory`: tăng limit hoặc giảm `--max-num-seqs` |
 | `CUDA out of memory` trong log | Giảm `--gpu-memory-utilization` hoặc `--max-model-len` |
 | `libnvrtc`, `CUDA driver version is insufficient` | Image không hợp driver của node (xem `docs/phien-ban.md`, yêu cầu driver ≥ 580) |
+| `StartError`, `failed to initialize NVML: Driver/library version mismatch` | Thư viện driver trên node đã bị nâng trong khi module kernel cũ vẫn nạp (VM Vast 08/11: `unattended-upgrades` nâng 580.95 → 580.178). Chờ nâng cấp xong rồi reboot node. Role `common` của Ansible đã tắt tự nâng cấp và hold gói driver trên VM thuê; gặp lại thì kiểm `apt-mark showhold` |
 | Lỗi tham số (`unrecognized arguments`, `ValueError`) | Vừa đổi tham số hoặc phiên bản: rollback bằng `git revert` |
 | Không tìm thấy model | Kiểm tra revision và đường dẫn model trong overlay |
 

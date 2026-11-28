@@ -1141,3 +1141,20 @@
 - **Deviations:** chưa gồm bảng cold start 8 pha của ĐG3 (đọc `summary.txt` do runner ghi) và hình trong `docs/images/` (`build_diagrams.py`), đã ghi rõ trong README. `dataset/` chưa có (việc P4), nên chưa chạy được với `DATA=dataset`.
 - **Links:** `Makefile` (target `analysis`), `analysis/charts.py`, `analysis/tests/test_charts.py`, `README.md` (mục Tái lập), `docs/chi-tiet/06-ke-hoach-quan-ly.md` §10.7, `docs/chi-tiet/05-moi-truong-danh-gia.md` §3.7.
 - **Thesis:** 4.6 hoặc 5.1 (HG5 tái lập: một lệnh dựng lại mọi bảng và hình chương 5, kiểm bằng `git status`); Phụ lục.
+
+## 2026-11-28 – Soát 7 runbook với sự cố V1, V2, VH (checklist Kế hoạch §11.4, phần 3)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** đọc 7 runbook trong `docs/runbooks/`, đối chiếu với các mục sự cố của `docs/nhat-ky/van-hanh.md` (06/11 SIGTERM, 08/11 NVML và V1, 16/11 image GC, 16/11 và 18–19/11 VH), nhật ký Quang tuần 07, quy tắc `common/observability/alerts/llm.yaml`, recording rule `llm:error_ratio:rate5m` và probe trong `common/serving/deployment.yaml`. Sửa 6 runbook và đồng bộ Phụ lục C.
+- **Results:** 7 cảnh báo, 7 runbook, mỗi quy tắc có `runbook_url` trỏ đúng file. Các điểm sửa:
+  - `LLMPodPending`: cỡ image ghi "~30 GB" sai, sửa thành khoảng 9 GB nén (Thông số §10.2; V2 kéo lại 2 phút 34 giây, PC nhà 14 phút 52 giây); thêm Lưu ý vLLM 0.31.0 không thoát khi nhận SIGTERM nên pod cũ giữ GPU đủ 180 s (V2: rollout 4 pod 371,6 s; VH2c Pending 300 s, chưa tới `for: 10m`); thêm nguyên nhân image bị kubelet GC khi vLLM ở 0 replica. Cùng lỗi "~30 GB" ở comment quy tắc `LLMPodPending`.
+  - `LLMPodNotReady`: thêm số cold start đo được (76–90 s V2, 151–162 s nhà, 300–311 s L0); startupProbe restart container sau 10 phút nên lúc cảnh báo kêu phải đọc `logs --previous`.
+  - `LLMPodCrashLooping`: thêm dòng `StartError` / NVML mismatch (VM Vast 08/11).
+  - `LLMErrorRateHigh`: thêm mục Giới hạn: chỉ đếm request qua Traefik, runner gọi thẳng Service nên cảnh báo không kêu được trong mọi lượt đánh giá; thêm ca 1 pod bị xoá/restart (V2 vh3-kill 129 lỗi, vh3-delete 2 pod 0 lỗi).
+  - `LLMSLOBurnFast` và Phụ lục C: thêm ca hàng đợi ghim ở pod cũ (V1 A2 × KB2: 1.028 request, xả ~9 phút); số cold start L2 trên V2.
+  - `KedaScalerErrors`: thêm thời gian từ lúc chặn tới fallback (16,8 s V2, 17,2 s N = 2).
+  - `LLMAtMaxReplicas`: không cần sửa.
+  - Kiểm: `make alerts-test` đạt (7 rule); `yamllint` sạch; `lychee` 27/27 link OK.
+- **Deviations:** chưa đánh dấu dòng "runbook được review lần cuối sau phiên V2" ở Kế hoạch §11.4, vì PR #102 sửa dòng ngay dưới (tránh xung đột); đánh dấu sau khi #102 merge.
+- **Links:** `docs/runbooks/*.md`, `docs/luan-van/phu-luc/c-runbook-mau.md`, `common/observability/alerts/llm.yaml` (chỉ comment).
+- **Thesis:** 4.6 (runbook cập nhật theo sự cố thật), 5.7 Hạn chế (`LLMErrorRateHigh` không đo được trong lượt đánh giá), Phụ lục C.

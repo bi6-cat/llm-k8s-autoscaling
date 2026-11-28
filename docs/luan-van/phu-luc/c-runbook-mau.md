@@ -1,10 +1,10 @@
 <!-- Mục đích: Phụ lục C, runbook mẫu cho cảnh báo LLMSLOBurnFast, mà mục 3.5 và 4.6 dẫn tới. Người viết: Trình. -->
-<!-- Chép từ docs/runbooks/LLMSLOBurnFast.md trên main (commit caf6a19, 21/11/2026), đổi link tương đối thành tên file, bỏ dẫn chiếu tới tài liệu thiết kế (Thông số §6, Vận hành §5, §8, §9) vì người đọc luận văn không có các tài liệu đó, bỏ ngày lược rate limit (12/11/2026); các ý khác giữ nguyên. Sửa runbook thì cập nhật bản ở đây. Số dòng của bảy runbook đếm bằng wc -l ngày 27/11/2026. -->
+<!-- Chép từ docs/runbooks/LLMSLOBurnFast.md trên main (bản soát lại ngày 28/11/2026 theo các sự cố của V1, V2 và VH; bản trước: commit caf6a19, 21/11/2026), đổi link tương đối thành tên file, bỏ dẫn chiếu tới tài liệu thiết kế (Thông số §6, Vận hành §5, §8, §9) vì người đọc luận văn không có các tài liệu đó, bỏ ngày lược rate limit (12/11/2026); các ý khác giữ nguyên. Sửa runbook thì cập nhật bản ở đây. Số dòng của bảy runbook đếm bằng wc -l ngày 28/11/2026. -->
 
 # Phụ lục C. Runbook mẫu {.unnumbered}
 
-Mỗi cảnh báo trong Bảng B.1 có một runbook cùng tên trong thư mục `docs/runbooks/` của repository, dài 29–53 dòng. Đường dẫn runbook nằm trong annotation `runbook_url` của quy tắc, nên tin cảnh báo gửi qua Telegram có sẵn link tới runbook. Mọi runbook theo cùng một khung: mức và quy tắc, ý nghĩa, ảnh hưởng tới người dùng, chẩn đoán nhanh trong 5 phút, bảng nguyên nhân và hành động, khi nào leo thang, ghi gì sau sự cố. Phần dưới đây là runbook của `LLMSLOBurnFast` (commit `caf6a19`), chép lại nội dung, chỉ bỏ các dẫn chiếu tới tài liệu thiết kế nội bộ.
-<!-- nguồn: wc -l docs/runbooks/*.md (29–53 dòng, 27/11/2026); annotation runbook_url trong common/observability/alerts/llm.yaml -->
+Mỗi cảnh báo trong Bảng B.1 có một runbook cùng tên trong thư mục `docs/runbooks/` của repository, dài 30–53 dòng. Đường dẫn runbook nằm trong annotation `runbook_url` của quy tắc, nên tin cảnh báo gửi qua Telegram có sẵn link tới runbook. Mọi runbook theo cùng một khung: mức và quy tắc, ý nghĩa, ảnh hưởng tới người dùng, chẩn đoán nhanh trong 5 phút, bảng nguyên nhân và hành động, khi nào leo thang, ghi gì sau sự cố. Phần dưới đây là runbook của `LLMSLOBurnFast` (bản soát lại sau phiên V2), chép lại nội dung, chỉ bỏ các dẫn chiếu tới tài liệu thiết kế nội bộ.
+<!-- nguồn: wc -l docs/runbooks/*.md (30–53 dòng, 28/11/2026); annotation runbook_url trong common/observability/alerts/llm.yaml -->
 
 ## C.1. Runbook `LLMSLOBurnFast`
 
@@ -37,12 +37,13 @@ kubectl -n llm-serving get hpa                   # TARGETS (metric/threshold), R
 
 | Nguyên nhân | Hành động |
 |---|---|
-| Tải vừa tăng, pod mới đang cold start | Theo dõi. Cảnh báo tự tắt khi pod mới Ready và hàng đợi rút hết, thường trong vài phút. Nếu cold start > 3 phút: kiểm tra image đã có sẵn trên node chưa, model có nằm trên NVMe không |
+| Tải vừa tăng, pod mới đang cold start | Theo dõi. Cảnh báo tự tắt khi pod mới Ready và hàng đợi rút hết, thường trong vài phút (V2: pod mới Ready sau 76–81 s khi image và model có sẵn). Nếu cold start > 3 phút: kiểm tra image đã có sẵn trên node chưa, model có nằm trên NVMe không |
+| Hàng đợi dồn ở pod cũ, pod mới rảnh (`waiting` cao ở một pod) | Hàng đợi nằm trong từng pod vLLM; Service không chuyển request đã xếp hàng sang pod mới. Gặp ở V1 (A2 × KB2, 08/11): 1.028 request ghim ở pod cũ, xả hết sau khoảng 9 phút. Không xoá pod cũ, vì sẽ cắt các request đang chờ; chờ xả và ghi lại |
 | Đã chạy tối đa replica | Báo người dùng; đề xuất thêm GPU. Không có giới hạn tốc độ ở Traefik để cắt bớt tải, vì lớp này đã được lược khỏi thiết kế |
 | Một pod chậm bất thường | Xem GPU của pod đó (nhiệt độ, XID); xoá pod để nó chuyển đi |
 | Ngay sau một lần cập nhật | Rollback bằng `git revert` rồi để Argo CD sync |
 | KEDA đang lỗi | Autoscaling đã fallback; xử lý theo runbook `KedaScalerErrors` |
-<!-- nguồn: docs/runbooks/LLMSLOBurnFast.md, commit caf6a19 -->
+<!-- nguồn: docs/runbooks/LLMSLOBurnFast.md bản 28/11/2026; hai số mới: docs/nhat-ky/van-hanh.md mục 08/11 (V1) và 19/11 (ĐG3 L2) -->
 
 **Leo thang.** Sau 15 phút chưa rõ nguyên nhân thì gọi người thứ hai.
 <!-- nguồn: docs/runbooks/LLMSLOBurnFast.md -->

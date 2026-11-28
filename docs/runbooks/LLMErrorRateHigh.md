@@ -9,6 +9,8 @@
 
 **Lưu ý.** Ở tải thấp, một đợt vài lỗi 503 ngắn (ví dụ lúc chuyển pod) cũng đủ vượt 1% và giữ cảnh báo khoảng 4 phút, vì đợt lỗi còn nằm trong cửa sổ 5 phút (`for: 1m` không lọc được). Để biết lỗi còn tiếp diễn không, xem cửa sổ ngắn: `sum by (code) (increase(traefik_service_requests_total{service=~"llm-serving-.*", code=~"5.."}[1m]))`. Bằng 0 nghĩa là đợt lỗi đã dừng, và cảnh báo tự hết trong ≤ 5 phút ([Vận hành §3.2](../chi-tiet/04-van-hanh.md#32-danh-sách-cảnh-báo)).
 
+**Giới hạn.** Cảnh báo chỉ đếm request đi qua Traefik, tức Ingress ở `envs/home/serving`. Runner và máy tạo tải gọi thẳng Service `vllm` ở mọi môi trường, còn máy thuê và kind không có Ingress, nên trong các lượt đánh giá chuỗi `llm:error_ratio:rate5m` rỗng và cảnh báo này không thể kêu. Lỗi của các kịch bản VH (ví dụ 129 request lỗi ở vh3-kill trên V2) chỉ thấy ở phía máy tạo tải (`summary.json` của lượt chạy).
+
 **Chẩn đoán nhanh (≤ 5 phút).**
 1. Còn pod Ready nào không? Không còn pod Ready thì Traefik trả 503.
    ```bash
@@ -30,6 +32,7 @@
 | Nguyên nhân | Hành động |
 |---|---|
 | Không còn pod Ready | Xem [LLMPodNotReady](LLMPodNotReady.md) hoặc [LLMPodCrashLooping](LLMPodCrashLooping.md) |
+| Chỉ có 1 pod, và pod đó vừa bị xoá hoặc container vừa restart | Lỗi tự hết khi pod Ready lại (V2: 67,4 s). Đo trên V2: vh3-kill lúc chỉ có 1 pod có 129 request lỗi; vh3-delete khi có 2 pod Ready thì 0 lỗi. Phiên cần phục vụ liên tục thì giữ `minReplicaCount` ≥ 2 |
 | Đang rollout với 1 replica | Tạm nâng `minReplicaCount` lên 2 trước khi cập nhật ([Vận hành §5](../chi-tiet/04-van-hanh.md#5-cập-nhật-phiên-bản-khi-gpu-đã-dùng-hết)) |
 | Lỗi 500 sau khi đổi tham số hoặc phiên bản | Rollback bằng `git revert`, để Argo CD sync |
 | Pod bị OOMKilled giữa chừng (502) | `kubectl describe pod` xem `Last State`; giảm `--max-num-seqs` hoặc `--max-model-len` |

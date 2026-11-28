@@ -41,7 +41,7 @@ Cảnh báo không dựa vào bộ đếm lỗi của KEDA. Lý do: khi đã fal
 | Sai `serverAddress` | So với Service thật của Prometheus trong namespace `monitoring` |
 | `Ready=False`, không có fallback | Xem `Reason`/`Message` của condition `Ready`: thường là Deployment `vllm` bị xoá hoặc đổi tên (`ErrorGettingCurrentReplicas`) |
 
-Khi KEDA hỏi lại được, condition `Fallback` về `False` ngay ở lần hỏi thành công đầu tiên. Cảnh báo hết sau khoảng 30 s (một lần scrape kube-state-metrics và một chu kỳ tính rule; khi hết thì không chờ `for:`). Tin "đã hết" tới Telegram chậm hơn, tới 5 phút (`group_interval` của Alertmanager). Đo trên kind 15/11: `Fallback=False` sau ≤ 12 s, Alertmanager hết cảnh báo sau ≤ 28 s, tin "đã hết" sau 273 s.
+Khi KEDA hỏi lại được, condition `Fallback` về `False` ngay ở lần hỏi thành công đầu tiên. Cảnh báo hết sau khoảng 30 s (một lần scrape kube-state-metrics và một chu kỳ tính rule; khi hết thì không chờ `for:`). Tin "đã hết" tới Telegram chậm hơn, tới 5 phút (`group_interval` của Alertmanager). Đo trên kind 15/11: `Fallback=False` sau ≤ 12 s, Alertmanager hết cảnh báo sau ≤ 28 s, tin "đã hết" sau 273 s. Chiều ngược lại, từ lúc chặn KEDA → Prometheus tới khi fallback bật: 16,8 s trên V2 (VH4, 19/11), 17,2 s trên máy thuê N = 2 (16/11).
 
 **Giới hạn.** Có ba ca cảnh báo này không kêu được, nên đừng coi "không có cảnh báo" là "KEDA ổn":
 - **Thiếu metric.** Môi trường chưa nạp `kube-state-metrics-values.yaml`, hoặc kube-state-metrics mất quyền đọc ScaledObject: rule không có dữ liệu nên im lặng. Sau mỗi lần dựng môi trường, chạy PromQL `kube_scaledobject_status_condition{namespace="llm-serving"}`: mỗi ScaledObject phải có 5 chuỗi (Ready, Active, Fallback, Paused, HPAActive).
