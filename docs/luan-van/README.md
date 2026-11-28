@@ -20,12 +20,12 @@ Thư mục này chứa **nội dung** luận văn, viết bằng Markdown, mỗi
 | `tai-lieu.bib` | Danh mục tài liệu tham khảo dùng chung (BibTeX) |
 | [`quy-tac-viet.md`](quy-tac-viet.md) | Quy tắc viết chung cho hai người: chương nào nói gì, văn phong, thuật ngữ thống nhất, trình bày kết quả, review, checklist trước PR. Không ghép vào `.docx` |
 | [`nguon-tu-lieu.md`](nguon-tu-lieu.md) | Mục nào lấy tư liệu ở đâu, số liệu đã chốt, những gì chưa có số, cách lấy dữ liệu V2. Không ghép vào `.docx` |
-| `phu-luc/<chữ>-<ten>.md` | Phụ lục A–F, mỗi phụ lục một file, tiêu đề `# Phụ lục A. … {.unnumbered}`; mục con, hình, bảng và đoạn mã đánh số theo chữ (`A.1`, `Bảng A.1`, `Đoạn mã A.1`). Ghép sau chương 6 và danh mục tài liệu tham khảo. Trích manifest hay quy tắc thì ghi đường dẫn file và commit sửa file đó gần nhất, để người đọc tìm lại được bản đầy đủ. Vì vậy phụ lục được ghi đường dẫn trong repository ngay trong văn bản, kể cả `docs/` (ngoại lệ của [quy tắc viết §3.5](quy-tac-viet.md#35-không-nhắc-chuyện-nội-bộ-trong-thân-bài)) |
+| `phu-luc/<chữ>-<ten>.md` | Phụ lục A–G, mỗi phụ lục một file, tiêu đề `# Phụ lục A. … {.unnumbered}`; mục con, hình, bảng và đoạn mã đánh số theo chữ (`A.1`, `Bảng A.1`, `Đoạn mã A.1`). Ghép sau chương 6 và danh mục tài liệu tham khảo. Trích manifest hay quy tắc thì ghi đường dẫn file và commit sửa file đó gần nhất, để người đọc tìm lại được bản đầy đủ. Vì vậy phụ lục được ghi đường dẫn trong repository ngay trong văn bản, kể cả `docs/` (ngoại lệ của [quy tắc viết §3.5](quy-tac-viet.md#35-không-nhắc-chuyện-nội-bộ-trong-thân-bài)) |
 
 - **Mỗi mục cấp 2 là một file**, không tách phần `a`, `b` theo người viết. Góp ý qua review PR hoặc comment trên `.docx` ghép thử ([quy tắc viết §8](quy-tac-viet.md#8-phối-hợp-giữa-hai-người)).
 - Dòng đầu mỗi file là comment `<!-- Mục đích: … Người viết: … -->` (CONTRIBUTING §2). Comment HTML không xuất hiện trong `.docx`.
 - Tiêu đề trong file mục: `## 3.4. …`, `### 3.4.1. …`. Số mục đánh tay, khớp dàn ý §11.1.
-- Hình lấy thẳng từ chỗ gốc, không chép vào đây: sơ đồ ở `docs/images/png/` (sinh từ `docs/diagrams/`), biểu đồ kết quả ở `analysis/figures/`.
+- Hình lấy thẳng từ chỗ gốc, không chép vào đây: sơ đồ ở `docs/images/png/` (sinh từ `docs/diagrams/`), biểu đồ kết quả ở `analysis/figures/`, ảnh chụp màn hình (dashboard) ở `docs/images/anh-chup/`.
 
 ## Quy ước viết
 

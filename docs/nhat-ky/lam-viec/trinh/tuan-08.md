@@ -1281,3 +1281,16 @@
 - **Results:** grep `\b5\.[0-9][a-z]\b` trong `docs/luan-van/`: chỉ còn số tạm cũ có ghi chú "số tạm theo mục", "bảng tạm 5.5a" và tên bảng của commit bc49ff6 ở comment 5.5. `danh_muc.py` trên bản ghép từ cây làm việc (chương 0–6 và phụ lục): Bảng 5.1–5.4, Hình 5.1–5.3, mục "Cần xem" 0 (không trùng, không nhảy, không số tạm, không số được nhắc mà thiếu chú thích). kiem_van trên 14 file của lần sửa đầu: như main (13 file 0 điểm, Phụ lục E 1 điểm có từ trước). lychee offline (loại trừ như job `docs` của CI): 0 lỗi.
 - **Links:** nhánh `docs/tr8-thesis-ch5-numbering`; `docs/luan-van/05-02` … `05-07`, `01-02`, `01-03`, `03-04`, `06-01` … `06-03`, `phu-luc/e-so-lieu-tung-luot.md`, `quy-tac-viet.md`.
 - **Thesis:** chương 5 (số hình, bảng); danh mục hình và bảng ở phần đầu.
+
+## 2026-11-28 – Merge PR #109; Phụ lục G ảnh dashboard trên simulator
+
+- **Task:** TR8 (F5) · **Environment:** none
+- **Done:**
+  1. Merge PR #109 (đánh lại số hình và bảng chương 5) `dec24e7` sau CI 6/6 xanh.
+  2. Viết Phụ lục G (`docs/luan-van/phu-luc/g-anh-dashboard-sim.md`): ba ảnh dashboard chụp trên kind ngày 27/11 (PR #98) thành Hình G.1–G.3, mỗi ảnh một câu dẫn trước và đoạn nhận xét sau. Chú thích ghi rõ "trên simulator kind (không phải GPU thật)", ngày chụp và khoảng xem 15 phút. Nêu các hạn chế đã ghi ở PR #98: hàng GPU "No data", panel theo pod chỉ có số ở pod cũ vì tải qua `kubectl port-forward`, cold start 6 s không so được với 5.4, hàng chi phí không phải số thật.
+  3. Dẫn tới Phụ lục G từ 4.6.1 và dòng F5 của Bảng 5.4 (F5 vẫn "Đạt một phần"); cập nhật danh sách phụ lục A–G ở Mở đầu, README `docs/luan-van/` (thêm chỗ để ảnh chụp `docs/images/anh-chup/`), `nguon-tu-lieu.md`, Kế hoạch §11.1 "Phần cuối".
+  4. `/code-review high`: 8 điểm, sửa cả 8: trạng thái `LLMAtMaxReplicas` (pending trong lúc tải, quy tắc cần cả request chờ > 0; panel cho thấy pending tắt trước lúc chụp), tỷ lệ 100% chỉ tính trên cửa sổ 5 phút cuối, câu "vì vậy" ở 4.6.1 bị đứng sau câu Phụ lục G, nguồn của G trong `nguon-tu-lieu.md`, chỗ để ảnh chụp trong README, thời gian chờ 4,5 s (ảnh) khác 4,7 s (4.6.1) vì khác lượt, comment nguồn ở 4.6.1 và Mở đầu.
+- **Decision:** ảnh đặt ở Phụ lục G mới, không ghép vào B hay E, vì B là quy tắc cảnh báo còn E là số liệu V2 trên GPU; phụ lục thêm ở cuối không đổi chữ của A–F, có ảnh GPU nhà thì chỉ thay ảnh trong G. Không đưa ảnh vào thân bài 4.6, vì ba ảnh chiếm khoảng 3 trang mà không phải số đo.
+- **Results:** kiem_van: Phụ lục G 0 điểm; 4.6, Mở đầu, 5.6 như main. lychee offline trên `docs/luan-van/` và Kế hoạch: 0 lỗi. gop.py (bản gộp từ `origin/main` và nhánh `docs/tr8-thesis-*`): Phụ lục G nằm sau F, ba ảnh có đường dẫn đúng, danh mục hình và bảng "Cần xem" 0. Số trang khuôn T: chưa đo (phụ lục không tính vào thân bài).
+- **Links:** nhánh `docs/tr8-thesis-appendix-dashboards`; `docs/luan-van/phu-luc/g-anh-dashboard-sim.md`, `04-06-giam-sat-canh-bao.md`, `05-06-bang-nghiem-thu.md`, `00-00-mo-dau.md`, `README.md`, `nguon-tu-lieu.md`, `docs/chi-tiet/06-ke-hoach-quan-ly.md`.
+- **Thesis:** Phụ lục G; 4.6.1, 5.6 (F5).

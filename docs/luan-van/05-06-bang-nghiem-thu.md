@@ -18,7 +18,7 @@ Bảng nghiệm thu (Bảng 5.4) đối chiếu kết quả của các mục 5.2
 | F2. Tự điều chỉnh replica | Must | A2 trong [1, 4]; T7 chưa chạy | Đạt một phần |
 | F3. Triển khai qua Git | Must | Cập nhật, rollback qua Git trên simulator, 0 lỗi; trên GPU chỉ qua annotation | Đạt |
 | F4. Dựng từ máy trắng | Must | 8 phút 22 giây (1 lần) | Đạt |
-| F5. Ba dashboard | Must | Đủ 3 dashboard; chưa chụp trên GPU thật | Đạt một phần |
+| F5. Ba dashboard | Must | Đủ 3 dashboard, ảnh trên simulator ở Phụ lục G; chưa chụp trên GPU thật | Đạt một phần |
 | F6. Cảnh báo tới Telegram | Must | Chưa gửi Telegram thật | Đạt một phần |
 | F7. Bảo vệ tối thiểu | Should | API key, SSH tunnel; checklist chưa chạy | Chưa đo |
 | N1. SLO attainment | Must | 100% ở KB1, KB3 (≥ 95%) | Đạt |
@@ -35,7 +35,7 @@ Bảng nghiệm thu (Bảng 5.4) đối chiếu kết quả của các mục 5.2
 <!-- nguồn: F2: analysis/figures/v2-dg2/runs.csv (replicas_max, scale_ups, scale_downs); nhật ký Trình tuần 04 mục 01/11 (T1–T5 trên kind); nhật ký Trình tuần 05 mục 07/11 (cơ chế T6 trên kind); Kế hoạch mốc M2 (ghi chú 08/11: chưa có T6, T7) -->
 <!-- nguồn: F3: VH 16/11 (7 app Synced/Healthy sau khi áp lại root-app); ADR-006 §3.1 (VM thuê dùng helm, không Argo CD); runs/v2-evidence/config/vh.py-pr46 (trigger_rollout: patch annotation); ADR-007 D2 (PR #75: phần Git của VH2 kiểm trên kind); nhật ký Trình tuần 08 mục 25/11 trên nhánh feat/tr8-vh2-git-run (PR #78: 4 commit qua Argo CD, 615 request, 0 lỗi, TTFT 206 → 306 → 206 ms) -->
 <!-- nguồn: F4: nhật ký Quang tuần 07 mục 18/11 (bootstrap 5 phút 8 giây, cloud-platform 82 s, vLLM Ready 90 s; tổng 8 phút 22 giây); VH 06/11 (dựng lại máy nhà, còn bước tay) -->
-<!-- nguồn: F5: nhật ký Trình tuần 05 mục 07/11 (TR3: 3 dashboard, số panel, kiểm truy vấn qua /api/ds/query trên kind, make dashboards-check); envs/cloud/provision/install-platform.sh (nạp 3 dashboard) -->
+<!-- nguồn: F5: nhật ký Trình tuần 05 mục 07/11 (TR3: 3 dashboard, số panel, kiểm truy vấn qua /api/ds/query trên kind, make dashboards-check); envs/cloud/provision/install-platform.sh (nạp 3 dashboard); docs/nhat-ky/van-hanh.md mục 27/11 (ảnh ba dashboard trên kind, Phụ lục G) -->
 <!-- nguồn: F6: docs/chi-tiet/04-van-hanh.md §3.2; docs/runbooks/ (7 file); Makefile alerts-coverage; nhật ký Trình tuần 06 mục 15/11 (tg-mock; chưa thử Telegram thật); analysis/figures/v2-dg2/alerts.csv (7 đợt LLMSLOBurnFast tính được); GHI-CHU-CHO-TRINH §3 điểm 1 -->
 <!-- nguồn: F7: envs/cloud/provision/install-platform.sh (openssl rand -hex 24); common/serving/deployment.yaml (VLLM_API_KEY); 00-thong-so.md §3 F7 (sửa 12/11); nguon-tu-lieu.md §4 (checklist bảo mật chưa làm) -->
 <!-- nguồn: N1–N3: analysis/figures/v2-dg2/runs.csv (slo_attainment, scored_phases, detect_s, create_to_ready_s, react_s, recovery_s, gpu_h, gpu_vs_baseline, slo_delta_vs_baseline_pp); nhật ký Quang tuần 07 mục 18/11 (bảng 11 ô), 19/11 (nguyên nhân A2 × KB2: hàng đợi 416–428 request ở pod có sẵn); docs/adr/003-ket-qua-dg1-va-gia-tri-chot.md G5 (N2b: mức tham chiếu 5 phút, chỉ báo cáo, không tính đạt hay trượt) và §5 (409–430 s vượt mức tham chiếu) -->
