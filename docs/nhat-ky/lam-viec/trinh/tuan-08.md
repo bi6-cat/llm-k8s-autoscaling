@@ -1213,3 +1213,17 @@
 - **Decision:** chỉ sửa chỗ đã có quy ước trong `quy-tac-viet.md` §4–§6. Điểm chưa có quy ước để lại lần soát 2, vì mỗi điểm đụng nhiều chương và cần chốt một cách gọi trước khi sửa: "X phút Y giây" so với đơn vị s; "pha" của cold start trùng "pha" của tải; "khoá API" và "API key"; "chu kỳ sync" của HPA trùng "sync" của Argo CD; số cảnh báo của F6 (6 ở Bảng 3.1, bảy quy tắc ở Bảng 3.7); các cặp "LLM serving"/"phục vụ LLM", "repository"/"repo", "rollout"/"rolling update", "8 pha"/"tám pha". Viết hoa phần giải nghĩa từ viết tắt giữ như cũ: danh mục viết hoa (Continuous Integration), thân bài viết thường in nghiêng.
 - **Links:** nhánh `docs/tr8-thesis-proofread` (xếp trên `docs/tr8-thesis-trim-d103`, PR #104).
 - **Thesis:** cả quyển (chất lượng văn bản trước M4).
+
+## 2026-11-28 – Hạn chế theo ADR-003 §6 và dòng N2b trong bảng nghiệm thu
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Soát việc nhóm D đầu (số VH2 trên kind ở 4.5, F3 và N4 ở 5.6 theo ADR-007): đã có sẵn trên `main` từ các PR trước (4.5 có 615 request, 0 lỗi, push → sync 138–247 s; 5.6 dòng F3 ghi "trên GPU chỉ qua annotation"), không cần sửa.
+  2. Bảng 5.6a dòng N2b: thêm "vượt mức tham chiếu 5 phút" (ADR-003 G5, §5), kết luận vẫn "Báo cáo".
+  3. 5.7 thêm các hạn chế ADR-003 §6 yêu cầu: C = 3,5 là cận dưới (so với năng lực thật, tải nhẹ hơn danh nghĩa tối đa gần 12,5%); chưa đối chiếu ĐG1 với `vllm bench serve`; ổ đĩa 126 GB dưới mức 130 GB, tốc độ đọc tuần tự không đo; mức tham chiếu N2b ghi thành quyết định sau khi có kết quả. Nêu rõ `LLMErrorRateHigh` chỉ có unit test vì máy tạo tải gọi thẳng Service, không qua Traefik (ý còn nợ từ #103). Tách đoạn 1 của 5.7 thành hai đoạn (ma trận ĐG2; ĐG1).
+  4. 5.1 sửa câu "đạt các tiêu chí lọc còn lại" thành đạt CPU, RAM, mạng, giá; ổ đĩa không đạt, tốc độ đọc chưa đo (ADR-003 G8, `runs/v2-evidence/console/00-probe.txt`: `/dev/root 126G`, 120G trống).
+  5. `/code-review high`: 10 điểm, sửa cả 10 (5.1 nói quá về tiêu chí đĩa; tên tài liệu nội bộ "Thông số" lọt vào thân bài; "Cuối cùng" sai cấu trúc; câu 12,5% so sai mốc; "bước cuối của quy trình" chưa giới thiệu trong luận văn; comment ngân sách và dòng "Soát số" chưa cập nhật; nguồn đoạn 1 bị dồn sang comment đoạn sau; câu ổ đĩa thiếu ảnh hưởng; "tiêu chí chọn máy" và "tiêu chí lọc" gọi hai kiểu).
+- **Decision:** các hạn chế của ADR-003 §6 đặt ở 5.7 (hạn chế của phép đo), không ở 6.2 (hạn chế của hệ thống), vì đều là điều kiện đo của phiên V2.
+- **Results:** kiem_van: 05-06 và 05-07 0 điểm; 05-01 1 điểm có từ trước (ngày đủ năm ở dòng 8). 5.7 tăng 573 → 768 chữ văn xuôi, chưa đo lại khuôn T. Các câu mới do người viết đối chiếu ADR-003 và probe, chưa soát độc lập.
+- **Links:** nhánh `docs/tr8-thesis-vh2-acceptance` (xếp trên `docs/tr8-thesis-proofread`, PR #105); `docs/luan-van/05-01`, `05-06`, `05-07`.
+- **Thesis:** 5.1, 5.6, 5.7.
