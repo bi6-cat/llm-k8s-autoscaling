@@ -1367,3 +1367,23 @@
 - **Incidents:** lệnh đầu tiên dùng `rm -rf .work/dataset-check` bị deny rule chặn (cấm xoá `.work/`). Chuyển sang thư mục mới trong scratchpad, không xoá gì.
 - **Links:** nhánh `docs/tr8-checklist-final`; `docs/chi-tiet/06-ke-hoach-quan-ly.md` §11.4, `docs/huong-dan/w2.md`.
 - **Thesis:** phụ lục bàn giao (bộ dữ liệu, checklist nộp).
+
+## 2026-11-28 – Merge PR #114 (soát checklist §11.4)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** kiểm lại 5 điều kiện merge (CI xanh, MERGEABLE, không review hay bình luận chờ xử lý, chỉ đổi tài liệu, base `main`), merge bằng merge commit `47035e1`, xoá nhánh head.
+- **Links:** PR #114.
+
+## 2026-11-28 – Rút gọn Phụ lục A và F
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Phụ lục A: Đoạn mã A.1 (Deployment vLLM) còn 17 dòng YAML, chỉ giữ các trường mục 3.4 và 4.5 dựa vào (không `replicas`, `maxSurge: 0`, startup probe 10 phút, preStop 20 s, `--shutdown-timeout=150`, grace period 180 s) và cổng `http` mà probe dùng. Bỏ đoạn mã overlay VM thuê và YAML của Application gốc, thay bằng đường dẫn file và một câu tóm tắt. Giữ trọn ScaledObject A2 (nay là Đoạn mã A.2) và Bảng A.1.
+  2. Phụ lục F: F.1 còn một đoạn bốn câu và Bảng F.1 rút cột tiêu chí xuống một dòng mỗi mốc. Rút gọn văn xuôi F.2, F.3 (bỏ câu về PR và CI đã có ở 1.2), giữ nguyên hai bảng phân công.
+  3. Đặt độ rộng cột cho ba bảng (A.1, F.2, F.3) bằng số dấu gạch ở dòng phân cách của pipe table. Pandoc chỉ dùng tỉ lệ dấu gạch khi có dòng dài hơn 72 ký tự, và khi đó chia đều cột nếu các dấu gạch bằng nhau, nên cột "Tính năng" của Bảng F.2 chỉ rộng 1/3 trang và mỗi dòng xuống 3–4 dòng.
+  4. Ý bỏ ghi vào comment đầu hai file. `/code-review high` báo 10 điểm, sửa cả 10: câu F.1 viết sai là giữ nguyên ngày đóng băng (thật ra chốt 22/11 thay cho 15/11), tiêu chí M2 bị rút yếu đi, đoạn trích A.1 thiếu cổng `http` và tên Deployment, câu dẫn mục 4.2 không khớp đoạn trích, comment cũ ở 4.1 còn nói Phụ lục A có root-app. Dựng lại bản nộp bằng `make thesis` và cập nhật trường bằng Word.
+- **Decision:** giữ hai bảng phân công F.2, F.3 vì quy tắc viết yêu cầu bảng phân công kèm tên thành viên theo mẫu của trường, nên F chưa xuống mức 1,5 trang đặt ra. Cách đặt độ rộng cột chỉ áp cho phụ lục. Các bảng ở thân bài chưa xem lại.
+- **Results:** bản nộp từ 119 xuống 116 trang (chưa bìa), 0 lỗi trường. Phụ lục A tr. 95–97, trang 97 chỉ có Bảng A.1 và phần cuối đoạn dẫn (khoảng 2,4 tr, trước 5 tr). Phụ lục F tr. 110–111, trang 111 gần đầy, 45 dòng chữ trích từ PDF (khoảng 1,9 tr, trước 3 tr). Thân bài chương 1–6 vẫn 75 trang. `kiem_van`: A 0 điểm, F 9 điểm (trước 13, đều là ngày tháng và tên thành viên vốn có). lychee offline 0 lỗi.
+- **Deviations:** Đoạn mã A.1 17 dòng thay vì mức 15 dòng Trình đặt, vì cần cổng `http` cho probe và probe viết dạng khối như file gốc.
+- **Links:** nhánh `docs/tr8-thesis-appendix-trim`; `docs/luan-van/phu-luc/a-manifest-chinh.md`, `docs/luan-van/phu-luc/f-ke-hoach-phan-cong.md`.
+- **Thesis:** Phụ lục A, F.
