@@ -1,8 +1,8 @@
 <!-- Mục đích: mục 5.2 của luận văn, năng lực một replica (ĐG1) và kiểm chứng LT1–LT3, bản base lượt 1. Người viết: Trình. Nháp ngày 24/11/2026 từ envs/cloud/experiments/capacity.json, nhật ký Quang tuần 07 (18/11), docs/nhat-ky/van-hanh.md (LT1–LT3) và log vLLM của phiên V2; Trình chưa đọc lại. Quy ước: docs/luan-van/README.md, docs/luan-van/quy-tac-viet.md -->
-<!-- Ngân sách (D96): 1,5 trang. Đo 24/11 sau soát số (dàn thử, 1 bảng): 1,07 tr (khuôn A), 1,49 tr (khuôn B); 501 chữ văn xuôi. Số bảng, hình tạm theo mục (Bảng 5.2a, Hình 5.2b thêm 28/11), đánh lại khi ghép chương. -->
+<!-- Ngân sách (D96): 1,5 trang. Đo 24/11 sau soát số (dàn thử, 1 bảng): 1,07 tr (khuôn A), 1,49 tr (khuôn B); 501 chữ văn xuôi. Số bảng, hình tạm theo mục (Bảng 5.2a, Hình 5.2b thêm 28/11), đánh lại khi ghép chương. Đo lại 28/11 bằng gop.py (khuôn T, gồm Hình 5.2b): 1,79 tr. -->
 <!-- Ý không đưa vào, để chỗ khác: bảng LT1–LT3 đầy đủ (dự đoán, số đo, độ lệch) cho bảng LT ở 5.6 hoặc Phụ lục E; số chi tiết của LT2 ở nhà với Qwen2.5-1.5B (28.672 B/token dự đoán, 28.670 đo, 23/10) và trên A4000 (211.936 token cho 7,28 GiB, 08/11), thân bài chỉ nói hai lần đo này khớp trong sai số làm tròn; điểm chưa giải thích của LT2 ở nhà (thêm 11.040 token trên k3s); bảng 6 mức của LT3 ở nhà (van-hanh.md LT3; thân bài chỉ dùng điểm gãy); LT1 trên laptop 4050 chưa đo; số pod KV L2 của ĐG3 là 224.336 token cho 7,7 GiB (khác pod ĐG1 211.584 token cho 7,26 GiB, chưa rõ vì sao, cùng tỷ lệ B/token); phiên thử A4000 chạy vLLM với 2 lõi CPU mỗi pod (phien-2026-11-08-a4000.md §8), đã đưa vào 5.7 ngày 27/11. -->
 <!-- Thông điệp: (1) C = 3,5 req/s và B* = 46,3 trên máy 4060 Ti, nên threshold của A2 là 37; (2) LT1–LT3 khớp số đo, và giới hạn chạm trước tiên là số request đồng thời, đúng tín hiệu mà A2 dùng. -->
-<!-- Soát số: 27/11/2026 · Soát văn phong: kiem_van 27/11 · Người viết đọc lại: chưa -->
+<!-- Soát số: 27/11/2026; đoạn quanh Hình 5.2b đối chiếu Bảng 5.2a, capacity.json, 00-thong-so.md ngày 28/11 · Soát văn phong: kiem_van 28/11 · Người viết đọc lại: chưa -->
 ## 5.2. Năng lực một replica
 
 Phép đo năng lực ĐG1 xác định C của một replica. Cấu hình S1 giữ cố định 1 replica và nhận tải Poisson với tốc độ không đổi, mỗi mức 300 s, bỏ 60 s đầu khi tính (Bảng 5.2a). Kết quả cho thấy C = 3,5 req/s. Khi λ tăng 14,3% lên 4 req/s, SLO attainment chỉ còn 28,5%, đúng dạng điểm gãy của hàng đợi ở mục 2.2. Mức 3,5 chỉ được thêm sau khi thấy điểm gãy. Vì vậy, C thật nằm trong khoảng 3,5–4 req/s, thô hơn bước 0,25 của thiết kế (mục 5.7). Tại C, B\* = 46,3, và threshold của A2 lấy bằng 0,8 × B\* ≈ 37 (mục 3.3).
@@ -22,10 +22,10 @@ Phép đo năng lực ĐG1 xác định C của một replica. Cấu hình S1 gi
 
 <!-- nguồn: capacity.json curves[] (slo_attainment, ttft_p95_s 0,314 / 0,454 / 1,216 / 7,321 / 69,717, tpot_p95_s, B_server, B_little, waiting_mean); 5 lượt valid: true; khớp bảng của nhật ký Quang tuần 07 mục 18/11 -->
 
-Hình 5.2b vẽ ba cột của Bảng 5.2a theo λ, cùng ngưỡng SLO và threshold của A2.
+Hình 5.2b vẽ hai cột độ trễ và cột B của Bảng 5.2a theo λ, cùng ngưỡng SLO và threshold của A2.
 
-![Hình 5.2b. Kết quả ĐG1 trên một replica (phiên đo V2): TTFT p95, TPOT p95 và số request đồng thời B theo λ. Vạch đứng: C = 3,5 req/s; gạch ngang: ngưỡng SLO, B\* và threshold của A2; điểm đỏ: mức có dưới 95% request đạt SLO.](../images/png/15-hieu-chinh-nang-luc.png)
-<!-- nguồn: docs/images/png/15-hieu-chinh-nang-luc.png (Hình 15 của docs/chi-tiet/, vẽ lại từ capacity.json ở PR #96 bằng docs/diagrams/build_diagrams.py); ngưỡng SLO: 00-thong-so.md (TTFT ≤ 2,5 s, TPOT ≤ 100 ms); chèn 28/11, lý do chèn dù đã có Bảng 5.2a: hình cho thấy hình dạng điểm gãy và vị trí threshold so với B*, bảng chỉ có số -->
+![Hình 5.2b. Kết quả ĐG1 trên một replica (phiên đo V2): TTFT p95, TPOT p95 và số request đồng thời B theo λ. Vạch đứng: C = 3,5 req/s; gạch ngang: ngưỡng SLO, B\* và threshold của A2; điểm đỏ: mức có dưới 95% request đạt SLO. B lấy từ vLLM (số request đang chạy và đang chờ trung bình), không phải λ × E2E.](../images/png/15-hieu-chinh-nang-luc.png)
+<!-- nguồn: docs/images/png/15-hieu-chinh-nang-luc.png (Hình 15 của docs/chi-tiet/, vẽ lại từ capacity.json ở PR #96 bằng fig_calibration trong docs/diagrams/chuyen_sau.py, gọi từ build_diagrams.py; chữ tiêu đề và chú thích trong hình viết tay, đo lại ĐG1 thì soát lại); ngưỡng SLO: 00-thong-so.md (TTFT ≤ 2,5 s, TPOT ≤ 100 ms); chèn 28/11, lý do chèn dù đã có Bảng 5.2a: hình cho thấy hình dạng điểm gãy và vị trí threshold so với B*, bảng chỉ có số -->
 
 Khi λ vượt C, TTFT p95 tăng vọt qua ngưỡng 2,5 s, còn TPOT p95 đứng yên quanh 64 ms, vẫn cách ngưỡng 100 ms một khoảng lớn. SLO vì thế bị vi phạm do request phải chờ trong hàng đợi, không phải do từng token sinh chậm đi. Threshold 37 của A2 nằm giữa B của hai mức λ = 3 và 3,5, tức trong vùng mà mọi SLO còn đạt.
 
