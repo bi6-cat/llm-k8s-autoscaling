@@ -282,9 +282,14 @@ release: ## Huỷ instance Vast đang thuê
 #   máy đã đo, hoặc dataset/ khi dùng bộ dữ liệu đã công bố. File capacity của ĐG1 ở nhà nằm sẵn trong repo.
 # OUT mặc định là analysis/figures, tức ghi đè bản trong Git. Chạy xong mà `git status analysis/figures` sạch
 #   nghĩa là mọi bảng, hình và báo cáo số tái lập đúng từng byte từ dữ liệu.
+# build_tables ghi bảng vào <phiên>/tables (chỗ mặc định, Môi trường §14.2) rồi mới chép sang OUT, vì dg2_a2 và
+#   vh6_window đọc bảng ở đó: nhờ vậy hai báo cáo luôn tính từ bảng vừa dựng, không từ bảng cũ còn sót.
 # Các phiên dưới là lượt luận văn dùng (nhật ký vận hành, mục LT5–LT8 và VH4). Hậu tố @k của LT5 đổi mốc của
 #   máy tạo tải trên WSL2 sang giờ thực, vì đồng hồ đơn điệu ở đó chạy nhanh k lần (docstring lt5_little.py).
-# Python trên Windows in ra stdout bằng CRLF, nên các báo cáo .txt đi qua `tr -d '\r'` để giống bản LF trong Git.
+# Mỗi bước in nhiều dòng tóm tắt, nên `step` cất output vào file tạm và chỉ in lại dòng báo bỏ dữ liệu ("bỏ qua
+#   <phiên>", "Bỏ <lượt>: thiếu …"), để không lặng lẽ dựng bảng từ ít lượt hơn.
+# PYTHONUTF8=1: Python dưới 3.15 trên Windows ghi ra pipe theo bảng mã ANSI của máy; bảng mã đó không phải UTF-8
+#   thì lỗi ở chữ có dấu. Python trên Windows in stdout bằng CRLF, nên các báo cáo .txt đi qua `tr -d '\r'`.
 # Chưa gồm: bảng cold start 8 pha của ĐG3 (summary.txt do runner ghi) và hình trong docs/images/ (build_diagrams.py).
 DATA ?= runs
 OUT ?= analysis/figures
@@ -296,23 +301,26 @@ ANALYSIS := uv run -q --project analysis python -m analysis
 analysis: ## Dựng lại bảng, hình, số chương 5: make analysis [DATA=runs|dataset] [OUT=analysis/figures]
 	@set -euo pipefail; d="$(patsubst %/,%,$(DATA))"; o="$(OUT)"; v2="$$d/v2-vm/v2-dg2"; \
 	test -d "$$v2" || { echo "make analysis: không thấy $$v2 (đặt DATA=<thư mục dữ liệu>)" >&2; exit 1; }; \
+	export PYTHONUTF8=1; log=$$(mktemp); trap 'rm -f "$$log"' EXIT; \
+	step() { "$$@" > "$$log"; grep -E '^(bỏ qua|Bỏ |không có lần thử)' "$$log" >&2 || true; }; \
 	mkdir -p "$$o/v2-dg2"; \
 	echo "ĐG2 → $$o/v2-dg2: 4 bảng CSV, biểu đồ C1–C4, số phụ của mục 5.3 và VH6"; \
-	$(ANALYSIS).build_tables "$$v2" --baseline S4 --out "$$o/v2-dg2" > /dev/null; \
-	$(ANALYSIS).charts "$$v2" --baseline S4 --formats svg --out "$$o/v2-dg2" > /dev/null; \
+	step $(ANALYSIS).build_tables "$$v2" --baseline S4; \
+	cp "$$v2"/tables/{runs,phases,cells,alerts}.csv "$$o/v2-dg2/"; \
+	step $(ANALYSIS).charts "$$v2" --baseline S4 --formats svg --out "$$o/v2-dg2"; \
 	$(ANALYSIS).dg2_a2 "$$v2" | tr -d '\r' > "$$o/v2-dg2/dg2-a2.txt"; \
 	$(ANALYSIS).vh6_window "$$v2" | tr -d '\r' > "$$o/v2-dg2/vh6-window.txt"; \
 	echo "VH4 → $$o/vh4-windows.txt"; \
-	$(ANALYSIS).vh4_windows "$$d/$(VH4_SESSION)" | sed "s|$$d/||" | tr -d '\r' > "$$o/vh4-windows.txt"; \
+	$(ANALYSIS).vh4_windows "$$d/$(VH4_SESSION)" | tr -d '\r' > "$$o/vh4-windows.txt"; \
 	echo "LT5–LT8 → $$o/lt*.csv, lt*.svg"; \
-	$(ANALYSIS).lt5_little envs/home/experiments/capacity-1.5b.json envs/home/experiments/capacity.json \
-	  $(foreach s,$(LT5_SIM),"$$d/$(s)") "$$d/dg1-v2-4060ti" "$$v2" --out "$$o/lt5-little.csv" > /dev/null; \
-	$(ANALYSIS).lt6_gpu_util envs/home/experiments/capacity-1.5b.json envs/home/experiments/capacity.json \
-	  "$$d/dg1-v2-4060ti/capacity.json" --out "$$o/lt6-gpu-util.csv" > /dev/null; \
-	$(ANALYSIS).lt7_hpa "$$d/$(LT7_SESSION)" --out "$$o/lt7-hpa.csv" > /dev/null; \
-	$(ANALYSIS).lt8_burn "$$d/$(LT8_SESSION)" --out "$$o/lt8-burn.csv" > /dev/null; \
-	$(ANALYSIS).lt_charts --lt5 "$$o/lt5-little.csv" --lt6 "$$o/lt6-gpu-util.csv" --lt7 "$$o/lt7-hpa.csv" \
-	  --lt8 "$$d/$(LT8_SESSION)" --out "$$o" > /dev/null; \
+	step $(ANALYSIS).lt5_little envs/home/experiments/capacity-1.5b.json envs/home/experiments/capacity.json \
+	  $(foreach s,$(LT5_SIM),"$$d/$(s)") "$$d/dg1-v2-4060ti" "$$v2" --out "$$o/lt5-little.csv"; \
+	step $(ANALYSIS).lt6_gpu_util envs/home/experiments/capacity-1.5b.json envs/home/experiments/capacity.json \
+	  "$$d/dg1-v2-4060ti/capacity.json" --out "$$o/lt6-gpu-util.csv"; \
+	step $(ANALYSIS).lt7_hpa "$$d/$(LT7_SESSION)" --out "$$o/lt7-hpa.csv"; \
+	step $(ANALYSIS).lt8_burn "$$d/$(LT8_SESSION)" --out "$$o/lt8-burn.csv"; \
+	step $(ANALYSIS).lt_charts --lt5 "$$o/lt5-little.csv" --lt6 "$$o/lt6-gpu-util.csv" --lt7 "$$o/lt7-hpa.csv" \
+	  --lt8 "$$d/$(LT8_SESSION)" --out "$$o"; \
 	echo "Xong. So với bản trong Git: git status --short $$o"
 
 # ── Kiểm tra trước khi mở PR ────────────────────────────────────────────────────
