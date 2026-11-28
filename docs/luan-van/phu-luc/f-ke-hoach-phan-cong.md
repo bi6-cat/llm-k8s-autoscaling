@@ -5,15 +5,15 @@
 
 ## F.1. Lịch và mốc
 
-Đồ án làm trong khoảng 9 tuần và có 5 mốc (Bảng F.1). Lịch được điều chỉnh một lần lớn ngày 04/11/2026, khi M1 mới đạt 2/7 mục và M2 chưa đạt mục nào. Nhóm làm trên kind và cluster nhà trước, gộp hai phiên thử V0 và V1, dời phiên đo chính V2 và giữ nguyên ngày đóng băng dữ liệu. V2 diễn ra ngày 18–19/11, trước ngày đóng băng.
+Đồ án làm trong khoảng 9 tuần và có 5 mốc (Bảng F.1). Lịch được điều chỉnh một lần lớn ngày 04/11/2026, khi M1 mới đạt 2/7 mục và M2 chưa đạt mục nào. Nhóm làm trên kind và cluster nhà trước, gộp hai phiên thử V0 và V1, dời phiên đo chính V2 và chốt ngày đóng băng dữ liệu là 22/11, không lùi thêm. V2 diễn ra ngày 18–19/11, trước ngày đóng băng.
 <!-- nguồn: 06-ke-hoach-quan-ly.md §1 (bảng tuần W1–W9, bảng mốc; M3 ghi "~~15/11~~ 22/11 (không lùi thêm)"), §1.1 (04/11: M1 2/7, M2 0/8; V0+V1 gộp; V2 dời sang 14–15/11; đóng băng 22/11); nhật ký Quang tuần 07 mục 18/11 và 19/11 (phiên V2) -->
 
 **Bảng F.1.** Các mốc của đồ án
 
 | Mốc | Ngày | Tiêu chí chính |
-|----|------|--------------------|
+|---|---|---|
 | M1 | 18/10 | Nền tảng tối thiểu chạy ở nhà qua Argo CD |
-| M2 | 01/11 | Vận hành thử đạt; runner chạy được trên VM thuê |
+| M2 | 01/11 | Vận hành thử đạt; runner chạy 2 lượt không cần can thiệp |
 | M3 | 22/11 | Dữ liệu đánh giá đầy đủ, đóng băng |
 | M4 | 29/11 | Bản thảo đủ 6 chương |
 | M5 | 07–08/12 | Nộp luận văn; tag `v1.0` |
@@ -50,7 +50,7 @@ Hai thành viên cùng vai trò DevOps/SRE và chia việc theo tính năng dọ
 
 ## F.3. Phân công viết luận văn
 
-Từ 22/11/2026, Trần Đức Trình viết bản đầu của toàn bộ luận văn từ nhật ký làm việc của cả hai người, tài liệu thiết kế và dữ liệu đo. Nguyễn Ngọc Quang review toàn bộ, sửa và cập nhật số. Mỗi mục do người sở hữu tính năng tương ứng soát sự kiện và số liệu (Bảng F.3).
+Từ 22/11/2026, Trần Đức Trình viết bản đầu của toàn bộ luận văn từ nhật ký làm việc của cả hai người, tài liệu thiết kế và dữ liệu đo. Nguyễn Ngọc Quang review toàn bộ, sửa và cập nhật số. Bảng F.3 ghi người soát sự kiện và số liệu của từng mục, thường là người sở hữu tính năng tương ứng.
 <!-- nguồn: 06-ke-hoach-quan-ly.md §5.1 đoạn "Luận văn" (từ 22/11/2026) và bảng theo chương -->
 
 **Bảng F.3.** Người soát sự kiện và số liệu của từng chương

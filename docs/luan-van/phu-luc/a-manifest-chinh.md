@@ -1,6 +1,6 @@
 <!-- Mục đích: Phụ lục A, trích đoạn các manifest chính (Deployment vLLM, ScaledObject A2, Application con của Argo CD) mà thân bài dẫn tới ở mục 3.2, 4.1, 4.2, 4.3. Người viết: Trình. -->
 <!-- Trích đoạn chép từ main ngày 27/11/2026; commit ghi cạnh mỗi đoạn là commit sửa file đó gần nhất (git log -1 -- <file>). Comment YAML rút gọn từ comment trong repo, không thêm ý mới. Sửa manifest thì cập nhật đoạn trích và commit ở đây. -->
-<!-- Rút gọn 28/11 (bản nộp: phụ lục A 5 tr, đích ≤ 2,5 tr). Ý không đưa vào, người đọc tra trong repository: phần còn lại của Deployment vLLM (cờ --port=8000, progressDeadlineSeconds 900, runtimeClassName nvidia, enableServiceLinks false, env VLLM_API_KEY từ Secret vllm-api-key, HF_HOME, VLLM_CACHE_ROOT, readinessProbe 5 s, livenessProbe 10 s × 6, volume cache emptyDir và dshm 8Gi; common/serving/deployment.yaml, commit 3101142); đoạn mã overlay VM thuê (envs/cloud/serving/patch-vllm.yaml, commit 3101142: --model Qwen2.5-3B-Instruct ghim revision aa8e725, --max-num-seqs=64, --gpu-memory-utilization=0.90, requests = limits 3 CPU 16Gi 1 GPU, cache hostPath /mnt/nvme/cache; mục 4.2 đã nêu đủ); YAML của Application gốc root-home (envs/home/argocd/root-app.yaml, commit ffee403: targetRevision main, path envs/home/argocd/apps, automated prune + selfHeal, RespectIgnoreDifferences=true, ignoreDifferences /spec/syncPolicy/automated của app autoscaling và annotation refresh, /operation của mọi Application; mục 4.1 đã giải thích bằng lời). -->
+<!-- Rút gọn 28/11 (bản nộp: phụ lục A 5 tr, đích ≤ 2,5 tr). Ý không đưa vào, người đọc tra trong repository: phần còn lại của Deployment vLLM (cờ --no-enable-prefix-caching, để prompt lặp lại không làm TTFT nhanh bất thường, mục 4.2 đã nêu; progressDeadlineSeconds 900, runtimeClassName nvidia, enableServiceLinks false, env VLLM_API_KEY từ Secret vllm-api-key, HF_HOME, VLLM_CACHE_ROOT, readinessProbe 5 s, livenessProbe 10 s × 6, volume cache emptyDir và dshm 8Gi; common/serving/deployment.yaml, commit 3101142); đoạn mã overlay VM thuê (envs/cloud/serving/patch-vllm.yaml, commit 3101142: --model Qwen2.5-3B-Instruct ghim revision aa8e725, --max-num-seqs=64, --gpu-memory-utilization=0.90, requests = limits 3 CPU 16Gi 1 GPU, cache hostPath /mnt/nvme/cache; mục 4.2 đã nêu đủ); YAML của Application gốc root-home (envs/home/argocd/root-app.yaml, commit ffee403: targetRevision main, path envs/home/argocd/apps, automated prune + selfHeal, RespectIgnoreDifferences=true, ignoreDifferences /spec/syncPolicy/automated của app autoscaling và annotation refresh, /operation của mọi Application; mục 4.1 đã giải thích bằng lời). -->
 
 # Phụ lục A. Manifest chính {.unnumbered}
 
@@ -9,7 +9,7 @@ Mã nguồn, manifest và tài liệu thiết kế của đồ án nằm ở rep
 
 ## A.1. Deployment vLLM
 
-Manifest chung của tầng phục vụ nằm ở `common/serving/deployment.yaml` (commit `3101142`). Đoạn mã A.1 chỉ giữ các trường mà mục 3.4, 4.2 và 4.5 dựa vào. Deployment không đặt `replicas`, rolling update không xin thêm GPU, startup probe cho phép cold start tới 10 phút, và pod được tắt an toàn bằng preStop 20 s, `--shutdown-timeout=150` cùng grace period 180 s. Các trường khác, như biến môi trường, readiness probe, liveness probe và volume, được bỏ, và vài khối được viết gọn trên một dòng. Image `vllm/vllm-openai` được ghim ở `common/serving/kustomization.yaml` theo tag `v0.31.0` kèm digest. Model và tham số theo GPU của từng môi trường được nối vào bằng JSON patch, ví dụ `envs/cloud/serving/patch-vllm.yaml` cho VM thuê ở phiên V2.
+Manifest chung của tầng phục vụ nằm ở `common/serving/deployment.yaml` (commit `3101142`). Đoạn mã A.1 là phần spec của Deployment `vllm` trong namespace `llm-serving`, mà ScaledObject ở Đoạn mã A.2 trỏ tới. Đoạn trích chỉ giữ các trường mà mục 3.4 và 4.5 dựa vào. Deployment không đặt `replicas`, rolling update không xin thêm GPU, startup probe cho phép cold start tới 10 phút, và pod được tắt an toàn bằng preStop 20 s, `--shutdown-timeout=150` cùng grace period 180 s. Các trường khác, như biến môi trường, readiness probe, liveness probe và volume mà mục 4.2 mô tả, được bỏ, và vài khối được viết gọn trên một dòng. Image `vllm/vllm-openai` được ghim ở `common/serving/kustomization.yaml` theo tag `v0.31.0` kèm digest. Model và tham số theo GPU của từng môi trường được nối vào bằng JSON patch, ví dụ `envs/cloud/serving/patch-vllm.yaml` cho VM thuê ở phiên V2.
 <!-- nguồn: common/serving/deployment.yaml; common/serving/kustomization.yaml (newTag v0.31.0); envs/cloud/serving/patch-vllm.yaml; commit 3101142 -->
 
 **Đoạn mã A.1.** Deployment vLLM dùng chung cho mọi môi trường (trích)
@@ -24,11 +24,13 @@ spec:                  # không đặt replicas: HPA do KEDA tạo quản lý s�
       terminationGracePeriodSeconds: 180  # > preStop 20 s + 150 s
       containers:
         - name: vllm
-          args: [--no-enable-prefix-caching, --shutdown-timeout=150]
+          args: [--port=8000, --shutdown-timeout=150]  # SIGTERM: chờ ≤ 150 s
+          ports: [{name: http, containerPort: 8000}]
           resources: {limits: {nvidia.com/gpu: 1}}
           startupProbe:    # 5 s × 120 lần = tối đa 10 phút cold start
-            {httpGet: {path: /health, port: http},
-             periodSeconds: 5, failureThreshold: 120}
+            httpGet: {path: /health, port: http}
+            periodSeconds: 5
+            failureThreshold: 120
           lifecycle:       # chờ rút pod khỏi Service rồi mới SIGTERM
             preStop: {sleep: {seconds: 20}}
 ```
