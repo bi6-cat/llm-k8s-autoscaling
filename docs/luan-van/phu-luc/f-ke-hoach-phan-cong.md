@@ -13,7 +13,7 @@
 | Mốc | Ngày | Tiêu chí hoàn thành |
 |---|---|---|
 | M1 | 18/10 | Nền tảng tối thiểu chạy ở nhà qua Argo CD; phiên thử V0 đạt; đã chốt nhà cung cấp cloud |
-| M2 | 01/11 | Vận hành thử đạt ở nhà và trên simulator; runner chạy 2 lượt không cần can thiệp trên máy thuê (phiên V1) |
+| M2 | 01/11 | Vận hành thử đạt ở nhà và trên simulator; runner chạy 2 lượt không cần can thiệp trên VM thuê (phiên V1) |
 | M3 | 22/11 | Dữ liệu đánh giá đầy đủ, đã sao lưu và đóng băng; có ADR-003 |
 | M4 | 29/11 | Bản thảo đủ 6 chương gửi giảng viên hướng dẫn |
 | M5 | 07–08/12 | Nộp luận văn; gắn tag `v1.0` cho repository |

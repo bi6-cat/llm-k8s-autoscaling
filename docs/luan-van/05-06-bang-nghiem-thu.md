@@ -6,11 +6,11 @@
 
 ## 5.6. Bảng nghiệm thu và khuyến nghị cấu hình
 
-Bảng nghiệm thu đối chiếu kết quả của các mục 5.2–5.5 với các yêu cầu và chỉ tiêu đặt ra ở mục 3.1; từ đó rút ra khuyến nghị chọn cấu hình autoscaling. Số đo trên GPU lấy từ phiên đo V2 (mục 5.1), còn vòng cập nhật qua Git và lần dựng lại theo README được đo trên simulator (mục 5.5).
+Bảng nghiệm thu (Bảng 5.6a) đối chiếu kết quả của các mục 5.2–5.5 với các yêu cầu và chỉ tiêu đặt ra ở mục 3.1; từ đó rút ra khuyến nghị chọn cấu hình autoscaling. Số đo trên GPU lấy từ phiên đo V2 (mục 5.1), còn vòng cập nhật qua Git và lần dựng lại theo README được đo trên simulator (mục 5.5).
 
 ### 5.6.1. Nghiệm thu yêu cầu và chỉ tiêu
 
-**Bảng 5.6a.** Nghiệm thu F1–F7 và N1–N8 (phiên đo V2 và simulator). Trong ngoặc là ngưỡng của Bảng 3.1; bảng đầy đủ kèm số từng lượt ở Phụ lục E. "Đạt một phần": phần chính đạt, một phần cách kiểm chứng chưa làm. "Báo cáo": chỉ yêu cầu báo cáo số đo.
+**Bảng 5.6a.** Nghiệm thu F1–F7 và N1–N8 (phiên đo V2 và simulator). Trong ngoặc là ngưỡng của Bảng 3.1; số từng lượt ở Phụ lục E. "Đạt một phần": phần chính đạt, một phần cách kiểm chứng chưa làm. "Báo cáo": chỉ yêu cầu báo cáo số đo.
 
 | Yêu cầu, chỉ tiêu | Mức | Kết quả, phần còn thiếu | Kết luận |
 |---|---|---|---|
@@ -24,7 +24,7 @@ Bảng nghiệm thu đối chiếu kết quả của các mục 5.2–5.5 với 
 | N1. SLO attainment | Must | 100% ở KB1, KB3 (≥ 95%) | Đạt |
 | N2a. Tốc độ phản ứng | Must | 79,7–81,5 s (≤ 2 phút) | Đạt |
 | N2b. Hồi phục | Should | 409–430 s | Báo cáo |
-| N3. Hiệu quả GPU | Should | 25% GPU-giờ của S4; SLO chênh 0 điểm | Đạt |
+| N3. Hiệu quả GPU | Should | 25% GPU-giờ của S4; SLO chênh 0 điểm phần trăm | Đạt |
 | N4. An toàn khi thay đổi | Must | 0 lỗi, kể cả lúc 1 replica | Đạt |
 | N5. Cold start | Should | L2 bằng 25,3% L0 (≤ 50%) | Đạt |
 | N6. Tự phục hồi | Must | Thay pod 67,4 s; fallback 16,8 s; dựng lại như F4 | Đạt |

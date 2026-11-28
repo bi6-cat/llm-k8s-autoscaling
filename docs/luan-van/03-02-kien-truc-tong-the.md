@@ -10,7 +10,7 @@
 Hệ thống gồm một Deployment vLLM trên Kubernetes, mỗi pod giữ một GPU (ở máy nhà là một GPU replica). Quanh nó là các thành phần để scale, quan sát và triển khai (Hình 3.1). Nhóm không thêm framework phục vụ nhiều tầng, để mỗi quyết định scale truy được về một truy vấn PromQL.
 <!-- nguồn: docs/chi-tiet/03-kien-truc-autoscaling.md §1 (nguyên tắc "Đơn giản, minh bạch": Deployment và KEDA thay vì framework serving nhiều tầng; mọi quyết định scale truy được về một câu PromQL), §2 (bảng thành phần; 1 GPU/pod); docs/chi-tiet/00-thong-so.md §9.2 (nvidia.com/gpu: 1 mỗi pod) -->
 
-![Hình 3.1. Kiến trúc tổng thể. Request đi qua Service tới các pod vLLM, mỗi pod giữ một GPU. KEDA chuyển kết quả truy vấn Prometheus thành external metric, HPA đặt số replica. Argo CD đồng bộ cluster nhà theo Git](../images/png/02-kien-truc-tong-the.png)
+![Hình 3.1. Kiến trúc tổng thể. Request đi qua Service tới các pod vLLM, mỗi pod giữ một GPU. KEDA chuyển kết quả truy vấn Prometheus thành external metric, HPA đặt số replica. Argo CD đồng bộ cluster nhà theo Git.](../images/png/02-kien-truc-tong-the.png)
 <!-- Hình tạm: xem comment thứ hai ở đầu file; chú thích viết theo hình sẽ vẽ lại -->
 
 Mục 3.2.1 đi qua các thành phần và ba luồng trên hình, mục 3.2.2 nói cách cùng các thành phần đó chạy ở ba môi trường.

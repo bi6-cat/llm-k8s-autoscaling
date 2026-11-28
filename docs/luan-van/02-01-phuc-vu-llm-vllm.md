@@ -13,7 +13,7 @@ Một LLM dạng decoder sinh câu trả lời từng token một. Token là đ�
 
 <!-- nguồn: docs/chi-tiet/02-kien-thuc-nen.md §1.1 (decoder-only sinh từng token, mỗi token tính từ mọi token trước, dừng khi gặp EOS hoặc đạt max_tokens), §1.3 (mỗi lớp attention lưu vector Key và Value của từng token); Vaswani và cộng sự 2017 (attention dùng query, key, value) -->
 
-Một request vì vậy đi qua hai pha có đặc điểm tài nguyên khác nhau. Pha prefill đưa toàn bộ prompt qua model trong một lượt, tính song song cho mọi token của prompt. Kết quả là token đầu tiên của câu trả lời và các vector key, value của prompt. Pha decode sinh các token còn lại, mỗi bước một token cho mỗi request. Prefill có nhiều phép tính trên mỗi byte đọc từ bộ nhớ và dùng gần trọn sức tính của GPU. Mỗi bước decode chỉ tính một token cho mỗi request nhưng vẫn phải đọc toàn bộ trọng số (*weights*) của model từ bộ nhớ GPU, và phần lớn sức tính để không [@agrawal-sarathi-serve]. Vì vậy prefill bị giới hạn bởi sức tính (*compute-bound*), còn decode bị giới hạn bởi băng thông bộ nhớ (*memory-bound*).
+Một request vì vậy đi qua hai pha có đặc điểm tài nguyên khác nhau. Pha prefill đưa toàn bộ prompt qua model trong một lần tính, song song cho mọi token của prompt. Kết quả là token đầu tiên của câu trả lời và các vector key, value của prompt. Pha decode sinh các token còn lại, mỗi bước một token cho mỗi request. Prefill có nhiều phép tính trên mỗi byte đọc từ bộ nhớ và dùng gần trọn sức tính của GPU. Mỗi bước decode chỉ tính một token cho mỗi request nhưng vẫn phải đọc toàn bộ trọng số (*weights*) của model từ bộ nhớ GPU, và phần lớn sức tính để không [@agrawal-sarathi-serve]. Vì vậy prefill bị giới hạn bởi sức tính (*compute-bound*), còn decode bị giới hạn bởi băng thông bộ nhớ (*memory-bound*).
 
 <!-- nguồn: docs/chi-tiet/02-kien-thuc-nen.md §1.2 (bảng prefill và decode: prefill xử lý toàn bộ prompt song song, giới hạn bởi sức tính; decode sinh 1 token mỗi bước, giới hạn bởi băng thông, mỗi bước đọc toàn bộ weights và KV cache); docs/chi-tiet/01-bai-toan-yeu-cau.md §1.1 (prefill cho token đầu và KV cache); tóm tắt Sarathi-Serve (arXiv 2403.02310, đọc 27/11/2026): "Prefill iterations have high latency but saturate GPU compute … decode iterations have low latency but also low compute utilization because a decode iteration processes only a single token per request. This makes batching highly effective for decodes" -->
 
@@ -71,7 +71,7 @@ Ba đại lượng khác hay đi cùng hai chỉ số trên. Độ trễ toàn t
 
 vLLM xuất trạng thái của mình qua endpoint `/metrics` theo định dạng của Prometheus, hệ thống giám sát trình bày ở mục 2.5 [@vllm-metrics]. Bảng 2.1 liệt kê các metric mà các chương sau dùng. Gauge là giá trị tức thời, counter là bộ đếm chỉ tăng, còn histogram đếm số lần đo rơi vào từng khoảng giá trị (*bucket*) định trước.
 
-**Bảng 2.1.** Các metric của vLLM được dùng trong luận văn.
+**Bảng 2.1.** Các metric của vLLM được dùng trong luận văn
 
 | Metric | Loại | Ý nghĩa |
 |---|---|---|
