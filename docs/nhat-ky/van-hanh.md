@@ -514,3 +514,10 @@ Máy của Trình, WSL2 Ubuntu 24.04, kind v0.33.0. Làm theo `envs/sim/README.m
 - **Thao tác:** `make sim-argocd ARGOCD_REV=feat/tr8-vh2-git-target` (33 s); `vh2-git` 2 lượt; `make sim-argocd-down` (13 s).
 - **Kết quả:** lượt chính ở 0,3 req/s đạt: 615 request, 0 lỗi. Có 4 commit (nâng min, đổi TTFT, revert, revert), mỗi commit được Argo CD tự sync sau 138–247 s. TTFT 206 → 306 → 206 ms. Lượt thử ở 0,5 req/s không đạt, vì A2 đã ở 2 replica trước bước nâng min; lượt đó cũng có 0 lỗi.
 - **Trạng thái sau:** không còn Argo CD trên kind; simulator 1 pod, ScaledObject min 1 max 3 như trước. Chi tiết ở [nhật ký Trình tuần 08](lam-viec/trinh/tuan-08.md).
+
+## 2026-11-27 – kind `llm-sim`: ảnh ba dashboard dự phòng cho F5
+
+- **Môi trường:** kind `llm-sim` trên laptop của Trình (WSL2), simulator thay vLLM, không có GPU. Không đụng cluster nhà hay máy thuê.
+- **Thao tác:** tạm bật anonymous Viewer cho Grafana (`kubectl set env deploy/kps-grafana GF_AUTH_ANONYMOUS_ENABLED=true GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer`) để Chrome headless mở được dashboard mà không cần đăng nhập; `make sim-test-load C=25 DUR=240s` (23:23:50–23:27:59); port-forward `svc/kps-grafana`, chụp `/d/<uid>?kiosk&from=now-15m` bằng Chrome headless (1600 × 2200, `--virtual-time-budget=25000`); gỡ hai biến môi trường.
+- **Kết quả:** A2 scale 1 → 3 trong lúc bơm tải, 971 response 200. Ảnh ở `docs/images/anh-chup/dashboard-autoscaling-sim.png`, `dashboard-serving-gpu-sim.png`, `dashboard-slo-cost-sim.png` (thư mục riêng cho ảnh chụp, vì `docs/images/png/` chỉ chứa PNG xuất từ SVG). Hàng GPU của dashboard Serving và GPU ghi "No data" vì kind không có GPU. Hàng chi phí của dashboard SLO và chi phí vẫn có số (GPU-giờ 0,38, $0,19), vì panel đếm mỗi pod `vllm-*` đã xếp lên node là một GPU; trên kind các số này không phải chi phí thật.
+- **Trạng thái sau:** Grafana về cấu hình cũ (không còn anonymous, rollout xong). Lúc 23:33:22 simulator còn 2/2 pod, đang scale-down theo cửa sổ 300 s; chưa kiểm lúc về 1. ScaledObject min 1 max 3 như trước.
