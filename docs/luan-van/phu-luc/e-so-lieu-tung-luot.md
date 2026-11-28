@@ -3,7 +3,7 @@
 
 # Phụ lục E. Số liệu từng lượt của phiên đo V2 {.unnumbered}
 
-Phụ lục này ghi số của từng lượt trong phiên đo V2 (4 × RTX 4060 Ti, model Qwen2.5-3B, ngày 18–19/11/2026), mà chương 5 chỉ báo cáo theo ô hoặc theo khoảng giá trị. Số của Bảng E.1–E.3 lấy từ các bảng mà script trong thư mục `analysis/` của repository dựng từ dữ liệu thô. Số của Bảng E.4 và E.5 đọc từ file kết quả của từng lượt. Thời điểm trong các bảng tính bằng giây kể từ lúc máy tạo tải bắt đầu gửi request của lượt đó.
+Phụ lục này ghi số của từng lượt trong phiên đo V2 (4 × RTX 4060 Ti, model 3B, ngày 18–19/11/2026), mà chương 5 chỉ báo cáo theo ô hoặc theo khoảng giá trị. Số của Bảng E.1–E.3 lấy từ các bảng mà script trong thư mục `analysis/` của repository dựng từ dữ liệu thô. Số của Bảng E.4 và E.5 đọc từ file kết quả của từng lượt. Thời điểm trong các bảng tính bằng giây kể từ lúc máy tạo tải bắt đầu gửi request của lượt đó.
 <!-- nguồn: nhật ký Quang tuần 07 mục 18/11 và 19/11 (V2: 4 × RTX 4060 Ti; ĐG2 17/17 lượt hợp lệ; VH; ĐG3 đo lại); analysis/figures/v2-dg2/runs.csv (cột t0_unix, model và image ghi trong metadata của lượt) -->
 
 ## E.1. So sánh autoscaling với cấu hình tĩnh (ĐG2)
@@ -107,7 +107,7 @@ Bảng E.5 ghi các lượt kịch bản vận hành chạy trên V2, mỗi kị
 |---|---|---|---|---|
 | VH2a | Rolling update, 2 replica trên 4 GPU | 2.077 / 0 | Hoàn tất sau 141,4 s | Bắt đầu từ 1 replica, nâng tối thiểu lên 2 và chờ đủ 2 pod Ready rồi mới cập nhật |
 | VH2b | Rolling update, 4 replica trên 4 GPU | 4.229 / 0 | Hoàn tất sau 371,6 s | Pod mới phải chờ pod cũ nhả GPU |
-| VH2c | Rolling update với maxSurge 1 khi hết GPU | 2.077 / 0 | Kẹt sau 300,5 s | 1 pod Pending; trả maxSurge về 0 thì hoàn tất sau 379,1 s |
+| VH2c | Rolling update với `maxSurge: 1` khi hết GPU | 2.077 / 0 | Kẹt sau 300,5 s | 1 pod Pending; trả `maxSurge` về 0 thì hoàn tất sau 379,1 s |
 | VH3, xoá pod | Xoá 1 trong 2 pod | 1.351 / 0 | Pod thay thế Ready sau 67,4 s | |
 | VH3, kill | `kill -9` tiến trình vLLM trong container | 1.041 / 129 | Container Ready lại sau 67,4 s | 70 lỗi kết nối, 47 timeout kết nối, 11 lỗi stream, 1 lỗi HTTP |
 | VH4 | Chặn KEDA tới Prometheus 301 s | 1.263 / 0 | Fallback sau 16,8 s | Lên 4 replica; thoát fallback trong không quá 5,3 s sau khi gỡ chặn |

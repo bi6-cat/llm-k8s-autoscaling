@@ -12,9 +12,9 @@ Mọi thành phần của hệ thống được ghim theo phiên bản cụ th�
 
 | Thành phần | Phiên bản | Ghi chú |
 |---|---|---|
-| Ubuntu (PC nhà) | 26.04.1 LTS | Bản desktop |
-| NVIDIA driver (PC nhà) | `595.99.02` (open) | Image vLLM CUDA 13 cần driver từ 580 trở lên |
-| NVIDIA Container Toolkit (PC nhà) | `1.20.1` | |
+| Ubuntu (máy nhà) | 26.04.1 LTS | Bản desktop |
+| NVIDIA driver (máy nhà) | `595.99.02` (open) | Image vLLM CUDA 13 cần driver từ 580 trở lên |
+| NVIDIA Container Toolkit (máy nhà) | `1.20.1` | |
 | k3s | `v1.36.5+k3s1` | Kênh stable |
 | Argo CD | `v3.5.4` | Bản core |
 | kube-prometheus-stack (Helm chart) | `92.1.1` | Kèm chart con kube-state-metrics `8.6.0` (kube-state-metrics `v2.20.0`) |
@@ -23,7 +23,7 @@ Mọi thành phần của hệ thống được ghim theo phiên bản cụ th�
 | nvidia_gpu_exporter | `1.15.1` | |
 | vLLM | `vllm/vllm-openai:v0.31.0@sha256:c1c9f6fd…c3` | CUDA 13.0. Bản `-cu129` hỏng lúc khởi động nên không dùng |
 | Model ở nhà | `Qwen/Qwen2.5-0.5B-Instruct@7ae55760…` | Từ 06/11 |
-| Model trên máy thuê (V2) | `Qwen/Qwen2.5-3B-Instruct@aa8e7253…` | Chốt cho V2 ngày 08/11 |
+| Model trên VM thuê (V2) | `Qwen/Qwen2.5-3B-Instruct@aa8e7253…` | Chốt cho V2 ngày 08/11 |
 | llm-d-inference-sim | `ghcr.io/llm-d/llm-d-inference-sim:v0.12.0@sha256:c6838d86…60` | Simulator thay vLLM trên kind |
 | kind, node image | `v0.33.0`, `kindest/node:v1.37.0@sha256:a1ed56cf…0ae5` | Máy simulator |
 | Helm, kubectl (máy simulator) | `v4.3.1`, `v1.36.5` | kubectl trùng bản của CI |

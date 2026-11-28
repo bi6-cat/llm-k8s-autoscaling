@@ -3,7 +3,7 @@
 
 # Danh mục thuật ngữ, chữ viết tắt và mã định danh {.unnumbered}
 
-Danh mục gồm bốn phần: chữ viết tắt, thuật ngữ giữ nguyên tiếng Anh, mã định danh do nhóm đặt và ký hiệu. Trong mỗi phần, các mục xếp theo thứ tự chữ cái; ký hiệu Hy Lạp đứng sau ký hiệu Latin.
+Danh mục gồm bốn phần: chữ viết tắt, thuật ngữ, mã định danh do nhóm đặt và ký hiệu. Trong mỗi phần, các mục xếp theo thứ tự chữ cái; ký hiệu Hy Lạp đứng sau ký hiệu Latin.
 
 **Chữ viết tắt**
 

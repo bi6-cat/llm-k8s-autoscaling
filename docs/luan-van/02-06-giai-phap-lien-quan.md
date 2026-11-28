@@ -9,7 +9,7 @@ Các giải pháp cho LLM serving trên Kubernetes chia thành hai nhóm: nền 
 
 <!-- nguồn: docs/chi-tiet/02-kien-thuc-nen.md §6 (hai nhóm: nền tảng mã nguồn mở, nghiên cứu học thuật) -->
 
-**Bảng 2.2.** Một số nền tảng mã nguồn mở cho LLM serving và tín hiệu autoscaling của chúng.
+**Bảng 2.2.** Một số nền tảng mã nguồn mở cho LLM serving và tín hiệu autoscaling của chúng
 
 | Nền tảng | Tín hiệu autoscaling | Điểm riêng |
 |---|---|---|
