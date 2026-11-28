@@ -17,7 +17,7 @@ Cách dùng: tìm mục mình viết ở [§2](#2-từng-mục-nguồn-nào), m�
 | Bàn giao của Quang | [`viec-sap-lam.md`](../nhat-ky/lam-viec/quang/viec-sap-lam.md) (tình trạng Q1–Q8 tới 16/11), [`phien-2026-11-08-a4000.md`](../nhat-ky/lam-viec/quang/phien-2026-11-08-a4000.md) (phiên V0+V1 từng bước) | 4.1, 4.4, 5.1, 5.2 |
 | Runbook | [`docs/runbooks/`](../runbooks/), 7 file | 4.6, Phụ lục C |
 | Phiên bản | [`docs/phien-ban.md`](../phien-ban.md) | Bảng phiên bản (phụ lục), tên phiên bản trong bài |
-| Sơ đồ | `docs/images/*.svg` (bản PNG ở `docs/images/png/`, sinh từ `docs/diagrams/`) | Hình chương 1–4. Hình 7 lệch cái đã làm ở 6 chỗ (nhật ký Trình 18/11), chưa sửa |
+| Sơ đồ | `docs/images/*.svg` (bản PNG ở `docs/images/png/`, sinh từ `docs/diagrams/`) | Hình chương 1–4. Hình 7 đã sửa theo cái đã làm ở PR #60, chèn vào 3.5 thành Hình 3.2 (28/11). Hình 8 và Hình 17 (vẽ lại ở PR #90) không chèn vào 3.6: trùng Bảng 3.8, và quy trình từng lượt đã chuyển sang 4.7 |
 | Biểu đồ kết quả | [`analysis/figures/`](../../analysis/figures/): LT5, LT6, LT7, LT8 (SVG + CSV); bảng và hình C1–C4 của V2 ở [`analysis/figures/v2-dg2/`](../../analysis/figures/v2-dg2/) | Chương 5. Hình C1–C4 chưa được xem lại bố cục (§5) |
 | Báo cáo HTML trong repo | [`docs/bao-cao/bao-cao-ky-thuat.html`](../bao-cao/bao-cao-ky-thuat.html) (số đo 08/11, mô phỏng ma trận); [`docs/bao-cao/de-xuat-v3/`](../bao-cao/de-xuat-v3/) (tờ trình V3, bốn hướng nâng cấp, mô phỏng Holt-Winters, ski-rental) | Số đo 08/11 là **sơ bộ**. Phần V3 là **đề xuất, không chạy**: chỉ dùng cho chương 6 (hướng phát triển), không dùng như kết quả |
 | Dữ liệu thô | `runs/` (không nằm trong Git) | Xem §5 |
