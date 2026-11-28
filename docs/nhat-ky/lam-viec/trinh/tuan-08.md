@@ -1092,6 +1092,18 @@
 - **Links:** `docs/diagrams/build_diagrams.py`, `docs/diagrams/chuyen_sau.py`, `docs/images/05-cold-start.svg`, `docs/images/15-hieu-chinh-nang-luc.svg` (+ PNG), `docs/chi-tiet/01`, `02`, `03`, `06`.
 - **Thesis:** Hình 5 dùng được cho 5.4 (cạnh Bảng 5.4a), Hình 15 cho 5.2; chưa chèn vào luận văn.
 
+## 2026-11-27 – Thay nguồn công thức M/M/1 ở mục 2.2 bằng giáo trình mở đã đọc trực tiếp
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Tìm nguồn công khai cho W = 1/(μ − λ) (mục 2.2 dẫn Harchol-Balter 2013, giáo trình chưa đọc trực tiếp; điểm còn để ngỏ từ code-review của #83).
+  2. Đọc bản PDF arXiv:1307.2968v27 (M. Zukerman, *Introduction to Queueing Theory and Stochastic Teletraffic Models*, 15/03/2025): mục 6 giả định dòng đến Poisson, phục vụ IID phân phối mũ, một server; mục 6.3 phương trình (303) cho E[D] = E[Q]/λ = 1/(μ − λ), suy từ E[Q] = ρ/(1 − ρ) bằng định luật Little.
+  3. Đổi trích dẫn trong `02-02` thành `[@zukerman-queueing]`, sửa hai comment nguồn; thay mục `harchol-balter-queueing` trong `tai-lieu.bib` bằng `zukerman-queueing` (`@online`, eprint arXiv, URL ghim v27, ngày đọc).
+  4. `/code-review high`: 5 điểm (URL chưa ghim v27, design doc còn dẫn sách cũ, locator, trường `howpublished`, comment gán câu λ ≥ μ cho phương trình 303); sửa cả 5.
+- **Decision:** thay hẳn, không giữ Harchol-Balter song song: luận văn chỉ dẫn tài liệu đã đọc (quy-tac-viet), và giáo trình mở đủ cho khẳng định đang dẫn. Bỏ phương án dẫn Wikipedia (không phải nguồn học thuật) và bài giảng MIT 2.854 (bản tìm được không nêu trực tiếp 1/(μ − λ)). Tài liệu thiết kế `01-bai-toan-yeu-cau.md` §3 cũng đổi phần đọc thêm sang Zukerman để hai nơi dẫn cùng một nguồn. Số mục để trong comment nguồn, không dùng locator trong `[@…]`, cho giống các trích dẫn khác.
+- **Results:** `pandoc … --citeproc` cả quyển: không cảnh báo trích dẫn (chỉ cảnh báo SVG thiếu `rsvg-convert`, có từ trước); câu ra "(Zukerman 2025)". `kiem_van.py` 02-02: 0 điểm.
+- **Links:** `docs/luan-van/02-02-hang-doi-nang-luc.md`, `docs/luan-van/tai-lieu.bib`.
+- **Thesis:** §2.2, danh mục tài liệu tham khảo.
 ## 2026-11-27 – Ảnh ba dashboard trên kind làm phương án dự phòng cho F5
 
 - **Task:** TR4 (F5) · **Environment:** sim
@@ -1101,3 +1113,9 @@
 - **Incidents:** Bảng "Request đang chạy" và "Token/s theo pod" chỉ có số ở pod cũ: `load-sim.sh` gửi tải qua `kubectl port-forward svc/vllm`, mà port-forward chỉ nối tới một pod, nên hai pod mới Ready nhưng không nhận request. Ảnh vẫn đúng cho vòng lặp scale (tín hiệu tổng, HPA, trạng thái pod), nhưng không minh hoạ chia tải giữa các pod. Ngoài ra, trên ảnh, "Request đang chạy" và "Request đang chờ" chỉ có số khoảng 23:24–23:26, trong khi tải chạy tới 23:27:59 và "Token/s theo pod" còn số tới khoảng 23:28; chưa tìm hiểu vì sao. Nếu cần ảnh chia tải thì bơm tải từ một pod trong cluster tới Service.
 - **Links:** `docs/images/anh-chup/dashboard-autoscaling-sim.png`, `dashboard-serving-gpu-sim.png`, `dashboard-slo-cost-sim.png`, `docs/nhat-ky/van-hanh.md`.
 - **Thesis:** dự phòng cho F5 ở 4.4 hoặc 5.6 nếu không có ảnh dashboard GPU nhà; khi dùng phải ghi rõ là simulator, hạn chế chia tải ở trên và hàng chi phí không phải số thật.
+
+## 2026-11-28 – Merge PR #98 (ảnh dashboard dự phòng F5)
+
+- **Task:** TR4 · **Environment:** none
+- **Done:** kiểm #98 đủ 5 điều kiện merge (CI 6/6 pass, MERGEABLE/CLEAN, không bình luận, chỉ thêm ảnh và nhật ký nên Argo CD nhà không đổi, base `main`); merge commit `c1d1756`, xoá nhánh head. Gộp `origin/main` vào nhánh #99: chỉ xung đột nhật ký `tuan-08.md`, `merge=union` tự giữ cả hai mục.
+- **Links:** PR #98, PR #99.

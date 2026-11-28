@@ -376,4 +376,4 @@ Không hoàn toàn. A2 cộng `running + waiting` của mọi pod rồi chia đ�
 
 ## Đọc thêm
 - [1] vLLM/PagedAttention; [3] Splitwise (Azure trace); [5] BurstGPT (danh mục đầy đủ ở [tài liệu tham khảo của bản mô tả](../mo-ta-chi-tiet-do-an.md#tài-liệu-tham-khảo)).
-- M. Harchol-Balter, *Performance Modeling and Design of Computer Systems: Queueing Theory in Action*, Cambridge University Press, 2013, chương về M/M/1.
+- M. Zukerman, *Introduction to Queueing Theory and Stochastic Teletraffic Models*, arXiv:1307.2968v27, 2025, mục 6 (M/M/1; thời gian trong hệ thống ở mục 6.3, phương trình 303). Giáo trình mở, thay cho Harchol-Balter 2013 (chưa đọc trực tiếp).
