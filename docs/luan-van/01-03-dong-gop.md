@@ -4,7 +4,7 @@
 <!-- Soát số: chưa · Soát văn phong: kiem_van 27/11 · Người viết đọc lại: chưa -->
 ## 1.3. Đóng góp chính
 
-Đóng góp của đồ án là một nền tảng phục vụ LLM chạy được trên Kubernetes, cùng ba kết luận có số đo về cách vận hành nó. Các số dưới đây đo trên VM thuê có 4 × RTX 4060 Ti, phục vụ model 3B. Điều kiện đo và số liệu đầy đủ nằm ở chương 5.
+Đóng góp của đồ án là một nền tảng phục vụ LLM chạy được trên Kubernetes, cùng ba kết luận có số đo về cách vận hành nó. Các số dưới đây lấy từ phiên đo chính (mục 1.2), điều kiện đo và số liệu đầy đủ nằm ở chương 5.
 
 <!-- nguồn: 05-01 trên nhánh docs/tr8-thesis-ch5-drafts (phiên V2: VM 4 × RTX 4060 Ti 16 GB, Qwen2.5-3B-Instruct); docs/luan-van/nguon-tu-lieu.md §3 (số đo V2: VM 4 × RTX 4060 Ti 16 GB, Qwen2.5-3B) -->
 
