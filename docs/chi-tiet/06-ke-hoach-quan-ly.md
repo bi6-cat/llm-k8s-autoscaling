@@ -560,10 +560,10 @@ Các cảnh dùng vLLM thật (model 3B) quay trong phiên V2 (phần ban ngày)
 - [ ] Mọi số liệu trong luận văn đều truy được về `analysis/` và tag `v1.0`.
 - [x] Hình minh hoạ (Hình 5, 15) đã được thay bằng số đo thật, hoặc ghi rõ là minh hoạ (27/11: cả hai vẽ lại từ số ĐG3, ĐG1 trên V2).
 - [ ] Mọi cảnh báo có runbook; runbook được review lần cuối sau phiên V2.
-- [ ] Không còn TODO hay placeholder (`vX.Y.Z`, `<org>`) trong repo công khai.
+- [ ] Không còn TODO hay placeholder (`vX.Y.Z`, `<org>`) trong repo công khai. Quét lần 1 ngày 28/11 trên `main` (`TODO`, `FIXME`, `vX.Y.Z`, `<org>`, "chưa viết"): ngoài nhật ký chỉ còn hai chỗ đúng nghĩa, là tên thư mục `shellcheck-vX.Y.Z/` trong gói tải ở `ci.yaml` và chính dòng này; quét lại trên bản nộp.
 - [ ] Link trong tài liệu không hỏng (CI `docs`).
 - [ ] Bộ dữ liệu có README, checksum và giấy phép.
-- [ ] Không có kubeconfig, token hay khoá Sealed Secrets trong lịch sử Git.
+- [ ] Không có kubeconfig, token hay khoá Sealed Secrets trong lịch sử Git. Quét lần 1 ngày 28/11 (mọi blob đến được từ các ref đã fetch, gồm head của mọi PR; mẫu token Telegram, Hugging Face, GitHub, Tailscale, khoá riêng, trường kubeconfig, JWT, khoá AWS/R2, cặp khoá = giá trị, IP công khai): không có bí mật thật. Quét lại trên bản nộp, sau khi fetch cả `refs/pull/*/head`.
 - [ ] Đã review toàn bộ luận văn (Quang review bản base của Trình); đã kiểm tra chính tả.
 
 ---
