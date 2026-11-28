@@ -58,7 +58,10 @@ spec:
         query: |
           (sum(vllm:num_requests_running{namespace="llm-serving"}) or vector(0))
           + (sum(vllm:num_requests_waiting{namespace="llm-serving"}) or vector(0))
-        # Số request đồng thời mục tiêu mỗi pod. Giá trị tạm; chốt từ đo năng lực (B*) ở ADR-003.
+        # Số request đồng thời mục tiêu mỗi pod. 24 là giá trị giữ chỗ của base, không phải số đo: mọi nơi
+        # dùng file này đều ghi đè theo đo năng lực của máy đó (0,8 × B*, Thông số §8.1). Nhà: 23 (ĐG1-mini,
+        # envs/home/autoscaling/); simulator: 10 (envs/sim/autoscaling/); VM thuê: runner lấy `A2_threshold`
+        # của ma trận đang chạy (envs/cloud/experiments/matrix-*.yaml; V2 = 37, ADR-003 G3).
         threshold: "24"
         # Timeout HTTP cho mỗi lần hỏi Prometheus, đơn vị ms (số không kèm đơn vị = ms). Mặc định 3000 ms
         # (KEDA_HTTP_DEFAULT_TIMEOUT) là dư cho Prometheus trong cluster: trên kind (07/11), 459 query
