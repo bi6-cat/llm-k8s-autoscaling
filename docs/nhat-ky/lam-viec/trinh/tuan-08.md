@@ -1227,3 +1227,14 @@
 - **Results:** kiem_van: 05-06 và 05-07 0 điểm; 05-01 1 điểm có từ trước (ngày đủ năm ở dòng 8). 5.7 tăng 573 → 768 chữ văn xuôi, chưa đo lại khuôn T. Các câu mới do người viết đối chiếu ADR-003 và probe, chưa soát độc lập.
 - **Links:** nhánh `docs/tr8-thesis-vh2-acceptance` (xếp trên `docs/tr8-thesis-proofread`, PR #105); `docs/luan-van/05-01`, `05-06`, `05-07`.
 - **Thesis:** 5.1, 5.6, 5.7.
+
+## 2026-11-28 – Chèn Hình 3.2 (vòng vận hành theo SLO) vào 3.5
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Chèn Hình 7 của `docs/chi-tiet/04-van-hanh.md` (vẽ lại ở PR #60) vào 3.5.2 thành Hình 3.2, kèm một câu nhận xét sau hình; sửa comment đánh số ở đầu 03-02…03-06.
+  2. Bản đầu chèn cả Hình 8 và Hình 17 vào 3.6 thành Hình 3.3, 3.4. `/code-review high` báo 10 điểm; sửa hoặc xử lý cả 10: bỏ Hình 3.3, 3.4; dời Hình 3.2 xuống sau comment nguồn của đoạn định tuyến; sửa câu ticket cho khớp hình; bỏ cụm "làm theo runbook" lặp ở đoạn tự xử lý; cập nhật dòng Sơ đồ của `nguon-tu-lieu.md`.
+- **Decision:** (D146) không chèn Hình 8 (trùng Bảng 3.8, in mã N1–N7 trái quy-tac-viet §4) và Hình 17 (quy trình từng lượt và tên lệnh, phần đã chuyển sang 4.7 khi cắt ngày 24/11). Hình 2 đã có ở 3.2 (Hình 3.1) từ trước. Câu ticket sửa thành "không nhắc lại trong 24 giờ, dài hơn một phiên đo, và không báo lúc đã hết", đúng `repeat_interval: 24h`, `send_resolved: false` trong `common/platform/alertmanager-values.yaml`.
+- **Results:** kiem_van 03-05 và 03-06: 0 điểm; lychee offline trên 03-0x và `nguon-tu-lieu.md`: 0 lỗi. Chưa đo lại khuôn T ch. 3 (cần push rồi chạy `gop.py`).
+- **Links:** nhánh `docs/tr8-thesis-ch3-figures` (xếp trên `docs/tr8-thesis-vh2-acceptance`, PR #106); `docs/luan-van/03-05-giam-sat-slo-canh-bao.md`, `nguon-tu-lieu.md`.
+- **Thesis:** 3.5 (Hình 3.2).
