@@ -1357,10 +1357,12 @@
   1. Quét lại TODO và placeholder trên `main` sau #104–#113 (`TODO`, `FIXME`, `vX.Y.Z`, `<org>`, "chưa viết", "[Trình viết]"), ngoài `docs/nhat-ky/`. Ngoài hai chỗ đã biết (`shellcheck-vX.Y.Z/` trong `ci.yaml`, chính dòng checklist), còn "[Trình viết]" ở Lời cảm ơn.
   2. Chạy lychee offline không loại trừ thư mục nào: 52 lỗi, đều ở `docs/huong-dan/w2.md`, là link tới bố cục scaffold W2 (`infra/`, `platform/`, `serving/`, `autoscaling/`). Job `docs` của CI không báo vì bỏ qua đường dẫn chưa có trên nhánh. Đổi cả 52 link sang file hiện tại (script ánh xạ, kiểm từng đích tồn tại), thêm ghi chú 28/11 ở đầu file.
   3. Đóng gói bộ dữ liệu bằng `analysis.dataset` vào scratchpad (không đụng `dataset/` trong cây), chép kèm `dataset/README.md`, rồi kiểm checksum.
-  4. Tick hai mục đạt trong §11.4, ghi ngày và căn cứ; ghi kết quả quét lần 2 vào mục TODO.
-- **Decision:** không tick mục TODO vì Lời cảm ơn còn chỗ để Trình viết. Không tick tag `v1.0`, mục bí mật (chờ Trình chạy gitleaks) và mục review toàn quyển (chờ Quang). Link của W2 đổi cả chữ hiển thị lẫn đích để chữ và đích khớp nhau; đường dẫn trong lệnh và văn bản giữ như lúc viết, vì file là tư liệu của W2.
+  4. Chạy lychee không `--offline` để kiểm cả link ngoài.
+  5. Tick mục link trong §11.4, ghi ngày và căn cứ; ghi kết quả quét lần 2 vào mục TODO và kết quả đóng gói thử vào mục bộ dữ liệu.
+  6. `/code-review high`: sửa 8 điểm. Mục bộ dữ liệu bỏ tick vì gói dữ liệu và SHA256SUMS chưa đăng ở đâu (chỉ có README trong Git). Ghi chú đầu W2 nói rõ lệnh vẫn dùng đường dẫn cũ và chỉ sang `make help`. Comment của job `docs` trong `ci.yaml` thôi coi W2 là tư liệu giữ đường dẫn cũ. Ghi rõ phần lychee offline bỏ qua là link ngoài.
+- **Decision:** không tick mục TODO vì Lời cảm ơn còn chỗ để Trình viết. Không tick mục bộ dữ liệu vì gói chưa đăng. Không tick tag `v1.0`, mục bí mật (chờ Trình chạy gitleaks) và mục review toàn quyển (chờ Quang). Link của W2 đổi cả chữ hiển thị lẫn đích để chữ và đích khớp nhau; đường dẫn trong lệnh và văn bản giữ như lúc viết, vì file là tư liệu của W2.
 - **Results:**
-  - lychee `--offline --include-fragments` trên `docs/**/*.md` và `*.md`: trước 52 lỗi, sau 0 lỗi (817 OK, 44 excluded). CI trên `main` @ `a8314e8`: 6/6 job xanh.
+  - lychee `--offline --include-fragments` trên `docs/**/*.md` và `*.md`: trước 52 lỗi, sau 0 lỗi (817 OK; 44 excluded là link ngoài mà `--offline` không kiểm). Chạy online: 860/861 đạt, 1 lỗi 404 là trang tin của trường VU trong mục nhật ký 26/11 (trang đã gỡ, giữ nguyên). CI trên `main` @ `a8314e8`: 6/6 job xanh.
   - `analysis.dataset runs`: 9 phiên, 851 file, 38,0 MB, INDEX.csv 25 dòng, quét bí mật không có chỗ khớp; `--check` và `sha256sum -c` khớp 853 dòng (gồm INDEX.csv, README.md). README có mục "Giấy phép và quyền riêng tư" (CC BY 4.0).
 - **Incidents:** lệnh đầu tiên dùng `rm -rf .work/dataset-check` bị deny rule chặn (cấm xoá `.work/`). Chuyển sang thư mục mới trong scratchpad, không xoá gì.
 - **Links:** nhánh `docs/tr8-checklist-final`; `docs/chi-tiet/06-ke-hoach-quan-ly.md` §11.4, `docs/huong-dan/w2.md`.

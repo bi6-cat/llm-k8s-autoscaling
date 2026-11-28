@@ -312,8 +312,9 @@ jobs:
           # Tài liệu link tới file code. Chỉ bỏ qua link tới FILE (hoặc thư mục) KHÔNG có trên nhánh đang
           # kiểm, theo từng file chứ không theo cả thư mục (để link tới file có thật vẫn được kiểm). Hai lý do
           # có link như vậy: (1) code mới được nhắc trong tài liệu trước khi lên main; (2) ngày 12/11/2026 repo
-          # chuyển sang cấu trúc envs/ + common/, còn nhật ký, ADR và hướng dẫn W1, W2 là tư liệu nên giữ
-          # đường dẫn cũ (serving/, autoscaling/, platform/, infra/, observability/).
+          # chuyển sang cấu trúc envs/ + common/, còn nhật ký, ADR và hướng dẫn W1 là tư liệu nên giữ đường dẫn
+          # cũ (serving/, autoscaling/, platform/, infra/, observability/). Link của hướng dẫn W2 đã đổi sang
+          # cấu trúc mới ngày 28/11/2026, nên đường dẫn của W2 không được có trong danh sách "Bỏ qua".
           # Lưu ý: cách này cũng bỏ qua một link mới bị gõ sai đường dẫn, nên danh sách "Bỏ qua" in ra bên
           # dưới phải được soát bằng mắt: trong đó chỉ nên có đường dẫn cũ.
           #   grep -rhoE: lấy phần "](<đường dẫn>" của mọi link Markdown trỏ vào các thư mục code
