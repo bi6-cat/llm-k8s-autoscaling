@@ -1119,3 +1119,24 @@
 - **Task:** TR4 · **Environment:** none
 - **Done:** kiểm #98 đủ 5 điều kiện merge (CI 6/6 pass, MERGEABLE/CLEAN, không bình luận, chỉ thêm ảnh và nhật ký nên Argo CD nhà không đổi, base `main`); merge commit `c1d1756`, xoá nhánh head. Gộp `origin/main` vào nhánh #99: chỉ xung đột nhật ký `tuan-08.md`, `merge=union` tự giữ cả hai mục.
 - **Links:** PR #98, PR #99.
+
+## 2026-11-28 – Merge PR #99 (nguồn M/M/1 ở mục 2.2)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** sau khi gộp `origin/main` (có #98) vào nhánh #99 và CI chạy lại, merge commit `4853a39` lúc 07:41, xoá nhánh head. Nhật ký của bước này ghi ở PR kế tiếp vì #99 đã merge.
+- **Links:** PR #99.
+
+## 2026-11-28 – `make analysis`: dựng lại bảng và hình chương 5 từ dữ liệu (P5)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Tìm lệnh và phiên đã tạo từng file trong `analysis/figures/` (nhật ký tuần 07, `van-hanh.md` mục LT5–LT8, docstring của script). LT7 lấy phiên `runs/sim/lt7-20261116-165323`, LT8 lấy `runs/sim/lt8-20261116-131116`: chạy cả ba phiên LT7 và hai phiên LT8, chỉ hai phiên này ra CSV trùng bản trong Git.
+  2. Chạy lại từng script vào thư mục tạm. 4 bảng ĐG2, `lt5-little.csv`, `lt6-gpu-util.csv`, `lt7-hpa.csv`, `lt8-burn.csv` trùng từng byte. 10 SVG chỉ khác ở xuống dòng: matplotlib trên Windows ghi CRLF; bỏ CR thì trùng từng byte.
+  3. Sửa `charts._save`: SVG ghi qua file mở với `newline="\n"`, nên chạy trên Windows hay Linux đều ra LF. Thêm một assert vào test sẵn có.
+  4. Thêm target `make analysis [DATA=runs] [OUT=analysis/figures]`, bỏ `analysis` khỏi danh sách lệnh đã lược. Target ghi thêm 3 báo cáo số mà chương 5 dẫn làm nguồn: `v2-dg2/dg2-a2.txt` (mục 5.3), `v2-dg2/vh6-window.txt`, `vh4-windows.txt` (mục 5.5); đường dẫn `DATA` được bỏ khỏi báo cáo VH4 để file không phụ thuộc thư mục dữ liệu.
+  5. README thêm mục "Tái lập" theo 7 ý của Kế hoạch §10.7; sửa Kế hoạch §10.7 ý 2 và Môi trường §3.7 (dòng `make analysis`).
+- **Decision:** D142. Mặc định `OUT=analysis/figures`, tức ghi đè bản trong Git, để phép kiểm tái lập chỉ là `git status` sạch. Commit 3 báo cáo số vào Git vì luận văn đang dẫn chúng làm nguồn. Không chọn: thư mục ra riêng rồi so bằng `diff -r` (thêm một bước, phải sửa `.gitignore`); chỉ in báo cáo ra màn hình (không kiểm được số trong luận văn từ repo).
+- **Results:** `make analysis SHELL=bash` trên `runs/` mất 25 s; sau đó `git status` chỉ có 3 file báo cáo mới, không file cũ nào đổi. `DATA=runs/` (có dấu `/`) với `OUT` là thư mục tạm cho kết quả trùng `analysis/figures` (`diff -r` rỗng). `DATA=nope` báo thiếu `nope/v2-vm/v2-dg2`, mã thoát 2. Test analysis: 212 passed; ruff check và ruff format đạt; lychee 0 lỗi; yamllint đạt.
+- **Deviations:** chưa gồm bảng cold start 8 pha của ĐG3 (đọc `summary.txt` do runner ghi) và hình trong `docs/images/` (`build_diagrams.py`), đã ghi rõ trong README. `dataset/` chưa có (việc P4), nên chưa chạy được với `DATA=dataset`.
+- **Links:** `Makefile` (target `analysis`), `analysis/charts.py`, `analysis/tests/test_charts.py`, `README.md` (mục Tái lập), `docs/chi-tiet/06-ke-hoach-quan-ly.md` §10.7, `docs/chi-tiet/05-moi-truong-danh-gia.md` §3.7.
+- **Thesis:** 4.6 hoặc 5.1 (HG5 tái lập: một lệnh dựng lại mọi bảng và hình chương 5, kiểm bằng `git status`); Phụ lục.

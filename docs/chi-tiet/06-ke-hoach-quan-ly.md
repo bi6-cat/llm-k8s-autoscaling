@@ -438,7 +438,7 @@ dataset/
 ### 10.7. Hướng dẫn tái lập và vận hành (dàn ý README)
 
 1. **Yêu cầu:** phần cứng (máy có GPU NVIDIA, hoặc tài khoản Vast.ai), công cụ (vastai CLI, ansible, kubectl, helm, kubeseal, python, uv, tailscale).
-2. **Chạy nhanh ở nhà:** `make home-up`, rồi `make run MATRIX=envs/home/experiments/matrix.yaml`, rồi `make analysis` (chưa có). Không có GPU: `make sim-up` rồi `make run MATRIX=envs/sim/experiments/matrix.yaml`.
+2. **Chạy nhanh ở nhà:** `make home-up`, rồi `make run MATRIX=envs/home/experiments/matrix.yaml`, rồi `make analysis` (có từ 28/11, [README](../../README.md#tái-lập) ý 5). Không có GPU: `make sim-up` rồi `make run MATRIX=envs/sim/experiments/matrix.yaml`.
 3. **Chạy đầy đủ trên máy thuê:** cấu hình `.env` (template Vast, khoá R2, bot Telegram), rồi lần lượt `make find rent probe bootstrap cloud-platform`, ĐG1 bằng `make run MATRIX=envs/cloud/experiments/matrix-dg1.yaml`, sau đó `make run MATRIX=envs/cloud/experiments/matrix-v2.yaml`, `make ops-tests`, `make backup`, `make release`.
 4. **Vận hành:** cập nhật phiên bản và rollback ([Vận hành §5.3](04-van-hanh.md#53-quy-trình-cập-nhật-qua-gitops)); xử lý cảnh báo (`docs/runbooks/`); dựng lại từ đầu ([Vận hành §7](04-van-hanh.md#7-dựng-lại-từ-đầu-khôi-phục-sau-thảm-hoạ)).
 5. **Chỉ tái tạo hình và bảng từ dữ liệu đã công bố:** tải `dataset/`, rồi `make analysis DATA=dataset/`.
