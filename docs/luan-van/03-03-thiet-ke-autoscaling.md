@@ -58,7 +58,7 @@ Tham số hành vi của HPA bất đối xứng (Bảng 3.5). Scale-up không c
 | Replica tối thiểu | 1 | Cold start hàng phút, nên không scale về 0 |
 | Replica tối đa | N = 4 | Bằng số GPU; bằng S4 để so sánh công bằng |
 | Scale-down | Chờ 300 s, bớt 1 pod mỗi 60 s | Bỏ qua đợt giảm ngắn |
-| Chu kỳ scrape, sync HPA | 5 s, 5 s (mặc định 30 s, 15 s) | Phát hiện sớm |
+| Chu kỳ scrape, chu kỳ đánh giá HPA | 5 s, 5 s (mặc định 30 s, 15 s) | Phát hiện sớm |
 | `fallback` | Lỗi quá 3 lần liên tiếp thì lên N | Ưu tiên chất lượng |
 | `timeout` truy vấn | 1 s (mặc định 3 s) | Fallback trong 30 s |
 <!-- nguồn: docs/chi-tiet/03-kien-truc-autoscaling.md §12 (bảng lý do từng tham số), §6 (scrape mặc định 30 s, sync HPA mặc định 15 s); docs/chi-tiet/00-thong-so.md §9.3 (min/max; nhà 2, simulator 3; scaleUp mặc định; scaleDown; fallback failureThreshold 3, replicas = max; timeout 1000 ms, mặc định 3000 ms); common/serving/podmonitor.yaml (interval 5s); common/platform/kube-prometheus-stack-values.yaml (chart để trống = 30 s); envs/home/autoscaling/kustomization.yaml (max 2); envs/sim/autoscaling/kustomization.yaml (max 3). Bỏ dòng tolerance 10% (mặc định, 02-kien-thuc-nen.md §3.1) -->

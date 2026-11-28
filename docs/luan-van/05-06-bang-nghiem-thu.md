@@ -17,7 +17,7 @@ Bảng nghiệm thu (Bảng 5.4) đối chiếu kết quả của các mục 5.2
 | F1. API có streaming | Must | ĐG1–ĐG3 chạy qua API có streaming | Đạt |
 | F2. Tự điều chỉnh replica | Must | A2 trong [1, 4]; T7 chưa chạy | Đạt một phần |
 | F3. Triển khai qua Git | Must | Cập nhật, rollback qua Git trên simulator, 0 lỗi; trên GPU chỉ qua annotation | Đạt |
-| F4. Dựng từ máy trắng | Must | 502 s (1 lần) | Đạt |
+| F4. Dựng từ máy trắng | Must | 502 s (8,4 phút; 1 lần) | Đạt |
 | F5. Ba dashboard | Must | Đủ 3 dashboard, ảnh trên simulator ở Phụ lục G; chưa chụp trên GPU thật | Đạt một phần |
 | F6. Cảnh báo tới Telegram | Must | Chưa gửi Telegram thật | Đạt một phần |
 | F7. Bảo vệ tối thiểu | Should | API key, SSH tunnel; checklist chưa chạy | Chưa đo |
@@ -29,7 +29,7 @@ Bảng nghiệm thu (Bảng 5.4) đối chiếu kết quả của các mục 5.2
 | N5. Cold start | Should | L2 bằng 25,3% L0 (≤ 50%) | Đạt |
 | N6. Tự phục hồi | Must | Thay pod 67,4 s; fallback 16,8 s; dựng lại như F4 | Đạt |
 | N7. Quan sát được | Should | 104 s (≤ 5 phút); 0 page giả | Đạt |
-| N8. Tái lập, chi phí | Should | Dựng lại theo README 25 phút trên simulator; thiếu chi phí | Đạt một phần |
+| N8. Tái lập, chi phí | Should | Dựng lại theo README 24,7 phút trên simulator; thiếu chi phí | Đạt một phần |
 
 <!-- nguồn: F1: envs/cloud/serving/patch-vllm.yaml (--model=Qwen/Qwen2.5-3B-Instruct); loadgen/sender.py (CHAT_PATH); nhật ký Quang tuần 07 mục 18/11 (ĐG1 5 lượt hợp lệ; ĐG2 17/17), 19/11 (ĐG3) -->
 <!-- nguồn: F2: analysis/figures/v2-dg2/runs.csv (replicas_max, scale_ups, scale_downs); nhật ký Trình tuần 04 mục 01/11 (T1–T5 trên kind); nhật ký Trình tuần 05 mục 07/11 (cơ chế T6 trên kind); Kế hoạch mốc M2 (ghi chú 08/11: chưa có T6, T7) -->
@@ -49,7 +49,7 @@ Theo Bảng 5.4, mọi yêu cầu và chỉ tiêu mức Must đều đạt hoặ
 
 <!-- nguồn: analysis/figures/v2-dg2/runs.csv (react_s 79,7–81,5; slo_attainment A2-KB2 0,794–0,807; recovery_s 409–430); nhật ký Quang tuần 07 mục 19/11 (hàng đợi ở pod có sẵn, Service chia đều); runs/v2-vm/ops-vh3-kill-*/summary.json (129 lỗi / 1.041 request); alerts.csv (client_bad_ratio 0,272 và 0,378 ở A2-KB3) -->
 
-Các phần còn thiếu đều nằm ở khâu kiểm chứng, không nằm ở chức năng. Bài kiểm thử T7 của F2 chưa chạy. Vòng cập nhật và rollback qua Git mới chạy trên simulator, chưa trọn vòng trên GPU thật. Nhóm cũng chưa chụp dashboard trên GPU thật và chưa gửi cảnh báo tới Telegram thật. Với F6, cảnh báo kêu đúng lúc đã được kiểm trong V2, còn khâu gửi tin thì Alertmanager báo lỗi suốt 17 lượt, nhiều khả năng do thiếu Secret Telegram (mục 5.5). Chỉ tiêu N8 mới đạt phần tái lập, với lần dựng lại theo README mất khoảng 25 phút trên simulator, còn tổng chi phí thuê chưa có.
+Các phần còn thiếu đều nằm ở khâu kiểm chứng, không nằm ở chức năng. Bài kiểm thử T7 của F2 chưa chạy. Vòng cập nhật và rollback qua Git mới chạy trên simulator, chưa trọn vòng trên GPU thật. Nhóm cũng chưa chụp dashboard trên GPU thật và chưa gửi cảnh báo tới Telegram thật. Với F6, cảnh báo kêu đúng lúc đã được kiểm trong V2, còn khâu gửi tin thì Alertmanager báo lỗi suốt 17 lượt, nhiều khả năng do thiếu Secret Telegram (mục 5.5). Chỉ tiêu N8 mới đạt phần tái lập, với lần dựng lại theo README mất 24,7 phút trên simulator, còn tổng chi phí thuê chưa có.
 
 <!-- nguồn: analysis/figures/v2-dg2/alerts.csv; GHI-CHU-CHO-TRINH §3 điểm 1 (Alertmanager báo lỗi gửi Telegram suốt 17 lượt); nguon-tu-lieu.md §4 (chi phí thực tế chưa có) -->
 

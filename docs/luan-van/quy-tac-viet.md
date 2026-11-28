@@ -205,7 +205,7 @@ Những thứ này chỉ nằm trong comment nguồn. Ngoại lệ: mục phân 
 | repository | | repo, kho mã (`repo-server` là tên thành phần của Argo CD, giữ nguyên) |
 | khởi động lại | | restart (trừ tên metric và trường `restartPolicy`) |
 | chu kỳ đánh giá (của HPA) | khoảng thời gian giữa hai lần HPA tính lại số replica (*sync period*, mặc định 15 s) | chu kỳ sync (chữ sync dành cho Argo CD) |
-| pha (của cold start) | tám pha đánh số 1–8, từ lúc pod được gán node tới khi Ready (mục 3.4) | bước (khi nói về tám pha) |
+| pha (của cold start) | tám pha đánh số 1–8, từ lúc pod được gán node tới khi Ready (mục 3.4); "bước" chỉ dùng cho một thao tác bên trong pha (nạp weights, capture CUDA graph) | bước (khi nói về một trong tám pha) |
 | burn rate, error budget (ngân sách lỗi) | | |
 | page, ticket | hai mức cảnh báo (gọi người trực ngay / xử lý trong giờ làm việc) | |
 | GPU-giờ | số GPU bị giữ nhân thời gian giữ | giờ GPU |
@@ -261,7 +261,7 @@ Những thứ này chỉ nằm trong comment nguồn. Ngoại lệ: mục phân 
 - **Ngày tháng** chỉ ghi một lần cho phiên đo, ở mục 5.1. Bối cảnh phát hiện (ví dụ "phát hiện trên simulator ngày 01/11") để ở phần sự cố của chương 4, hoặc trong comment nguồn.
 - **Khoảng giá trị:** "80–82 s" (gạch ngang ngắn, không cách). Phép nhân: "4 × RTX 4060 Ti". Đẳng thức: "λ = 3,5 req/s" (có cách hai bên).
 - **Đơn vị:** s, ms, phút (không viết "min"), req/s, GB hoặc GiB đúng như nguồn, USD. Phần trăm và mọi định dạng số khác: theo README.
-- **Thời lượng** ghi bằng s, làm tròn như trên; từ 10 phút trở lên ghi bằng phút với 1 chữ số thập phân ("24,4 phút"). Khi so với chỉ tiêu tính bằng phút thì thêm số phút trong ngoặc: "502 s (8,4 phút)". Không dùng dạng "8 phút 22 giây". Bảng số từng lượt ở Phụ lục E giữ số chữ số của nguồn.
+- **Thời lượng** ghi bằng s, làm tròn như trên; từ 10 phút trở lên ghi bằng phút, từ 2 giờ trở lên ghi bằng giờ, đều 1 chữ số thập phân ("24,4 phút", "7,2 giờ"). Số từ 300 s trở lên khi so với một mức tính bằng phút thì thêm số phút trong ngoặc: "502 s (8,4 phút)". Không dùng dạng ghép "8 phút 22 giây", "7 giờ 14 phút". Giá trị tham số giữ đơn vị của tham số (`progressDeadlineSeconds` 600 s); trong bảng, mỗi cột dùng một đơn vị. Bảng số từng lượt ở Phụ lục E giữ số chữ số của nguồn.
 - **Số đếm cấu trúc** nhỏ hơn 10 viết bằng chữ trong văn xuôi ("ba kịch bản", "tám pha"); số đo, số lượt và số trong bảng viết bằng chữ số.
 - **Nhãn nguồn gốc:** số nào không phải đo thật thì gắn nhãn ngay cạnh:
   - "(mô phỏng)": ví dụ phần mô phỏng ma trận;

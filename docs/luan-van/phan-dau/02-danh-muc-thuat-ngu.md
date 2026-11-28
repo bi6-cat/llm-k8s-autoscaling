@@ -142,7 +142,7 @@ Danh mục gồm bốn phần: chữ viết tắt, thuật ngữ, mã định da
 | N1–N8 | Chỉ tiêu nghiệm thu; N2a và N2b là hai vế của N2 | Mục 3.1 |
 | S1, S4 | Cấu hình tĩnh: luôn 1 replica, luôn 4 replica | Mục 3.3 |
 | T1–T7 | Bài kiểm thử autoscaling | Mục 4.3 |
-| V0, V1 | Hai phiên thử trên VM thuê, trước phiên đo chính | Phụ lục F |
+| V0, V1 | Hai phiên thử trên VM thuê, trước phiên đo chính | Phụ lục C, F |
 | V2 | Phiên đo chính, trên VM thuê 4 × RTX 4060 Ti | Mục 5.1 |
 | VH1–VH6 | Kịch bản vận hành | Mục 3.6 |
 
