@@ -430,6 +430,7 @@ dataset/
 ```
 
 - Cấu trúc một lượt: [Môi trường §14.2](05-moi-truong-danh-gia.md#142-dữ-liệu-của-một-lượt).
+- **Thực tế (28/11):** `dataset/` giữ nguyên bố cục của `runs/` thay cho cây trên, để `make analysis DATA=dataset` đọc thẳng mà không phải đổi đường dẫn; `analysis/dataset.py` chép 9 phiên chương 5 dùng, quét bí mật trước khi chép, rồi ghi `INDEX.csv` (mỗi lần thử của runner một dòng) và `SHA256SUMS`. Bộ dữ liệu khoảng 38 MB, 853 file; trong Git chỉ có [dataset/README.md](../../dataset/README.md), phần dữ liệu chưa đăng.
 - **Kích thước ước tính:** khoảng 25 lượt × vài chục MB, tổng dưới 2 GB.
 - **Giấy phép đề xuất:** CC BY 4.0 cho dữ liệu, Apache-2.0 hoặc MIT cho mã nguồn.
 - **Không chứa dữ liệu cá nhân:** prompt hoàn toàn là dữ liệu tổng hợp.
