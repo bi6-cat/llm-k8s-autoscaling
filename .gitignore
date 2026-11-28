@@ -23,6 +23,10 @@ __pycache__/
 # --- Dữ liệu ---------------------------------------------------------------------
 # Dữ liệu thô của các lượt đánh giá: nặng, được sao lưu lên Cloudflare R2 thay vì Git
 runs/
+# Bộ dữ liệu công bố (analysis/dataset.py đóng gói từ runs/): chỉ README.md nằm trong Git, phần dữ liệu
+# đăng riêng (Kế hoạch §10.6)
+dataset/*
+!dataset/README.md
 
 # --- Bí mật và trạng thái cục bộ ------------------------------------------------
 # Giá trị riêng từng người (mẫu ở .env.example)
