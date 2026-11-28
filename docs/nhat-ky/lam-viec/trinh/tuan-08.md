@@ -1101,6 +1101,7 @@
   - `/code-review high`: 6 điểm, sửa 4 (mô tả TPOT trên dashboard SLO là tỉ lệ, không phải phân vị; Decision dẫn sai D114; số retention cloud chép cứng; thiếu giới hạn 4 GB của nhà). Không sửa: màu đỏ của vạch 100 ms (chế độ `dashed` chỉ vẽ một vạch, không tô vùng; mô tả đã ghi là tham chiếu). Điều kiện merge 4 ghi ở Decision. Trên kind: `llm-slo-cost` 19 panel, `llm-serving-gpu` 24 panel, API Grafana trả về mô tả mới ở đúng hai panel đã sửa.
 - **Links:** nhánh `fix/tr4-dashboard-panel-desc`; `common/observability/dashboards/slo-cost.json`, `serving-gpu.json`.
 - **Thesis:** §4.4 (dashboard), nếu cần dẫn chuyện ITL và TPOT.
+
 ## 2026-11-27 – Thay nguồn công thức M/M/1 ở mục 2.2 bằng giáo trình mở đã đọc trực tiếp
 
 - **Task:** TR8 · **Environment:** none
@@ -1247,3 +1248,12 @@
 - **Results:** kiem_van 03-05 và 03-06: 0 điểm; lychee offline trên 03-0x và `nguon-tu-lieu.md`: 0 lỗi. Chưa đo lại khuôn T ch. 3 (cần push rồi chạy `gop.py`).
 - **Links:** nhánh `docs/tr8-thesis-ch3-figures` (xếp trên `docs/tr8-thesis-vh2-acceptance`, PR #106); `docs/luan-van/03-05-giam-sat-slo-canh-bao.md`, `nguon-tu-lieu.md`.
 - **Thesis:** 3.5 (Hình 3.2).
+
+## 2026-11-28 – Merge chuỗi PR #104–#107 và chuẩn bị merge PR #97
+
+- **Task:** TR8, TR4 · **Environment:** none
+- **Done:**
+  1. Merge chuỗi xếp chồng theo D42: đổi base của PR trên về `main` trước khi merge PR dưới. #104 (cắt trang D103) `ba7496c`, #105 (soát chính tả) `84ee5c6`, #106 (Hạn chế ADR-003) `dcc934d`, #107 (Hình 3.2) `92a5b0b`. Mỗi PR: 6 check CI xanh, `MERGEABLE`, không có review hay bình luận đòi sửa, chỉ đổi tài liệu (không làm Argo CD đổi cluster), merge commit và xoá nhánh head.
+  2. PR #97 báo `CONFLICTING` sau chuỗi trên: gộp `origin/main` vào `fix/tr4-dashboard-panel-desc`, chỉ xung đột ở nhật ký tuần 08 (union tự gộp; thêm dòng trống trước tiêu đề mục kế bị union bỏ sót).
+- **Decision:** (D147) coi điều kiện merge 4 của PR #97 là đạt nhờ kiểm trên kind: PR chỉ đổi `description` của hai panel, không đổi PromQL; D114 đã cho dùng kind `llm-sim` thay cluster nhà để kiểm; Argo CD nhà ghi lại hai ConfigMap dashboard chỉ làm đổi chữ chú thích.
+- **Links:** PR #104, #105, #106, #107, #97.
