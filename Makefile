@@ -284,6 +284,7 @@ release: ## Huỷ instance Vast đang thuê
 #   nghĩa là mọi bảng, hình và báo cáo số tái lập đúng từng byte từ dữ liệu.
 # Các phiên dưới là lượt luận văn dùng (nhật ký vận hành, mục LT5–LT8 và VH4). Hậu tố @k của LT5 đổi mốc của
 #   máy tạo tải trên WSL2 sang giờ thực, vì đồng hồ đơn điệu ở đó chạy nhanh k lần (docstring lt5_little.py).
+# Python trên Windows in ra stdout bằng CRLF, nên các báo cáo .txt đi qua `tr -d '\r'` để giống bản LF trong Git.
 # Chưa gồm: bảng cold start 8 pha của ĐG3 (summary.txt do runner ghi) và hình trong docs/images/ (build_diagrams.py).
 DATA ?= runs
 OUT ?= analysis/figures
@@ -299,10 +300,10 @@ analysis: ## Dựng lại bảng, hình, số chương 5: make analysis [DATA=ru
 	echo "ĐG2 → $$o/v2-dg2: 4 bảng CSV, biểu đồ C1–C4, số phụ của mục 5.3 và VH6"; \
 	$(ANALYSIS).build_tables "$$v2" --baseline S4 --out "$$o/v2-dg2" > /dev/null; \
 	$(ANALYSIS).charts "$$v2" --baseline S4 --formats svg --out "$$o/v2-dg2" > /dev/null; \
-	$(ANALYSIS).dg2_a2 "$$v2" > "$$o/v2-dg2/dg2-a2.txt"; \
-	$(ANALYSIS).vh6_window "$$v2" > "$$o/v2-dg2/vh6-window.txt"; \
+	$(ANALYSIS).dg2_a2 "$$v2" | tr -d '\r' > "$$o/v2-dg2/dg2-a2.txt"; \
+	$(ANALYSIS).vh6_window "$$v2" | tr -d '\r' > "$$o/v2-dg2/vh6-window.txt"; \
 	echo "VH4 → $$o/vh4-windows.txt"; \
-	$(ANALYSIS).vh4_windows "$$d/$(VH4_SESSION)" | sed "s|$$d/||" > "$$o/vh4-windows.txt"; \
+	$(ANALYSIS).vh4_windows "$$d/$(VH4_SESSION)" | sed "s|$$d/||" | tr -d '\r' > "$$o/vh4-windows.txt"; \
 	echo "LT5–LT8 → $$o/lt*.csv, lt*.svg"; \
 	$(ANALYSIS).lt5_little envs/home/experiments/capacity-1.5b.json envs/home/experiments/capacity.json \
 	  $(foreach s,$(LT5_SIM),"$$d/$(s)") "$$d/dg1-v2-4060ti" "$$v2" --out "$$o/lt5-little.csv" > /dev/null; \
