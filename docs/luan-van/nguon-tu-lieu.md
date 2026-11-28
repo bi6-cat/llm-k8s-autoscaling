@@ -108,7 +108,7 @@ Số mục theo dàn ý ở Kế hoạch §11.1. Bản base do Trình viết; ng
 | 6.1 Kết luận | Ba thông điệp TĐ1–TĐ3 (Kế hoạch §11.1) |
 | 6.2 Hạn chế của hệ thống và phạm vi | §6 dưới đây; Bài toán §11, §12; ADR-006 §3.1; hai hạn chế mà 3.5 dẫn chéo: `LLMErrorRateHigh` vẫn page vì một đợt lỗi 503 ngắn, chưa có dead man's switch cho Prometheus |
 | 6.3 Hướng phát triển | Kế hoạch §12 (E1–E13); `docs/bao-cao/de-xuat-v3/`; `Q-06` (13–15/11: các hướng nâng cấp) |
-| Phụ lục A–F | A: `common/serving/`, `common/autoscaling/`; B: `common/observability/alerts/` (kèm `tests/`); C: `docs/runbooks/`; D: `docs/phien-ban.md`; E: `analysis/figures/v2-dg2/`; F: Kế hoạch §1, §5.1 |
+| Phụ lục A–G | A: `common/serving/`, `common/autoscaling/`; B: `common/observability/alerts/` (kèm `tests/`); C: `docs/runbooks/`; D: `docs/phien-ban.md`; E: `analysis/figures/v2-dg2/`; F: Kế hoạch §1, §5.1; G: `docs/images/anh-chup/`, `docs/nhat-ky/van-hanh.md` mục 27/11 |
 | Slide, video | Kế hoạch §11.2, §11.3 |
 
 ## 3. Số liệu đã chốt

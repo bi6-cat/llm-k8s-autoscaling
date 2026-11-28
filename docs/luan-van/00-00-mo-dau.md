@@ -41,6 +41,6 @@ Ngoài phần Mở đầu, luận văn gồm sáu chương.
 
 **Chương 6. Kết luận và hướng phát triển** rút ba kết luận từ kết quả đánh giá và nêu các hạn chế còn lại của hệ thống. Chương này đề xuất hướng làm tiếp, mỗi hướng xuất phát từ một phát hiện của chương 5.
 
-Phụ lục chứa phần người muốn làm lại cần tra cứu. Đó là tệp cấu hình chính, quy tắc cảnh báo, hướng dẫn xử lý sự cố mẫu và phiên bản phần mềm. Phụ lục cũng có số liệu của từng lượt đo, kế hoạch và phân công.
+Phụ lục chứa phần người muốn làm lại cần tra cứu. Đó là tệp cấu hình chính, quy tắc cảnh báo, hướng dẫn xử lý sự cố mẫu và phiên bản phần mềm. Phụ lục cũng có số liệu của từng lượt đo, kế hoạch và phân công, cùng ảnh chụp dashboard trên simulator.
 
-<!-- nguồn: đoạn mở đầu của từng chương (01-00, 02-00, 03-00, 05-00, 06-00 trên nhánh docs/tr8-thesis-ch*); docs/chi-tiet/06-ke-hoach-quan-ly.md §11.1 (dòng từng chương, Phần cuối: Phụ lục A–F; kết chương 4 có bảng vấn đề riêng của GPU/LLM) -->
+<!-- nguồn: đoạn mở đầu của từng chương (01-00, 02-00, 03-00, 05-00, 06-00 trên nhánh docs/tr8-thesis-ch*); docs/chi-tiet/06-ke-hoach-quan-ly.md §11.1 (dòng từng chương, Phần cuối: Phụ lục A–G; kết chương 4 có bảng vấn đề riêng của GPU/LLM) -->

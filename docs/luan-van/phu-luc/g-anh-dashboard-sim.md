@@ -11,8 +11,8 @@ Cấu hình autoscaling là A2, với giới hạn trên 3 replica và threshold
 
 ## G.1. Serving và GPU
 
-Hình G.1 là dashboard Serving và GPU. Hàng tổng quan cho thấy 3 pod Ready, TTFT p95 khoảng 0,24 s, còn biểu đồ thời gian chờ cho thấy request phải chờ trong hàng đợi khoảng 4,5 s ở p95. TTFT vẫn thấp vì TTFT của simulator không tính thời gian chờ này (mục 4.6.1).
-<!-- nguồn: docs/images/anh-chup/dashboard-serving-gpu-sim.png (Pod vLLM Ready 3; TTFT p95 (1 phút) 242.50 ms; panel "Thời gian chờ hàng đợi và toàn request", đường "chờ hàng đợi p95" ≈ 4,5 s); docs/luan-van/04-06-giam-sat-canh-bao.md dòng 34 (TTFT của simulator không tính thời gian chờ) -->
+Hình G.1 là dashboard Serving và GPU. Hàng tổng quan cho thấy 3 pod Ready, TTFT p95 khoảng 0,24 s, còn biểu đồ thời gian chờ cho thấy request phải chờ trong hàng đợi khoảng 4,5 s ở p95. TTFT vẫn thấp vì TTFT của simulator không tính thời gian chờ này. Mục 4.6.1 nêu cùng hiện tượng ở một lượt quá tải khác, với thời gian chờ p95 4,7 s.
+<!-- nguồn: docs/images/anh-chup/dashboard-serving-gpu-sim.png (Pod vLLM Ready 3; TTFT p95 (1 phút) 242.50 ms; panel "Thời gian chờ hàng đợi và toàn request", đường "chờ hàng đợi p95" ≈ 4,5 s); docs/luan-van/04-06-giam-sat-canh-bao.md dòng 34 (TTFT của simulator không tính thời gian chờ; lượt quá tải khác: TTFT p95 0,24 s, chờ p95 4,7 s) -->
 
 ![Hình G.1. Dashboard Serving và GPU trên simulator kind (không phải GPU thật), chụp ngày 27/11/2026 sau lượt tải 25 request đồng thời, khoảng xem 15 phút.](../../images/anh-chup/dashboard-serving-gpu-sim.png)
 
@@ -31,8 +31,8 @@ Bảng cold start ghi hai pod mới mất 6 s từ lúc tạo tới lúc Ready, 
 
 ## G.3. SLO và chi phí
 
-Hình G.3 là dashboard SLO và chi phí. Trong khoảng xem có 972 request đã trả xong, tỷ lệ đạt cả TTFT và TPOT là 100%, burn rate gần 0. Cảnh báo `LLMAtMaxReplicas` đang ở trạng thái pending, vì số replica đã chạm giới hạn trên nhưng chưa giữ đủ 15 phút như quy tắc yêu cầu.
-<!-- nguồn: dashboard-slo-cost-sim.png (Request đã trả xong 972; TTFT ≤ 2,5 s 100.0%, TPOT ≤ 100 ms 100.0%; Burn rate TTFT ≈ 0; "Cảnh báo LLM theo thời gian": LLMAtMaxReplicas pending); common/observability/alerts/llm.yaml (LLMAtMaxReplicas for: 15m) -->
+Hình G.3 là dashboard SLO và chi phí. Trong khoảng xem có 972 request đã trả xong. Trên cửa sổ 5 phút cuối, tỷ lệ request đạt cả ngưỡng TTFT và ngưỡng TPOT là 100%, burn rate gần 0. Cảnh báo `LLMAtMaxReplicas` ở trạng thái pending trong lúc có tải, khi số replica đã chạm giới hạn trên và vẫn còn request chờ. Cảnh báo không chuyển sang firing, vì hai điều kiện này chưa giữ đủ 15 phút thì tải đã dừng.
+<!-- nguồn: dashboard-slo-cost-sim.png (Request đã trả xong 972 trong khoảng xem; hàng "SLI so với SLO (5 phút gần nhất)": TTFT ≤ 2,5 s 100.0%, TPOT ≤ 100 ms 100.0%; Burn rate TTFT ≈ 0; "Cảnh báo LLM theo thời gian": LLMAtMaxReplicas pending); common/observability/alerts/llm.yaml (LLMAtMaxReplicas: replica hiện tại ≥ max và sum(vllm:num_requests_waiting) > 0, for: 15m); panel "Cảnh báo LLM theo thời gian" có pending khoảng 23:24–23:28, tải dừng 23:27:59 theo van-hanh.md -->
 
 ![Hình G.3. Dashboard SLO và chi phí trên simulator kind (không phải GPU thật), chụp ngày 27/11/2026 sau lượt tải 25 request đồng thời, khoảng xem 15 phút. Hàng chi phí không phải chi phí thật.](../../images/anh-chup/dashboard-slo-cost-sim.png)
 
