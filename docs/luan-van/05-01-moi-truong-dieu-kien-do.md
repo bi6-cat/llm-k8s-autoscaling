@@ -17,7 +17,7 @@ Phiên đo chạy lần lượt ĐG1, ma trận ĐG2, các kịch bản vận h�
 
 <!-- nguồn: nhật ký Quang tuần 07 mục 18/11 (ma trận 16:30–23:44, 17 lượt, 11 ô, khoảng 24 phút/lượt, tổng 7 giờ 14 phút, thứ tự xáo của seed 20261114; VH2–VH4 từ 23:46, dg3 chạy sau vh) và 19/11 (L2-1, L2-3, L0-1 dừng do hàm wait_count của dg3.sh, đo lại 01:55–02:04) -->
 
-Runner kiểm tra từng lượt theo các điều kiện hợp lệ ở mục 3.6. Cả 5 lượt của ĐG1 và 17 lượt của ma trận đều hợp lệ ngay lần đo đầu. Ở lượt xấu nhất, độ lệch lịch gửi p99 là 6,0 ms và CPU của tiến trình gửi tải là 43,6% một lõi, so với ngưỡng 50 ms và 70%. Khoảng trống scrape lớn nhất là 5,0 s, đúng bằng chu kỳ scrape và dưới ngưỡng 15 s.
+Runner kiểm tra từng lượt theo các điều kiện hợp lệ ở mục 3.6. Cả 5 lượt của ĐG1 và 17 lượt của ma trận đều hợp lệ ngay ở lần thử đầu. Ở lượt xấu nhất, độ lệch lịch gửi p99 là 6,0 ms và CPU của tiến trình gửi tải là 43,6% một lõi, so với ngưỡng 50 ms và 70%. Khoảng trống scrape lớn nhất là 5,0 s, đúng bằng chu kỳ scrape và dưới ngưỡng 15 s.
 
 <!-- nguồn: nhật ký Quang tuần 07 mục 18/11 (ĐG1 5 lượt hợp lệ, ma trận 17/17 valid); giá trị xấu nhất do script tạm tính từ runs/v2-vm/v2-dg2/*/attempt-1/checks.json (17 lượt, mỗi lượt 1 attempt) và runs/dg1-v2-4060ti/*/attempt-1/checks.json (5 lượt): send_lag_ms.p99 tối đa 5,98 ms (max 24,2 ms), loop_lag_ms.p99 tối đa 4,11 ms (max 74,1 ms, ngưỡng 500 ms), cpu_max_pct tối đa 43,6 (ĐG1: 22,7), throttled_pct 0, scrape_gap_max_s tối đa 5,003 s, signal.max_gap_s tối đa 5,002 s, loadgen_rc 0 ở mọi lượt; ngưỡng: Môi trường §17 -->
 

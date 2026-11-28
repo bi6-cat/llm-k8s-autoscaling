@@ -20,6 +20,6 @@
 
 <!-- nguồn: docs/chi-tiet/06-ke-hoach-quan-ly.md §11.1 (TĐ3); 05-05 trên nhánh docs/tr8-thesis-ch5-drafts (pha giảm của 3 lượt A2 × KB2: 0 lỗi trên 1.147–1.245 request; VH2: 0 lỗi; VH4 fallback 16,8 s; VH6: LLMSLOBurnFast kêu ở 7 lượt có cửa sổ 1 phút vi phạm, 0 page giả; F6 chưa gửi Telegram thật, đường gửi kiểm trên simulator với máy chủ giả; VH3 dừng tiến trình vLLM có 129 lỗi khi chỉ có 1 pod, nên câu đầu giới hạn "khi còn ít nhất một replica") -->
 
-**Nền tảng tái lập được.** Toàn bộ nền tảng nằm trong một kho Git công khai. Kho gồm playbook dựng cluster, manifest Kubernetes dùng chung cho các môi trường, quy tắc cảnh báo kèm unit test, dashboard, hướng dẫn xử lý cho từng cảnh báo, máy tạo tải và công cụ phân tích số liệu. Từ một VM trắng, nhóm dựng lại được nền tảng tới lúc phục vụ request theo các bước trong kho (mục 4.1, 5.5.2).
+**Nền tảng tái lập được.** Toàn bộ nền tảng nằm trong một kho Git công khai. Kho gồm playbook dựng cluster, manifest Kubernetes dùng chung cho các môi trường, quy tắc cảnh báo kèm unit test, dashboard, hướng dẫn xử lý cho từng cảnh báo, mã nguồn máy tạo tải và công cụ phân tích số liệu. Từ một VM trắng, nhóm dựng lại được nền tảng tới lúc phục vụ request theo các bước trong kho (mục 4.1, 5.5.2).
 
 <!-- nguồn: docs/luan-van/nguon-tu-lieu.md §3 (VH5: từ máy trắng tới vLLM Ready 8 phút 22 giây, bấm tay, 1 lần); docs/chi-tiet/06-ke-hoach-quan-ly.md §10.1 (sản phẩm bàn giao), §10.2 (cấu trúc repository); 05-05 trên nhánh docs/tr8-thesis-ch5-drafts (VH5; N8 dựng lại theo README trên simulator 25 phút) -->
