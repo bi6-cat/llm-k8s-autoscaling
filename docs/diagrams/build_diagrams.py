@@ -557,7 +557,7 @@ def fig_coldstart():
         s.rich(cx + 10, y + 19, [(f"{total:g} s".replace(".", ","), 700, INK),
                                  (f"  ≈ {total / 60:.1f} phút".replace(".", ","), 400, INK2)], size=12.5)
     s.text(32, H - 20, "L0 đo khi scale 0 → 1 replica, L2 khi scale 1 → 2; trước mỗi lượt xoá page cache của node. "
-                       "Số từng pha: Bảng 5.4a và Phụ lục E của luận văn (làm tròn 0,1 s).", size=12, fill=INK2)
+                       "Số từng pha: bảng cold start ở mục 5.4 và Phụ lục E của luận văn (làm tròn 0,1 s).", size=12, fill=INK2)
     s.save("05-cold-start.svg")
 
 
