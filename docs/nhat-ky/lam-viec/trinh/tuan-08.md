@@ -1185,12 +1185,12 @@
 - **Links:** `analysis/dataset.py`, `analysis/tests/test_dataset.py`, `dataset/README.md`, `.gitignore`, `README.md`, `docs/chi-tiet/06-ke-hoach-quan-ly.md` §10.6.
 - **Thesis:** 4.6 hoặc 5.1 (HG5 tái lập: bộ dữ liệu kèm checksum dựng lại đúng từng byte mọi bảng và hình); Phụ lục (mô tả bộ dữ liệu).
 
-## 2026-11-28 – Merge PR #101 (bộ dữ liệu) và PR #102 (quét placeholder, bí mật)
+## 2026-11-28 – Merge PR #101 (bộ dữ liệu), PR #102 (quét placeholder, bí mật) và PR #103 (runbook)
 
 - **Task:** TR8 · **Environment:** none
 - **Done:** kiểm đủ 5 điều kiện merge cho #101, #102, #103 (CI 6/6 pass, MERGEABLE, không review hay bình luận, `/code-review high` đã chạy và sửa, base `main`). Điều kiện 4: #102 và #103 chỉ đổi comment trong `scaledobject-a2.yaml` và `alerts/llm.yaml`; hai file vào kustomize qua `resources:` nên comment bị bỏ khi render, manifest Argo CD áp lên cluster nhà không đổi. Merge #101 (`d26a9ba`, 11:09) trước vì nó thêm quy tắc `.gitignore` cho `dataset/`. Gộp `origin/main` vào nhánh #102: chỉ nhật ký và Kế hoạch §11.4 tự gộp, không xung đột thật; push, CI chạy lại xanh, merge `7086160` (11:10). Gộp `origin/main` vào nhánh #103: `merge=union` đặt hai mục nhật ký sát nhau, thiếu dòng trống, đã thêm. Đánh dấu dòng "runbook được review lần cuối sau phiên V2" ở Kế hoạch §11.4 (để dành từ #103 vì #102 sửa dòng ngay dưới).
-- **Links:** PR #101, PR #102, PR #103, `docs/chi-tiet/06-ke-hoach-quan-ly.md` §11.4.
 - **Results:** merge #103 `2d6c0b6` (11:12, CI 6/6 pass). Sau ba lần merge, `main` sạch và `dataset/` được ignore.
+- **Links:** PR #101, PR #102, PR #103, `docs/chi-tiet/06-ke-hoach-quan-ly.md` §11.4.
 
 ## 2026-11-28 – Cắt trang nhẹ chương 1, 4, 6 theo D103
 
