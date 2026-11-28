@@ -1142,6 +1142,24 @@
 - **Links:** `Makefile` (target `analysis`), `analysis/charts.py`, `analysis/tests/test_charts.py`, `README.md` (mục Tái lập), `docs/chi-tiet/06-ke-hoach-quan-ly.md` §10.7, `docs/chi-tiet/05-moi-truong-danh-gia.md` §3.7.
 - **Thesis:** 4.6 hoặc 5.1 (HG5 tái lập: một lệnh dựng lại mọi bảng và hình chương 5, kiểm bằng `git status`); Phụ lục.
 
+## 2026-11-28 – Soát 7 runbook với sự cố V1, V2, VH (checklist Kế hoạch §11.4, phần 3)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** đọc 7 runbook trong `docs/runbooks/`, đối chiếu với các mục sự cố của `docs/nhat-ky/van-hanh.md` (06/11 SIGTERM, 08/11 NVML và V1, 16/11 image GC, 16/11 và 18–19/11 VH), nhật ký Quang tuần 07, quy tắc `common/observability/alerts/llm.yaml`, recording rule `llm:error_ratio:rate5m` và probe trong `common/serving/deployment.yaml`. Sửa 6 runbook và đồng bộ Phụ lục C.
+- **Results:** 7 cảnh báo, 7 runbook, mỗi quy tắc có `runbook_url` trỏ đúng file. Các điểm sửa:
+  - `LLMPodPending`: cỡ image chỉ ghi "~30 GB" (cỡ sau giải nén), thêm cỡ tải về 9–11 GB nén (Thông số §10.2, nhật ký vận hành 23/10; V2 kéo lại 2 phút 34 giây, PC nhà 14 phút 52 giây, đủ làm cảnh báo kêu); thêm Lưu ý vLLM 0.31.0 không thoát khi nhận SIGTERM nên pod cũ giữ GPU đủ 180 s (V2: rollout 4 pod 371,6 s; VH2c Pending 300 s, chưa tới `for: 10m`); thêm ca image mất khỏi node khi vLLM ở 0 replica (nghi kubelet image GC, chưa xác định). Comment quy tắc `LLMPodPending` ghi thêm cỡ nén.
+  - `LLMPodNotReady`: thêm số cold start đo được (container chạy → Ready 155–162 s ở nhà; lệnh scale → Ready trên V2 76–81 s L2, 300–311 s L0); startupProbe restart container sau 10 phút nên lúc cảnh báo kêu phải đọc `logs --previous`.
+  - `LLMPodCrashLooping`: thêm dòng `StartError` / NVML mismatch (VM Vast 08/11).
+  - `LLMErrorRateHigh`: thêm mục Giới hạn: chỉ đếm request qua Traefik, runner gọi thẳng Service nên cảnh báo không kêu được trong mọi lượt đánh giá; gộp vào dòng "Không còn pod Ready" ca pod duy nhất bị xoá/restart (V2 vh3-delete 2 pod 0 lỗi; vh3-kill 129 lỗi, khả năng cao vì chỉ có 1 pod, chưa kiểm).
+  - `LLMSLOBurnFast` và Phụ lục C: thêm ca hàng đợi ghim ở pod cũ (V1 A2 × KB2: 1.028 request, xả ~9 phút), kèm cách phân biệt với "một pod chậm"; số cold start L2 trên V2.
+  - `/code-review high`: 9 điểm, sửa cả 9 (hai chỗ ghi giả thuyết thành sự thật, cỡ image, cold start trộn hai cách đo, hai dòng bảng mâu thuẫn, Phụ lục C ghim commit).
+  - `KedaScalerErrors`: thêm thời gian từ lúc chặn tới fallback (16,8 s V2, 17,2 s N = 2).
+  - `LLMAtMaxReplicas`: không cần sửa.
+  - Kiểm: `make alerts-test` đạt (7 rule); `yamllint` sạch; `lychee` 27/27 link OK.
+- **Deviations:** chưa đánh dấu dòng "runbook được review lần cuối sau phiên V2" ở Kế hoạch §11.4, vì PR #102 sửa dòng ngay dưới (tránh xung đột); đánh dấu sau khi #102 merge.
+- **Links:** `docs/runbooks/*.md`, `docs/luan-van/phu-luc/c-runbook-mau.md`, `common/observability/alerts/llm.yaml` (chỉ comment).
+- **Thesis:** 4.6 (runbook cập nhật theo sự cố thật), 5.7 Hạn chế (`LLMErrorRateHigh` không đo được trong lượt đánh giá), Phụ lục C.
+
 ## 2026-11-28 – Checklist trước khi nộp, lần quét 1: placeholder và bí mật trong lịch sử Git (Kế hoạch §11.4)
 
 - **Task:** TR8 · **Environment:** none
@@ -1166,3 +1184,9 @@
 - **Deviations:** bố cục khác cây ở Kế hoạch §10.6 (đã ghi "Thực tế" ở đó). Chưa đăng dữ liệu. Lượt tự chạy không đọc `.env` nên chưa quét theo giá trị trong đó: trước khi đăng, Trình chạy lại lệnh đóng gói không kèm `--no-env-file`.
 - **Links:** `analysis/dataset.py`, `analysis/tests/test_dataset.py`, `dataset/README.md`, `.gitignore`, `README.md`, `docs/chi-tiet/06-ke-hoach-quan-ly.md` §10.6.
 - **Thesis:** 4.6 hoặc 5.1 (HG5 tái lập: bộ dữ liệu kèm checksum dựng lại đúng từng byte mọi bảng và hình); Phụ lục (mô tả bộ dữ liệu).
+
+## 2026-11-28 – Merge PR #101 (bộ dữ liệu) và PR #102 (quét placeholder, bí mật)
+
+- **Task:** TR8 · **Environment:** none
+- **Done:** kiểm đủ 5 điều kiện merge cho #101, #102, #103 (CI 6/6 pass, MERGEABLE, không review hay bình luận, `/code-review high` đã chạy và sửa, base `main`). Điều kiện 4: #102 và #103 chỉ đổi comment trong `scaledobject-a2.yaml` và `alerts/llm.yaml`; hai file vào kustomize qua `resources:` nên comment bị bỏ khi render, manifest Argo CD áp lên cluster nhà không đổi. Merge #101 (`d26a9ba`, 11:09) trước vì nó thêm quy tắc `.gitignore` cho `dataset/`. Gộp `origin/main` vào nhánh #102: chỉ nhật ký và Kế hoạch §11.4 tự gộp, không xung đột thật; push, CI chạy lại xanh, merge `7086160` (11:10). Gộp `origin/main` vào nhánh #103: `merge=union` đặt hai mục nhật ký sát nhau, thiếu dòng trống, đã thêm. Đánh dấu dòng "runbook được review lần cuối sau phiên V2" ở Kế hoạch §11.4 (để dành từ #103 vì #102 sửa dòng ngay dưới).
+- **Links:** PR #101, PR #102, PR #103, `docs/chi-tiet/06-ke-hoach-quan-ly.md` §11.4.
