@@ -1113,3 +1113,9 @@
 - **Incidents:** Bảng "Request đang chạy" và "Token/s theo pod" chỉ có số ở pod cũ: `load-sim.sh` gửi tải qua `kubectl port-forward svc/vllm`, mà port-forward chỉ nối tới một pod, nên hai pod mới Ready nhưng không nhận request. Ảnh vẫn đúng cho vòng lặp scale (tín hiệu tổng, HPA, trạng thái pod), nhưng không minh hoạ chia tải giữa các pod. Ngoài ra, trên ảnh, "Request đang chạy" và "Request đang chờ" chỉ có số khoảng 23:24–23:26, trong khi tải chạy tới 23:27:59 và "Token/s theo pod" còn số tới khoảng 23:28; chưa tìm hiểu vì sao. Nếu cần ảnh chia tải thì bơm tải từ một pod trong cluster tới Service.
 - **Links:** `docs/images/anh-chup/dashboard-autoscaling-sim.png`, `dashboard-serving-gpu-sim.png`, `dashboard-slo-cost-sim.png`, `docs/nhat-ky/van-hanh.md`.
 - **Thesis:** dự phòng cho F5 ở 4.4 hoặc 5.6 nếu không có ảnh dashboard GPU nhà; khi dùng phải ghi rõ là simulator, hạn chế chia tải ở trên và hàng chi phí không phải số thật.
+
+## 2026-11-28 – Merge PR #98 (ảnh dashboard dự phòng F5)
+
+- **Task:** TR4 · **Environment:** none
+- **Done:** kiểm #98 đủ 5 điều kiện merge (CI 6/6 pass, MERGEABLE/CLEAN, không bình luận, chỉ thêm ảnh và nhật ký nên Argo CD nhà không đổi, base `main`); merge commit `c1d1756`, xoá nhánh head. Gộp `origin/main` vào nhánh #99: chỉ xung đột nhật ký `tuan-08.md`, `merge=union` tự giữ cả hai mục.
+- **Links:** PR #98, PR #99.
