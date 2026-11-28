@@ -1269,3 +1269,15 @@
 - **Results:** kiem_van 05-02, 05-04: 0 điểm; lychee offline (loại trừ như job `docs` của CI): 0 lỗi. Khuôn T đo bằng `gop.py`: 5.2 1,40 → 1,79 tr, 5.4 1,34 → 1,74 tr, chương 5 14,74 tr (định hướng 14–17). `/code-review high`: 8 điểm, sửa cả 8 (thứ tự đo của L2 so với nhãn thanh, chú thích B, "tám pha" thành nhóm pha của bảng, ghi chú soát số và độ dài, nơi vẽ Hình 15 là `chuyen_sau.py`).
 - **Links:** nhánh `docs/tr8-thesis-fig5-fig15`; `docs/luan-van/05-02-nang-luc-mot-replica.md`, `05-04-cold-start.md`, `docs/diagrams/build_diagrams.py`, `docs/images/05-cold-start.svg`, `docs/images/png/05-cold-start.png`.
 - **Thesis:** 5.2 (Hình 5.2b), 5.4 (Hình 5.4b).
+
+## 2026-11-28 – Merge PR #108; đánh lại số hình và bảng chương 5
+
+- **Task:** TR8 · **Environment:** none
+- **Done:**
+  1. Merge PR #108 (Hình 5.2b, 5.4b) `9acb252` sau CI 6/6 xanh.
+  2. Đánh số chính thức cho hình và bảng chương 5 theo thứ tự xuất hiện (README của `docs/luan-van/`): Bảng 5.2a → 5.1, 5.3a → 5.2, 5.4a → 5.3, 5.6a → 5.4; Hình 5.2b → 5.1, 5.3b → 5.2, 5.4b → 5.3. Sửa mọi chỗ dẫn trong `docs/luan-van/` (chương 1, 3, 5, 6 và Phụ lục E), kể cả comment nguồn.
+  3. Sửa các comment "số tạm theo mục, đánh lại khi ghép chương" ở 5.2, 5.3, 5.4, 5.6 thành "số theo chương", ghi kèm số tạm cũ để đối chiếu với nhật ký và PR trước 28/11. Hai comment ở 5.5 nhắc bảng đã bỏ ngày 24/11 đổi thành "bảng tạm 5.5a". Nhật ký các tuần trước giữ nguyên số tạm (là sự kiện lúc đó).
+  4. `/code-review high`: 6 điểm, sửa cả 6: comment ngân sách 5.7 còn "5.4b" (grep đầu chỉ bắt số đứng ngay sau chữ Hình/Bảng), ví dụ C1 ở quy-tac-viet §4 đổi "Hình 5.3" thành "Hình 5.2", bỏ "trên nhánh docs/tr8-thesis-ch5-drafts" ở 8 comment nguồn của 1.2, 1.3, 6.1 (PR #82 đã merge, số trên nhánh đó là số tạm), hai comment 5.5 ghi bảng đã cắt nay nằm ở Bảng E.3, E.5.
+- **Results:** grep `\b5\.[0-9][a-z]\b` trong `docs/luan-van/`: chỉ còn số tạm cũ có ghi chú "số tạm theo mục", "bảng tạm 5.5a" và tên bảng của commit bc49ff6 ở comment 5.5. `danh_muc.py` trên bản ghép từ cây làm việc (chương 0–6 và phụ lục): Bảng 5.1–5.4, Hình 5.1–5.3, mục "Cần xem" 0 (không trùng, không nhảy, không số tạm, không số được nhắc mà thiếu chú thích). kiem_van trên 14 file của lần sửa đầu: như main (13 file 0 điểm, Phụ lục E 1 điểm có từ trước). lychee offline (loại trừ như job `docs` của CI): 0 lỗi.
+- **Links:** nhánh `docs/tr8-thesis-ch5-numbering`; `docs/luan-van/05-02` … `05-07`, `01-02`, `01-03`, `03-04`, `06-01` … `06-03`, `phu-luc/e-so-lieu-tung-luot.md`, `quy-tac-viet.md`.
+- **Thesis:** chương 5 (số hình, bảng); danh mục hình và bảng ở phần đầu.

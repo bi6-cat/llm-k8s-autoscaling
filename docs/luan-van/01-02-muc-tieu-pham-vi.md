@@ -20,7 +20,7 @@ Mục tiêu tổng quát của đồ án là xây dựng và vận hành một n
 | 6. So sánh với cấu hình tài nguyên cố định | N1; N3 | 3.6; 4.7 | 5.3 |
 | 7. Đánh giá đánh đổi giữa hiệu năng và tài nguyên | N3 | 3.6 | 5.3, 5.6 |
 
-<!-- nguồn: docs/chi-tiet/01-bai-toan-yeu-cau.md §9 (bảng: mục tiêu → F/N → bằng chứng); docs/chi-tiet/06-ke-hoach-quan-ly.md §11.1 (bảng "Truy vết yêu cầu → mục"); tên ngắn của F/N theo Bảng 5.6a trên nhánh docs/tr8-thesis-ch5-drafts (05-06). N2 gồm N2a phản ứng và N2b hồi phục -->
+<!-- nguồn: docs/chi-tiet/01-bai-toan-yeu-cau.md §9 (bảng: mục tiêu → F/N → bằng chứng); docs/chi-tiet/06-ke-hoach-quan-ly.md §11.1 (bảng "Truy vết yêu cầu → mục"); tên ngắn của F/N theo Bảng 5.4 (05-06). N2 gồm N2a phản ứng và N2b hồi phục -->
 
 Bốn yêu cầu không có trong bảng (bảo vệ tối thiểu, an toàn khi thay đổi, tự phục hồi, tái lập và chi phí) là phần nhóm thêm ngoài đề cương, đều thuộc yêu cầu vận hành được hằng ngày của bài toán.
 
@@ -36,7 +36,7 @@ Giả định quan trọng nhất là chi phí xấp xỉ bằng số GPU-giờ 
 
 Nhóm làm theo vòng qua ba môi trường (mục 3.2). Autoscaling, cảnh báo và triển khai qua Git được thử trước trên simulator, một cluster Kubernetes không có GPU, chạy phần mềm giả lập API và metric của vLLM. Phần cần GPU được kiểm chức năng trên máy nhà, một PC có GPU RTX 5060. Nhóm còn thuê vài VM ngắn hạn để thử quy trình, cold start và các kịch bản vận hành. Số đo hiệu năng dùng để kết luận chỉ lấy từ phiên đo chính trên một VM thuê có 4 × RTX 4060 Ti, với model Qwen2.5-3B-Instruct.
 
-<!-- nguồn: docs/chi-tiet/05-moi-truong-danh-gia.md (dòng 6: tầng 1 máy nhà và simulator, PC RTX 5060 8 GB time-slicing 2 GPU replica, model 0,5B, llm-d-inference-sim; dòng 650: số đo hiệu năng không lấy ở máy nhà); 05-01 trên nhánh docs/tr8-thesis-ch5-drafts (máy V2 thực tế 4 × RTX 4060 Ti 16 GB); docs/luan-van/nguon-tu-lieu.md §3 (số đo V2: VM 4 × RTX 4060 Ti 16 GB, Qwen2.5-3B); các phiên thử trước V2: docs/nhat-ky/van-hanh.md mục 08/11 (2 × RTX 5060 Ti; 4 × RTX A4000, V0+V1) và 16/11 (2 × RTX 4000 Ada, chạy thử VH2a, VH3, VH4) -->
+<!-- nguồn: docs/chi-tiet/05-moi-truong-danh-gia.md (dòng 6: tầng 1 máy nhà và simulator, PC RTX 5060 8 GB time-slicing 2 GPU replica, model 0,5B, llm-d-inference-sim; dòng 650: số đo hiệu năng không lấy ở máy nhà); 05-01 (máy V2 thực tế 4 × RTX 4060 Ti 16 GB); docs/luan-van/nguon-tu-lieu.md §3 (số đo V2: VM 4 × RTX 4060 Ti 16 GB, Qwen2.5-3B); các phiên thử trước V2: docs/nhat-ky/van-hanh.md mục 08/11 (2 × RTX 5060 Ti; 4 × RTX A4000, V0+V1) và 16/11 (2 × RTX 4000 Ada, chạy thử VH2a, VH3, VH4) -->
 
 Kế hoạch chia theo tuần với năm mốc. Dữ liệu của phiên đo chính được đóng băng trước khi viết chương đánh giá, và phép thử bổ sung sau đó chạy trên simulator. Hai thành viên chia việc theo tính năng: một người phụ trách phần chạy trên GPU, người kia phụ trách autoscaling, giám sát và đánh giá.
 

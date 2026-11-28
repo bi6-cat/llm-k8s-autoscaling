@@ -8,7 +8,7 @@ Phụ lục này ghi số của từng lượt trong phiên đo V2 (4 × RTX 406
 
 ## E.1. So sánh autoscaling với cấu hình tĩnh (ĐG2)
 
-Bảng E.1 ghi 17 lượt của ma trận ĐG2, theo thứ tự cấu hình rồi kịch bản, không theo thứ tự chạy. Cách tính giống Bảng 5.3a: SLO attainment và TTFT p95 tính trên các pha được chấm, còn số request, lỗi và GPU-giờ tính trên cả kịch bản. Mọi request lỗi trong ma trận đều là timeout phía máy tạo tải.
+Bảng E.1 ghi 17 lượt của ma trận ĐG2, theo thứ tự cấu hình rồi kịch bản, không theo thứ tự chạy. Cách tính giống Bảng 5.2: SLO attainment và TTFT p95 tính trên các pha được chấm, còn số request, lỗi và GPU-giờ tính trên cả kịch bản. Mọi request lỗi trong ma trận đều là timeout phía máy tạo tải.
 <!-- nguồn: analysis/figures/v2-dg2/runs.csv (n_sent, n_error, error_types chỉ có Timeout=…, slo_attainment, ttft_p95_s, gpu_h, gpu_vs_baseline, replicas_ready_mean, scale_changes, pages; scored_phases: KB1 steady, KB2 pre+spike+drop, KB3 sustain) -->
 
 **Bảng E.1.** Kết quả từng lượt của ĐG2. GPU-giờ (% S4): GPU-giờ so với cấu hình tĩnh 4 replica cùng kịch bản. Replica Ready: số replica Ready trung bình trong lượt. Đổi số replica: số lần HPA đổi số replica mong muốn. "–": không có request thành công.
@@ -77,7 +77,7 @@ Cả 7 page đều kêu khi tỷ lệ request xấu đã vượt 20%, nên khôn
 
 ## E.4. Cold start (ĐG3)
 
-Bảng E.4 ghi thời gian từng pha của 5 lượt cold start, chia theo 8 pha như Bảng 5.4a. Lần chạy đầu của L2-1, L2-3 và L0-1 dừng sớm do lỗi của script đo nên được đo lại; bảng ghi lần đo lại.
+Bảng E.4 ghi thời gian từng pha của 5 lượt cold start, chia theo 8 pha như Bảng 5.3. Lần chạy đầu của L2-1, L2-3 và L0-1 dừng sớm do lỗi của script đo nên được đo lại; bảng ghi lần đo lại.
 <!-- nguồn: comment đầu 05-04-cold-start.md (số từng lượt, chính xác tới 0,1 s); runs/v2-vm/dg3-v2-4060ti/ (5 thư mục hợp lệ, 3 thư mục *-failed-wait-count-bug của lần chạy đầu L2-1, L2-3, L0-1; nhật ký Quang tuần 07 mục 19/11) -->
 
 **Bảng E.4.** Thời gian từng pha cold start của từng lượt (s). Thứ tự đo thực tế: L2-2, L0-2, L2-1, L2-3, L0-1.
