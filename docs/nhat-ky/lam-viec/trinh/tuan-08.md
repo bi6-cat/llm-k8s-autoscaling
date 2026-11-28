@@ -1147,11 +1147,12 @@
 - **Task:** TR8 · **Environment:** none
 - **Done:** đọc 7 runbook trong `docs/runbooks/`, đối chiếu với các mục sự cố của `docs/nhat-ky/van-hanh.md` (06/11 SIGTERM, 08/11 NVML và V1, 16/11 image GC, 16/11 và 18–19/11 VH), nhật ký Quang tuần 07, quy tắc `common/observability/alerts/llm.yaml`, recording rule `llm:error_ratio:rate5m` và probe trong `common/serving/deployment.yaml`. Sửa 6 runbook và đồng bộ Phụ lục C.
 - **Results:** 7 cảnh báo, 7 runbook, mỗi quy tắc có `runbook_url` trỏ đúng file. Các điểm sửa:
-  - `LLMPodPending`: cỡ image ghi "~30 GB" sai, sửa thành khoảng 9 GB nén (Thông số §10.2; V2 kéo lại 2 phút 34 giây, PC nhà 14 phút 52 giây); thêm Lưu ý vLLM 0.31.0 không thoát khi nhận SIGTERM nên pod cũ giữ GPU đủ 180 s (V2: rollout 4 pod 371,6 s; VH2c Pending 300 s, chưa tới `for: 10m`); thêm nguyên nhân image bị kubelet GC khi vLLM ở 0 replica. Cùng lỗi "~30 GB" ở comment quy tắc `LLMPodPending`.
-  - `LLMPodNotReady`: thêm số cold start đo được (76–90 s V2, 151–162 s nhà, 300–311 s L0); startupProbe restart container sau 10 phút nên lúc cảnh báo kêu phải đọc `logs --previous`.
+  - `LLMPodPending`: cỡ image chỉ ghi "~30 GB" (cỡ sau giải nén), thêm cỡ tải về 9–11 GB nén (Thông số §10.2, nhật ký vận hành 23/10; V2 kéo lại 2 phút 34 giây, PC nhà 14 phút 52 giây, đủ làm cảnh báo kêu); thêm Lưu ý vLLM 0.31.0 không thoát khi nhận SIGTERM nên pod cũ giữ GPU đủ 180 s (V2: rollout 4 pod 371,6 s; VH2c Pending 300 s, chưa tới `for: 10m`); thêm ca image mất khỏi node khi vLLM ở 0 replica (nghi kubelet image GC, chưa xác định). Comment quy tắc `LLMPodPending` ghi thêm cỡ nén.
+  - `LLMPodNotReady`: thêm số cold start đo được (container chạy → Ready 155–162 s ở nhà; lệnh scale → Ready trên V2 76–81 s L2, 300–311 s L0); startupProbe restart container sau 10 phút nên lúc cảnh báo kêu phải đọc `logs --previous`.
   - `LLMPodCrashLooping`: thêm dòng `StartError` / NVML mismatch (VM Vast 08/11).
-  - `LLMErrorRateHigh`: thêm mục Giới hạn: chỉ đếm request qua Traefik, runner gọi thẳng Service nên cảnh báo không kêu được trong mọi lượt đánh giá; thêm ca 1 pod bị xoá/restart (V2 vh3-kill 129 lỗi, vh3-delete 2 pod 0 lỗi).
-  - `LLMSLOBurnFast` và Phụ lục C: thêm ca hàng đợi ghim ở pod cũ (V1 A2 × KB2: 1.028 request, xả ~9 phút); số cold start L2 trên V2.
+  - `LLMErrorRateHigh`: thêm mục Giới hạn: chỉ đếm request qua Traefik, runner gọi thẳng Service nên cảnh báo không kêu được trong mọi lượt đánh giá; gộp vào dòng "Không còn pod Ready" ca pod duy nhất bị xoá/restart (V2 vh3-delete 2 pod 0 lỗi; vh3-kill 129 lỗi, khả năng cao vì chỉ có 1 pod, chưa kiểm).
+  - `LLMSLOBurnFast` và Phụ lục C: thêm ca hàng đợi ghim ở pod cũ (V1 A2 × KB2: 1.028 request, xả ~9 phút), kèm cách phân biệt với "một pod chậm"; số cold start L2 trên V2.
+  - `/code-review high`: 9 điểm, sửa cả 9 (hai chỗ ghi giả thuyết thành sự thật, cỡ image, cold start trộn hai cách đo, hai dòng bảng mâu thuẫn, Phụ lục C ghim commit).
   - `KedaScalerErrors`: thêm thời gian từ lúc chặn tới fallback (16,8 s V2, 17,2 s N = 2).
   - `LLMAtMaxReplicas`: không cần sửa.
   - Kiểm: `make alerts-test` đạt (7 rule); `yamllint` sạch; `lychee` 27/27 link OK.

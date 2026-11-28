@@ -3,9 +3,9 @@
 
 **Mức:** page · **Quy tắc:** [common/observability/alerts/llm.yaml](../../common/observability/alerts/llm.yaml)
 
-**Ý nghĩa.** Một pod vLLM ở phase `Running` (đã có node, container đã khởi động ít nhất một lần) hơn 15 phút mà readiness probe vẫn chưa đạt. 15 phút lâu hơn nhiều so với cold start đo được: 76–90 s trên V2 khi image và model có sẵn, 151–162 s ở PC nhà, 300–311 s trên V2 khi phải tải lại cả image lẫn model (L0). Vì vậy pod gần như chắc chắn bị treo. Pod Pending không tính ở đây mà thuộc [LLMPodPending](LLMPodPending.md).
+**Ý nghĩa.** Một pod vLLM ở phase `Running` (đã có node, container đã khởi động ít nhất một lần) hơn 15 phút mà readiness probe vẫn chưa đạt. 15 phút lâu hơn nhiều so với cold start đo được. Riêng đoạn từ lúc container chạy tới Ready: 155–162 s ở PC nhà. Cả quá trình từ lệnh scale tới Ready trên V2: 76–81 s khi image và model có sẵn (L2), 300–311 s khi phải kéo lại image và tải lại model (L0; phần kéo image nằm ở phase Pending). Vì vậy pod gần như chắc chắn bị treo. Pod Pending không tính ở đây mà thuộc [LLMPodPending](LLMPodPending.md).
 
-**Lưu ý.** startupProbe cho container tối đa 10 phút (5 s × 120 lần), quá hạn thì kubelet restart container mà pod vẫn ở `Running`. Nên lúc cảnh báo kêu, container thường đã restart ít nhất một lần (cột `RESTARTS` ≥ 1), và log của lần treo đầu nằm ở `--previous`. Nếu restart lặp lại thì [LLMPodCrashLooping](LLMPodCrashLooping.md) cũng có thể kêu.
+**Lưu ý.** startupProbe cho container tối đa 10 phút (5 s × 120 lần), quá hạn thì kubelet restart container mà pod vẫn ở `Running`. Nên lúc cảnh báo kêu, container thường đã restart ít nhất một lần (cột `RESTARTS` ≥ 1), và log của lần treo đầu nằm ở `--previous`. Sau mỗi lần restart, kubelet chờ một khoảng backoff với lý do `CrashLoopBackOff`, nên [LLMPodCrashLooping](LLMPodCrashLooping.md) có thể kêu gần cùng lúc, kể cả khi mới restart một lần. Hai cảnh báo đó là cùng một sự cố.
 
 **Ảnh hưởng.** Pod giữ một GPU mà không phục vụ request. Nếu đó là pod duy nhất thì Traefik trả 503 ([LLMErrorRateHigh](LLMErrorRateHigh.md)).
 

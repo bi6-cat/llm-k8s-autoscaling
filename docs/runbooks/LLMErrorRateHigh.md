@@ -31,8 +31,7 @@
 
 | Nguyên nhân | Hành động |
 |---|---|
-| Không còn pod Ready | Xem [LLMPodNotReady](LLMPodNotReady.md) hoặc [LLMPodCrashLooping](LLMPodCrashLooping.md) |
-| Chỉ có 1 pod, và pod đó vừa bị xoá hoặc container vừa restart | Lỗi tự hết khi pod Ready lại (V2: 67,4 s). Đo trên V2: vh3-kill lúc chỉ có 1 pod có 129 request lỗi; vh3-delete khi có 2 pod Ready thì 0 lỗi. Phiên cần phục vụ liên tục thì giữ `minReplicaCount` ≥ 2 |
+| Không còn pod Ready | Xem [LLMPodNotReady](LLMPodNotReady.md) hoặc [LLMPodCrashLooping](LLMPodCrashLooping.md). Nếu pod duy nhất vừa bị xoá hoặc container vừa restart thì lỗi tự hết khi pod Ready lại (V2: 67,4 s). Trên V2, vh3-delete khi có 2 pod Ready thì 0 lỗi; vh3-kill có 129 request lỗi, khả năng cao vì lúc kill chỉ có 1 pod (chưa kiểm số pod lúc đó) |
 | Đang rollout với 1 replica | Tạm nâng `minReplicaCount` lên 2 trước khi cập nhật ([Vận hành §5](../chi-tiet/04-van-hanh.md#5-cập-nhật-phiên-bản-khi-gpu-đã-dùng-hết)) |
 | Lỗi 500 sau khi đổi tham số hoặc phiên bản | Rollback bằng `git revert`, để Argo CD sync |
 | Pod bị OOMKilled giữa chừng (502) | `kubectl describe pod` xem `Last State`; giảm `--max-num-seqs` hoặc `--max-model-len` |
