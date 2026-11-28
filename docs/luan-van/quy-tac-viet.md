@@ -240,7 +240,7 @@ Những thứ này chỉ nằm trong comment nguồn. Ngoại lệ: mục phân 
 - TĐ1–TĐ3 (ba thông điệp) và HG1–HG5 (năm hướng giải) là nhãn của dàn ý (Kế hoạch §11.1), không dùng trong thân bài; trong bài nói bằng lời.
 - Tên pha viết tiếng Việt, không để trong `code`: pha nền (`pre`), pha tăng đột ngột (`spike`), pha giảm (`drop`), pha ổn định (`steady`), pha tăng dần (`ramp`), pha duy trì (`sustain`).
 - `code` chỉ dành cho tên người đọc có thể tra hoặc gõ lại: metric, tham số cấu hình, tên file, tên cảnh báo.
-- Mã C1–C6 của tài liệu thiết kế là tên nội bộ của biểu đồ. Trong bài dùng số hình ("Hình 5.3"), không viết "C1", vì C đã là ký hiệu năng lực.
+- Mã C1–C6 của tài liệu thiết kế là tên nội bộ của biểu đồ. Trong bài dùng số hình ("Hình 5.2"), không viết "C1", vì C đã là ký hiệu năng lực.
 - **Ký hiệu:** C = năng lực một replica (req/s); B\* = số request đồng thời ở mức năng lực; λ = tốc độ đến (req/s); N = số GPU ("N = 4"). Không dùng lại các chữ này cho nghĩa khác.
 
 ## 5. Trình bày số liệu và kết quả
