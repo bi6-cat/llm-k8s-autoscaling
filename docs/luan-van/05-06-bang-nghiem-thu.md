@@ -17,7 +17,7 @@ Bảng nghiệm thu (Bảng 5.4) đối chiếu kết quả của các mục 5.2
 | F1. API có streaming | Must | ĐG1–ĐG3 chạy qua API có streaming | Đạt |
 | F2. Tự điều chỉnh replica | Must | A2 trong [1, 4]; T7 chưa chạy | Đạt một phần |
 | F3. Triển khai qua Git | Must | Cập nhật, rollback qua Git trên simulator, 0 lỗi; trên GPU chỉ qua annotation | Đạt |
-| F4. Dựng từ máy trắng | Must | 8 phút 22 giây (1 lần) | Đạt |
+| F4. Dựng từ máy trắng | Must | 502 s (1 lần) | Đạt |
 | F5. Ba dashboard | Must | Đủ 3 dashboard, ảnh trên simulator ở Phụ lục G; chưa chụp trên GPU thật | Đạt một phần |
 | F6. Cảnh báo tới Telegram | Must | Chưa gửi Telegram thật | Đạt một phần |
 | F7. Bảo vệ tối thiểu | Should | API key, SSH tunnel; checklist chưa chạy | Chưa đo |

@@ -77,7 +77,7 @@ Cả 7 page đều kêu khi tỷ lệ request xấu đã vượt 20%, nên khôn
 
 ## E.4. Cold start (ĐG3)
 
-Bảng E.4 ghi thời gian từng pha của 5 lượt cold start, chia theo 8 pha như Bảng 5.3. Lần chạy đầu của L2-1, L2-3 và L0-1 dừng sớm do lỗi của script đo nên được đo lại; bảng ghi lần đo lại.
+Bảng E.4 ghi thời gian từng pha của 5 lượt cold start, chia theo tám pha như Bảng 5.3. Lần chạy đầu của L2-1, L2-3 và L0-1 dừng sớm do lỗi của script đo nên được đo lại; bảng ghi lần đo lại.
 <!-- nguồn: comment đầu 05-04-cold-start.md (số từng lượt, chính xác tới 0,1 s); runs/v2-vm/dg3-v2-4060ti/ (5 thư mục hợp lệ, 3 thư mục *-failed-wait-count-bug của lần chạy đầu L2-1, L2-3, L0-1; nhật ký Quang tuần 07 mục 19/11) -->
 
 **Bảng E.4.** Thời gian từng pha cold start của từng lượt (s). Thứ tự đo thực tế: L2-2, L0-2, L2-1, L2-3, L0-1.
